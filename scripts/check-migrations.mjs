@@ -1,0 +1,99 @@
+// READ-ONLY. Asks the live database which migrations are actually in it, by
+// probing for one signature column per migration through PostgREST.
+// Nothing is written.  Usage:  npm run check:migrations
+//
+// 2026-08-20: moved here from tmp/. It is the acceptance gate for the new
+// Supabase project (docs/新树迁移计划.md step 3), and tmp/ is not carried into
+// the new tree - the verifier would have been left behind in the old one.
+// The .env.local path used to be hardcoded to C:/dev/minit, which would have
+// silently checked the OLD database from inside the new tree. It is now
+// resolved relative to this file.
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
+const envPath = fileURLToPath(new URL("../.env.local", import.meta.url));
+const env = Object.fromEntries(
+  readFileSync(envPath, "utf8")
+    .split(/\r?\n/)
+    .filter((l) => l.trim() && !l.trim().startsWith("#") && l.includes("="))
+    .map((l) => {
+      const i = l.indexOf("=");
+      return [l.slice(0, i).trim(), l.slice(i + 1).trim().replace(/^["']|["']$/g, "")];
+    }),
+);
+
+const url = env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL;
+const key = env.SUPABASE_SERVICE_ROLE_KEY;
+if (!url || !key) {
+  console.log(`no SUPABASE_URL / SERVICE_ROLE_KEY in ${envPath}`);
+  process.exit(1);
+}
+console.log(`asking: ${url}\n`);
+
+const probes = [
+  ["20260708000000 init", "orgs", "id"],
+  ["20260719000000 phase7 auth+RLS", "orgs", "is_demo"],
+  ["20260719150000 ai_usage quota", "orgs", "monthly_free_quota"],
+  ["20260726000000 P0-2 client_id + receipt lock", "donations", "client_id"],
+  ["20260730000000 receipt series", "orgs", "receipt_prefix"],
+  ["20260803000000 ai_usage cost", "ai_usage", "cost_micros"],
+  ["20260819000000 org_glossary", "org_glossary", "term"],
+  ["20260819010000 committee name_official", "committee_roster", "name_official"],
+  ["20260820000000 meeting types + draft", "minutes_docs", "meeting_type_label"],
+  ["20260820000000 meeting types + draft", "minutes_docs", "extraction"],
+  ["20260821000000 ai_usage refunded_at", "ai_usage", "refunded_at"],
+  ["20260822000000 minutes search (pgvector)", "minutes_embeddings", "model"],
+  ["20260822000000 minutes search (pgvector)", "minutes_docs", "embedded_at"],
+];
+
+const headers = { apikey: key, Authorization: `Bearer ${key}` };
+
+for (const [label, table, column] of probes) {
+  const r = await fetch(`${url}/rest/v1/${table}?select=${column}&limit=1`, { headers });
+  const ok = r.status === 200;
+  const body = ok ? "" : (await r.text()).slice(0, 90).replace(/\s+/g, " ");
+  console.log(
+    `${ok ? "[ APPLIED  ]" : "[ NOT YET  ]"} ${label.padEnd(46)} ${table}.${column}${ok ? "" : "   " + body}`,
+  );
+}
+
+// 2026-08-20: two of the migrations add NO column that PostgREST can see, so
+// "everything above says APPLIED" does NOT mean every file ran. Saying so out
+// loud, in the same idiom as npm run status, is cheaper than someone
+// concluding the database is complete when two files never executed.
+// 2026-08-21: eleven files became thirteen (refunded_at, pgvector).
+console.log(`
+[ 人眼 ]  These two cannot be probed through PostgREST - they add a trigger and
+          a function in a non-public schema, not a column. Confirm by eye in the
+          Supabase SQL editor after running them:
+
+            20260728000000_lock_org_privileged_columns.sql
+              select tgname from pg_trigger where tgrelid = 'public.orgs'::regclass;
+
+            20260729000000_admin_grant_ai_credits.sql
+              select proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+              where n.nspname = 'minit_admin';
+
+          Thirteen migration files. Thirteen probes above cover eleven of
+          them (three of the probes are two different columns of the same two
+          migrations, which is on purpose: 20260822000000 touches two tables
+          and a half-run migration is worth catching).
+
+          One more thing 20260822000000 needs that no probe can see: the
+          pgvector EXTENSION. If it did not run, check by eye:
+            select extname from pg_extension where extname = 'vector';`);
+
+// Row counts, so "this page is empty" is answered by data, not by guessing.
+console.log("\n--- rows ---");
+for (const t of [
+  "orgs", "members_roles", "uploads", "minutes_docs", "committee_roster",
+  "donations", "receipts", "expenses", "constitutions", "ai_usage",
+  "org_glossary", "paste_packs", "remittance_batches", "einvois_packs",
+  "events_meetings", "deadlines", "qa_log", "extractions", "reminders", "rsvps",
+]) {
+  const r = await fetch(`${url}/rest/v1/${t}?select=*&limit=1`, {
+    headers: { ...headers, Prefer: "count=exact", Range: "0-0" },
+  });
+  const range = r.headers.get("content-range") || "?";
+  console.log(`${String(range.split("/")[1] ?? "?").padStart(6)}  ${t}`);
+}

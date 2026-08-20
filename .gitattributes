@@ -1,0 +1,51 @@
+# 行尾一律用 LF 存进 Git（2026-08-03 补充审计第 18 条）
+#
+# 为什么需要这个档案：
+# 在这个档案出现之前，`git status` 显示 **273 个档案被修改** —— 而其实一个字都没改。
+# 原因是工作目录里的档案变成了 CRLF（Windows 行尾），Git 里存的是 LF，
+# 所以每一行都算「改过」。
+#
+# 后果不是好看不好看：`push-to-github.bat` 会把这 273 个档案一起 commit，
+# 之后你（或 Claude）再也看不出「这次到底改了什么」—— 真正的改动会被淹没在杂讯里。
+# 对一个靠「每个阶段 commit 一次」当稽核轨迹的专案，这是会痛的。
+#
+# `text=auto eol=lf` = Git 里永远存 LF；Windows 上编辑照常，不影响任何工具。
+# .bat 保留 CRLF，因为 Windows 的批次档需要它。
+
+* text=auto eol=lf
+
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# 二进位档不要碰
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.pptx binary
+*.xlsx binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+
+# Hash-bound R1-C evidence must retain the exact bytes emitted by the evidence runners.
+r1c-output/phase4/art008-checkpoint-20260812T031000000Z/** -text
+r1c-output/phase4/art008-checkpoint-exact-bytes-20260812T032800000Z/** -text
+r1c-output/phase4/art008-offline-recovery-20260811T180547784Z/** -text
+r1c-output/phase4/art008-validation-authoritative-command-02-20260811T184942791Z/** -text
+r1c-output/phase4/art008-validation-authoritative-command-20260811T184213704Z/** -text
+r1c-output/phase4/locale-matrix-commit-20260812T015600000Z/** -text
+r1c-output/phase4/locale-matrix-postcommit-boundary-20260812T015800000Z/** -text
+r1c-output/phase4/locale-matrix-postcommit-verification.json -text
+r1c-output/phase4/a11y004-mobile-failure-recovery-20260811T195950939Z/** -text
+r1c-output/phase4/a11y004-quality-20260811T202319667Z/** -text
+r1c-output/phase4/a11y004-validation-authoritative-command-20260811T205356962Z/** -text
+r1c-output/phase4/a11y004-validation-authoritative-command-02-20260811T210412422Z/** -text
+r1c-output/phase4/a11y004-checkpoint-exact-bytes-20260812T052000000Z/** -text
+r1c-output/phase4/a11y001-keyboard-traversal-20260812T040858550Z/** -text
+r1c-output/phase4/a11y001-pause-checkpoint-20260812T042700000Z/** -text
+r1c-output/phase4/a11y001-pause-commit-20260812T042900000Z/** -text
+r1c-output/phase4/a11y001-pause-postcommit-boundary-20260812T043100000Z/** -text
+r1c-output/phase4/a11y001-pause-postcommit-verification.json -text

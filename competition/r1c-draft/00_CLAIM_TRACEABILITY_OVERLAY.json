@@ -1,0 +1,233 @@
+{
+  "schemaVersion": 1,
+  "asOfDate": "2026-08-10",
+  "legacyClaimClassOverrides": {
+    "CLM-001": "proposed",
+    "CLM-002": "audited legacy evidence",
+    "CLM-003": "audited legacy evidence",
+    "CLM-004": "audited legacy evidence",
+    "CLM-005": "audited legacy evidence",
+    "CLM-006": "audited legacy evidence",
+    "CLM-007": "audited legacy evidence",
+    "CLM-008": "audited legacy evidence",
+    "CLM-009": "audited legacy evidence",
+    "CLM-010": "demonstrated",
+    "CLM-011": "demonstrated",
+    "CLM-012": "fictional",
+    "CLM-013": "demonstrated",
+    "CLM-014": "demonstrated",
+    "CLM-015": "demonstrated",
+    "CLM-016": "demonstrated",
+    "CLM-017": "demonstrated",
+    "CLM-018": "fictional",
+    "CLM-019": "demonstrated",
+    "CLM-020": "owner-supplied",
+    "CLM-021": "proposed",
+    "CLM-022": "external",
+    "CLM-023": "owner-supplied",
+    "CLM-024": "owner-supplied",
+    "CLM-025": "owner-supplied",
+    "CLM-026": "proposed",
+    "CLM-027": "proposed",
+    "CLM-028": "fictional",
+    "CLM-029": "audited legacy evidence",
+    "CLM-030": "external"
+  },
+  "sourceMappings": [
+    {
+      "artifact": "competition/r1-draft/01_PROJECT_SUMMARY.txt",
+      "lineStart": 1,
+      "lineEnd": 1,
+      "claimIds": ["CLM-002", "CLM-005", "CLM-006"]
+    },
+    {
+      "artifact": "competition/r1-draft/01_PROJECT_SUMMARY.txt",
+      "lineStart": 3,
+      "lineEnd": 3,
+      "claimIds": ["CLM-007", "CLM-008", "CLM-009"]
+    },
+    {
+      "artifact": "competition/r1-draft/01_PROJECT_SUMMARY.txt",
+      "lineStart": 5,
+      "lineEnd": 5,
+      "claimIds": ["CLM-001"]
+    },
+    {
+      "artifact": "competition/r1-draft/01_PROJECT_SUMMARY.txt",
+      "lineStart": 7,
+      "lineEnd": 7,
+      "claimIds": ["CLM-010", "CLM-012", "CLM-013", "CLM-014", "CLM-026"]
+    },
+    {
+      "artifact": "competition/r1-draft/01_PROJECT_SUMMARY.txt",
+      "lineStart": 9,
+      "lineEnd": 9,
+      "claimIds": ["CLM-014", "CLM-015", "CLM-016", "CLM-017", "CLM-018", "CLM-019"]
+    },
+    {
+      "artifact": "competition/r1-draft/01_PROJECT_SUMMARY.txt",
+      "lineStart": 11,
+      "lineEnd": 11,
+      "claimIds": ["CLM-020", "CLM-022", "CLM-023", "CLM-025", "CLM-028"]
+    },
+    {
+      "artifact": "competition/r1-draft/02_AI_DISCLOSURE.txt",
+      "lineStart": 5,
+      "lineEnd": 5,
+      "claimIds": ["CLM-003", "CLM-004", "CLM-005"]
+    },
+    {
+      "artifact": "competition/r1-draft/02_AI_DISCLOSURE.txt",
+      "lineStart": 9,
+      "lineEnd": 9,
+      "claimIds": ["CLM-006", "CLM-007", "CLM-029"]
+    },
+    {
+      "artifact": "competition/r1-draft/02_AI_DISCLOSURE.txt",
+      "lineStart": 13,
+      "lineEnd": 13,
+      "claimIds": ["CLM-007", "CLM-008"]
+    },
+    {
+      "artifact": "competition/r1-draft/02_AI_DISCLOSURE.txt",
+      "lineStart": 17,
+      "lineEnd": 17,
+      "claimIds": ["CLM-009", "CLM-010", "CLM-012", "CLM-013", "CLM-014", "CLM-019"]
+    },
+    {
+      "artifact": "competition/r1-draft/02_AI_DISCLOSURE.txt",
+      "lineStart": 21,
+      "lineEnd": 21,
+      "claimIds": ["CLM-013", "CLM-022", "CLM-023", "CLM-028"]
+    },
+    {
+      "artifact": "competition/r1-draft/02_AI_DISCLOSURE.txt",
+      "lineStart": 25,
+      "lineEnd": 25,
+      "claimIds": ["CLM-024"]
+    },
+    {
+      "artifact": "competition/r1-draft/02_AI_DISCLOSURE.txt",
+      "lineStart": 29,
+      "lineEnd": 29,
+      "claimIds": ["CLM-001", "CLM-025"]
+    },
+    {
+      "artifact": "competition/r1-draft/06_DEMO_SCRIPT_3_MINUTES.md",
+      "lineStart": 3,
+      "lineEnd": 3,
+      "claimIds": ["CLM-001", "CLM-012", "CLM-025", "CLM-028"]
+    },
+    {
+      "artifact": "competition/r1-draft/06_DEMO_SCRIPT_3_MINUTES.md",
+      "lineStart": 7,
+      "lineEnd": 7,
+      "claimIds": ["CLM-001", "CLM-012", "CLM-025", "CLM-028"]
+    },
+    {
+      "artifact": "competition/r1-draft/06_DEMO_SCRIPT_3_MINUTES.md",
+      "lineStart": 8,
+      "lineEnd": 8,
+      "claimIds": ["CLM-011", "CLM-027"]
+    },
+    {
+      "artifact": "competition/r1-draft/06_DEMO_SCRIPT_3_MINUTES.md",
+      "lineStart": 9,
+      "lineEnd": 9,
+      "claimIds": ["CLM-012", "CLM-016"]
+    },
+    {
+      "artifact": "competition/r1-draft/06_DEMO_SCRIPT_3_MINUTES.md",
+      "lineStart": 10,
+      "lineEnd": 10,
+      "claimIds": ["CLM-010", "CLM-013", "CLM-016"]
+    },
+    {
+      "artifact": "competition/r1-draft/06_DEMO_SCRIPT_3_MINUTES.md",
+      "lineStart": 11,
+      "lineEnd": 11,
+      "claimIds": ["CLM-014"]
+    },
+    {
+      "artifact": "competition/r1-draft/06_DEMO_SCRIPT_3_MINUTES.md",
+      "lineStart": 12,
+      "lineEnd": 12,
+      "claimIds": ["CLM-015", "CLM-016"]
+    },
+    {
+      "artifact": "competition/r1-draft/06_DEMO_SCRIPT_3_MINUTES.md",
+      "lineStart": 13,
+      "lineEnd": 13,
+      "claimIds": ["CLM-010", "CLM-012", "CLM-017"]
+    },
+    {
+      "artifact": "competition/r1-draft/06_DEMO_SCRIPT_3_MINUTES.md",
+      "lineStart": 14,
+      "lineEnd": 14,
+      "claimIds": ["CLM-011", "CLM-019"]
+    },
+    {
+      "artifact": "competition/r1-draft/06_DEMO_SCRIPT_3_MINUTES.md",
+      "lineStart": 15,
+      "lineEnd": 15,
+      "claimIds": ["CLM-017", "CLM-018"]
+    },
+    {
+      "artifact": "competition/r1-draft/06_DEMO_SCRIPT_3_MINUTES.md",
+      "lineStart": 16,
+      "lineEnd": 16,
+      "claimIds": ["CLM-015", "CLM-025", "CLM-028"]
+    },
+    {
+      "artifact": "competition/r1-draft/06_DEMO_SCRIPT_3_MINUTES.md",
+      "lineStart": 20,
+      "lineEnd": 24,
+      "claimIds": ["CLM-001", "CLM-025", "CLM-027", "CLM-028"]
+    }
+  ],
+  "governanceSourcePolicies": {
+    "competition/r1-draft/03_CLAIM_LEDGER.md": {
+      "claimClass": "proposed",
+      "machineStatus": "MAPPED_GOVERNANCE_SOURCE_ONLY",
+      "scope": "Historical R1 claim-control wording only. Exact CLM rows retain their ledger evidence; surrounding approval rules and prohibited registers are governance context, not owner approval."
+    },
+    "competition/r1-draft/04_PROHIBITED_PHRASE_CHECK.md": {
+      "claimClass": "audited legacy evidence",
+      "machineStatus": "MAPPED_GOVERNANCE_SOURCE_ONLY",
+      "scope": "Historical R1 local prohibited-phrase and package review record only; it is not owner approval, public-release authority, or independent external validation."
+    },
+    "competition/r1-draft/05_DECK_10_SLIDE_CONTENT.md": {
+      "claimClass": "proposed",
+      "machineStatus": "MAPPED_GOVERNANCE_SOURCE_ONLY",
+      "scope": "Historical private R1 deck-source wording only. Slide-level CLM blocks are used when present; unmatched production instructions remain proposed governance context."
+    },
+    "competition/r1-draft/06_DEMO_SCRIPT_3_MINUTES.md": {
+      "claimClass": "proposed",
+      "machineStatus": "MAPPED_GOVERNANCE_SOURCE_ONLY",
+      "scope": "Historical private R1 rehearsal script only. Scene overlays map narration/evidence where defensible; fallback and rehearsal instructions are not proof of a recorded run."
+    },
+    "competition/r1-draft/07_JUDGE_QA.md": {
+      "claimClass": "proposed",
+      "machineStatus": "MAPPED_GOVERNANCE_SOURCE_ONLY",
+      "scope": "Historical private R1 answer and pressure-language preparation only. Row-level CLM references are used when present; no judge, owner, or external reviewer approval is inferred."
+    },
+    "competition/r1-draft/08_SUBMISSION_CHECKLIST.md": {
+      "claimClass": "proposed",
+      "machineStatus": "MAPPED_GOVERNANCE_SOURCE_ONLY",
+      "scope": "Private R1 checklist or gate wording only. Checked boxes are historical R1 assertions and unchecked boxes remain open; neither is current owner approval."
+    }
+  },
+  "candidateSubmissionGlobs": [
+    "**/*.txt",
+    "**/*.md",
+    "**/*.pdf",
+    "**/*.pptx"
+  ],
+  "candidateSubmissionExclusions": [
+    "competition/r1c-draft/00_CLAIM_TRACEABILITY_OVERLAY.md"
+  ],
+  "prohibitedContextClaimIds": {
+    "OFFICIAL_OUTPUTS": ["CLM-028"]
+  },
+  "defaultProhibitedStrongerWording": "Do not remove the stated scope, date, denominator, fictional/proposed label, limitation, or approval boundary; do not present the wording as production-wide, deployed, externally validated, owner-approved, submitted, or measured impact."
+}

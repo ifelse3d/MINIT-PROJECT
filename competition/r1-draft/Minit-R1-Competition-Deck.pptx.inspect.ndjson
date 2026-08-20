@@ -1,0 +1,181 @@
+{"kind":"deck","id":"pr/294gz5","name":"Deck"}
+{"kind":"layout","layoutId":"/ppt/slideMasters/slideMaster1.xml","name":"","type":"master"}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout1.xml","name":"DEFAULT"}
+{"kind":"slide","id":"sl/y90nupkv","slide":1,"title":"Minit","textShapes":5}
+{"kind":"shape","id":"sh/547294r6","slide":1,"name":"Shape 0","bbox":[426.24,97.92,21.12,21.12]}
+{"kind":"shape","id":"sh/k3yl0zql","slide":1,"name":"Shape 1","bbox":[458.98,97.92,21.12,21.12]}
+{"kind":"shape","id":"sh/7qp4be9c","slide":1,"name":"Shape 2","bbox":[491.71,97.92,21.12,21.12]}
+{"kind":"textbox","id":"sh/65g3298r","slide":1,"name":"Text 3","text":"Minit","textPreview":"Minit","textChars":5,"textLines":1,"bbox":[48,136.32,864,100.8]}
+{"kind":"textbox","id":"sh/ts7md4r2","slide":1,"name":"Text 4","text":"Human-verified community\nrequest → resolution","textPreview":"Human-verified community | request → resolution","textChars":45,"textLines":2,"bbox":[115.2,251.52,729.6,81.6]}
+{"kind":"textbox","id":"sh/sryl4zqx","slide":1,"name":"Text 5","text":"AI proposes • named humans decide • the audit trail remembers","textPreview":"AI proposes • named humans decide • the audit trail remembers","textChars":61,"textLines":1,"bbox":[115.2,347.52,729.6,33.6]}
+{"kind":"textbox","id":"sh/fu94fe98","slide":1,"name":"Text 6","text":"PROPOSED • FICTIONAL DATA\nMAIC Nexus Challenge — T5","textPreview":"PROPOSED • FICTIONAL DATA | MAIC Nexus Challenge — T5","textChars":51,"textLines":2,"bbox":[115.2,410.88,729.6,28.8]}
+{"kind":"shape","id":"sh/utg3698n","slide":1,"name":"Text 7","bbox":[115.2,453.12,729.6,28.8]}
+{"kind":"textbox","id":"sh/wn6dc7eh","slide":1,"name":"R1 Boundary Footer","text":"Fictional competition demo — proposed workflow, not production","textPreview":"Fictional competition demo — proposed workflow, not production","textChars":62,"textLines":1,"bbox":[115.2,500,729.6,18]}
+{"kind":"notes","id":"nt/y90nupkv","slide":1,"text":"Minit is an early-stage civic-operations MVP. R1 does not present a deployment; it presents one inspectable proposed workflow using fictional data. The beneficiary is a community member whose low-risk request must survive multilingual handoffs without granting AI decision authority.\nClaim IDs: CLM-001, CLM-002, CLM-026.\n[Sources]\n- MINIT_R1_CODEX_MASTER_PROMPT.md §§4–6\n- remediation-output/R0_03_COMPETITION_CLAIM_RESET.md\n- remediation-output/R0_05_T5_HERO_WORKFLOW_DESIGN.md"}
+{"kind":"slide","id":"sl/hwbqtkby","slide":2,"title":"PROPOSED • FICTIONAL DATA","textShapes":6}
+{"kind":"textbox","id":"sh/9072xkry","slide":2,"name":"Text 0","text":"PROPOSED • FICTIONAL DATA","textPreview":"PROPOSED • FICTIONAL DATA","textChars":25,"textLines":1,"bbox":[48,30.72,710.4,28.8]}
+{"kind":"textbox","id":"sh/ozy1ofad","slide":2,"name":"Text 1","text":"The civic handoff we are testing","textPreview":"The civic handoff we are testing","textChars":32,"textLines":1,"bbox":[48,55.68,806.4,72]}
+{"kind":"shape","id":"sh/b29kza94","slide":2,"name":"Shape 2","bbox":[868.8,40.32,10.56,10.56]}
+{"kind":"shape","id":"sh/a10jqpsj","slide":2,"name":"Shape 3","bbox":[885.17,40.32,10.56,10.56]}
+{"kind":"shape","id":"sh/x4r21kru","slide":2,"name":"Shape 4","bbox":[901.54,40.32,10.56,10.56]}
+{"kind":"textbox","id":"sh/w3i1sfa9","slide":2,"name":"Text 5","text":"Multilingual requests can lose context across volunteer handoffs.\nAcknowledgement, assignment and outcome need one reconstructable record.\nOne fixed low-risk request lets reviewers inspect authority, language, failure and isolation.\nNo prevalence, adoption or impact claim is made.","textPreview":"Multilingual requests can lose context across volunteer handoffs. | Acknowledgement, assignment and outcome need one reconstructable reco...","textChars":281,"textLines":4,"bbox":[48,148.8,513.6,336]}
+{"kind":"shape","id":"sh/r65knqtk","slide":2,"name":"Shape 6","bbox":[595.2,148.8,316.8,144]}
+{"kind":"textbox","id":"sh/q5wjelsz","slide":2,"name":"Text 7","text":"SYNTHETIC DEMO RECORD\nBroken walkway light beside Dewan Komuniti Seri Damai","textPreview":"SYNTHETIC DEMO RECORD | Broken walkway light beside Dewan Komuniti Seri Damai","textChars":75,"textLines":2,"bbox":[614.4,161.28,278.4,124.8]}
+{"kind":"shape","id":"sh/ove9o7yd","slide":2,"name":"Shape 8","bbox":[595.2,321.6,316.8,144]}
+{"kind":"textbox","id":"sh/9wnqhczy","slide":2,"name":"Text 9","text":"EXCLUDED\nEmergencies • contacts • payments • official filings • real delivery","textPreview":"EXCLUDED | Emergencies • contacts • payments • official filings • real delivery","textChars":77,"textLines":2,"bbox":[614.4,334.08,278.4,124.8]}
+{"kind":"textbox","id":"sh/mtwrmxg7","slide":2,"name":"R1 Boundary Footer","text":"Fictional competition demo — proposed workflow, not production","textPreview":"Fictional competition demo — proposed workflow, not production","textChars":62,"textLines":1,"bbox":[48,518,864,14]}
+{"kind":"notes","id":"nt/hwbqtkby","slide":2,"text":"This is a problem hypothesis, not a measured prevalence or impact claim. The fixed low-risk scenario lets reviewers inspect authority, language, failure and isolation boundaries without real people or production records.\nClaim IDs: CLM-001, CLM-012, CLM-026, CLM-028.\n[Sources]\n- MINIT_R1_CODEX_MASTER_PROMPT.md §6 Required flow\n- remediation-output/R0_05_T5_HERO_WORKFLOW_DESIGN.md"}
+{"kind":"slide","id":"sl/ofy9wn61","slide":3,"title":"PROPOSED • FICTIONAL DATA","textShapes":7}
+{"kind":"textbox","id":"sh/cza94vmx","slide":3,"name":"Text 0","text":"PROPOSED • FICTIONAL DATA","textPreview":"PROPOSED • FICTIONAL DATA","textChars":25,"textLines":1,"bbox":[48,30.72,710.4,28.8]}
+{"kind":"textbox","id":"sh/d0jax03i","slide":3,"name":"Text 1","text":"One fictional request, end to end","textPreview":"One fictional request, end to end","textChars":33,"textLines":1,"bbox":[48,55.68,806.4,72]}
+{"kind":"shape","id":"sh/298ryl4v","slide":3,"name":"Shape 2","bbox":[868.8,40.32,10.56,10.56]}
+{"kind":"shape","id":"sh/3ah8rqlg","slide":3,"name":"Shape 3","bbox":[885.17,40.32,10.56,10.56]}
+{"kind":"shape","id":"sh/obq90bml","slide":3,"name":"Shape 4","bbox":[901.54,40.32,10.56,10.56]}
+{"kind":"shape","id":"sh/pcjqtg36","slide":3,"name":"Shape 5","bbox":[48,163.2,259.2,168]}
+{"kind":"textbox","id":"sh/m5cra54z","slide":3,"name":"Text 6","text":"Intake\nreceived → triage_proposed → awaiting human review","textPreview":"Intake | received → triage_proposed → awaiting human review","textChars":57,"textLines":2,"bbox":[69.12,180.48,217.92,134.4]}
+{"kind":"shape","id":"sh/n6ls3alk","slide":3,"name":"Shape 7","bbox":[310.08,247.68,40.32,0]}
+{"kind":"shape","id":"sh/n2l4fq98","slide":3,"name":"Shape 8","bbox":[353.28,163.2,259.2,168]}
+{"kind":"textbox","id":"sh/m1c3mlsn","slide":3,"name":"Text 9","text":"Human authority\nverified → assigned → in_progress","textPreview":"Human authority | verified → assigned → in_progress","textChars":49,"textLines":2,"bbox":[374.4,180.48,217.92,134.4]}
+{"kind":"shape","id":"sh/943mhgre","slide":3,"name":"Shape 10","bbox":[615.36,247.68,40.32,0]}
+{"kind":"shape","id":"sh/83ulovat","slide":3,"name":"Shape 11","bbox":[658.56,163.2,259.2,168]}
+{"kind":"textbox","id":"sh/v6l4jq94","slide":3,"name":"Text 12","text":"Outcome\nresolution_proposed → resolved → closed or reopened","textPreview":"Outcome | resolution_proposed → resolved → closed or reopened","textChars":59,"textLines":2,"bbox":[679.68,180.48,217.92,134.4]}
+{"kind":"shape","id":"sh/ja54na9g","slide":3,"name":"Shape 6","bbox":[50.4,399.6,856.8,82.8]}
+{"kind":"textbox","id":"sh/e10f2twf","slide":3,"name":"Text 7","text":"Every command: idempotency key + expected version • locales: ms • en • zh-Hans","textPreview":"Every command: idempotency key + expected version • locales: ms • en • zh-Hans","textChars":78,"textLines":1,"bbox":[72,399.6,813.6,82.8]}
+{"kind":"textbox","id":"sh/f29gbyx0","slide":3,"name":"R1 Boundary Footer","text":"Fictional competition demo — proposed workflow, not production","textPreview":"Fictional competition demo — proposed workflow, not production","textChars":62,"textLines":1,"bbox":[48,518,864,14]}
+{"kind":"notes","id":"nt/ofy9wn61","slide":3,"text":"The server, not the browser, enforces this path. AI can create the triage proposal only. A duplicate request or lost-response retry reuses its idempotency key; a stale expected version fails rather than overwriting a newer decision.\nClaim IDs: CLM-001, CLM-010, CLM-011, CLM-012, CLM-016.\n[Sources]\n- MINIT_R1_CODEX_MASTER_PROMPT.md §§4, 6 State rules\n- remediation-output/R0_05_T5_HERO_WORKFLOW_DESIGN.md\n- r1-output/05_FUNCTIONAL_TEST_RESULTS.md\n- r1-output/06_SECURITY_AND_ISOLATION_RESULTS.md"}
+{"kind":"slide","id":"sl/jyx0ra1s","slide":4,"title":"PROPOSED • FICTIONAL DATA","textShapes":12}
+{"kind":"textbox","id":"sh/1cj2d8b6","slide":4,"name":"Text 0","text":"PROPOSED • FICTIONAL DATA","textPreview":"PROPOSED • FICTIONAL DATA","textChars":25,"textLines":1,"bbox":[48,30.72,710.4,28.8]}
+{"kind":"textbox","id":"sh/0ba143al","slide":4,"name":"Text 1","text":"AI proposes. Humans decide.","textPreview":"AI proposes. Humans decide.","textChars":27,"textLines":1,"bbox":[48,55.68,806.4,72]}
+{"kind":"shape","id":"sh/rm1k7yt4","slide":4,"name":"Shape 2","bbox":[868.8,40.32,10.56,10.56]}
+{"kind":"shape","id":"sh/ql8jytsj","slide":4,"name":"Shape 3","bbox":[885.17,40.32,10.56,10.56]}
+{"kind":"shape","id":"sh/doj29oba","slide":4,"name":"Shape 4","bbox":[901.54,40.32,10.56,10.56]}
+{"kind":"shape","id":"sh/sna103ap","slide":4,"name":"Shape 5","bbox":[48,153.6,268.8,316.8]}
+{"kind":"shape","id":"sh/3ihk3et8","slide":4,"name":"Shape 6","bbox":[72,182.4,40.32,40.32]}
+{"kind":"textbox","id":"sh/ih8ju9sn","slide":4,"name":"Text 7","text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[72,182.4,40.32,40.32]}
+{"kind":"textbox","id":"sh/kbm987y5","slide":4,"name":"Text 8","text":"AI proposal","textPreview":"AI proposal","textChars":11,"textLines":1,"bbox":[72,240,220.8,62.4]}
+{"kind":"textbox","id":"sh/5cva1cfq","slide":4,"name":"Text 9","text":"Deterministic demo fixture — no live model call.\nCategory, urgency, location, missing info and summary. Every field: UNVERIFIED.","textPreview":"Deterministic demo fixture — no live model call. | Category, urgency, location, missing info and summary. Every field: UNVERIFIED.","textChars":128,"textLines":2,"bbox":[72,305.28,220.8,148.8]}
+{"kind":"shape","id":"sh/i94r6xgz","slide":4,"name":"Shape 10","bbox":[345.6,153.6,268.8,316.8]}
+{"kind":"shape","id":"sh/jadsz2xk","slide":4,"name":"Shape 11","bbox":[369.6,182.4,40.32,40.32]}
+{"kind":"textbox","id":"sh/w72947yt","slide":4,"name":"Text 12","text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[369.6,182.4,40.32,40.32]}
+{"kind":"textbox","id":"sh/x8vaxsfe","slide":4,"name":"Text 13","text":"Named human review","textPreview":"Named human review","textChars":18,"textLines":1,"bbox":[369.6,240,220.8,62.4]}
+{"kind":"textbox","id":"sh/a5kr2xg3","slide":4,"name":"Text 14","text":"Source and proposal remain side by side. Aina Rahman changes high → normal and records why. Server supplies actor and time.","textPreview":"Source and proposal remain side by side. Aina Rahman changes high → normal and records why. Server supplies actor and time.","textChars":123,"textLines":1,"bbox":[369.6,305.28,220.8,148.8]}
+{"kind":"shape","id":"sh/v6tsv2xo","slide":4,"name":"Shape 15","bbox":[643.2,153.6,268.8,316.8]}
+{"kind":"shape","id":"sh/g36tgryd","slide":4,"name":"Shape 16","bbox":[667.2,182.4,40.32,40.32]}
+{"kind":"textbox","id":"sh/h4fa9wfy","slide":4,"name":"Text 17","text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[667.2,182.4,40.32,40.32]}
+{"kind":"textbox","id":"sh/p0batw72","slide":4,"name":"Text 18","text":"External action","textPreview":"External action","textChars":15,"textLines":1,"bbox":[667.2,240,220.8,62.4]}
+{"kind":"textbox","id":"sh/oz29krqh","slide":4,"name":"Text 19","text":"Only approved verified facts feed the preview. Simulate send only. No message is sent or delivered.","textPreview":"Only approved verified facts feed the preview. Simulate send only. No message is sent or delivered.","textChars":99,"textLines":1,"bbox":[667.2,305.28,220.8,148.8]}
+{"kind":"textbox","id":"sh/3ytsrmpw","slide":4,"name":"R1 Boundary Footer","text":"Fictional competition demo — proposed workflow, not production","textPreview":"Fictional competition demo — proposed workflow, not production","textChars":62,"textLines":1,"bbox":[48,518,864,14]}
+{"kind":"notes","id":"nt/jyx0ra1s","slide":4,"text":"The fixture structures the request but is not authority. Fictional reviewer Aina Rahman compares the source, corrects urgency and approves an exact version. The client cannot supply reviewer identity or approval time.\nClaim IDs: CLM-001, CLM-010, CLM-013, CLM-014, CLM-019.\n[Sources]\n- MINIT_R1_CODEX_MASTER_PROMPT.md §§4, 6 Required flow\n- competition/r1-draft/03_CLAIM_LEDGER.md\n- src/lib/r1-demo/engine.test.ts\n- src/app/api/competition-demo/community-request/route.test.ts"}
+{"kind":"slide","id":"sl/i107q5of","slide":5,"title":"PROPOSED • FICTIONAL DATA","textShapes":10}
+{"kind":"textbox","id":"sh/dgbulwnm","slide":5,"name":"Text 0","text":"PROPOSED • FICTIONAL DATA","textPreview":"PROPOSED • FICTIONAL DATA","textChars":25,"textLines":1,"bbox":[48,30.72,710.4,28.8]}
+{"kind":"textbox","id":"sh/cf2tcr61","slide":5,"name":"Text 1","text":"Authority stays server-side","textPreview":"Authority stays server-side","textChars":27,"textLines":1,"bbox":[48,55.68,806.4,72]}
+{"kind":"shape","id":"sh/z2tcnm5s","slide":5,"name":"Shape 2","bbox":[868.8,40.32,10.56,10.56]}
+{"kind":"shape","id":"sh/yhkbe1o7","slide":5,"name":"Shape 3","bbox":[885.17,40.32,10.56,10.56]}
+{"kind":"shape","id":"sh/l4bupwny","slide":5,"name":"Shape 4","bbox":[901.54,40.32,10.56,10.56]}
+{"kind":"shape","id":"sh/032tgr6d","slide":5,"name":"Shape 5","bbox":[48,225.6,129.6,110.4]}
+{"kind":"textbox","id":"sh/n6dcr65o","slide":5,"name":"Text 6","text":"Request\nreceived","textPreview":"Request | received","textChars":16,"textLines":2,"bbox":[53.76,231.36,118.08,98.88]}
+{"kind":"shape","id":"sh/m5kbi1oj","slide":5,"name":"Shape 7","bbox":[178.56,280.32,17.28,0]}
+{"kind":"shape","id":"sh/w32dkbuh","slide":5,"name":"Shape 8","bbox":[196.8,225.6,129.6,110.4]}
+{"kind":"textbox","id":"sh/x4vedgvm","slide":5,"name":"Text 9","text":"AI\ntriage proposed","textPreview":"AI | triage proposed","textChars":18,"textLines":2,"bbox":[202.56,231.36,118.08,98.88]}
+{"kind":"shape","id":"sh/ahkvi1cb","slide":5,"name":"Shape 10","bbox":[327.36,280.32,17.28,0]}
+{"kind":"shape","id":"sh/v2twb6dw","slide":5,"name":"Shape 11","bbox":[345.6,225.6,129.6,110.4]}
+{"kind":"textbox","id":"sh/k7mxovud","slide":5,"name":"Text 12","text":"Human\nverified","textPreview":"Human | verified","textChars":14,"textLines":2,"bbox":[351.36,231.36,118.08,98.88]}
+{"kind":"shape","id":"sh/58vehgvy","slide":5,"name":"Shape 13","bbox":[476.16,280.32,17.28,0]}
+{"kind":"shape","id":"sh/i54fmlc7","slide":5,"name":"Shape 14","bbox":[494.4,225.6,129.6,110.4]}
+{"kind":"textbox","id":"sh/j6dwfqds","slide":5,"name":"Text 15","text":"Dispatch\nassigned","textPreview":"Dispatch | assigned","textChars":17,"textLines":2,"bbox":[500.16,231.36,118.08,98.88]}
+{"kind":"shape","id":"sh/sb6xsvu9","slide":5,"name":"Shape 16","bbox":[624.96,280.32,17.28,0]}
+{"kind":"shape","id":"sh/tcfel0vu","slide":5,"name":"Shape 17","bbox":[643.2,225.6,129.6,110.4]}
+{"kind":"textbox","id":"sh/hgrmpwj2","slide":5,"name":"Text 18","text":"Resolve\nproposed → resolved","textPreview":"Resolve | proposed → resolved","textChars":27,"textLines":2,"bbox":[648.96,231.36,118.08,98.88]}
+{"kind":"shape","id":"sh/gfi5grih","slide":5,"name":"Shape 19","bbox":[773.76,280.32,17.28,0]}
+{"kind":"shape","id":"sh/fe94nm1w","slide":5,"name":"Shape 20","bbox":[792,225.6,129.6,110.4]}
+{"kind":"textbox","id":"sh/ud0ne10b","slide":5,"name":"Text 21","text":"Outcome\nclosed or reopened","textPreview":"Outcome | closed or reopened","textChars":26,"textLines":2,"bbox":[797.76,231.36,118.08,98.88]}
+{"kind":"textbox","id":"sh/pkr6tgjy","slide":5,"name":"Text 22","text":"Opaque session • tenant and role resolved on server • no raw tenant chooser • illegal transitions denied + safe event • second session and unrelated tenant denied in isolated direct-access tests.","textPreview":"Opaque session • tenant and role resolved on server • no raw tenant chooser • illegal transitions denied + safe event • second session an...","textChars":195,"textLines":1,"bbox":[48,379.2,868.8,91.2]}
+{"kind":"shape","id":"sh/4ji5kbid","slide":5,"name":"Text 23","bbox":[48,480,868.8,28.8]}
+{"kind":"textbox","id":"sh/3i94r61s","slide":5,"name":"R1 Boundary Footer","text":"Fictional competition demo — proposed workflow, not production","textPreview":"Fictional competition demo — proposed workflow, not production","textChars":62,"textLines":1,"bbox":[48,518,864,14]}
+{"kind":"notes","id":"nt/i107q5of","slide":5,"text":"This is scoped evidence for the isolated route only. The browser sends an action, idempotency key and expected version; it does not select tenant, actor or approval time. Passing R1 denial tests does not establish production-safe multi-tenancy for the legacy MVP.\nClaim IDs: CLM-001, CLM-015, CLM-016, CLM-017, CLM-025.\n[Sources]\n- MINIT_R1_CODEX_MASTER_PROMPT.md §§4, 6 Role and tenant decisions\n- remediation-output/R0_07_ACCEPTANCE_TEST_PLAN.md SEC-001/003/005/012\n- r1-output/06_SECURITY_AND_ISOLATION_RESULTS.md"}
+{"kind":"slide","id":"sl/x8f69ofe","slide":6,"title":"PROPOSED • FICTIONAL DATA","textShapes":7}
+{"kind":"textbox","id":"sh/yhg7epsj","slide":6,"name":"Text 0","text":"PROPOSED • FICTIONAL DATA","textPreview":"PROPOSED • FICTIONAL DATA","textChars":25,"textLines":1,"bbox":[48,30.72,710.4,28.8]}
+{"kind":"textbox","id":"sh/zi98nu94","slide":6,"name":"Text 1","text":"Resolution is proposed, then verified","textPreview":"Resolution is proposed, then verified","textChars":37,"textLines":1,"bbox":[48,55.68,806.4,72]}
+{"kind":"shape","id":"sh/87ipkzal","slide":6,"name":"Shape 2","bbox":[868.8,40.32,10.56,10.56]}
+{"kind":"shape","id":"sh/98rqt4r6","slide":6,"name":"Shape 3","bbox":[885.17,40.32,10.56,10.56]}
+{"kind":"shape","id":"sh/ml07i9sv","slide":6,"name":"Shape 4","bbox":[901.54,40.32,10.56,10.56]}
+{"kind":"shape","id":"sh/7m98ru9g","slide":6,"name":"Shape 5","bbox":[48,148.8,422.4,136.32]}
+{"kind":"textbox","id":"sh/oryp8fah","slide":6,"name":"Text 6","text":"Dispatcher gate\nKumar Velu assigns only after human verification. Server enforces role, state and version.","textPreview":"Dispatcher gate | Kumar Velu assigns only after human verification. Server enforces role, state and version.","textChars":106,"textLines":2,"bbox":[67.2,158.4,384,119.04]}
+{"kind":"shape","id":"sh/pc76hkr2","slide":6,"name":"Shape 7","bbox":[494.4,148.8,422.4,136.32]}
+{"kind":"textbox","id":"sh/h4bupgn6","slide":6,"name":"Text 8","text":"Minimum necessary view\nMei Lin sees the synthetic case, records the repair and proposes resolution. She cannot close.","textPreview":"Minimum necessary view | Mei Lin sees the synthetic case, records the repair and proposes resolution. She cannot close.","textChars":117,"textLines":2,"bbox":[513.6,158.4,384,119.04]}
+{"kind":"shape","id":"sh/w32twb6l","slide":6,"name":"Shape 9","bbox":[48,312,422.4,136.32]}
+{"kind":"textbox","id":"sh/v2tcn650","slide":6,"name":"Text 10","text":"Separate approval\nSiti Noor verifies evidence and exact version before the request becomes resolved.","textPreview":"Separate approval | Siti Noor verifies evidence and exact version before the request becomes resolved.","textChars":100,"textLines":2,"bbox":[67.2,321.6,384,119.04]}
+{"kind":"shape","id":"sh/u1kbu1ov","slide":6,"name":"Shape 11","bbox":[494.4,312,422.4,136.32]}
+{"kind":"textbox","id":"sh/5svutgni","slide":6,"name":"Text 12","text":"Append-only history\nPrior events remain. Corrections append later events; user roles cannot rewrite the trail.","textPreview":"Append-only history | Prior events remain. Corrections append later events; user roles cannot rewrite the trail.","textChars":110,"textLines":2,"bbox":[513.6,321.6,384,119.04]}
+{"kind":"shape","id":"sh/47mt0b6x","slide":6,"name":"Text 13","bbox":[48,472.32,868.8,43.2]}
+{"kind":"textbox","id":"sh/j6dcr65c","slide":6,"name":"R1 Boundary Footer","text":"Fictional competition demo — proposed workflow, not production","textPreview":"Fictional competition demo — proposed workflow, not production","textChars":62,"textLines":1,"bbox":[48,518,864,14]}
+{"kind":"notes","id":"nt/x8f69ofe","slide":6,"text":"A resolver can record progress and propose an outcome but cannot close directly. A separate fictional approver retains the evidence and exact version. This demonstrates role separation in a disposable fictional store, not a product-grade operational claim.\nClaim IDs: CLM-001, CLM-010, CLM-012, CLM-016, CLM-017.\n[Sources]\n- MINIT_R1_CODEX_MASTER_PROMPT.md §6 Required flow and State rules\n- remediation-output/R0_05_T5_HERO_WORKFLOW_DESIGN.md\n- src/lib/r1-demo/engine.test.ts\n- r1-output/05_FUNCTIONAL_TEST_RESULTS.md"}
+{"kind":"slide","id":"sl/gnmp4jqx","slide":7,"title":"PROPOSED • FICTIONAL DATA","textShapes":12}
+{"kind":"shape","id":"sh/cb2tkvap","slide":7,"name":"Shape 0","bbox":[856.8,32.4,11.52,11.52]}
+{"kind":"shape","id":"sh/dcbud0ra","slide":7,"name":"Shape 1","bbox":[876.96,32.4,11.52,11.52]}
+{"kind":"shape","id":"sh/ydkbm5sv","slide":7,"name":"Shape 2","bbox":[897.12,32.4,11.52,11.52]}
+{"kind":"textbox","id":"sh/zedcfa9g","slide":7,"name":"Text 3","text":"PROPOSED • FICTIONAL DATA","textPreview":"PROPOSED • FICTIONAL DATA","textChars":25,"textLines":1,"bbox":[50.4,36,648,28.8]}
+{"kind":"textbox","id":"sh/kzmdova1","slide":7,"name":"Text 4","text":"Three explicit locales — one stored contract","textPreview":"Three explicit locales — one stored contract","textChars":44,"textLines":1,"bbox":[50.4,68.4,864,72]}
+{"kind":"shape","id":"sh/l0vuh0rm","slide":7,"name":"Shape 5","bbox":[50.4,162,39.6,39.6]}
+{"kind":"textbox","id":"sh/eh0ba1sr","slide":7,"name":"Text 6","text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[50.4,162,39.6,39.6]}
+{"kind":"textbox","id":"sh/fi9c369c","slide":7,"name":"Text 7","text":"Select ms, en or zh-Hans; the server stores the BCP 47 locale.","textPreview":"Select ms, en or zh-Hans; the server stores the BCP 47 locale.","textChars":62,"textLines":1,"bbox":[104.4,156.24,792,50.4]}
+{"kind":"shape","id":"sh/baxkjqlk","slide":7,"name":"Shape 8","bbox":[50.4,228.24,39.6,39.6]}
+{"kind":"textbox","id":"sh/a9ojq5kz","slide":7,"name":"Text 9","text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[50.4,228.24,39.6,39.6]}
+{"kind":"textbox","id":"sh/xcz2l03q","slide":7,"name":"Text 10","text":"Preserve the original requester text and the verified fact set.","textPreview":"Preserve the original requester text and the verified fact set.","textChars":63,"textLines":1,"bbox":[104.4,222.48,792,50.4]}
+{"kind":"shape","id":"sh/cbq1sv25","slide":7,"name":"Shape 11","bbox":[50.4,294.48,39.6,39.6]}
+{"kind":"textbox","id":"sh/n6x0fqlo","slide":7,"name":"Text 12","text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[50.4,294.48,39.6,39.6]}
+{"kind":"textbox","id":"sh/25ojml43","slide":7,"name":"Text 13","text":"Render the response preview from verified facts in the stored locale.","textPreview":"Render the response preview from verified facts in the stored locale.","textChars":69,"textLines":1,"bbox":[104.4,288.72,792,50.4]}
+{"kind":"shape","id":"sh/p8fih03e","slide":7,"name":"Shape 14","bbox":[50.4,360.72,39.6,39.6]}
+{"kind":"textbox","id":"sh/o761ov2t","slide":7,"name":"Text 15","text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[50.4,360.72,39.6,39.6]}
+{"kind":"textbox","id":"sh/f2d0b6lc","slide":7,"name":"Text 16","text":"Named human approval + Simulate send. zh-Hant is future work, not claimed.","textPreview":"Named human approval + Simulate send. zh-Hant is future work, not claimed.","textChars":74,"textLines":1,"bbox":[104.4,354.96,792,50.4]}
+{"kind":"shape","id":"sh/eh4jil4r","slide":7,"name":"Shape 17","bbox":[50.4,442.8,856.8,54]}
+{"kind":"textbox","id":"sh/id4ju1oz","slide":7,"name":"Text 18","text":"SYNTHETIC DEMO RECORD • WCAG 2.2 AA TARGET • native/domain sign-off still required","textPreview":"SYNTHETIC DEMO RECORD • WCAG 2.2 AA TARGET • native/domain sign-off still required","textChars":82,"textLines":1,"bbox":[72,442.8,813.6,54]}
+{"kind":"textbox","id":"sh/jedkn654","slide":7,"name":"R1 Boundary Footer","text":"Fictional competition demo — proposed workflow, not production","textPreview":"Fictional competition demo — proposed workflow, not production","textChars":62,"textLines":1,"bbox":[48,518,864,14]}
+{"kind":"notes","id":"nt/gnmp4jqx","slide":7,"text":"R1 names the BCP 47 variants instead of claiming generic Chinese support. The server stores the requester-selected locale and the preview uses verified facts in that locale. Native/domain sign-off remains required before public release.\nClaim IDs: CLM-001, CLM-011, CLM-019, CLM-027.\n[Sources]\n- MINIT_R1_CODEX_MASTER_PROMPT.md §§4, 6 Language\n- remediation-output/R0_07_ACCEPTANCE_TEST_PLAN.md LANG-001/002/004\n- src/app/api/competition-demo/community-request/route.test.ts\n- r1-output/07_LANGUAGE_ACCESSIBILITY_MOBILE_RESULTS.md"}
+{"kind":"slide","id":"sl/fu1gfa1s","slide":8,"title":"PROPOSED • FICTIONAL DATA","textShapes":12}
+{"kind":"textbox","id":"sh/18byd4zy","slide":8,"name":"Text 0","text":"PROPOSED • FICTIONAL DATA","textPreview":"PROPOSED • FICTIONAL DATA","textChars":25,"textLines":1,"bbox":[48,30.72,710.4,28.8]}
+{"kind":"textbox","id":"sh/g72x4zyd","slide":8,"name":"Text 1","text":"Evidence, not adjectives","textPreview":"Evidence, not adjectives","textChars":24,"textLines":1,"bbox":[48,55.68,806.4,72]}
+{"kind":"shape","id":"sh/ri9g7uhw","slide":8,"name":"Shape 2","bbox":[868.8,40.32,10.56,10.56]}
+{"kind":"shape","id":"sh/6h0fypgb","slide":8,"name":"Shape 3","bbox":[885.17,40.32,10.56,10.56]}
+{"kind":"shape","id":"sh/tkby9kzm","slide":8,"name":"Shape 4","bbox":[901.54,40.32,10.56,10.56]}
+{"kind":"shape","id":"sh/sjix0zy1","slide":8,"name":"Shape 5","bbox":[48,153.6,268.8,316.8]}
+{"kind":"shape","id":"sh/je9g3ahk","slide":8,"name":"Shape 6","bbox":[72,182.4,40.32,40.32]}
+{"kind":"textbox","id":"sh/id0fu50z","slide":8,"name":"Text 7","text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[72,182.4,40.32,40.32]}
+{"kind":"textbox","id":"sh/o7ydoret","slide":8,"name":"Text 8","text":"Audited model result","textPreview":"Audited model result","textChars":20,"textLines":1,"bbox":[72,240,220.8,62.4]}
+{"kind":"textbox","id":"sh/98rehwve","slide":8,"name":"Text 9","text":"9 Aug 2026 • Gemini gemini-3.5-flash-lite\n117 / 125 fields • 10 synthetic typeset fixtures\nZero scored invented under repository method.","textPreview":"9 Aug 2026 • Gemini gemini-3.5-flash-lite | 117 / 125 fields • 10 synthetic typeset fixtures | Zero scored invented under repository method.","textChars":136,"textLines":3,"bbox":[72,305.28,220.8,148.8]}
+{"kind":"shape","id":"sh/m5gvmhwn","slide":8,"name":"Shape 10","bbox":[345.6,153.6,268.8,316.8]}
+{"kind":"shape","id":"sh/n6pwfmd8","slide":8,"name":"Shape 11","bbox":[369.6,182.4,40.32,40.32]}
+{"kind":"textbox","id":"sh/0jydkreh","slide":8,"name":"Text 12","text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[369.6,182.4,40.32,40.32]}
+{"kind":"textbox","id":"sh/1k7edwv2","slide":8,"name":"Text 13","text":"Hard limits","textPreview":"Hard limits","textChars":11,"textLines":1,"bbox":[369.6,240,220.8,62.4]}
+{"kind":"textbox","id":"sh/ehgvihwr","slide":8,"name":"Text 14","text":"Not handwriting • not grounding proof • not a hallucination guarantee. Provider terms and deployment equivalence unverified.","textPreview":"Not handwriting • not grounding proof • not a hallucination guarantee. Provider terms and deployment equivalence unverified.","textChars":124,"textLines":1,"bbox":[369.6,305.28,220.8,148.8]}
+{"kind":"shape","id":"sh/zipwbmdc","slide":8,"name":"Shape 15","bbox":[643.2,153.6,268.8,316.8]}
+{"kind":"shape","id":"sh/kfixwbe1","slide":8,"name":"Shape 16","bbox":[667.2,182.4,40.32,40.32]}
+{"kind":"textbox","id":"sh/lgbepgvm","slide":8,"name":"Text 17","text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[667.2,182.4,40.32,40.32]}
+{"kind":"textbox","id":"sh/tw7e9gnq","slide":8,"name":"Text 18","text":"R1 isolated proof","textPreview":"R1 isolated proof","textChars":17,"textLines":1,"bbox":[667.2,240,220.8,62.4]}
+{"kind":"textbox","id":"sh/svydgb65","slide":8,"name":"Text 19","text":"Server-bound state • ordered events • retry/version tests • synthetic metrics • session/tenant denials.","textPreview":"Server-bound state • ordered events • retry/version tests • synthetic metrics • session/tenant denials.","textChars":103,"textLines":1,"bbox":[667.2,305.28,220.8,148.8]}
+{"kind":"textbox","id":"sh/7u5w765k","slide":8,"name":"R1 Boundary Footer","text":"Fictional competition demo — proposed workflow, not production","textPreview":"Fictional competition demo — proposed workflow, not production","textChars":62,"textLines":1,"bbox":[48,518,864,14]}
+{"kind":"notes","id":"nt/fu1gfa1s","slide":8,"text":"The extraction number is a dated, small, stochastic typeset-fixture result. It does not answer a handwriting question. R1 adds separate evidence about human authority, events, retries, locale and isolation in a fictional demo.\nClaim IDs: CLM-001, CLM-003, CLM-004, CLM-005, CLM-006, CLM-007, CLM-013, CLM-017, CLM-018.\n[Sources]\n- audit-output/_evidence/ai-live-eval/current-run.md\n- audit-output/04_AI_LOAD_BEARING_AUDIT.md\n- audit-output/14_AI_DISCLOSURE_FACT_BASE.md\n- r1-output/05_FUNCTIONAL_TEST_RESULTS.md\n- r1-output/06_SECURITY_AND_ISOLATION_RESULTS.md"}
+{"kind":"slide","id":"sl/udsvah03","slide":9,"title":"PROPOSED • FICTIONAL DATA","textShapes":7}
+{"kind":"shape","id":"sh/1cfmhgne","slide":9,"name":"Shape 0","bbox":[856.8,32.4,11.52,11.52]}
+{"kind":"shape","id":"sh/0b65obm9","slide":9,"name":"Shape 1","bbox":[876.96,32.4,11.52,11.52]}
+{"kind":"shape","id":"sh/nex4jq5k","slide":9,"name":"Shape 2","bbox":[897.12,32.4,11.52,11.52]}
+{"kind":"textbox","id":"sh/mdonql4z","slide":9,"name":"Text 3","text":"PROPOSED • FICTIONAL DATA","textPreview":"PROPOSED • FICTIONAL DATA","textChars":25,"textLines":1,"bbox":[50.4,36,648,28.8]}
+{"kind":"textbox","id":"sh/9gzml0nq","slide":9,"name":"Text 4","text":"Keep the boundary visible","textPreview":"Keep the boundary visible","textChars":25,"textLines":1,"bbox":[50.4,68.4,864,72]}
+{"kind":"textbox","id":"sh/ofq5svm5","slide":9,"name":"Text 5","text":"Current • demo-only • proposed","textPreview":"Current • demo-only • proposed","textChars":30,"textLines":1,"bbox":[50.4,158.4,403.2,36]}
+{"kind":"textbox","id":"sh/bih4na5w","slide":9,"name":"Text 6","text":"CURRENT — model calls and deterministic workflows in the audited MVP.\nDEMO-ONLY — fixed fictional case, actors, images, store and metrics.\nPROPOSED — Community Request-to-Resolution direction.\nR1 does not rehabilitate unsafe legacy financial, legal or deletion paths.","textPreview":"CURRENT — model calls and deterministic workflows in the audited MVP. | DEMO-ONLY — fixed fictional case, actors, images, store and metri...","textChars":267,"textLines":4,"bbox":[50.4,198,414,244.8]}
+{"kind":"shape","id":"sh/ah8nu54b","slide":9,"name":"Shape 7","bbox":[486,154.8,421.2,284.4]}
+{"kind":"textbox","id":"sh/oza1gfyh","slide":9,"name":"Text 8","text":"Not verified • product-grade work","textPreview":"Not verified • product-grade work","textChars":33,"textLines":1,"bbox":[511.2,172.8,374.4,36]}
+{"kind":"textbox","id":"sh/p0ji9kf2","slide":9,"name":"Text 9","text":"NOT VERIFIED — provider terms, past real-data status, production tenancy, pilot and impact.\nPRODUCT-GRADE WORK — lawful data gate, tenancy, operations, native review and independent security evidence.\nPrivate/proprietary R1; no publication authority.","textPreview":"NOT VERIFIED — provider terms, past real-data status, production tenancy, pilot and impact. | PRODUCT-GRADE WORK — lawful data gate, tena...","textChars":250,"textLines":3,"bbox":[511.2,216,374.4,216]}
+{"kind":"shape","id":"sh/2xsjepgb","slide":9,"name":"Text 10","bbox":[82.8,465.7,856.8,50.4]}
+{"kind":"textbox","id":"sh/3y107axw","slide":9,"name":"R1 Boundary Footer","text":"Fictional competition demo — proposed workflow, not production","textPreview":"Fictional competition demo — proposed workflow, not production","textChars":62,"textLines":1,"bbox":[48,518,864,14]}
+{"kind":"notes","id":"nt/udsvah03","slide":9,"text":"This is the truth architecture. The isolated demo does not rehabilitate unsafe legacy financial, legal, deletion or multi-tenant paths. Provider and historical data facts remain unknown. No pilot, customer, deployment, government acceptance or measured impact is claimed.\nClaim IDs: CLM-001, CLM-009, CLM-020, CLM-022, CLM-023, CLM-025, CLM-027, CLM-028.\n[Sources]\n- MINIT_R1_CODEX_MASTER_PROMPT.md §§4, 8 Claim control\n- remediation-output/R0_03_COMPETITION_CLAIM_RESET.md\n- audit-output/21_FINDINGS_REGISTER.md"}
+{"kind":"slide","id":"sl/m90b6t0r","slide":10,"title":"The ask is review,","textShapes":4}
+{"kind":"shape","id":"sh/xc3mho32","slide":10,"name":"Shape 0","bbox":[426.24,81.6,21.12,21.12]}
+{"kind":"shape","id":"sh/cbu58j2h","slide":10,"name":"Shape 1","bbox":[458.98,81.6,21.12,21.12]}
+{"kind":"shape","id":"sh/zelojyl8","slide":10,"name":"Shape 2","bbox":[491.71,81.6,21.12,21.12]}
+{"kind":"textbox","id":"sh/ydcnatkn","slide":10,"name":"Text 3","text":"The ask is review,\nnot belief.","textPreview":"The ask is review, | not belief.","textChars":30,"textLines":2,"bbox":[96,139.2,768,110.4]}
+{"kind":"textbox","id":"sh/l036l83y","slide":10,"name":"Text 4","text":"Inspect truth • challenge authority • re-run isolation, language, mobile and retry tests • review limitations • owner go/no-go required before publication or submission","textPreview":"Inspect truth • challenge authority • re-run isolation, language, mobile and retry tests • review limitations • owner go/no-go required b...","textChars":168,"textLines":1,"bbox":[124.8,268.8,710.4,72]}
+{"kind":"shape","id":"sh/kzu5c32t","slide":10,"name":"Text 5","bbox":[124.8,360,710.4,48]}
+{"kind":"textbox","id":"sh/725onyl4","slide":10,"name":"R1 Boundary Footer","text":"Fictional competition demo — proposed workflow, not production","textPreview":"Fictional competition demo — proposed workflow, not production","textChars":62,"textLines":1,"bbox":[115.2,500,729.6,18]}
+{"kind":"textbox","id":"sh/m1cnetkj","slide":10,"name":"R1 Proposed Fictional Badge","text":"PROPOSED • FICTIONAL DATA","textPreview":"PROPOSED • FICTIONAL DATA","textChars":25,"textLines":1,"bbox":[312,102,336,20]}
+{"kind":"notes","id":"nt/m90b6t0r","slide":10,"text":"The contribution is an inspectable claim: a proposed civic-service handoff can keep AI in a suggestion role while humans hold authority and evidence remains reconstructable. The next decision is whether the owner accepts the evidence for a private competition draft—not whether the system is ready for real people or publication.\nClaim IDs: CLM-001, CLM-020, CLM-025, CLM-026, CLM-028, CLM-030.\n[Sources]\n- MINIT_R1_CODEX_MASTER_PROMPT.md §§4, 10–11\n- competition/r1-draft/03_CLAIM_LEDGER.md\n- competition/r1-draft/08_SUBMISSION_CHECKLIST.md"}

@@ -1,0 +1,20 @@
+{
+  "type": "minutes",
+  "description": "EGM — venue NOT written; AI must mark it missing, not guess",
+  "orgName": "Pertubuhan Contoh Harmoni",
+  "todayIso": "2026-07-01",
+  "expected": {
+    "meeting_type": "egm",
+    "meeting_date": "2026-03-21",
+    "meeting_venue": "",
+    "attendees": [
+      "Raju A/L Muniandy",
+      "Fatimah Binti Ali"
+    ],
+    "resolutions": [
+      "Meluluskan pindaan Fasal 5 perlembagaan"
+    ],
+    "figures": [],
+    "office_bearers": []
+  }
+}

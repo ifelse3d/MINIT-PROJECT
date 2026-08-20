@@ -1,0 +1,36 @@
+{
+  "type": "minutes",
+  "description": "BM AGM notes, complete",
+  "orgName": "Pertubuhan Contoh Harmoni",
+  "todayIso": "2026-07-01",
+  "expected": {
+    "meeting_type": "agm",
+    "meeting_date": "2026-06-14",
+    "meeting_venue": "Dewan Seri Murni",
+    "attendees": [
+      "Ahmad Zaki",
+      "Lee Chong Wei",
+      "Siti Aminah"
+    ],
+    "resolutions": [
+      "Meluluskan penyata kewangan tahun 2025",
+      "Melantik juruaudit baharu Tetuan Contoh & Rakan"
+    ],
+    "figures": [
+      {
+        "description": "Baki bank",
+        "amount_cents": 1234500
+      }
+    ],
+    "office_bearers": [
+      {
+        "position": "Pengerusi",
+        "person_name": "Ahmad Zaki"
+      },
+      {
+        "position": "Setiausaha",
+        "person_name": "Siti Aminah"
+      }
+    ]
+  }
+}

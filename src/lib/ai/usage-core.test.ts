@@ -1,0 +1,193 @@
+import { describe, expect, it } from "vitest";
+import {
+  AI_ACTIONS,
+  aiRateLimitPerMin,
+  ASK_INTENT_COSTS,
+  computeUsageState,
+  decideCharge,
+  DEFAULT_AI_RATE_LIMIT_PER_MIN,
+  isAiAction,
+  isRateLimited,
+  QuotaExceededError,
+  RATE_LIMITED_MESSAGE,
+  RateLimitedError,
+  usageMonthMalaysia,
+  usageMonthUtcWindow,
+} from "./usage-core";
+
+describe("computeUsageState", () => {
+  it("normal month: remaining = quota - used + credits, not blocked", () => {
+    const s = computeUsageState({
+      usedThisMonth: 34,
+      monthlyFreeQuota: 100,
+      extraCredits: 20,
+    });
+    expect(s.freeRemaining).toBe(66);
+    expect(s.totalRemaining).toBe(86);
+    expect(s.blocked).toBe(false);
+  });
+
+  it("quota exactly reached with no credits → blocked", () => {
+    const s = computeUsageState({
+      usedThisMonth: 100,
+      monthlyFreeQuota: 100,
+      extraCredits: 0,
+    });
+    expect(s.freeRemaining).toBe(0);
+    expect(s.totalRemaining).toBe(0);
+    expect(s.blocked).toBe(true);
+  });
+
+  it("quota reached but credits left → not blocked", () => {
+    const s = computeUsageState({
+      usedThisMonth: 100,
+      monthlyFreeQuota: 100,
+      extraCredits: 5,
+    });
+    expect(s.totalRemaining).toBe(5);
+    expect(s.blocked).toBe(false);
+  });
+
+  it("used can exceed quota (credits were spent) — freeRemaining never negative", () => {
+    const s = computeUsageState({
+      usedThisMonth: 130,
+      monthlyFreeQuota: 100,
+      extraCredits: 0,
+    });
+    expect(s.freeRemaining).toBe(0);
+    expect(s.blocked).toBe(true);
+  });
+
+  it("zero-quota org with credits still works on credits", () => {
+    const s = computeUsageState({
+      usedThisMonth: 0,
+      monthlyFreeQuota: 0,
+      extraCredits: 3,
+    });
+    expect(s.totalRemaining).toBe(3);
+    expect(s.blocked).toBe(false);
+  });
+});
+
+describe("decideCharge", () => {
+  it("under quota → free", () => {
+    expect(
+      decideCharge({ usedThisMonth: 99, monthlyFreeQuota: 100, extraCredits: 0 }),
+    ).toBe("free");
+  });
+  it("at quota with credits → credit", () => {
+    expect(
+      decideCharge({ usedThisMonth: 100, monthlyFreeQuota: 100, extraCredits: 1 }),
+    ).toBe("credit");
+  });
+  it("at quota, zero credits → blocked", () => {
+    expect(
+      decideCharge({ usedThisMonth: 100, monthlyFreeQuota: 100, extraCredits: 0 }),
+    ).toBe("blocked");
+  });
+});
+
+describe("Malaysian month boundary (UTC+8)", () => {
+  it("31 Jul 23:00 UTC is already 1 Aug in Malaysia", () => {
+    expect(usageMonthMalaysia(new Date("2026-07-31T23:00:00Z"))).toBe("2026-08");
+  });
+  it("31 Jul 15:59 UTC is still 31 Jul in Malaysia", () => {
+    expect(usageMonthMalaysia(new Date("2026-07-31T15:59:00Z"))).toBe("2026-07");
+  });
+  it("window for July 2026 runs 30 Jun 16:00Z → 31 Jul 16:00Z", () => {
+    const w = usageMonthUtcWindow(new Date("2026-07-19T04:00:00Z"));
+    expect(w.startUtc).toBe("2026-06-30T16:00:00.000Z");
+    expect(w.endUtc).toBe("2026-07-31T16:00:00.000Z");
+  });
+  it("December window rolls into January of the next year", () => {
+    const w = usageMonthUtcWindow(new Date("2026-12-15T00:00:00Z"));
+    expect(w.endUtc).toBe("2026-12-31T16:00:00.000Z");
+  });
+});
+
+describe("action codes and ask costs", () => {
+  it("every action code is short (PDPA: codes only, fits DB check)", () => {
+    for (const a of AI_ACTIONS) {
+      expect(a.length).toBeGreaterThan(0);
+      expect(a.length).toBeLessThanOrEqual(40);
+    }
+  });
+  it("isAiAction accepts known, rejects unknown", () => {
+    expect(isAiAction("extract_minutes")).toBe(true);
+    expect(isAiAction("donor_name")).toBe(false);
+  });
+  // 2026-08-21: out_of_scope went from 0 to 1. The classify call is what tells
+  // us the question was out of scope, so the vendor was already paid by then.
+  // Refunding it made off-topic chat free for the user and billable to us.
+  it("out-of-scope costs the classify call it took to find out; search costs 2", () => {
+    expect(ASK_INTENT_COSTS.out_of_scope).toBe(1);
+    expect(ASK_INTENT_COSTS.record_search).toBe(2);
+  });
+});
+
+describe("QuotaExceededError", () => {
+  it("carries a typed code and the usage state", () => {
+    const state = computeUsageState({
+      usedThisMonth: 100,
+      monthlyFreeQuota: 100,
+      extraCredits: 0,
+    });
+    const err = new QuotaExceededError(state);
+    expect(err.code).toBe("QUOTA_EXCEEDED");
+    expect(err.state.blocked).toBe(true);
+  });
+});
+
+// --- rate limit (2026-08-21) -------------------------------------------------
+
+describe("isRateLimited", () => {
+  it("allows everything below the limit", () => {
+    expect(isRateLimited(0, 20)).toBe(false);
+    expect(isRateLimited(19, 20)).toBe(false);
+  });
+
+  it("refuses AT the limit, not one past it", () => {
+    // The count is of actions already started in the window, so the 21st call
+    // in a minute is the one that must be refused, not the 22nd.
+    expect(isRateLimited(20, 20)).toBe(true);
+    expect(isRateLimited(500, 20)).toBe(true);
+  });
+});
+
+describe("aiRateLimitPerMin", () => {
+  it("uses the provisional default when nothing is configured", () => {
+    expect(aiRateLimitPerMin(undefined)).toBe(DEFAULT_AI_RATE_LIMIT_PER_MIN);
+  });
+
+  it("takes the number from the environment", () => {
+    expect(aiRateLimitPerMin("5")).toBe(5);
+  });
+
+  it("falls back rather than switching the limiter off on a bad value", () => {
+    // "0" is the dangerous one: read literally it means "allow nothing", but a
+    // 0 in an env var is almost always a typo or an unset variable that
+    // stringified. Falling back is the safe reading in both directions.
+    for (const bad of ["", "abc", "0", "-1", "NaN"]) {
+      expect(aiRateLimitPerMin(bad)).toBe(DEFAULT_AI_RATE_LIMIT_PER_MIN);
+    }
+  });
+});
+
+describe("RateLimitedError", () => {
+  it("carries the limit it tripped on", () => {
+    const e = new RateLimitedError(20);
+    expect(e.code).toBe("RATE_LIMITED");
+    expect(e.limitPerMin).toBe(20);
+    expect(e instanceof Error).toBe(true);
+  });
+
+  it("has a message in all three languages that says nothing was charged", () => {
+    // The first thing someone asks after being refused is whether it cost them
+    // anything, and a Chinese-only treasurer must be able to read the answer.
+    for (const lang of ["bm", "zh", "en"] as const) {
+      expect(RATE_LIMITED_MESSAGE[lang].length).toBeGreaterThan(20);
+    }
+    expect(RATE_LIMITED_MESSAGE.zh).toContain("没有用掉");
+    expect(RATE_LIMITED_MESSAGE.en).toContain("did not use");
+  });
+});

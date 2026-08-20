@@ -1,0 +1,79 @@
+# CLAUDE.md — Minit
+
+## What this project is
+Minit: an AI compliance and operating-memory assistant for Malaysian registered societies and NGOs. Users photograph messy inputs — handwritten mixed-language (Malay/Chinese/English) meeting notes, paper donation ledgers, the organisation's constitution — and Minit produces: compliant BM meeting minutes + an eROSES Annual Return "paste-pack"; a structured donation register with sequentially numbered receipts (WhatsApp-first delivery), collector→HQ custody tracking, and a month-end e-Invois consolidation pack; AGM document packs (notice, agenda, attendance sheet, proxy forms); bank-resolution extracts; and clause-cited answers to constitution questions. Supports an HQ + branches hierarchy (pilot: a 20+ hall temple network). Humans confirm everything; AI drafts everything. Built for the MAIC Nexus Challenge (T5) and real organisations.
+
+The full build plan lives in `BUILD_PLAN.md` — read it before large tasks. The paste-ready session prompts live in `PROMPTS.md`. Follow the phases in order; do not jump ahead.
+
+## Read these, in this order, at the start of every session
+1. **`CLAUDE.md`** (this file) — the rules. They do not change often.
+2. **`STATE.md`** — *where the project actually is right now*: what landed, what's next, what's undecided, which traps have already been stepped in. **This is the only source of truth for current state.**
+3. **`docs/DECISIONS.md`** — why things are the way they are (D1–D8 + the five security rules).
+
+`BUILD_PLAN.md` and `PROMPTS.md` when the task is a phase. `docs/` for a specific reference. **`docs/archive/` is history, not state — never read current status from it.**
+
+## The one design law — the "eROSES test"
+Effort must flow from AI to human, never human to AI. Any feature that requires the user to key structured data into a form is WRONG unless it is a one-tap confirmation of something the AI proposed. If you find yourself building a data-entry form, stop and re-read this.
+
+## Stack (locked — do not substitute)
+- Next.js (App Router) + TypeScript (strict) + Tailwind + shadcn/ui, single repo
+- Supabase: Postgres + Storage (+ Auth from Phase 7). Row-level security by `org_id`; orgs form a tree (`parent_org_id`) for HQ/branch.
+- LLM access through the provider layer `/src/lib/ai/` (SERVER-SIDE ONLY, never imported by client components). Vendor chosen by `AI_PROVIDER` env var. **Current dev provider: Gemini free tier** (user decision 12 Jul 2026 — no Anthropic free tier; user wants to compare vendors later). Anthropic remains the intended production option; add it as another provider file, don't rewrite features. **Free-tier caveat (PDPA): free tiers may train on inputs — SAMPLE/FICTIONAL data only until a paid tier is configured.** Verify current model IDs before hardcoding (models get retired).
+- PDFs/images: send to Claude as document/image content blocks (no OCR libraries). PDF generation for receipts/minutes: server-side (react-pdf or pdf-lib — pick one and stay with it).
+- NO vector database, NO Redis, NO queues, NO microservices in v1. Constitution and org memory are small structured JSON passed in-context (filter by section if >100KB).
+- WhatsApp sending in v1 = generate a wa.me deep link / click-to-send with the PDF attached manually. Official WhatsApp Business Platform (via Twilio/Meta Cloud API) is Phase 8+, NOT before. **NEVER use unofficial WhatsApp automation libraries (whatsapp-web.js etc.) — they get numbers banned.**
+- e-Invois in v1 = generate the MyInvois Portal **Batch Upload .xlsx** file (official template, ≤100 docs per file) for the treasurer to upload manually. Direct MyInvois API submission (org digital certificate, client ID/secret, service-provider model) is roadmap only — never build it in v1.
+- Tests: vitest. All deterministic logic (receipt numbering, custody state machine, e-Invois consolidation, date/deadline math) must be unit-tested.
+
+## Hard rules
+1. **The AI never invents.** If a fact (a resolution, a name, an amount) is not present in the input, the field is `missing` with an empty value. Every non-missing extracted field must carry `source_ref` (photo region or note line) and `confidence` ∈ {confirmed, check, missing}.
+2. **Money math is TypeScript, never the LLM.** The LLM extracts quantities; deterministic code sums registers, numbers receipts (sequential, non-editable, gap-free per org), computes e-Invois consolidation totals, and runs the custody state machine (`collected → pending_remittance → settled`).
+3. **Receipts must never imply tax-deductibility** unless the org's `tax_exempt_status` is set to an approved s.44(6) status — and that setting shows a hard warning explaining the legal meaning.
+4. **Secrets:** AI provider keys (GEMINI_API_KEY / ANTHROPIC_API_KEY) and Supabase service keys only in `.env.local`/Vercel env. Never client-side, never committed, never printed. `.gitignore` includes `.env*`.
+5. **PDPA/privacy:** never log document contents, extracted facts, donor names or IC numbers; scope all queries and storage paths by `org_id`; delete-organisation must remove rows AND storage objects; donor personal data is masked in list views by default.
+6. **Prompts are content, not code:** all LLM prompt templates live in `/src/prompts/*.ts` as exported strings with typed params.
+7. LLM JSON outputs validated with zod; on parse failure retry once with the error appended, then mark the item `failed` — never crash a batch.
+8. Generated documents carry an audit line: "Drafted by Minit, confirmed by [name] on [date]". Gap/template outputs carry a "DRAFT — review before use" watermark.
+9. UI: shadcn tables, badges (confirmed=green, check=amber, missing=red), simple polling status. **TRILINGUAL UI labels (BM + Chinese + English)** from the start; generated official documents are BM. *(Corrected 2026-08-21: this rule said "bilingual (BM + English)" and had been wrong for a while — the product has been trilingual since `language-provider.tsx`, `src/lib/user-errors.ts` opens with a rule requiring all three, and `docs/方案与权益设计.md` §4 lists trilingual output under what is free forever. A stale rule is not harmless: `/api/ask` shipped a summary with `zh: null` in it and nothing objected.)*
+10. **The assistant IS a conversation, and it is being given eyes** — see **`docs/助手重做-设计.md`**, which is newer than this rule and wins where they differ (product decision, 20 Aug 2026). Four sentences of this rule were overturned on that date; they are listed below so nobody restores them by accident.
+    - ✅ **Still true.** One implementation only: `/api/chat` + `/src/prompts/chat.ts`, used by both the home page box and the floating panel. A per-conversation turn cap (`MAX_TURNS` in the route) and the monthly org quota both stand. Remaining quota and remaining turns are always visible. No legal, tax or accounting advice, ever. Money math stays in TypeScript (Hard Rule 2) — that rule is about not letting the model *calculate*, never about not letting it *see*.
+    - ❌ **OVERTURNED — "the prompt must keep saying the assistant cannot see the org's records".** This is the sentence that made the assistant useless: asked "how much did we collect last month", it answered "I cannot see your records, go to that page". The correct defence against hallucination is *let it read the real records and cite them*, not *blindfold it*. Replaced by: tools that run RLS-scoped queries, answers that may only use what a tool returned, and a clickable source on every fact. 🔴 Tools use the **user-scoped** client — RLS is the boundary, not a sentence in a prompt.
+    - ❌ **OVERTURNED — "never state a number or a clause as fact".** Now: only state numbers a tool returned, and show where they came from. Not *never say*, but *never say without a source*.
+    - ❌ **OVERTURNED — "one AI action per turn".** An assistant with tools may look things up two or three times in one turn. Metering counts **actual vendor calls**, not turns.
+    - ❌ **OVERTURNED — "a refusal is refunded; a refusal must never eat someone's quota".** Since 2026-08-21 (J: "不管做什麼有用到 api 就扣，我們不是慈善家"): **reaching the vendor is what costs an action.** We only learn a question was off-topic from the model's own answer, so that answer was already paid for. A refund now means one thing only — **the vendor was never reached** (network, outage, a throw before the call) — which also makes `ai_usage.refunded_at` a vendor-health signal rather than a customer-service one. See `docs/助手重做-设计.md` §4.5.
+    - ⚠️ **Status, 2026-08-21:** the migration this needs (`20260822000000_minutes_search.sql`, pgvector) is written. The tools, the grounding and the source links are **not built yet** — the first item is `cari_minit`, §5 of the design doc, to be done in `minit-v2`. Until then `src/prompts/chat.ts` still carries the old "you cannot see their records" line, because removing it before the tools exist would licence exactly the guessing this rule was written to stop. **Remove it in the same change that gives the assistant its first tool, not before.**
+11. **One door on the home page.** A person holding a piece of paper must not have to know which page it belongs to. `/api/intake` classifies any uploaded photo/PDF (meeting notes / ledger page / constitution) and runs the matching extractor, then hands the result to the review page via `src/lib/intake-handoff.ts`. Cost: 1 classify + 1 extract = 2 actions, both metered.
+12. **Text size is a user setting, not a constant** (`src/components/appearance-provider.tsx`): four steps on the root font-size, remembered per device. Everything must stay rem-based so one control scales type and spacing together. Never hardcode a root font-size again — "too big" is an accessibility failure too.
+13. **Task pages are collapsible step cards** (`src/components/step-card.tsx`), not one long scroll. One card per step, numbered, with a plain-language summary and a status (done / needs you (N) / not yet / example). Collapsed by default; exactly ONE card opens itself — the first that needs the person. A locked step explains what unlocks it instead of showing dead controls.
+
+## Folder conventions
+- `/src/app` routes: `/inbox` (uploads), `/minutes`, `/filings`, `/money` (register, receipts, custody, e-invois), `/agm-pack`, `/constitution`, `/orgs`, `/calendar`, `/settings`, `/health`
+- `/src/lib` pure logic (`receipts.ts`, `custody.ts`, `einvois.ts`, `deadlines.ts`), `/src/prompts` LLM templates, `/src/db` supabase client + queries, `/eval` golden cases + reports, `/supabase/migrations` SQL
+
+## Documentation layout (enforced — the root used to hold 38 .md files)
+| Where | What | Lifecycle |
+|---|---|---|
+| repo root | `CLAUDE.md`, `STATE.md`, `BUILD_PLAN.md`, `PROMPTS.md`, `DEPLOY.md`, `README.md`, `AGENTS.md` | permanent — 7 files, do not add an 8th |
+| `docs/` | reference still in active use (`DECISIONS.md`, model-swap manual, pricing, open plans, the current audit) | edited in place |
+| `docs/archive/` | finished process reports and superseded handovers | append-only; never the source of truth |
+| `legal/`, `competition/`, `eval/`, `supabase/` | as before | — |
+
+**Never create a new `YYYY-MM-DD-下一个session从这里开始.md`.** Dated handover files never get overwritten, so they accumulate and contradict each other — that is exactly the problem `STATE.md` exists to solve. One `STATE.md`, overwritten.
+
+## Working style expected from Claude Code
+- Propose a short plan before multi-file changes; wait for approval.
+- Small self-contained changes; after each feature, state how to test it manually in the browser.
+- If a requirement here conflicts with your instinct (vector DB, queues, Twilio-now, member app), THE FILE WINS — say so and follow the file.
+- The humans on this team are beginners: explain changes in plain English; never assume unstated context.
+- **Before ending a session, overwrite `STATE.md`.** This is part of the deliverable, not optional. Update the status snapshot, the next steps, the open questions (tick off anything answered), and add any new trap to "已知陷阱". Do not create a new dated handover file. If a full process report is worth keeping, put it in `docs/archive/` and leave one pointer line in `STATE.md`.
+- **State what you could NOT verify.** The sandbox cannot reach Supabase and cannot download binaries, so "which migrations are actually applied" and "what eval actually scored" are things you *read in a report*, not things you *saw*. Say which is which — a wrong claim here has already happened once (see `docs/审计-2026-08-03-补充发现.md` §「我没能验证的」).
+
+## Which machine does what
+| | Does | Does not |
+|---|---|---|
+| **J (human)** | Applies every migration by hand in the Supabase SQL Editor; runs `npm install` / `build` / `eval`; holds the API keys; photographs real samples | — |
+| **Claude Code (local)** | Edits `src/`; runs `tsc --noEmit` and `vitest`; real `next build` and dev server | Never runs a migration against the live DB (D8) |
+| **Cowork (Linux sandbox)** | Reads/writes docs, audits, reports, small scripts, data conversion, `--package-lock-only` lock updates | **Never `npm install` into `node_modules`** (Linux binaries); never `next build` (2 vCPU / 3.9 GB vs a 1.2 GB repo); cannot reach Supabase |
+
+## Secrets
+`.env.local` is gitignored but it is **not** hidden from an agent with folder access — anything granted `C:\dev` can read `SUPABASE_SERVICE_ROLE_KEY`. Never open, echo, or quote `.env.local`; read `.env.example` for variable *names*. When a real paid key exists, move it out of the repo (system env / Vercel) and leave only `.env.example` behind.

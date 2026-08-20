@@ -1,0 +1,23 @@
+{
+  "type": "constitution",
+  "description": "Inner constitution page — no document title visible",
+  "orgName": "Pertubuhan Contoh Harmoni",
+  "todayIso": "2026-07-01",
+  "expected": {
+    "document_title": "",
+    "clauses": [
+      {
+        "clause_no": "Fasal 5",
+        "heading": "Keahlian",
+        "text": "Keahlian terbuka kepada semua warganegara Malaysia yang berumur 18 tahun ke atas.",
+        "page_ref": ""
+      },
+      {
+        "clause_no": "Fasal 9",
+        "heading": "Jawatankuasa",
+        "text": "Jawatankuasa hendaklah terdiri daripada tujuh orang ahli yang dipilih dalam mesyuarat agung tahunan.",
+        "page_ref": ""
+      }
+    ]
+  }
+}

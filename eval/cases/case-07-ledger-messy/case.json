@@ -1,0 +1,32 @@
+{
+  "type": "ledger",
+  "description": "No page title, sen amounts, one row has no date — must be missing",
+  "orgName": "Pertubuhan Contoh Harmoni",
+  "todayIso": "2026-07-01",
+  "expected": {
+    "page_title": "",
+    "rows": [
+      {
+        "donor_name": "Aminah Bte Yusof",
+        "donor_phone": "",
+        "amount_cents": 1550,
+        "purpose": "derma am",
+        "donated_at": "2026-06-03"
+      },
+      {
+        "donor_name": "K. Selvam",
+        "donor_phone": "",
+        "amount_cents": 7500,
+        "purpose": "derma kilat",
+        "donated_at": ""
+      },
+      {
+        "donor_name": "Ong Siew Lan",
+        "donor_phone": "",
+        "amount_cents": 25000,
+        "purpose": "derma am",
+        "donated_at": "2026-06-30"
+      }
+    ]
+  }
+}

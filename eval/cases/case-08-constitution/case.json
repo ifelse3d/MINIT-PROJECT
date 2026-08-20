@@ -1,0 +1,29 @@
+{
+  "type": "constitution",
+  "description": "BM constitution page, 3 clauses, verbatim text required",
+  "orgName": "Pertubuhan Contoh Harmoni",
+  "todayIso": "2026-07-01",
+  "expected": {
+    "document_title": "UNDANG-UNDANG TUBUH PERTUBUHAN CONTOH HARMONI",
+    "clauses": [
+      {
+        "clause_no": "Fasal 1",
+        "heading": "Nama",
+        "text": "Pertubuhan ini dikenali sebagai Pertubuhan Contoh Harmoni.",
+        "page_ref": ""
+      },
+      {
+        "clause_no": "Fasal 8",
+        "heading": "Mesyuarat Agung Tahunan",
+        "text": "Notis mesyuarat agung tahunan hendaklah diberi kepada semua ahli sekurang-kurangnya 14 hari sebelum tarikh mesyuarat.",
+        "page_ref": ""
+      },
+      {
+        "clause_no": "Fasal 12",
+        "heading": "Kewangan",
+        "text": "Semua wang pertubuhan hendaklah disimpan dalam akaun bank atas nama pertubuhan.",
+        "page_ref": ""
+      }
+    ]
+  }
+}

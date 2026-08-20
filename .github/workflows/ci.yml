@@ -1,0 +1,43 @@
+# CI — 每次 push 和 pull request 都跑一次。
+#
+# 为什么存在（2026-08-03 补充审计第 7 条）：
+# CLAUDE.md 说「所有确定性逻辑必须有单元测试」，BUILD_PLAN 说「npm run build +
+# npm run test 必须过才能收阶段」。在这个档案出现之前，这两条**纯靠人记得跑**。
+# 现在跑不过就是红的，GitHub 上看得到。
+#
+# 刻意不跑的两件事：
+#   * eslint  — 目前有 21 个 react-hooks error（多数在 use-persistent-state.ts，
+#               那个档案 P1-2 反正要重写）。现在加进来只会一直红，红久了就没人看，
+#               关卡就失效了。等 P1-2 做完再把 `npx eslint .` 加回来。
+#   * next build — 会去 Google Fonts 抓字体（补充审计第 9 条）。等字体本地化之后
+#               再加 `npx next build`，那时候它才是稳定的。
+#
+# 不需要任何密钥：tsc 和 vitest 都不碰资料库、不碰 AI 供应商。
+
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    name: types + tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # npm ci 严格照 package-lock.json 装，装不出来就失败 —— 这正是我们要的。
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Unit tests
+        run: npx vitest run

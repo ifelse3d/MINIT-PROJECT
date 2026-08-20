@@ -1,0 +1,272 @@
+"use server";
+
+// Save a fully human-confirmed minutes draft to the database (Phase 7
+// history). User-scoped client: RLS proves write access to the active org.
+// PDPA: contents are stored, never logged.
+//
+// 2026-07-28 AUDIT FIX (P1: forged audit line).
+// This action used to accept `finalMd` (already rendered in the browser) and a
+// `confirmedBy` NAME, both from the client. The browser sent the literal string
+// "Setiausaha (Demo)" and the fictional sample temple's name, so every minutes
+// document saved into a real organisation's audit trail claimed it had been
+// confirmed by a person who does not exist, on someone else's letterhead. That
+// breaks Hard Rule 8 (the audit line must name the real confirming human) and
+// it is the same class of bug the document PDF routes were fixed for.
+//
+// The action now takes the EXTRACTION and renders the document itself, using
+// getDocumentIdentity() — org name and signer read from the signed-in session,
+// exactly like the receipt/AGM/bank routes. There is nothing left to forge.
+import { getSupabaseServer, getSessionUser } from "@/db/supabase-server";
+import { getActiveOrg } from "@/lib/active-org";
+import { getDocumentIdentity } from "@/lib/doc-identity";
+import { parseMeetingNotesExtraction } from "@/lib/extraction";
+import { normaliseMeetingType } from "@/lib/meeting-types";
+import { renderMinutesDraftBm } from "@/lib/minutes-draft";
+import { joinUserError, inputProblemError, USER_ERRORS } from "@/lib/user-errors";
+import { dayIsoMalaysia } from "@/lib/history";
+import {
+  isMinutesLang,
+  minutesAuditLine,
+  minutesTitle,
+  MINUTES_TITLE_PATTERN,
+  type MinutesLang,
+} from "@/lib/minutes-lang";
+
+export type SaveMinutesState = {
+  error: string | null;
+  ok: boolean;
+};
+
+export async function saveConfirmedMinutes(input: {
+  /** The reviewed extraction. Validated here; the document is rendered here. */
+  extraction: unknown;
+  /**
+   * OPTIONAL — the document written by the model at step 3
+   * (/api/draft-minutes). When absent we fall back to the deterministic
+   * template, so saving never depends on the vendor being up.
+   *
+   * The BODY is accepted from the client on purpose: editing your own minutes
+   * before signing them is a legitimate thing to do, and step 3 will grow a
+   * text box. What is NOT accepted from the client is WHO signed it and on
+   * WHOSE letterhead — the title line and the audit line are re-stamped below
+   * from the session, which is exactly the hole the 2026-07-28 audit closed.
+   */
+  aiDraftMd?: string;
+  /** Which language `aiDraftMd` is written in, so the letterhead and audit
+   *  line are re-stamped in the same one. Ignored for the template fallback,
+   *  which is Bahasa Malaysia. */
+  language?: string;
+}): Promise<SaveMinutesState> {
+  const user = await getSessionUser();
+  const active = await getActiveOrg();
+  if (!user || !active) {
+    return {
+      error:
+        "Pilih pertubuhan di halaman Pertubuhan dahulu / 请先在「机构」页选择一个机构 / Choose an organisation on the Organisations page first",
+      ok: false,
+    };
+  }
+  if (active.role === "auditor_readonly") {
+    return {
+      error:
+        "Akaun auditor hanya boleh membaca / 审计账号只能查看，不能保存 / Auditor accounts are read-only",
+      ok: false,
+    };
+  }
+
+  const parsed = parseMeetingNotesExtraction(input.extraction);
+  if (!parsed.success) {
+    // 2026-08-20. This used to say "the minutes data is incomplete — reload the
+    // page and try again". Reloading cannot help: the value the person typed is
+    // what was refused, and it survives the reload. Name the box instead.
+    const firstPath = parsed.error.issues[0]?.path?.[0];
+    return {
+      error: joinUserError(inputProblemError(String(firstPath ?? ""))),
+      ok: false,
+    };
+  }
+  const extraction = parsed.data;
+
+  // Hard Rule 8: the audit line names the real signed-in human, resolved on the
+  // server. Never the browser's idea of who confirmed it.
+  const identity = await getDocumentIdentity();
+  if (!identity) {
+    return {
+      error:
+        "Sila log masuk semula / 请重新登入 / Please sign in again",
+      ok: false,
+    };
+  }
+
+  // A document is only saved as "confirmed" when every field has actually been
+  // reviewed. The client also blocks the button, but the client is not the
+  // authority on this.
+  const unreviewed = countUnreviewed(extraction);
+  if (unreviewed > 0) {
+    return {
+      error:
+        "Masih ada medan belum disemak — sahkan semuanya dahulu / 还有栏位没核对 —— 请先全部确认 / Some fields have not been reviewed yet — confirm them all first",
+      ok: false,
+    };
+  }
+
+  const todayIso = dayIsoMalaysia(new Date().toISOString())!;
+  const aiDraft = (input.aiDraftMd ?? "").trim();
+  const lang: MinutesLang = isMinutesLang(input.language ?? "")
+    ? (input.language as MinutesLang)
+    : "bm";
+  const finalMd =
+    aiDraft !== "" && aiDraft.length <= MAX_DRAFT_CHARS
+      ? stampIdentity(aiDraft, {
+          orgName: identity.orgName,
+          confirmedBy: identity.confirmedBy,
+          dateIso: todayIso,
+          lang,
+        })
+      : renderMinutesDraftBm(extraction, {
+          orgName: identity.orgName,
+          confirmedBy: { name: identity.confirmedBy, dateIso: todayIso },
+        });
+
+  if (!finalMd.trim()) {
+    return {
+      error: "Draf kosong / 草稿是空的 / The draft is empty",
+      ok: false,
+    };
+  }
+
+  const meetingDateIso = extraction.meeting_date.value ?? "";
+
+  const supabase = await getSupabaseServer();
+  const customLabel = (extraction.meeting_type_label ?? "").trim();
+  const row: Record<string, unknown> = {
+    org_id: active.id,
+    meeting_type: normaliseMeetingType(String(extraction.meeting_type.value ?? "")),
+    meeting_date: /^\d{4}-\d{2}-\d{2}$/.test(meetingDateIso)
+      ? meetingDateIso
+      : null,
+    final_md: finalMd,
+    status: "confirmed",
+    confirmed_by: identity.confirmedBy,
+    confirmed_at: new Date().toISOString(),
+  };
+  // meeting_type_label only exists from migration 20260820000000. Sending a
+  // column PostgREST does not know about fails the whole INSERT, so it is only
+  // sent when the person actually wrote one — which they can only have done by
+  // choosing "other", which that same migration is what allows. Every save that
+  // worked yesterday still sends exactly the columns it sent yesterday.
+  if (customLabel !== "") row.meeting_type_label = customLabel;
+
+  const { error } = await supabase.from("minutes_docs").insert(row);
+
+  if (error) {
+    // The CHECK on meeting_type is the one failure here with a specific, fast
+    // fix, and it is ours, not theirs: the code allows six types and the
+    // database still allows three. Telling that person to "try again" would
+    // have them trying forever. (Postgres 23514 = check_violation; PostgREST
+    // 42703 = undefined_column, for the label above.)
+    const behind =
+      error.code === "23514" ||
+      error.code === "42703" ||
+      /meeting_type/i.test(error.message ?? "");
+    return {
+      error: behind
+        ? joinUserError(USER_ERRORS.databaseBehind)
+        : "Tidak berjaya disimpan — cuba lagi / 没有保存成功 —— 请再试一次 / Could not save — try again",
+      ok: false,
+    };
+  }
+  return { error: null, ok: true };
+}
+
+/**
+ * Every reviewable leaf in the extraction that is not yet `confirmed`.
+ *
+ * Kept in step with the client's own count in minutes-review.tsx. Note that
+ * `amount_cents` IS included: the previous client-side check listed only the
+ * figure DESCRIPTIONS, so a ringgit amount the AI could not read did not block
+ * saving and was printed into a document carrying the Hard Rule 8 audit line.
+ */
+function countUnreviewed(e: {
+  meeting_type: { confidence: string };
+  meeting_date: { confidence: string };
+  meeting_venue: { confidence: string };
+  attendees: { name: { confidence: string } }[];
+  resolutions: { text: { confidence: string } }[];
+  figures: {
+    description: { confidence: string };
+    amount_cents: { confidence: string };
+  }[];
+  office_bearers: {
+    position: { confidence: string };
+    person_name: { confidence: string };
+  }[];
+}): number {
+  const levels: string[] = [
+    e.meeting_type.confidence,
+    e.meeting_date.confidence,
+    e.meeting_venue.confidence,
+    ...e.attendees.map((a) => a.name.confidence),
+    ...e.resolutions.map((r) => r.text.confidence),
+    ...e.figures.flatMap((f) => [
+      f.description.confidence,
+      f.amount_cents.confidence,
+    ]),
+    ...e.office_bearers.flatMap((b) => [
+      b.position.confidence,
+      b.person_name.confidence,
+    ]),
+  ];
+  return levels.filter((c) => c !== "confirmed").length;
+}
+
+/** A saved minutes document is a page or two of text; anything far past that
+ *  is not a document someone typed, so it is not stored. */
+const MAX_DRAFT_CHARS = 50_000;
+
+/**
+ * Force the two identity-bearing lines of a document to match the session:
+ * the letterhead and the Hard Rule 8 audit line. Any version of either that
+ * arrived with the body is discarded first, so a client cannot keep a stale —
+ * or invented — org name or signer by sending it back.
+ */
+function stampIdentity(
+  markdown: string,
+  identity: {
+    orgName: string;
+    confirmedBy: string;
+    dateIso: string;
+    lang: MinutesLang;
+  },
+): string {
+  let body = markdown.replace(/\r\n/g, "\n").trim();
+
+  // Drop a trailing audit block, however many the body happens to carry.
+  while (true) {
+    const cut = body.lastIndexOf("\n---\n");
+    if (cut === -1) break;
+    if (!body.slice(cut).includes("Disediakan oleh Minit")) break;
+    body = body.slice(0, cut).trimEnd();
+  }
+
+  // Replace (or add) the letterhead, in whichever language it was written.
+  const title = minutesTitle(identity.lang, identity.orgName);
+  const lines = body.split("\n");
+  const firstContent = lines.findIndex((l) => l.trim() !== "");
+  if (
+    firstContent !== -1 &&
+    MINUTES_TITLE_PATTERN.test(lines[firstContent].trim())
+  ) {
+    lines[firstContent] = title;
+    body = lines.join("\n").trim();
+  } else {
+    body = `${title}\n\n${body}`.trim();
+  }
+
+  const audit = minutesAuditLine(
+    identity.lang,
+    identity.confirmedBy,
+    identity.dateIso,
+  );
+  return `${body}\n\n---\n${audit}`;
+}

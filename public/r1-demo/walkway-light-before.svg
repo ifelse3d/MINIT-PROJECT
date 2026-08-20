@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 640" role="img" aria-labelledby="title description">
+  <title id="title">Generated fictional walkway light before repair</title>
+  <description id="description">A typeset illustration of an unlit walkway light beside a fictional community hall after rain.</description>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#183b5b"/>
+      <stop offset="1" stop-color="#6c8797"/>
+    </linearGradient>
+    <linearGradient id="path" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9aa9ae"/>
+      <stop offset="1" stop-color="#5f737a"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="640" fill="url(#sky)"/>
+  <circle cx="820" cy="104" r="44" fill="#d7e2e7" opacity=".72"/>
+  <path d="M0 420C190 375 335 410 480 397s296-69 480-10v253H0z" fill="#244d45"/>
+  <path d="M360 640c58-132 126-210 204-257 76-46 171-58 296-42l100 22v277z" fill="url(#path)"/>
+  <path d="M94 289h360v225H94z" fill="#e4ecee" stroke="#102c45" stroke-width="10"/>
+  <path d="M72 298 275 173l206 125z" fill="#0f6a65" stroke="#102c45" stroke-width="10"/>
+  <rect x="224" y="376" width="98" height="138" fill="#254b5e"/>
+  <rect x="123" y="340" width="71" height="60" fill="#8dc6cb" stroke="#183b5b" stroke-width="7"/>
+  <rect x="352" y="340" width="71" height="60" fill="#8dc6cb" stroke="#183b5b" stroke-width="7"/>
+  <rect x="137" y="243" width="274" height="50" rx="7" fill="#fff"/>
+  <text x="274" y="275" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#183b5b">SERI DAMAI HALL · FICTIONAL</text>
+  <path d="M677 195v285" stroke="#172135" stroke-width="16"/>
+  <path d="M676 199c0-44 24-69 69-69" fill="none" stroke="#172135" stroke-width="16"/>
+  <rect x="730" y="109" width="88" height="48" rx="12" fill="#172135"/>
+  <rect x="743" y="121" width="61" height="24" rx="7" fill="#59677b"/>
+  <path d="M158 518q52 22 104 0m265 34q76 28 151-2m-14-56q64 24 129 0" fill="none" stroke="#b9dce1" stroke-width="7" opacity=".8"/>
+  <g stroke="#d4edf0" stroke-width="4" opacity=".58">
+    <path d="m44 82-17 35m121-69-17 35m148-18-17 35m132-69-17 35m153 23-17 35m137-79-17 35m154 35-17 35"/>
+  </g>
+  <rect x="32" y="30" width="374" height="58" rx="12" fill="#fff" stroke="#102c45" stroke-width="3"/>
+  <text x="54" y="66" font-family="Arial, sans-serif" font-size="24" font-weight="800" fill="#9d1d2d">GENERATED · TYPESET · FICTIONAL</text>
+  <rect x="688" y="536" width="238" height="70" rx="12" fill="#fff4d9" stroke="#7a4300" stroke-width="4"/>
+  <text x="807" y="566" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="800" fill="#5d3300">BEFORE FIXTURE</text>
+  <text x="807" y="589" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" fill="#5d3300">Walkway light unlit</text>
+</svg>

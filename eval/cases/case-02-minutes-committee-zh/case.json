@@ -1,0 +1,26 @@
+{
+  "type": "minutes",
+  "description": "Chinese committee notes with one figure",
+  "orgName": "Pertubuhan Contoh Harmoni",
+  "todayIso": "2026-07-01",
+  "expected": {
+    "meeting_type": "committee",
+    "meeting_date": "2026-05-03",
+    "meeting_venue": "大礼堂",
+    "attendees": [
+      "陈明发",
+      "黄丽花",
+      "Lim Ah Seng"
+    ],
+    "resolutions": [
+      "通过购买50张椅子"
+    ],
+    "figures": [
+      {
+        "description": "预算 椅子",
+        "amount_cents": 250000
+      }
+    ],
+    "office_bearers": []
+  }
+}

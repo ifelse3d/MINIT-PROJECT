@@ -1,0 +1,32 @@
+{
+  "type": "minutes",
+  "description": "Mixed BM/EN/中文 committee minutes",
+  "orgName": "Pertubuhan Contoh Harmoni",
+  "todayIso": "2026-07-15",
+  "expected": {
+    "meeting_type": "committee",
+    "meeting_date": "2026-07-05",
+    "meeting_venue": "Rumah Persatuan",
+    "attendees": [
+      "Wong Mei Ling",
+      "Arun Kumar",
+      "张伟明",
+      "Nurul Huda"
+    ],
+    "resolutions": [
+      "Approve repair of hall roof"
+    ],
+    "figures": [
+      {
+        "description": "Kutipan derma bulan Jun",
+        "amount_cents": 83000
+      }
+    ],
+    "office_bearers": [
+      {
+        "position": "Bendahari",
+        "person_name": "Wong Mei Ling"
+      }
+    ]
+  }
+}

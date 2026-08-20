@@ -1,0 +1,11 @@
+Minit is an early-stage civic-operations MVP for administrative workflows used by Malaysian societies and NGOs. The audited code uses external Gemini and OpenAI APIs for intake classification, document extraction and chat. Deterministic TypeScript, not an AI model, handles arithmetic, numbering helpers, templates, deadline helpers and workbook mapping.
+
+On 9 August 2026, an independent audit run using Gemini gemini-3.5-flash-lite scored 117 of 125 fields correctly across ten fictional synthetic typeset fixtures, with zero fields scored as invented. This small, stochastic result does not measure handwriting, source-region grounding, production-route reliability, confidence calibration or a guarantee against hallucination. Human review exists in selected legacy extraction flows but is not universal.
+
+Fictional competition demo — proposed workflow, not production.
+
+The R1 artifact narrows the story to one Community Request-to-Resolution scenario for a fictional Malaysian community organisation. A requester selects Bahasa Melayu, English or Simplified Chinese and reports a non-emergency broken walkway light beside a fictional community hall. AI proposes a category, urgency, location description, missing information and summary. Every proposal remains visibly unverified. A named fictional reviewer compares it with the source, changes urgency from high to normal, records a reason and verifies the exact version before assignment.
+
+A fictional dispatcher then assigns a fictional volunteer. The volunteer records progress and proposes a repair outcome; another authorised fictional human verifies the resolution. The response preview follows the locale stored for the request and can only use Simulate send. An append-only audit view and synthetic timing metrics reconstruct the sequence. Server-bound session and tenant checks are designed to deny a second session or unrelated fictional tenant, while idempotency keys and expected versions protect transitions and retries.
+
+The artifact uses fictional data only and makes no claim of a pilot, customer, government integration, external delivery, production readiness, PDPA compliance, official financial output or measured civic impact. Provider tier, DPA, retention and any past real-personal-data processing remain unverified. Publication and submission require a separate owner go/no-go.

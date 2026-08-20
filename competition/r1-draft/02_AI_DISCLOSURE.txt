@@ -1,0 +1,29 @@
+Project: Minit — R1 fictional Community Request-to-Resolution competition artifact
+
+Product AI
+
+Current source code supports Google Gemini and OpenAI through a server-only provider layer. Anthropic is not implemented in the audited provider layer. Model calls are used for intake classification, structured extraction of minutes, donation ledgers, constitutions and events, and chat. In the local configuration inspected on 9 August 2026, classification and chat resolved to OpenAI gpt-5-nano, while extraction and long-document tasks resolved to Gemini gemini-3.5-flash-lite. This is dated local evidence; equivalence to any deployment is not verified.
+
+Deterministic software boundary
+
+Deterministic TypeScript, not a language model, performs cents arithmetic, numbering helpers, templates, deadline helpers and workbook mapping. The audited code did not contain a vector database, embeddings, fine-tuning or model tool execution. Model-returned source notes and confidence values are proposals; the audited implementation does not cryptographically or geometrically prove source-region grounding.
+
+Evaluation
+
+On 9 August 2026, an independent audit run used Gemini gemini-3.5-flash-lite on ten fictional synthetic typeset fixtures and scored 117 correct fields out of 125, or 93.6%, with zero fields scored as invented under the repository method. A stored 6 August 2026 run on the same fixture set and model scored 119 out of 125, or 95.2%, which demonstrates run variability. These small results do not measure handwriting, real documents, source-region correctness, confidence calibration, complete production routes, failure rate, latency, cost, fairness or public-service outcomes. Zero fields scored as invented is a run result, not a claim that AI cannot hallucinate or omit information.
+
+Human authority and R1 mode
+
+Legacy review screens exist for selected extraction flows, but named human confirmation is not universal in the current MVP. The R1 competition artifact uses fictional data only. Its Community Request-to-Resolution AI result is a bounded deterministic demo fixture unless the interface explicitly labels an approved live-model run. Every consequential proposal is marked unverified. AI cannot verify, assign, refer, resolve, close or communicate externally. Server-resolved fictional human roles perform those actions. The response control is Simulate send only and does not send or deliver a message.
+
+Data and provider terms
+
+The audited product can send supplied images, documents or text and limited organisational context to external providers. Code comments are not a technical real-data gate. The provider account tier, data-processing agreement, training/use settings, retention, safety logging, residency and deletion behavior are not verified. Whether real personal data was processed in the past is also not verified. R1 therefore uses only fixed fictional synthetic content and does not make an external model call by default.
+
+AI-assisted development and materials
+
+Repository evidence shows material AI assistance in development and competition drafting, and this R1 draft was prepared with Codex assistance under owner instructions. The complete tools, underlying model versions, dates, affected code and assets, prompt history, named human reviewers, review method and licence/provenance ledger are not fully verified. Final submission wording must retain that limitation until the owner supplies and approves the complete record.
+
+Status
+
+Fictional competition demo — proposed workflow, not production. The artifact is private and locally reviewable. It has not been published, deployed, piloted, submitted or approved for real data.

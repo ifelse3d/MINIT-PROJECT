@@ -1,0 +1,25 @@
+{
+  "type": "events",
+  "description": "Pasted year plan, BM",
+  "orgName": "Pertubuhan Contoh Harmoni",
+  "todayIso": "2026-07-01",
+  "expected": {
+    "events": [
+      {
+        "title": "Mesyuarat Agung Tahunan",
+        "date": "2026-08-30",
+        "time": ""
+      },
+      {
+        "title": "Makan malam tahunan",
+        "date": "2026-09-12",
+        "time": "7:30 malam"
+      },
+      {
+        "title": "Gotong-royong",
+        "date": "2026-10-04",
+        "time": "pagi"
+      }
+    ]
+  }
+}

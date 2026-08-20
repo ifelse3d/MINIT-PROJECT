@@ -1,0 +1,305 @@
+import { NextResponse } from "next/server";
+import {
+  joinUserError,
+  tooManyPagesError,
+  USER_ERRORS,
+} from "@/lib/user-errors";
+import { getVisionProvider } from "@/lib/ai/provider";
+import {
+  checkAndRecordUsage,
+  createUsageRecorder,
+  requireAiQuota,
+  type UsageCharge,
+} from "@/lib/ai/usage";
+import { QuotaExceededError } from "@/lib/ai/usage-core";
+import {
+  classificationSchema,
+  parseConstitutionExtraction,
+  parseLedgerExtraction,
+  parseMeetingNotesExtraction,
+} from "@/lib/extraction";
+import { classifyPrompt } from "@/prompts/classify";
+import { extractMeetingNotesPrompt } from "@/prompts/extract-meeting-notes";
+import { extractLedgerPrompt } from "@/prompts/extract-ledger";
+import { extractConstitutionPrompt } from "@/prompts/extract-constitution";
+import { dayIsoMalaysia } from "@/lib/history";
+import { recordUpload } from "@/lib/record-upload";
+import { checkPageLimit } from "@/lib/pdf-pages";
+
+// ---------------------------------------------------------------------------
+// ONE DOOR: drop any page of society paperwork here and Minit works out what it
+// is, then reads it.
+//
+// WHY THIS EXISTS (user request, 2026-07-28)
+// The home page used to ask "What did you photograph?" and offer three cards.
+// That question puts the burden on the person: they have to know that a donation
+// ledger goes to /money and handwritten notes go to /minutes before anything can
+// happen. For someone who has never used a computer, "I have a piece of paper and
+// I don't know where it goes" is the actual starting state.
+//
+// So: one box. The file goes in, this route CLASSIFIES it first (the cheap
+// classify prompt, which had been written since Phase 1 and had zero importers),
+// then runs the matching extractor, and returns both. The browser then puts the
+// extraction where it belongs and sends the person to that page with the work
+// already done.
+//
+// COST (the product owner asked for this to be metered):
+//   1 × classify_upload  + 1 × extract_* per file = 2 AI actions.
+// Both are charged BEFORE the vendor call they pay for, and the response reports
+// how many actions are left so the box can show it live.
+//
+// Rule 7: every model reply is zod-validated and retried ONCE with the errors
+// appended, then fails cleanly. Rule 5 (PDPA): the file and the extracted facts
+// are NEVER logged.
+// ---------------------------------------------------------------------------
+
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
+const MAX_BYTES = 8 * 1024 * 1024;
+const ALLOWED_MIME = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+  "application/pdf",
+]);
+
+/** Where each kind of page is reviewed, and what to call it in plain words. */
+const DESTINATION = {
+  meeting_notes: { page: "/minutes", store: "minutes" },
+  ledger_page: { page: "/money", store: "ledger" },
+  constitution: { page: "/constitution", store: "constitution" },
+} as const;
+
+type Handled = keyof typeof DESTINATION;
+
+function isHandled(kind: string): kind is Handled {
+  return kind === "meeting_notes" || kind === "ledger_page" || kind === "constitution";
+}
+
+export async function POST(req: Request) {
+  try {
+    const form = await req.formData();
+    const file = form.get("file");
+    if (!(file instanceof File)) {
+      return NextResponse.json(
+        { error: joinUserError(USER_ERRORS.noPhoto) },
+        { status: 400 },
+      );
+    }
+    if (!ALLOWED_MIME.has(file.type)) {
+      return NextResponse.json(
+        { error: joinUserError(USER_ERRORS.unsupportedLedgerFile) },
+        { status: 400 },
+      );
+    }
+    if (file.size > MAX_BYTES) {
+      return NextResponse.json(
+        { error: joinUserError(USER_ERRORS.fileTooLarge) },
+        { status: 400 },
+      );
+    }
+
+    // 2026-08-21: pages are counted BEFORE the quota is charged. A 200-page PDF
+    // is one tap and a large part of a month's AI quota, and there is no
+    // confirmation screen between the two. See src/lib/pdf-pages.ts.
+    const bytes = await file.arrayBuffer();
+    const pages = await checkPageLimit(bytes, file.type);
+    if (!pages.ok) {
+      return NextResponse.json(
+        {
+          error: joinUserError(
+            tooManyPagesError(pages.pages, pages.limit),
+          ),
+        },
+        { status: 400 },
+      );
+    }
+
+    // Charge the classify step first. requireAiQuota also resolves the org, so
+    // the org name never comes from the browser (prompt-injection surface).
+    const gate = await requireAiQuota(["classify_upload"]);
+    if (!gate.ok) {
+      return NextResponse.json(gate.body, { status: gate.status });
+    }
+    const orgName = gate.org.name;
+    const todayIso = dayIsoMalaysia(new Date().toISOString())!;
+    const imageBase64 = Buffer.from(bytes).toString("base64");
+    // Two tiers on purpose (2026-08-03): "which of three kinds of page is
+    // this?" is a trivial question and a small model answers it as well as a
+    // large one — but it is ~30% of all AI calls. Step 2 below, reading the
+    // actual handwriting, keeps the careful model.
+    // Configure with AI_MODEL_CLASSIFY / AI_MODEL_EXTRACT; both default to the
+    // same model as before, so this change is a no-op until you set them.
+    const classifier = getVisionProvider("classify");
+    const provider = getVisionProvider("extract");
+
+    // 2026-08-18: attach what the vendor actually charged to the ai_usage row
+    // that paid for it — the pattern extract-ledger has had since 2026-08-03.
+    // Two charged rows here, so two recorders: the classify row is billed
+    // and priced separately from the extract row it decides.
+    const onClassifyUsage = createUsageRecorder(gate.org.id, gate.charges[0]);
+
+    // --- step 1: what IS this page? ---------------------------------------
+    let classification: { kind: string; language_detected: string } | null = null;
+    try {
+      const raw = await classifier.extractJson({
+        prompt: classifyPrompt({ filename: file.name }),
+        imageBase64,
+        mimeType: file.type,
+        onUsage: onClassifyUsage,
+      });
+      const parsed = classificationSchema.safeParse(raw);
+      if (parsed.success) classification = parsed.data;
+    } catch {
+      return NextResponse.json(
+        { error: joinUserError(USER_ERRORS.aiUnavailable) },
+        { status: 502 },
+      );
+    }
+
+    if (!classification || !isHandled(classification.kind)) {
+      // Honest outcome, not a guess: we know we could not place this page.
+      // The classify action is still charged — the model did run.
+      return NextResponse.json(
+        {
+          kind: "unknown",
+          error: joinUserError({
+            bm: "Minit tidak pasti halaman ini jenis apa. Kalau ia nota mesyuarat, buka halaman Minit Mesyuarat dan ambil gambar di sana. Kalau ia halaman lejar derma, buka halaman Wang & Resit. Kalau ia perlembagaan, buka halaman Perlembagaan.",
+            zh: "Minit 不太确定这一页是什么。如果是会议笔记，请到「会议记录」页拍；如果是捐款账页，请到「财务与收据」页；如果是章程，请到「章程」页。",
+            en: "Minit is not sure what this page is. If it is meeting notes, open the Meeting Minutes page and take the photo there. If it is a donation ledger page, open Money & Receipts. If it is your constitution, open the Constitution page.",
+          }),
+        },
+        { status: 422 },
+      );
+    }
+
+    const kind: Handled = classification.kind;
+
+    // --- step 2: charge and run the matching extractor ---------------------
+    const extractAction =
+      kind === "meeting_notes"
+        ? "extract_minutes"
+        : kind === "ledger_page"
+          ? "extract_ledger"
+          : "extract_constitution";
+    let extractCharge: UsageCharge | undefined;
+    try {
+      extractCharge = await checkAndRecordUsage(gate.org.id, extractAction);
+    } catch (e) {
+      // Only a real quota exhaustion gets the "come back on the 1st" message.
+      // checkAndRecordUsage also throws on a transient metering/DB failure, and
+      // telling someone their month is used up when they should simply retry is a
+      // dead end. (Found in review, 2026-07-28.)
+      if (!(e instanceof QuotaExceededError)) {
+        return NextResponse.json(
+          { error: joinUserError(USER_ERRORS.serverError) },
+          { status: 500 },
+        );
+      }
+      // Quota ran out between the two charges: tell them the file was recognised
+      // so the classify action was not wasted from their point of view.
+      return NextResponse.json(
+        {
+          kind,
+          error: joinUserError({
+            bm: "Minit kenal halaman ini, tetapi bantuan AI untuk bulan ini sudah habis sebelum ia dapat membacanya. Ia bermula semula pada 1 hari bulan depan.",
+            zh: "Minit 认出这一页了，但这个月的 AI 用量在读完之前刚好用尽。下个月 1 号会重新开始。",
+            en: "Minit recognised the page, but this month's AI help ran out before it could read it. It starts again on the 1st of next month.",
+          }),
+        },
+        { status: 402 },
+      );
+    }
+
+    const onExtractUsage = createUsageRecorder(gate.org.id, extractCharge);
+
+    const prompt =
+      kind === "meeting_notes"
+        ? extractMeetingNotesPrompt({ orgName, todayIso })
+        : kind === "ledger_page"
+          ? extractLedgerPrompt({ orgName, todayIso })
+          : extractConstitutionPrompt({ orgName });
+
+    const validate =
+      kind === "meeting_notes"
+        ? parseMeetingNotesExtraction
+        : kind === "ledger_page"
+          ? parseLedgerExtraction
+          : parseConstitutionExtraction;
+
+    let raw: unknown;
+    try {
+      raw = await provider.extractJson({
+        prompt,
+        imageBase64,
+        mimeType: file.type,
+        onUsage: onExtractUsage,
+      });
+    } catch {
+      return NextResponse.json(
+        { error: joinUserError(USER_ERRORS.aiUnavailable) },
+        { status: 502 },
+      );
+    }
+
+    let parsed = validate(raw);
+    if (!parsed.success) {
+      // Rule 7: retry ONCE with the validation errors appended, not charged again.
+      const issues = parsed.error.issues
+        .slice(0, 10)
+        .map((i) => `${i.path.join(".")}: ${i.message}`)
+        .join("\n");
+      try {
+        raw = await provider.extractJson({
+          prompt: `${prompt}
+
+YOUR PREVIOUS ATTEMPT FAILED VALIDATION with these errors — fix them and respond with ONLY the corrected JSON:
+${issues}`,
+          imageBase64,
+          mimeType: file.type,
+          onUsage: onExtractUsage,
+        });
+        parsed = validate(raw);
+      } catch {
+        // fall through
+      }
+    }
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { kind, error: joinUserError(USER_ERRORS.aiCouldNotRead) },
+        { status: 422 },
+      );
+    }
+
+    // Keep the page + a history row (best-effort), so the original stays
+    // checkable against every field Minit read off it.
+    await recordUpload(
+      file,
+      kind === "meeting_notes"
+        ? "meeting_notes"
+        : kind === "ledger_page"
+          ? "ledger_page"
+          : "constitution",
+    );
+
+    return NextResponse.json({
+      kind,
+      store: DESTINATION[kind].store,
+      page: DESTINATION[kind].page,
+      language: classification.language_detected,
+      fileName: file.name,
+      extraction: parsed.data,
+      provider: provider.name,
+    });
+  } catch {
+    // No contents in logs (PDPA).
+    return NextResponse.json(
+      { error: joinUserError(USER_ERRORS.serverError) },
+      { status: 500 },
+    );
+  }
+}

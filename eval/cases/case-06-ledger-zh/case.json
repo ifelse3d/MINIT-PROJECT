@@ -1,0 +1,32 @@
+{
+  "type": "ledger",
+  "description": "Chinese temple ledger page",
+  "orgName": "Pertubuhan Contoh Harmoni",
+  "todayIso": "2026-06-01",
+  "expected": {
+    "page_title": "乐捐簿 2026年5月",
+    "rows": [
+      {
+        "donor_name": "陈亚九",
+        "donor_phone": "",
+        "amount_cents": 10000,
+        "purpose": "香油钱",
+        "donated_at": "2026-05-02"
+      },
+      {
+        "donor_name": "黄小红",
+        "donor_phone": "",
+        "amount_cents": 8800,
+        "purpose": "香油钱",
+        "donated_at": "2026-05-09"
+      },
+      {
+        "donor_name": "李大山",
+        "donor_phone": "",
+        "amount_cents": 50000,
+        "purpose": "建庙基金",
+        "donated_at": "2026-05-18"
+      }
+    ]
+  }
+}
