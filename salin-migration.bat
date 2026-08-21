@@ -2,75 +2,112 @@
 REM ============================================================
 REM  SALIN MIGRATION KE CLIPBOARD / COPY MIGRATION TO CLIPBOARD
 REM
-REM  Klik dua kali. Ia salin fail SQL terus ke clipboard,
-REM  jadi anda tak payah cari fail atau buka Notepad.
+REM  Klik dua kali. Pilih nombor. Ia salin fail SQL itu terus ke
+REM  clipboard, jadi anda tak payah cari fail atau buka Notepad.
 REM
-REM  Double-click. It copies the SQL straight to your clipboard,
-REM  so you never have to find the file or open Notepad.
+REM  Double-click. Pick a number. It copies that SQL file straight
+REM  to your clipboard, so you never have to find the file or open
+REM  Notepad.
 REM
 REM  FAIL INI TIDAK MENJALANKAN APA-APA. Ia hanya menyalin.
 REM  Anda yang tekan RUN di Supabase.
 REM  THIS FILE RUNS NOTHING. It only copies. You are the one who
 REM  presses RUN in Supabase.
 REM
-REM  Guna PowerShell + UTF8 kerana fail ini ada tulisan Cina
-REM  dalam komen -- `type | clip` akan rosakkannya.
-REM
-REM  2026-08-20: dua migration 19 Ogos SUDAH dijalankan (disahkan
-REM  terus pada pangkalan data). Fail ini kini menunjuk kepada
-REM  yang seterusnya sahaja.
-REM  The two 19 August migrations are already applied (checked
-REM  against the database itself). This now points at the next
-REM  one only.
+REM  2026-08-21 (minit-v2): dulu fail ini menunjuk kepada SATU
+REM  migration sahaja. Pangkalan data baharu bermula kosong, jadi
+REM  ke-13 fail perlu dijalankan mengikut turutan nama fail.
+REM  Sekarang ia menyenaraikan semua 13.
+REM  This used to point at ONE migration. The new database starts
+REM  empty, so all 13 must be run in filename order. It now lists
+REM  all 13.
 REM ============================================================
 cd /d "%~dp0"
 chcp 65001 >nul
 
+:menu
+cls
 echo.
-echo   ============================================
-echo    20260820000000
-echo    jenis mesyuarat + simpan draf
-echo    meeting types + save-as-draft
-echo   ============================================
+echo   ==============================================================
+echo    MIGRATION - salin satu, satu / copy one at a time
+echo   ==============================================================
 echo.
-echo    Apa yang ia buat / What it does:
-echo      1. Benarkan 6 jenis mesyuarat, bukan 3
-echo         (tambah: perancangan, program, lain-lain)
-echo         Allows 6 meeting types instead of 3
-echo      2. Tambah lajur `extraction` untuk simpan draf
-echo         Adds an `extraction` column, for saving drafts
+echo    Jalankan MENGIKUT TURUTAN. Tunggu "Success" sebelum yang
+echo    seterusnya. Run IN ORDER. Wait for "Success" before the next.
 echo.
-echo    Selamat dijalankan berulang kali.
-echo    Safe to run more than once.
+echo     1.  20260708000000  init - semua jadual asas / all base tables
+echo     2.  20260719000000  auth + RLS (pengasingan pertubuhan)
+echo     3.  20260719150000  kuota AI / AI quota
+echo     4.  20260726000000  kunci resit / receipt lock  (P0-2)
+echo     5.  20260728000000  kunci lajur org / lock org columns  (P0-1)
+echo     6.  20260729000000  admin grant AI credits
+echo     7.  20260730000000  nombor siri resit / receipt series
+echo     8.  20260803000000  kos AI / AI cost columns
+echo     9.  20260819000000  glosari / org glossary
+echo    10.  20260819010000  nama rasmi AJK / committee name_official
+echo    11.  20260820000000  jenis mesyuarat + simpan draf
+echo    12.  20260821000000  ai_usage.refunded_at
+echo    13.  20260822000000  carian minit + pgvector
+echo         ^^^ SEBELUM No.13: buka extension "vector" dahulu
+echo             BEFORE No.13: enable the "vector" extension first
+echo             (Dashboard - Database - Extensions - cari "vector")
 echo.
-powershell -NoProfile -Command "Get-Content -Raw -Encoding UTF8 'supabase\migrations\20260820000000_meeting_types_and_minutes_draft.sql' | Set-Clipboard"
-if errorlevel 1 goto :fail
-echo    SUDAH DISALIN / COPIED.
+echo     0.  Keluar / Quit
 echo.
-echo    Sekarang / Now:
-echo      1. Buka Supabase  -^>  SQL Editor
-echo      2. Klik dalam kotak kod, tekan Ctrl+A
-echo      3. Tekan Ctrl+V
-echo      4. Tekan butang hijau RUN
-echo      5. Baris terakhir akan memaparkan satu baris hasil --
-echo         salin baris itu dan hantar pada Claude.
-echo         The last line prints one row of results --
-echo         copy that row and send it to Claude.
+set /p pick=   Nombor / Number:
+
+if "%pick%"=="0" exit /b 0
+if "%pick%"=="1"  set f=20260708000000_init.sql& goto copy
+if "%pick%"=="2"  set f=20260719000000_phase7_auth_rls.sql& goto copy
+if "%pick%"=="3"  set f=20260719150000_phase75_ai_usage.sql& goto copy
+if "%pick%"=="4"  set f=20260726000000_client_id_and_receipt_lock.sql& goto copy
+if "%pick%"=="5"  set f=20260728000000_lock_org_privileged_columns.sql& goto copy
+if "%pick%"=="6"  set f=20260729000000_admin_grant_ai_credits.sql& goto copy
+if "%pick%"=="7"  set f=20260730000000_receipt_series.sql& goto copy
+if "%pick%"=="8"  set f=20260803000000_ai_usage_cost.sql& goto copy
+if "%pick%"=="9"  set f=20260819000000_org_glossary.sql& goto copy
+if "%pick%"=="10" set f=20260819010000_committee_official_name.sql& goto copy
+if "%pick%"=="11" set f=20260820000000_meeting_types_and_minutes_draft.sql& goto copy
+if "%pick%"=="12" set f=20260821000000_ai_usage_refunded_at.sql& goto copy
+if "%pick%"=="13" set f=20260822000000_minutes_search.sql& goto copy
+
+echo.
+echo    Nombor tak sah / not a valid number.
+timeout /t 2 >nul
+goto menu
+
+:copy
+if not exist "supabase\migrations\%f%" goto fail
+
+REM PowerShell + UTF8 kerana fail ini ada tulisan Cina dalam komen --
+REM `type ^| clip` akan rosakkannya.
+REM PowerShell + UTF8 because these files have Chinese in the comments;
+REM `type ^| clip` mangles it.
+powershell -NoProfile -Command "Get-Content -Raw -Encoding UTF8 'supabase\migrations\%f%' | Set-Clipboard"
+if errorlevel 1 goto fail
+
+echo.
+echo   ==============================================================
+echo    SIAP DISALIN / COPIED:  %f%
+echo   ==============================================================
+echo.
+echo    1. Supabase - SQL Editor - New query
+echo    2. Klik dalam kotak kod, tekan Ctrl+A, kemudian Ctrl+V
+echo       Click in the code box, press Ctrl+A, then Ctrl+V
+echo    3. Tekan butang hijau RUN
+echo    4. "Success. No rows returned" = jadi / it worked
 echo.
 echo    Kalau keluar tulisan MERAH, salin semua dan hantar pada Claude.
 echo    If you get RED text, copy all of it and send it to Claude.
 echo.
-echo   ============================================
-echo    SIAP DISALIN / COPIED.
-echo   ============================================
-echo.
 pause
-exit /b 0
+goto menu
 
 :fail
 echo.
-echo    GAGAL / FAILED -- fail tidak dijumpai.
-echo    File not found. Nothing was changed.
+echo    GAGAL / FAILED -- fail tidak dijumpai / file not found:
+echo    supabase\migrations\%f%
+echo    Tiada apa-apa yang diubah / Nothing was changed.
 echo.
 pause
-exit /b 1
+goto menu
