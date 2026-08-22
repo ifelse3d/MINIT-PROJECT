@@ -13,6 +13,9 @@
 //      course — on 18 Jul an ENTIRE eval run died this way (all 10 cases,
 //      chat-backup-2026-07-21/08). In production the same failure is called
 //      "the treasurer's quota was charged and no receipt came out".
+//      (1 and 2 moved to ./http.ts on 2026-08-23 — openai.ts had grown its own
+//      slightly different copy, and neither had ever been tested. One copy, 15
+//      tests.)
 //   3. maxOutputTokens. Output costs 3–5x input, so a runaway generation is
 //      the most expensive possible failure (D3 item 3).
 //   4. usageMetadata is CAPTURED instead of discarded. Google was already
@@ -39,14 +42,6 @@ import { geminiToolBody, readGeminiTurn } from "./tool-wire";
 import { postVendorJson } from "./http";
 
 export const GEMINI_DEFAULT_MODEL = "gemini-3.5-flash-lite";
-
-/** Give up on one attempt after this long. Route maxDuration is 60s, so this
- *  leaves room for one retry plus the response. */
-const REQUEST_TIMEOUT_MS = 20_000;
-/** Attempts for TRANSIENT failures only (429/503/network). Not for bad JSON —
- *  that is rule 7's separate retry, which happens one level up. */
-const MAX_ATTEMPTS = 3;
-const BACKOFF_MS = [0, 900, 2_600];
 
 // ---------------------------------------------------------------------------
 // Prices per 1M tokens in USD, from ai.google.dev/gemini-api/docs/pricing,
@@ -77,148 +72,95 @@ function costMicrosFor(model: string, inTok: number, outTok: number): number | n
   return Math.round(usd * 1e6);
 }
 
-/** 429 = rate limited, 5xx = vendor trouble. Both are worth waiting out.
- *  4xx other than 429 is our mistake and retrying just burns time. */
-function isTransient(status: number): boolean {
-  return status === 429 || status === 408 || status >= 500;
-}
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
 export function createGeminiProvider(model: string): VisionJsonProvider {
   return {
-  name: "gemini",
+    name: "gemini",
 
-  async extractJson({
-    prompt,
-    imageBase64,
-    mimeType,
-    maxOutputTokens,
-    temperature,
-    onUsage,
-  }: VisionJsonRequest): Promise<unknown> {
-    const key = process.env.GEMINI_API_KEY;
-    if (!key) {
-      throw new Error(
-        "GEMINI_API_KEY tiada dalam .env.local / missing — add it and restart the server."
-      );
-    }
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-
-    const parts: Array<
-      { text: string } | { inline_data: { mime_type: string; data: string } }
-    > = [{ text: prompt }];
-    if (imageBase64 && mimeType) {
-      parts.push({ inline_data: { mime_type: mimeType, data: imageBase64 } });
-    }
-
-    const body = JSON.stringify({
-      contents: [{ parts }],
-      generationConfig: {
-        // 0 unless a caller overrides it — see DEFAULT_TEMPERATURE in provider.ts.
-        temperature: temperature ?? DEFAULT_TEMPERATURE,
-        responseMimeType: "application/json",
-        maxOutputTokens: maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
-      },
-    });
-
-    let lastError: Error = new Error("Gemini: no attempt was made.");
-
-    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-      if (BACKOFF_MS[attempt]) await sleep(BACKOFF_MS[attempt]);
-
-      // AbortController, not just a Promise.race: this actually cancels the
-      // socket, so a hung vendor call stops occupying the function.
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
-      try {
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-          body,
-          signal: controller.signal,
-        });
-
-        if (!res.ok) {
-          // PDPA: never echo request contents; status + vendor message only.
-          const detail = await res.text().catch(() => "");
-          const err = new Error(`Gemini API ${res.status}: ${detail.slice(0, 300)}`);
-          if (isTransient(res.status) && attempt < MAX_ATTEMPTS - 1) {
-            lastError = err;
-            continue;
-          }
-          throw err;
-        }
-
-        const json = (await res.json()) as {
-          candidates?: {
-            content?: { parts?: { text?: string }[] };
-            finishReason?: string;
-          }[];
-          usageMetadata?: {
-            promptTokenCount?: number;
-            candidatesTokenCount?: number;
-          };
-        };
-
-        const candidate = json.candidates?.[0];
-
-        // Report the cost even when the answer turns out unusable — it was
-        // still charged by Google, so it must still appear in our numbers.
-        if (onUsage && json.usageMetadata) {
-          const inTok = json.usageMetadata.promptTokenCount ?? 0;
-          const outTok = json.usageMetadata.candidatesTokenCount ?? 0;
-          const usage: TokenUsage = {
-            inputTokens: inTok,
-            outputTokens: outTok,
-            model,
-            provider: "gemini",
-            costMicros: costMicrosFor(model, inTok, outTok),
-          };
-          try {
-            onUsage(usage);
-          } catch {
-            // Cost bookkeeping must never break the user's request.
-          }
-        }
-
-        // MAX_TOKENS means our ceiling cut the JSON in half. Say so plainly:
-        // otherwise it surfaces as an unexplained "AI could not read this".
-        if (candidate?.finishReason === "MAX_TOKENS") {
-          throw new Error(
-            "Gemini stopped at maxOutputTokens — the document is too large for one pass. " +
-              "Split it into smaller parts."
-          );
-        }
-
-        const text = (candidate?.content?.parts ?? []).map((p) => p.text ?? "").join("");
-        if (!text) throw new Error("Gemini returned an empty response.");
-        return parseModelJson(text);
-      } catch (e) {
-        const err = e instanceof Error ? e : new Error(String(e));
-        const isAbort = err.name === "AbortError";
-        // Retry on timeout and on network-level failures; anything else
-        // (bad JSON, MAX_TOKENS, our own 4xx) is not going to fix itself.
-        const worthRetrying =
-          isAbort || err.message.includes("fetch failed") || err.message.includes("ECONN");
-        if (worthRetrying && attempt < MAX_ATTEMPTS - 1) {
-          lastError = isAbort
-            ? new Error(`Gemini timed out after ${REQUEST_TIMEOUT_MS}ms`)
-            : err;
-          continue;
-        }
-        throw isAbort ? new Error(`Gemini timed out after ${REQUEST_TIMEOUT_MS}ms`) : err;
-      } finally {
-        clearTimeout(timer);
+    async extractJson({
+      prompt,
+      imageBase64,
+      mimeType,
+      maxOutputTokens,
+      temperature,
+      onUsage,
+    }: VisionJsonRequest): Promise<unknown> {
+      const key = process.env.GEMINI_API_KEY;
+      if (!key) {
+        throw new Error(
+          "GEMINI_API_KEY tiada dalam .env.local / missing — add it and restart the server."
+        );
       }
-    }
 
-    throw lastError;
-  },
+      const parts: Array<
+        { text: string } | { inline_data: { mime_type: string; data: string } }
+      > = [{ text: prompt }];
+      if (imageBase64 && mimeType) {
+        parts.push({ inline_data: { mime_type: mimeType, data: imageBase64 } });
+      }
+
+      // The timeout, the transient retry and the backoff live in ./http.ts —
+      // ONE copy, 15 tests. They used to be written out here and again in
+      // openai.ts, and the two copies had already drifted apart. (2026-08-23.)
+      const json = (await postVendorJson({
+        vendor: "Gemini",
+        url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+        headers: { "x-goog-api-key": key },
+        body: {
+          contents: [{ parts }],
+          generationConfig: {
+            // 0 unless a caller overrides it — see DEFAULT_TEMPERATURE in provider.ts.
+            temperature: temperature ?? DEFAULT_TEMPERATURE,
+            responseMimeType: "application/json",
+            maxOutputTokens: maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
+          },
+        },
+      })) as {
+        candidates?: {
+          content?: { parts?: { text?: string }[] };
+          finishReason?: string;
+        }[];
+        usageMetadata?: {
+          promptTokenCount?: number;
+          candidatesTokenCount?: number;
+        };
+      };
+
+      const candidate = json.candidates?.[0];
+
+      // Report the cost even when the answer turns out unusable — it was
+      // still charged by Google, so it must still appear in our numbers.
+      if (onUsage && json.usageMetadata) {
+        const inTok = json.usageMetadata.promptTokenCount ?? 0;
+        const outTok = json.usageMetadata.candidatesTokenCount ?? 0;
+        const usage: TokenUsage = {
+          inputTokens: inTok,
+          outputTokens: outTok,
+          model,
+          provider: "gemini",
+          costMicros: costMicrosFor(model, inTok, outTok),
+        };
+        try {
+          onUsage(usage);
+        } catch {
+          // Cost bookkeeping must never break the user's request.
+        }
+      }
+
+      // MAX_TOKENS means our ceiling cut the JSON in half. Say so plainly:
+      // otherwise it surfaces as an unexplained "AI could not read this".
+      if (candidate?.finishReason === "MAX_TOKENS") {
+        throw new Error(
+          "Gemini stopped at maxOutputTokens — the document is too large for one pass. " +
+            "Split it into smaller parts."
+        );
+      }
+
+      const text = (candidate?.content?.parts ?? []).map((p) => p.text ?? "").join("");
+      if (!text) throw new Error("Gemini returned an empty response.");
+      return parseModelJson(text);
+    },
   };
 }
-
 
 // ---------------------------------------------------------------------------
 // FUNCTION CALLING (2026-08-23).

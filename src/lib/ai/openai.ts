@@ -35,10 +35,6 @@ import type { ToolTurn } from "./tool-core";
 import { openAiToolBody, readOpenAiTurn } from "./tool-wire";
 import { postVendorJson } from "./http";
 
-const REQUEST_TIMEOUT_MS = 20_000;
-const MAX_ATTEMPTS = 3;
-const BACKOFF_MS = [0, 900, 2_600];
-
 // Prices per 1M tokens in USD — developers.openai.com/api/docs/pricing,
 // checked 2026-08-03. Same rule as gemini.ts: a missing model yields a null
 // cost, never a guess. Add the date when you add a row.
@@ -59,12 +55,6 @@ function costMicrosFor(model: string, inTok: number, outTok: number): number | n
   if (!p) return null;
   return Math.round(((inTok / 1e6) * p.in + (outTok / 1e6) * p.out) * 1e6);
 }
-
-function isTransient(status: number): boolean {
-  return status === 429 || status === 408 || status >= 500;
-}
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
  * Models that answered "Unsupported parameter: 'temperature'" once already.
@@ -122,129 +112,86 @@ export function createOpenAiProvider(model: string): VisionJsonProvider {
         });
       }
 
-      // Rebuildable, because of the fallback below: some models in the GPT-5
-      // reasoning family reject `temperature` outright ("Unsupported parameter")
-      // instead of ignoring it, and which ones do is not something this file can
-      // know in advance — it is a per-model fact that changes when OpenAI ships.
-      // So: send it, and if THIS model says no, drop it and remember for the
-      // rest of the process. Refusing to send it at all would leave every
-      // OpenAI call running at the vendor default of 1 (see DEFAULT_TEMPERATURE).
-      const buildBody = (withTemperature: boolean) =>
-        JSON.stringify({
-          model,
-          input: [{ role: "user", content }],
-          max_output_tokens: maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
-          text: { format: { type: "json_object" } },
-          ...(withTemperature
-            ? { temperature: temperature ?? DEFAULT_TEMPERATURE }
-            : {}),
+      // The timeout, the transient retry and the backoff live in ./http.ts —
+      // ONE copy, 15 tests, shared with gemini.ts and with both tool providers.
+      const send = (withTemperature: boolean) =>
+        postVendorJson({
+          vendor: "OpenAI",
+          url: "https://api.openai.com/v1/responses",
+          headers: { Authorization: `Bearer ${key}` },
+          body: {
+            model,
+            input: [{ role: "user", content }],
+            max_output_tokens: maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
+            text: { format: { type: "json_object" } },
+            ...(withTemperature ? { temperature: temperature ?? DEFAULT_TEMPERATURE } : {}),
+          },
         });
 
-      let body = buildBody(!MODELS_REJECTING_TEMPERATURE.has(model));
-
-      let lastError: Error = new Error("OpenAI: no attempt was made.");
-
-      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-        if (BACKOFF_MS[attempt]) await sleep(BACKOFF_MS[attempt]);
-
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
-        try {
-          const res = await fetch("https://api.openai.com/v1/responses", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${key}`,
-            },
-            body,
-            signal: controller.signal,
-          });
-
-          if (!res.ok) {
-            // PDPA: status + vendor message only, never the request contents.
-            const detailText = await res.text().catch(() => "");
-            const err = new Error(`OpenAI API ${res.status}: ${detailText.slice(0, 300)}`);
-
-            // "this model does not take a temperature" — not a failure, a fact
-            // about the model. Learn it, resend without the parameter. Only
-            // once per model per process; the flag makes the second call skip
-            // straight to the accepted shape.
-            if (
-              res.status === 400 &&
-              /temperature/i.test(detailText) &&
-              !MODELS_REJECTING_TEMPERATURE.has(model)
-            ) {
-              MODELS_REJECTING_TEMPERATURE.add(model);
-              body = buildBody(false);
-              lastError = err;
-              continue;
-            }
-
-            if (isTransient(res.status) && attempt < MAX_ATTEMPTS - 1) {
-              lastError = err;
-              continue;
-            }
-            throw err;
-          }
-
-          const json = (await res.json()) as {
-            status?: string;
-            incomplete_details?: { reason?: string };
-            output?: { type?: string; content?: { type?: string; text?: string }[] }[];
-            usage?: { input_tokens?: number; output_tokens?: number };
-          };
-
-          // Report cost even if the answer turns out unusable — it was billed.
-          if (onUsage && json.usage) {
-            const inTok = json.usage.input_tokens ?? 0;
-            const outTok = json.usage.output_tokens ?? 0;
-            const usage: TokenUsage = {
-              inputTokens: inTok,
-              outputTokens: outTok,
-              model,
-              provider: "openai",
-              costMicros: costMicrosFor(model, inTok, outTok),
-            };
-            try {
-              onUsage(usage);
-            } catch {
-              // bookkeeping must never break the user's request
-            }
-          }
-
-          if (json.incomplete_details?.reason === "max_output_tokens") {
-            throw new Error(
-              "OpenAI stopped at max_output_tokens — the document is too large for one pass. " +
-                "Split it into smaller parts."
-            );
-          }
-
-          const text = outputTextOf(json);
-          if (!text) throw new Error("OpenAI returned an empty response.");
-          return parseModelJson(text);
-        } catch (e) {
-          const err = e instanceof Error ? e : new Error(String(e));
-          const isAbort = err.name === "AbortError";
-          const worthRetrying =
-            isAbort || err.message.includes("fetch failed") || err.message.includes("ECONN");
-          if (worthRetrying && attempt < MAX_ATTEMPTS - 1) {
-            lastError = isAbort
-              ? new Error(`OpenAI timed out after ${REQUEST_TIMEOUT_MS}ms`)
-              : err;
-            continue;
-          }
-          throw isAbort ? new Error(`OpenAI timed out after ${REQUEST_TIMEOUT_MS}ms`) : err;
-        } finally {
-          clearTimeout(timer);
+      // Some models in the GPT-5 reasoning family REJECT `temperature` outright
+      // ("Unsupported parameter") instead of ignoring it, and which ones do is
+      // not something this file can know in advance — it is a per-model fact
+      // that changes when OpenAI ships. So: send it, and if THIS model says no,
+      // drop it and remember for the rest of the process. Refusing to send it
+      // at all would leave every OpenAI call running at the vendor default of 1
+      // (see DEFAULT_TEMPERATURE).
+      //
+      // 2026-08-23: this used to swap the body mid-retry-loop, spending one of
+      // the three transient attempts on it. It is now an OUTER retry, so a
+      // model teaching us about temperature no longer eats the budget meant for
+      // rate limits. It happens at most once per model per process either way.
+      const withTemperature = !MODELS_REJECTING_TEMPERATURE.has(model);
+      let json: unknown;
+      try {
+        json = await send(withTemperature);
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        if (withTemperature && /400/.test(message) && /temperature/i.test(message)) {
+          MODELS_REJECTING_TEMPERATURE.add(model);
+          json = await send(false);
+        } else {
+          throw e;
         }
       }
 
-      throw lastError;
+      const reply = json as {
+        status?: string;
+        incomplete_details?: { reason?: string };
+        output?: { type?: string; content?: { type?: string; text?: string }[] }[];
+        usage?: { input_tokens?: number; output_tokens?: number };
+      };
+
+      // Report cost even if the answer turns out unusable — it was billed.
+      if (onUsage && reply.usage) {
+        const inTok = reply.usage.input_tokens ?? 0;
+        const outTok = reply.usage.output_tokens ?? 0;
+        const usage: TokenUsage = {
+          inputTokens: inTok,
+          outputTokens: outTok,
+          model,
+          provider: "openai",
+          costMicros: costMicrosFor(model, inTok, outTok),
+        };
+        try {
+          onUsage(usage);
+        } catch {
+          // bookkeeping must never break the user's request
+        }
+      }
+
+      if (reply.incomplete_details?.reason === "max_output_tokens") {
+        throw new Error(
+          "OpenAI stopped at max_output_tokens — the document is too large for one pass. " +
+            "Split it into smaller parts."
+        );
+      }
+
+      const text = outputTextOf(reply);
+      if (!text) throw new Error("OpenAI returned an empty response.");
+      return parseModelJson(text);
     },
   };
 }
-
 
 // ---------------------------------------------------------------------------
 // FUNCTION CALLING (2026-08-23). Same endpoint and key as extractJson; the
