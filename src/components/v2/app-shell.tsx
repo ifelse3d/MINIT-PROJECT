@@ -35,11 +35,14 @@ export function AppShell({
   children,
   showAiLauncher,
   aiRemaining,
+  aiUsedPct,
   aiBlocked,
 }: {
   children: React.ReactNode;
   showAiLauncher: boolean;
   aiRemaining: number | null;
+  /** Share of the monthly free quota already spent, 0–100. null = unknown. */
+  aiUsedPct: number | null;
   aiBlocked: boolean;
 }) {
   const pathname = usePathname();
@@ -99,6 +102,7 @@ export function AppShell({
         <AIDock
           dock={dock}
           initialRemaining={aiRemaining}
+          initialUsedPct={aiUsedPct}
           blocked={aiBlocked}
         />
       )}

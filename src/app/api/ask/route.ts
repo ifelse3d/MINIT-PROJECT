@@ -141,7 +141,7 @@ export async function POST(req: Request) {
           en: "Sorry — Minit only answers questions about your organisation's records, constitution and app pages. Minit had to read the question to know that, so it used 1 of your AI quota. Try asking about donations, receipts, meeting minutes or the constitution.",
         },
         button: null,
-        remaining: (await getUsage(org.id))?.totalRemaining ?? null,
+        ...(await usageFields(org.id)),
       });
     }
 
@@ -158,7 +158,7 @@ export async function POST(req: Request) {
           zh: "前往页面",
           en: "Go to page",
         },
-        remaining: (await getUsage(org.id))?.totalRemaining ?? null,
+        ...(await usageFields(org.id)),
       });
     }
 
@@ -182,7 +182,7 @@ export async function POST(req: Request) {
           zh: "前往章程页面",
           en: "Go to Constitution",
         },
-        remaining: (await getUsage(org.id))?.totalRemaining ?? null,
+        ...(await usageFields(org.id)),
       });
     }
 
@@ -208,7 +208,7 @@ export async function POST(req: Request) {
           en: "No records in your active organisation match this search.",
         },
         button: searchButton(classification),
-        remaining: (await getUsage(org.id))?.totalRemaining ?? null,
+        ...(await usageFields(org.id)),
       });
     }
 
@@ -246,7 +246,7 @@ export async function POST(req: Request) {
       },
       totals: totalsText,
       button: searchButton(classification),
-      remaining: (await getUsage(org.id))?.totalRemaining ?? null,
+      ...(await usageFields(org.id)),
     });
   } catch {
     // No contents in logs (PDPA).
@@ -258,6 +258,30 @@ export async function POST(req: Request) {
 }
 
 // --- helpers -----------------------------------------------------------------
+
+/**
+ * The meter fields every answer carries back, read once.
+ *
+ * 2026-08-22: `remaining` used to be built inline at five different return
+ * sites. Adding the percentage next to it would have meant five more chances
+ * for one branch to disagree with the others about what the meter says, so the
+ * pair is produced in one place instead.
+ *
+ * `usedPct` is the share of the MONTHLY FREE QUOTA spent (see usage-core) — not
+ * a share of free + purchased credits, which would fall when you buy more.
+ * Both are null when the usage row cannot be read: null means "unknown", and
+ * the UI hides the badge rather than printing a made-up 0.
+ */
+async function usageFields(
+  orgId: number,
+): Promise<{ remaining: number | null; usedPct: number | null }> {
+  const usage = await getUsage(orgId);
+  return {
+    remaining: usage?.totalRemaining ?? null,
+    usedPct: usage?.usedPct ?? null,
+  };
+}
+
 
 function quotaOrServerError(e: unknown) {
   // 2026-08-21: going too fast is a 429, not a 500 and not a 402 — the fix is

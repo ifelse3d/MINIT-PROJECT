@@ -27,19 +27,26 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, ArrowUp, RotateCcw, Sparkles, X } from "lucide-react";
 import { Tri, useTriText } from "@/components/language-provider";
 import { GlassBadge } from "./glass";
+import { AnswerSources, type AnswerSource } from "./answer-sources";
 import { tidyReply } from "@/lib/tidy-reply";
 
 type Turn = {
   role: "user" | "assistant";
   text: string;
   button?: { href: string; bm: string; zh: string; en: string } | null;
+  /** Clickable "this came from the 12 June meeting" links. */
+  sources?: AnswerSource[] | null;
 };
 
 type ChatOk = {
   reply: string;
   inScope: boolean;
   button: { href: string; bm: string; zh: string; en: string } | null;
+  /** Which of the society's own meetings the answer rests on (2026-08-22). */
+  sources: AnswerSource[] | null;
   remaining: number | null;
+  /** Share of the monthly free quota spent, 0–100 (2026-08-22). */
+  usedPct: number | null;
   turnsUsed: number;
   maxTurns: number;
 };
@@ -62,12 +69,15 @@ const SUGGESTIONS = [
 
 export function AIPanel({
   initialRemaining,
+  initialUsedPct,
   blocked,
   onNavigate,
   onClose,
 }: {
   /** null = unknown (no org yet) */
   initialRemaining: number | null;
+  /** Share of the monthly free quota spent, 0–100. null = unknown. */
+  initialUsedPct: number | null;
   blocked: boolean;
   /** Close the sheet when the member follows the Go-to-page button. Omitted by
    *  the docked desktop rail, which deliberately STAYS open while the page
@@ -83,6 +93,7 @@ export function AIPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [remaining, setRemaining] = useState<number | null>(initialRemaining);
+  const [usedPct, setUsedPct] = useState<number | null>(initialUsedPct);
   const [turnsLeft, setTurnsLeft] = useState<number | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
   /** Ticket for the question in flight — see ask(). */
@@ -100,6 +111,10 @@ export function AIPanel({
   if (initialRemaining !== seenRemaining) {
     setSeenRemaining(initialRemaining);
     setRemaining(initialRemaining);
+    // The percentage is adopted with the count, never on its own: the two are
+    // one reading of one meter, and letting them arrive separately is how the
+    // badge ends up saying "99 left · 40% used".
+    setUsedPct(initialUsedPct);
   }
 
   const isBlocked = blocked || (remaining !== null && remaining <= 0);
@@ -135,9 +150,15 @@ export function AIPanel({
       }
       setTurns((prev) => [
         ...prev,
-        { role: "assistant", text: tidyReply(body.reply), button: body.button },
+        {
+          role: "assistant",
+          text: tidyReply(body.reply),
+          button: body.button,
+          sources: body.sources ?? null,
+        },
       ]);
       if (typeof body.remaining === "number") setRemaining(body.remaining);
+      if (typeof body.usedPct === "number") setUsedPct(body.usedPct);
       setTurnsLeft(Math.max(0, body.maxTurns - body.turnsUsed));
       // Re-run the server render so the other meters (home box, /settings)
       // move at the same time as this one.
@@ -176,12 +197,18 @@ export function AIPanel({
             />
           </p>
         </div>
+        {/* 2026-08-22, J: "为什么还是在额度呢？不是说要换去 PERCENTAGE 吗".
+            Both numbers, not one: "99 left" is the concrete thing an older
+            treasurer acts on, and the percentage is what makes "am I about to
+            run out" readable at a glance. The word "guna / 用了 / used" is
+            carried with the figure on purpose — "Baki 99 · 1%" on its own reads
+            as "1% LEFT", which is the opposite of what it says. */}
         {remaining !== null && (
           <GlassBadge tone={remaining > 0 ? "info" : "missing"}>
             <Tri
-              bm={`Baki ${remaining}`}
-              zh={`剩 ${remaining}`}
-              en={`${remaining} left`}
+              bm={`Baki ${remaining}${usedPct === null ? "" : ` · ${usedPct}% guna`}`}
+              zh={`剩 ${remaining}${usedPct === null ? "" : ` · 用了 ${usedPct}%`}`}
+              en={`${remaining} left${usedPct === null ? "" : ` · ${usedPct}% used`}`}
             />
           </GlassBadge>
         )}
@@ -239,6 +266,7 @@ export function AIPanel({
                   <ArrowRight className="h-5 w-5" strokeWidth={2} />
                 </Link>
               )}
+              <AnswerSources sources={turn.sources ?? []} />
             </div>
           ),
         )}

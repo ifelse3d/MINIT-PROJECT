@@ -157,11 +157,14 @@ export function useAIDock() {
 export function AIDock({
   dock,
   initialRemaining,
+  initialUsedPct,
   blocked,
 }: {
   dock: AIDockState;
   /** null = unknown (no org yet) */
   initialRemaining: number | null;
+  /** Share of the monthly free quota already spent, 0–100. null = unknown. */
+  initialUsedPct: number | null;
   blocked: boolean;
 }) {
   const { open, setOpen, width, isDesktop, dragging, startResize, nudgeWidth } =
@@ -242,6 +245,7 @@ export function AIDock({
 
               <AIPanel
                 initialRemaining={initialRemaining}
+                initialUsedPct={initialUsedPct}
                 blocked={blocked}
                 onClose={() => setOpen(false)}
                 // Docked: following the "go to this page" button navigates the
@@ -269,6 +273,7 @@ export function AIDock({
                 <div className="h-[80vh]">
                   <AIPanel
                     initialRemaining={initialRemaining}
+                    initialUsedPct={initialUsedPct}
                     blocked={blocked}
                     onClose={() => setOpen(false)}
                     // A phone sheet covers the page, so following a link must

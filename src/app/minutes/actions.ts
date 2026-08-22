@@ -17,6 +17,7 @@
 // getDocumentIdentity() — org name and signer read from the signed-in session,
 // exactly like the receipt/AGM/bank routes. There is nothing left to forge.
 import { getSupabaseServer, getSessionUser } from "@/db/supabase-server";
+import { indexMinutesDocInBackground } from "@/lib/ai/minutes-index";
 import { getActiveOrg } from "@/lib/active-org";
 import { getDocumentIdentity } from "@/lib/doc-identity";
 import { parseMeetingNotesExtraction } from "@/lib/extraction";
@@ -157,7 +158,11 @@ export async function saveConfirmedMinutes(input: {
   // worked yesterday still sends exactly the columns it sent yesterday.
   if (customLabel !== "") row.meeting_type_label = customLabel;
 
-  const { error } = await supabase.from("minutes_docs").insert(row);
+  const { data: saved, error } = await supabase
+    .from("minutes_docs")
+    .insert(row)
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     // The CHECK on meeting_type is the one failure here with a specific, fast
@@ -176,6 +181,19 @@ export async function saveConfirmedMinutes(input: {
       ok: false,
     };
   }
+  // 2026-08-22 — the moment this record becomes searchable.
+  //
+  // This is what makes "我記得有一次開會說了什麼，你幫我找出來" answerable:
+  // the assistant searches minutes_embeddings, and a document only gets there
+  // when a human has confirmed it (docs/助手重做-设计.md §3).
+  //
+  // Deliberately NOT awaited and deliberately unable to fail the save. The
+  // person just confirmed a legal record and is waiting for a page; an
+  // embedding vendor having a bad minute must not turn that into "could not
+  // save". Anything missed here has embedded_at = NULL and is picked up by
+  // `npm run embed:backfill`.
+  if (saved?.id) indexMinutesDocInBackground(Number(saved.id));
+
   return { error: null, ok: true };
 }
 

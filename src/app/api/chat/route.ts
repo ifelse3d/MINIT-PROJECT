@@ -16,6 +16,7 @@ import {
   RateLimitedError,
 } from "@/lib/ai/usage-core";
 import { getActiveOrg } from "@/lib/active-org";
+import { cariMinit, formatHitsForPrompt, type MinutesHit } from "@/lib/ai/cari-minit";
 import { ASK_ROUTES, type AskRouteKey } from "@/lib/ask-routes";
 import { chatPrompt, type ChatTurn } from "@/prompts/chat";
 import { dayIsoMalaysia } from "@/lib/history";
@@ -78,7 +79,54 @@ const replySchema = z.object({
   reply: z.string().min(1),
   in_scope: z.boolean(),
   suggested_page: z.string(),
+  // Which excerpts the model says it used. Optional on purpose: a model that
+  // forgets this field must still get a usable answer through, and the fallback
+  // (show every excerpt that was found) is safe -- it over-shows sources, it
+  // never invents one.
+  used_sources: z.array(z.number().int().positive()).optional(),
 });
+
+/** What the assistant is allowed to show as a source.
+ *  Not exported: a route module may only export its handlers and config. */
+type ChatSource = {
+  /** The number that appears in the reply as [1], [2]. */
+  n: number;
+  docId: number;
+  meetingDate: string | null;
+  meetingType: string | null;
+};
+
+/**
+ * The excerpts the model said it used, mapped back to real meetings.
+ *
+ * When `used` is missing or empty but excerpts WERE found, every excerpt is
+ * shown. That is deliberate: the failure mode of showing one source too many is
+ * a person opening a meeting that turns out not to matter, while the failure
+ * mode of showing none is a claim with nothing behind it. An out-of-range
+ * number is dropped rather than clamped — a model that cites [7] when six
+ * excerpts exist is not to be second-guessed about which one it meant.
+ */
+function citedSources(hits: MinutesHit[], used?: number[]): ChatSource[] {
+  if (hits.length === 0) return [];
+  const wanted =
+    used && used.length > 0
+      ? used.filter((n) => n >= 1 && n <= hits.length)
+      : hits.map((_, i) => i + 1);
+  const seen = new Set<number>();
+  const out: ChatSource[] = [];
+  for (const n of wanted) {
+    if (seen.has(n)) continue;
+    seen.add(n);
+    const hit = hits[n - 1];
+    out.push({
+      n,
+      docId: hit.docId,
+      meetingDate: hit.meetingDate,
+      meetingType: hit.meetingType,
+    });
+  }
+  return out;
+}
 
 function routeFor(key: string): { href: string; bm: string; zh: string; en: string } | null {
   if (key === "none" || !(key in ASK_ROUTES)) return null;
@@ -168,6 +216,27 @@ export async function POST(req: Request) {
     // that paid for it — the pattern extract-ledger has had since 2026-08-03.
     const onUsage = createUsageRecorder(org.id, charge);
 
+    // --- cari_minit: what does this society's own record say? --------------
+    //
+    // 2026-08-20, J: the assistant has to answer "我記得有一次開會說了什麼".
+    // docs/助手重做-设计.md §5 step 1. This is the first thing the assistant can
+    // actually SEE, and it is why the "you cannot read their records" line came
+    // out of src/prompts/chat.ts in this same change.
+    //
+    // RETRIEVAL-FIRST, NOT YET MODEL-CHOSEN TOOL CALLS. The design doc's shape
+    // is "the model decides which tool to call". That needs a function-calling
+    // abstraction across four vendors, which the provider layer does not have
+    // yet. Searching on every turn reaches the same outcome for this one tool:
+    // the excerpts are in front of the model, and it is told to use only those.
+    // The cost of searching when it was not needed is one embedding call --
+    // cheap, and not charged to the org's quota (docs/助手重做-设计.md §3).
+    //
+    // Never throws: cariMinit returns [] for a missing key, an unapplied
+    // migration, a vendor outage or simply nothing similar enough. All four
+    // mean the same thing to the assistant, and it says it could not find it
+    // rather than filling the gap.
+    const hits = await cariMinit({ orgId: org.id, query: question });
+
     const prompt = chatPrompt({
       orgName: org.name,
       todayIso,
@@ -175,6 +244,7 @@ export async function POST(req: Request) {
       // token is money.
       history: history.slice(-CONTEXT_TURNS * 2) as ChatTurn[],
       question,
+      minutesExcerpts: formatHitsForPrompt(hits),
     });
 
     let raw: unknown;
@@ -235,7 +305,14 @@ YOUR PREVIOUS ATTEMPT WAS NOT VALID JSON in the required shape. Respond with ONL
       reply: parsed.data.reply,
       inScope: parsed.data.in_scope,
       button: routeFor(parsed.data.suggested_page),
+      // Every claim about their records, with the meeting it came from — the
+      // person can open it and check. "每个事实带出处" (design doc §2).
+      sources: citedSources(hits, parsed.data.used_sources),
       remaining: after?.totalRemaining ?? null,
+      // 2026-08-22: the badge prints both — how many actions are left, and how
+      // full the month's free quota is. usedPct measures the FREE quota only
+      // (usage-core), so buying credits cannot make the gauge go backwards.
+      usedPct: after?.usedPct ?? null,
       turnsUsed: userTurns + 1,
       maxTurns: MAX_TURNS,
     });

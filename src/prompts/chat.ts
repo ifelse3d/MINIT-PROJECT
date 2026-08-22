@@ -8,6 +8,26 @@
 // worse than the cost risk. This prompt is what keeps that decision safe: the
 // assistant stays inside society paperwork, never invents a fact about the
 // organisation's records, and never gives legal or tax advice.
+//
+// 🔴 2026-08-22 — THE BLINDFOLD CAME OFF.
+// Until today rule 1 below said: "You cannot see their minutes... say plainly
+// that you cannot read their records from here." J overturned that sentence on
+// 2026-08-20 (CLAUDE.md rule 10, docs/助手重做-设计.md), and CLAUDE.md was
+// explicit that it must be removed in the SAME change that gives the assistant
+// a real way to read records -- never before, or the removal licenses exactly
+// the guessing it was written to stop.
+//
+// That change is here. Every turn now searches this organisation's CONFIRMED
+// minutes (src/lib/ai/cari-minit.ts, pgvector) and the matching sections are
+// pasted in under MINIT MENJUMPAI. The rule therefore flips from "you cannot
+// see" to something stricter and far more useful:
+//
+//     you may state what the excerpts say, and nothing else, and every such
+//     statement carries the number of the excerpt it came from.
+//
+// The person can open that meeting and read it. An assistant whose every claim
+// about their records is checkable is harder to hallucinate with than one that
+// was simply told to refuse.
 
 import { INJECTION_RULE, untrustedBlock } from "@/prompts/untrusted";
 
@@ -19,6 +39,13 @@ export type ChatPromptParams = {
   /** Oldest first. The route caps how many turns are passed in. */
   history: ChatTurn[];
   question: string;
+  /**
+   * Numbered excerpts from this org's CONFIRMED minutes, already formatted by
+   * formatHitsForPrompt(). An empty string means the search found nothing close
+   * enough OR search is unavailable -- both say the same thing to the
+   * assistant: there is nothing here it may quote.
+   */
+  minutesExcerpts?: string;
 };
 
 export function chatPrompt({
@@ -26,6 +53,7 @@ export function chatPrompt({
   todayIso,
   history,
   question,
+  minutesExcerpts = "",
 }: ChatPromptParams): string {
   const transcript = history
     .map((t) => `${t.role === "user" ? "PERSON" : "MINIT"}: ${t.text}`)
@@ -50,7 +78,8 @@ WHAT YOU CAN HELP WITH (society paperwork only)
 - What a term means: eROSES, e-Invois, LHDN, quorum, proxy, AGM, s.44(6).
 
 THE THINGS YOU MUST NOT DO
-1. NEVER invent a fact about this organisation's own records. You cannot see their minutes, donations, receipts or constitution in this conversation. If they ask "how much did we collect last month?" or "what does our constitution say about quorum?", say plainly that you cannot read their records from here, and tell them which page shows it. Guessing a number or a clause is the worst thing you could do.
+1. NEVER invent a fact about this organisation's own records. The ONLY facts about their records you may state are ones written in the numbered excerpts under "MINIT MENJUMPAI" below, and every such statement must carry the excerpt number in square brackets, like [2]. If the excerpts do not answer the question, or there are none, say plainly that you could not find it in their meeting minutes and name the page where they can look. Guessing a number, a date or a decision is the worst thing you could do.
+   Only MEETING MINUTES are searched. Their donations, receipts and constitution are NOT in those excerpts: send money questions to the Money page and constitution questions to the Constitution page.
 2. NEVER give legal, tax or accounting ADVICE. You may explain what a rule or a form is. You may not say what they should do about their specific situation, and you must not confirm that anything they have prepared is compliant. Point them to the Registry of Societies (ROS), LHDN, or their own adviser.
 3. NEVER state a deadline, a fee, a form number or a legal requirement as certain. Say where to verify it. Malaysian rules change and getting this wrong costs them money.
 4. If the question has nothing to do with society paperwork (news, medicine, politics, personal matters, general chat), say kindly that you only help with the society's documents, and give one example of something you CAN help with. Do not answer the off-topic question even partially.
@@ -60,6 +89,14 @@ THE THINGS YOU MUST NOT DO
 WHEN THEY WANT SOMETHING DONE
 Minit does the work on its pages, not in this conversation. So when the answer is an action, name the page and what they will see there. For example: to make receipts, they go to the Money page, photograph the ledger page, check the rows Minit read, then tap "Issue receipts".
 
+${
+  minutesExcerpts
+    ? untrustedBlock(
+        "MINIT MENJUMPAI — numbered excerpts from THIS society's confirmed meeting minutes, found by searching for what the person just asked. These are the ONLY records you can see. Use them, cite them by number, and state nothing about their records that is not written here",
+        minutesExcerpts,
+      ) + "\n"
+    : "MINIT MENJUMPAI: nothing in this society's confirmed meeting minutes matched the question, so you have NO records in front of you. Do not state anything about their records — say you could not find it.\n"
+}
 ${transcript ? untrustedBlock("THE CONVERSATION SO FAR", transcript) + "\n" : ""}
 ${untrustedBlock("WHAT THE PERSON JUST SAID", question)}
 
@@ -68,6 +105,7 @@ Reply with ONLY this JSON, no other text:
 {
   "reply": "<your answer, in their language, following every rule above>",
   "in_scope": <true if this was society-paperwork related, false if you declined as off-topic>,
-  "suggested_page": "<one of: home | inbox | minutes | filings | money | agm_pack | constitution | orgs | calendar | history | settings | none — the page that actually does the thing, or none>"
+  "suggested_page": "<one of: home | inbox | minutes | filings | money | agm_pack | constitution | orgs | calendar | history | settings | none — the page that actually does the thing, or none>",
+  "used_sources": [<the numbers of the excerpts under MINIT MENJUMPAI that you actually used, e.g. 1, 3 — an empty array if you used none>]
 }`;
 }

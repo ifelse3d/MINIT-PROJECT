@@ -57,6 +57,31 @@ for (const [label, table, column] of probes) {
   );
 }
 
+// 2026-08-23 (the function migration) CAN be probed after all — not by looking
+// for a column, but by CALLING it. PostgREST exposes a Postgres function as
+// POST /rest/v1/rpc/<name>, so an empty database answers 200 with [] when the
+// function exists and 404 (PGRST202, "function not found") when it does not.
+// This used to be listed under "confirm by eye", which meant nobody did.
+// Nothing is written: cari_minit is `stable`, and the query vector is 768 zeros.
+{
+  const zeros = `[${new Array(768).fill(0).join(",")}]`;
+  const r = await fetch(`${url}/rest/v1/rpc/cari_minit`, {
+    method: "POST",
+    headers: { ...headers, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      p_org_id: 0,
+      p_model: "gemini:gemini-embedding-001",
+      p_query: zeros,
+      p_limit: 1,
+    }),
+  });
+  const ok = r.status === 200;
+  const body = ok ? "" : (await r.text()).slice(0, 120).replace(/\s+/g, " ");
+  console.log(
+    `${ok ? "[ APPLIED  ]" : "[ NOT YET  ]"} ${"20260823000000 cari_minit() RPC".padEnd(46)} rpc/cari_minit${ok ? "" : "   " + body}`,
+  );
+}
+
 // 2026-08-20: two of the migrations add NO column that PostgREST can see, so
 // "everything above says APPLIED" does NOT mean every file ran. Saying so out
 // loud, in the same idiom as npm run status, is cheaper than someone
@@ -74,14 +99,24 @@ console.log(`
               select proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
               where n.nspname = 'minit_admin';
 
-          Thirteen migration files. Thirteen probes above cover eleven of
-          them (three of the probes are two different columns of the same two
-          migrations, which is on purpose: 20260822000000 touches two tables
-          and a half-run migration is worth catching).
+          Fourteen migration files. The probes above cover eleven of them
+          (some probe two different columns of the same migration, on purpose:
+          20260822000000 touches two tables and a half-run migration is worth
+          catching).
 
           One more thing 20260822000000 needs that no probe can see: the
           pgvector EXTENSION. If it did not run, check by eye:
-            select extname from pg_extension where extname = 'vector';`);
+            select extname from pg_extension where extname = 'vector';
+
+          20260823000000_cari_minit_rpc.sql IS probed now (the line above,
+          rpc/cari_minit) — but the probe can only prove the function EXISTS.
+          It cannot see how the function was declared, and that second fact is
+          the one that matters. Run this once, by eye, after applying it:
+
+            select proname, prosecdef from pg_proc where proname = 'cari_minit';
+
+          prosecdef MUST be false. true means SECURITY DEFINER, which bypasses
+          RLS and would let the assistant read every society's minutes.`);
 
 // Row counts, so "this page is empty" is answered by data, not by guessing.
 console.log("\n--- rows ---");

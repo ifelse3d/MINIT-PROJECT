@@ -21,6 +21,9 @@ REM  Sekarang ia menyenaraikan semua 13.
 REM  This used to point at ONE migration. The new database starts
 REM  empty, so all 13 must be run in filename order. It now lists
 REM  all 13.
+REM
+REM  2026-08-22: No.14 ditambah (cari_minit) - jumlah 14.
+REM  2026-08-22: No.14 added (cari_minit) - 14 in total.
 REM ============================================================
 cd /d "%~dp0"
 chcp 65001 >nul
@@ -51,6 +54,11 @@ echo    13.  20260822000000  carian minit + pgvector
 echo         ^^^ SEBELUM No.13: buka extension "vector" dahulu
 echo             BEFORE No.13: enable the "vector" extension first
 echo             (Dashboard - Database - Extensions - cari "vector")
+echo    14.  20260823000000  cari_minit() - fungsi carian / the search function
+echo         ^^^ 2026-08-22: No.13 buat JADUAL sahaja. Tanpa No.14 tiada
+echo             pintu masuk - kod tak boleh panggil jadual itu langsung.
+echo             No.13 makes the TABLE only. Without No.14 there is no door:
+echo             the code cannot call that table at all.
 echo.
 echo     0.  Keluar / Quit
 echo.
@@ -70,6 +78,7 @@ if "%pick%"=="10" set f=20260819010000_committee_official_name.sql& goto copy
 if "%pick%"=="11" set f=20260820000000_meeting_types_and_minutes_draft.sql& goto copy
 if "%pick%"=="12" set f=20260821000000_ai_usage_refunded_at.sql& goto copy
 if "%pick%"=="13" set f=20260822000000_minutes_search.sql& goto copy
+if "%pick%"=="14" set f=20260823000000_cari_minit_rpc.sql& goto copy
 
 echo.
 echo    Nombor tak sah / not a valid number.

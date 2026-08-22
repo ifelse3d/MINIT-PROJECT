@@ -31,18 +31,28 @@ import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
 import { writeIntake, type IntakeKind } from "@/lib/intake-handoff";
 import { tidyReply } from "@/lib/tidy-reply";
+import {
+  AnswerSources,
+  type AnswerSource,
+} from "@/components/v2/answer-sources";
 
 type Turn = {
   role: "user" | "assistant";
   text: string;
   button?: { href: string; bm: string; zh: string; en: string } | null;
+  /** Clickable "this came from the 12 June meeting" links. */
+  sources?: AnswerSource[] | null;
 };
 
 type ChatOk = {
   reply: string;
   inScope: boolean;
   button: { href: string; bm: string; zh: string; en: string } | null;
+  /** Which of the society's own meetings the answer rests on (2026-08-22). */
+  sources: AnswerSource[] | null;
   remaining: number | null;
+  /** Share of the monthly free quota spent, 0–100 (2026-08-22). */
+  usedPct: number | null;
   turnsUsed: number;
   maxTurns: number;
 };
@@ -76,10 +86,13 @@ const EXAMPLES = [
 export function AskBox({
   hasOrg,
   initialRemaining,
+  initialUsedPct,
 }: {
   hasOrg: boolean;
   /** AI actions left this month; null when there is no organisation yet. */
   initialRemaining: number | null;
+  /** Share of the monthly free quota spent, 0–100; null when unknown. */
+  initialUsedPct: number | null;
 }) {
   const t = useTriText();
   const router = useRouter();
@@ -93,6 +106,7 @@ export function AskBox({
   const [busy, setBusy] = useState<"chat" | "file" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [remaining, setRemaining] = useState<number | null>(initialRemaining);
+  const [usedPct, setUsedPct] = useState<number | null>(initialUsedPct);
   const [turnsLeft, setTurnsLeft] = useState<number | null>(null);
   const [reading, setReading] = useState<string | null>(null);
 
@@ -137,9 +151,15 @@ export function AskBox({
       }
       setTurns((prev) => [
         ...prev,
-        { role: "assistant", text: tidyReply(body.reply), button: body.button },
+        {
+          role: "assistant",
+          text: tidyReply(body.reply),
+          button: body.button,
+          sources: body.sources ?? null,
+        },
       ]);
       if (typeof body.remaining === "number") setRemaining(body.remaining);
+      if (typeof body.usedPct === "number") setUsedPct(body.usedPct);
       setTurnsLeft(Math.max(0, body.maxTurns - body.turnsUsed));
       // The meter in the side panel is rendered by the ROOT LAYOUT, which does
       // not re-run when only this component's state changes — which is why the
@@ -396,6 +416,7 @@ export function AskBox({
                     </Link>
                   </Button>
                 )}
+                <AnswerSources sources={turn.sources ?? []} />
               </div>
             ),
           )}
@@ -458,15 +479,32 @@ export function AskBox({
             en="This month's AI help is used up. It starts again on the 1st of next month — all your records and documents still open as normal."
           />
         ) : (
+          /* 2026-08-22: the percentage of the month's free quota now travels
+             with the count here too, so this line, the assistant badge and
+             /settings all read the same meter. It always says what the
+             percentage is OF ("guna / 用了 / used") — a bare percentage beside
+             a remaining count reads as the remaining percentage. */
           <Tri
             bm={`Setiap soalan guna 1 bantuan AI; setiap gambar guna 2. ${
-              remaining === null ? "" : `Tinggal ${remaining} bulan ini.`
+              remaining === null
+                ? ""
+                : `Tinggal ${remaining} bulan ini${
+                    usedPct === null ? "" : ` (${usedPct}% kuota percuma sudah diguna)`
+                  }.`
             }`}
             zh={`每问一次用掉 1 次 AI；每张照片用掉 2 次。${
-              remaining === null ? "" : `这个月还剩 ${remaining} 次。`
+              remaining === null
+                ? ""
+                : `这个月还剩 ${remaining} 次${
+                    usedPct === null ? "" : `（免费额度已经用了 ${usedPct}%）`
+                  }。`
             }`}
             en={`Each question uses 1 AI action; each photo uses 2. ${
-              remaining === null ? "" : `${remaining} left this month.`
+              remaining === null
+                ? ""
+                : `${remaining} left this month${
+                    usedPct === null ? "" : ` (${usedPct}% of the free quota used)`
+                  }.`
             }`}
           />
         )}

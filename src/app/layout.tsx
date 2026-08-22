@@ -100,6 +100,7 @@ export default async function RootLayout({
             <AppShell
               showAiLauncher={Boolean(active)}
               aiRemaining={usage?.totalRemaining ?? null}
+              aiUsedPct={usage?.usedPct ?? null}
               aiBlocked={usage?.blocked ?? false}
             >
               {children}

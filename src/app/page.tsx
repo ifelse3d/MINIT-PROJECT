@@ -94,6 +94,7 @@ export default async function Home() {
       <AskBox
         hasOrg={Boolean(active)}
         initialRemaining={usage?.totalRemaining ?? null}
+        initialUsedPct={usage?.usedPct ?? null}
       />
 
       {!active ? <OrgPrompt /> : null}

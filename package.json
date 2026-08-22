@@ -9,14 +9,17 @@
     "lint": "eslint",
     "test": "vitest run",
     "eval": "tsx eval/run-eval.ts",
+    "bench": "tsx scripts/bench-models.ts",
     "economics": "tsx scripts/unit-economics.ts",
     "check:ai": "tsx scripts/check-ai-routing.ts",
     "status": "node scripts/status.mjs",
     "check:migrations": "node scripts/check-migrations.mjs",
     "seed:demo": "tsx scripts/seed-demo.ts",
+    "embed:backfill": "tsx scripts/backfill-embeddings.ts",
     "cap:sync": "cap sync",
     "cap:android": "cap sync android && cap open android",
-    "cap:ios": "cap sync ios && cap open ios"
+    "cap:ios": "cap sync ios && cap open ios",
+    "tune:minscore": "tsx scripts/tune-min-score.ts"
   },
   "dependencies": {
     "@capacitor/android": "^7.0.0",
