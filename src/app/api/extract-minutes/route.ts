@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
+import { joinUserError, tooManyPagesError, USER_ERRORS } from "@/lib/user-errors";
 import { getVisionProvider } from "@/lib/ai/provider";
 import { createUsageRecorder, refundUsage, requireAiQuota } from "@/lib/ai/usage";
 import { parseMeetingNotesExtraction } from "@/lib/extraction";
 import { extractMeetingNotesPrompt } from "@/prompts/extract-meeting-notes";
 import { dayIsoMalaysia } from "@/lib/history";
+import { checkPageLimit } from "@/lib/pdf-pages";
 import { recordUpload } from "@/lib/record-upload";
 import { glossaryPromptBlockForReading } from "@/lib/glossary";
 import { loadGlossary } from "@/lib/glossary-server";
@@ -20,7 +21,20 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const MAX_BYTES = 8 * 1024 * 1024;
-const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
+// 2026-08-23: PDF added. /money has taken PDFs since it shipped
+// (extract-ledger/route.ts), and /minutes has not — the same photograph, sent
+// from a scanner instead of a phone, was refused on one page and accepted on
+// the other. J's UX list, N1: 「只收照片和部分 PDF」. A set of minutes that
+// arrives as a scan is the commonest way a secretary who uses a computer sends
+// one; refusing it teaches them the product is for phones only.
+const ALLOWED_MIME = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+  "application/pdf",
+]);
 
 export async function POST(req: Request) {
   try {
@@ -34,7 +48,10 @@ export async function POST(req: Request) {
     }
     if (!ALLOWED_MIME.has(photo.type)) {
       return NextResponse.json(
-        { error: joinUserError(USER_ERRORS.unsupportedImage) },
+        // The wording that mentions PDF, now that PDFs are accepted. Telling
+        // somebody to re-save as JPEG when a PDF would have worked is the kind
+        // of instruction that gets followed and wastes their time.
+        { error: joinUserError(USER_ERRORS.unsupportedLedgerFile) },
         { status: 400 }
       );
     }
@@ -45,6 +62,20 @@ export async function POST(req: Request) {
       );
     }
 
+    // 2026-08-21, and now here too: pages are counted BEFORE the quota is
+    // charged. A 200-page PDF is one tap and a large part of a month's AI
+    // quota, and there is no confirmation screen between the two. The limit for
+    // minutes is 5 — a handwritten meeting record is one to three pages, so a
+    // 40-page scan is not a long meeting, it is the wrong file.
+    // See src/lib/pdf-pages.ts.
+    const bytes = await photo.arrayBuffer();
+    const pages = await checkPageLimit(bytes, photo.type, "minutes");
+    if (!pages.ok) {
+      return NextResponse.json(
+        { error: joinUserError(tooManyPagesError(pages.pages, pages.limit)) },
+        { status: 400 },
+      );
+    }
 
     // Phase 7.5a: charge the quota BEFORE any AI vendor is called.
     // One extraction = one action (the rule-7 retry below is not charged).
@@ -60,7 +91,9 @@ export async function POST(req: Request) {
     // gate above. It now comes from there.
     const orgName = gate.org.name;
 
-    const imageBase64 = Buffer.from(await photo.arrayBuffer()).toString("base64");
+    // `bytes` was already read for the page count above — reading the stream a
+    // second time would yield an empty buffer.
+    const imageBase64 = Buffer.from(bytes).toString("base64");
     const todayIso = dayIsoMalaysia(new Date().toISOString())!;
     // 2026-08-19: the org's own vocabulary. Knowing that a member is called
     // 昶源 is what stops the model reading it as the commoner 湘源 — the exact

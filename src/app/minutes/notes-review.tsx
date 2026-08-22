@@ -67,9 +67,9 @@ export function NotesReview() {
             />
           ) : (
             <Tri
-              bm="Satu gambar, satu halaman. Minit membaca tulisan tangan Bahasa Malaysia, Cina dan Inggeris. Atau taip sendiri."
-              zh="一张照片拍一页。Minit 能读马来文、中文和英文的手写字。也可以自己打字。"
-              en="One photo per page. Minit reads handwriting in Malay, Chinese and English. Or type it in yourself."
+              bm="Gambar atau PDF (paling banyak 5 muka surat). Minit membaca tulisan tangan Bahasa Malaysia, Cina dan Inggeris. Atau taip sendiri."
+              zh="照片或 PDF（最多 5 页）。Minit 能读马来文、中文和英文的手写字。也可以自己打字。"
+              en="A photo or a PDF (up to 5 pages). Minit reads handwriting in Malay, Chinese and English. Or type it in yourself."
             />
           )
         }
@@ -89,12 +89,22 @@ export function NotesReview() {
               </>
             ) : (
               <>
-                📷 <Tri bm="Pilih / ambil gambar" zh="选择照片" en="Choose / take a photo" />
+                📷{" "}
+                <Tri
+                  bm="Pilih gambar / PDF"
+                  zh="选照片或 PDF"
+                  en="Choose a photo or PDF"
+                />
               </>
             )}
             <input
               type="file"
-              accept="image/*"
+              // PDF as well as photos, matching /money's ledger input. Until
+              // 2026-08-23 the same page of minutes was accepted when it came
+              // from a phone and refused when it came from a scanner. The route
+              // counts pages before charging (5 for minutes), so a 40-page scan
+              // is turned away with a reason instead of a bill.
+              accept="image/*,application/pdf"
               capture="environment"
               className="hidden"
               disabled={aiBusy}
