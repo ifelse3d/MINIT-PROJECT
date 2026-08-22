@@ -1,0 +1,294 @@
+"use client";
+
+import { useMemo, useState, type ReactNode } from "react";
+import { Button } from "@/components/ui/button";
+import { ConfidenceBadge } from "@/components/confidence-badge";
+import { Tri, useTriText } from "@/components/language-provider";
+import { formatDateLong, isIsoDate, toIsoDate } from "@/lib/date-input";
+import type { TextLikeField } from "./minutes-store";
+
+// ---------------------------------------------------------------------------
+// One reviewable row: label + value + badge + where the AI read it + the three
+// buttons (Correct / Edit / Not in the notes).
+//
+// Moved out of minutes-review.tsx on 2026-08-23 when /minutes became four
+// pages. Three of them render these rows, and the date-picker fallback below is
+// exactly the kind of hard-won detail that gets lost in a copy-paste.
+// ---------------------------------------------------------------------------
+
+/**
+ * HOW A ROW IS EDITED.
+ *
+ * 🔴 2026-08-20. Every row used to share one plain text <input>. That box did
+ * not know whether it was editing free text, an enum or a date — so "event
+ * meeting" and "2/2/2026" were both accepted on screen and both refused by the
+ * schema AND the database CHECK, and what the person was shown was "Something
+ * went wrong on Minit's side". Nothing was saved; History looked empty.
+ *
+ * A shared component saves code and pays for it in the data contract. The fix
+ * is not a longer validation message: it is a box that can only produce a legal
+ * value in the first place.
+ */
+type FieldEditor =
+  | { kind: "text" }
+  | { kind: "date" }
+  | { kind: "choice"; choices: readonly { value: string; label: string }[] };
+
+/** Does this browser give a real date picker, or will type="date" fall back to
+ *  a plain text box? Old Android WebViews do the latter, and on those the
+ *  person types the date by hand — so we must be able to read what they type. */
+export function useNativeDateInput(): boolean {
+  return useMemo(() => {
+    if (typeof document === "undefined") return true;
+    const probe = document.createElement("input");
+    probe.setAttribute("type", "date");
+    probe.value = "bukan-tarikh";
+    return probe.value === "";
+  }, []);
+}
+
+/** One reviewable row: label + value + badge + source + confirm/edit. */
+export function FieldRow({
+  labelBm,
+  labelZh,
+  labelEn,
+  field,
+  display,
+  editor = { kind: "text" },
+  onConfirm,
+  onEdit,
+  onMarkAbsent,
+}: {
+  labelBm: string;
+  labelZh: string;
+  labelEn: string;
+  field: TextLikeField;
+  /** Optional pretty value (falls back to field.value). */
+  display?: string;
+  /** Defaults to a plain text box — the behaviour every other row has. */
+  editor?: FieldEditor;
+  onConfirm: () => void;
+  onEdit: (value: string) => void;
+  /** See EditableField.onMarkAbsent — the escape hatch for a fact that was
+   *  never written down. Without it a `missing` field blocks saving forever and
+   *  the only way out is for the human to invent a value. */
+  onMarkAbsent?: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(field.value);
+  /** Set when Save was pressed on something this row cannot accept. Shown
+   *  right under the box, in the person's own languages. */
+  const [problem, setProblem] = useState<ReactNode>(null);
+  const nativeDate = useNativeDateInput();
+  const t = useTriText();
+
+  const isMissing = field.confidence === "missing";
+
+  /** What the row would store, or null when it cannot read the draft. */
+  const commitValue = (): string | null => {
+    if (editor.kind === "date") return toIsoDate(draft);
+    if (editor.kind === "choice") return draft === "" ? null : draft;
+    return draft.trim();
+  };
+
+  const startEditing = () => {
+    setDraft(field.value);
+    setProblem(null);
+    setEditing(true);
+  };
+
+  return (
+    <div className="flex flex-col gap-1.5 border-b py-4 last:border-b-0">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="min-w-44 text-base font-semibold">
+          <Tri bm={labelBm} zh={labelZh} en={labelEn} />
+        </span>
+        <ConfidenceBadge level={field.confidence} />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {editing ? (
+          <>
+            {editor.kind === "choice" ? (
+              <select
+                autoFocus
+                value={draft}
+                onChange={(ev) => {
+                  setDraft(ev.target.value);
+                  setProblem(null);
+                }}
+                className="h-12 w-full max-w-md rounded-lg border border-input bg-white px-3 text-base dark:bg-transparent"
+                aria-label={labelEn}
+              >
+                <option value="">
+                  {t("— Pilih satu —", "— 请选一个 —", "— Choose one —")}
+                </option>
+                {editor.choices.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            ) : editor.kind === "date" && nativeDate ? (
+              <input
+                autoFocus
+                type="date"
+                // A native picker can only ever hand back YYYY-MM-DD. An older
+                // value that is not a real date starts the box empty rather
+                // than being silently rewritten.
+                value={isIsoDate(draft) ? draft : ""}
+                onChange={(ev) => {
+                  setDraft(ev.target.value);
+                  setProblem(null);
+                }}
+                className="h-12 w-full max-w-md rounded-lg border border-input bg-white px-3 text-base dark:bg-transparent"
+                aria-label={labelEn}
+              />
+            ) : (
+              <input
+                autoFocus
+                value={draft}
+                inputMode={editor.kind === "date" ? "numeric" : undefined}
+                placeholder={
+                  editor.kind === "date"
+                    ? t(
+                        "hari/bulan/tahun — 2/2/2026",
+                        "日/月/年 —— 2/2/2026",
+                        "day/month/year — 2/2/2026",
+                      )
+                    : undefined
+                }
+                onChange={(ev) => {
+                  setDraft(ev.target.value);
+                  setProblem(null);
+                }}
+                className="h-12 w-full max-w-md rounded-lg border border-input bg-white px-3 text-base dark:bg-transparent"
+                aria-label={labelEn}
+              />
+            )}
+            <Button
+              onClick={() => {
+                const value = commitValue();
+                if (value === null) {
+                  // Refuse HERE, saying which box and how — not three screens
+                  // later as "something went wrong on Minit's side".
+                  setProblem(
+                    editor.kind === "date" ? (
+                      <Tri
+                        bm="Minit tidak faham tarikh itu. Tulis hari/bulan/tahun — contohnya 2/2/2026 untuk 2 Februari 2026."
+                        zh="Minit 看不懂这个日期。请写「日/月/年」—— 例如 2/2/2026 就是 2026 年 2 月 2 日。"
+                        en="Minit could not read that date. Write day/month/year — 2/2/2026 means 2 February 2026."
+                      />
+                    ) : (
+                      <Tri
+                        bm="Pilih satu daripada senarai dahulu."
+                        zh="请先从清单里选一个。"
+                        en="Choose one from the list first."
+                      />
+                    ),
+                  );
+                  return;
+                }
+                onEdit(value);
+                setProblem(null);
+                setEditing(false);
+              }}
+            >
+              <Tri bm="Simpan" zh="保存" en="Save" />
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setProblem(null);
+                setEditing(false);
+              }}
+            >
+              <Tri bm="Batal" zh="取消" en="Cancel" />
+            </Button>
+          </>
+        ) : (
+          <>
+            <span
+              className={
+                isMissing
+                  ? "text-base font-medium text-red-700 italic"
+                  : "text-base"
+              }
+            >
+              {isMissing ? (
+                <Tri
+                  bm="— tiada dalam nota —"
+                  zh="— 记录中没有 —"
+                  en="— not in the notes —"
+                />
+              ) : (
+                display ?? field.value
+              )}
+            </span>
+            {field.confidence === "check" && (
+              <Button variant="outline" onClick={onConfirm}>
+                ✓&nbsp;<Tri bm="Betul" zh="没错" en="Correct" />
+              </Button>
+            )}
+            <Button variant="outline" onClick={startEditing}>
+              {isMissing ? (
+                editor.kind === "choice" ? (
+                  <Tri bm="Pilih" zh="选一个" en="Choose" />
+                ) : (
+                  <Tri bm="Isi sendiri" zh="自己填写" en="Fill in" />
+                )
+              ) : (
+                <Tri bm="Ubah" zh="修改" en="Edit" />
+              )}
+            </Button>
+            {isMissing && onMarkAbsent && (
+              <Button variant="outline" onClick={onMarkAbsent}>
+                <Tri bm="Tiada dalam nota" zh="笔记里没写" en="Not in the notes" />
+              </Button>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* What Minit understood, in words, BEFORE it is saved. 2/2/2026 and
+          3/12/2026 are both day-first here (the Malaysian convention) and no
+          parser can prove that is what was meant — so the month is spelled out
+          where a wrong reading is still one tap from being fixed. */}
+      {editing && editor.kind === "date" && toIsoDate(draft) && (
+        <p className="text-base text-muted-foreground">
+          →{" "}
+          <span className="font-medium text-foreground">
+            <Tri
+              bm={formatDateLong(toIsoDate(draft) as string, "bm")}
+              zh={formatDateLong(toIsoDate(draft) as string, "zh")}
+              en={formatDateLong(toIsoDate(draft) as string, "en")}
+            />
+          </span>
+        </p>
+      )}
+
+      {problem && (
+        <p className="text-base font-medium text-red-700" role="alert">
+          {problem}
+        </p>
+      )}
+
+      {field.source_ref && (
+        <p className="text-base text-muted-foreground">
+          <Tri bm="AI baca di" zh="AI 读到的位置" en="The AI read this at" />{" "}
+          {field.source_ref.location} ·{" "}
+          <span className="font-mono">&ldquo;{field.source_ref.snippet}&rdquo;</span>
+        </p>
+      )}
+      {isMissing && (
+        <p className="text-base text-muted-foreground">
+          <Tri
+            bm="AI tidak jumpa ini dalam nota anda. Isi sendiri, atau tandakan tiada dalam nota."
+            zh="AI 在您的笔记里找不到这一项。可以自己填写，或标示笔记里没写。"
+            en="The AI could not find this in your notes. Fill it in yourself, or mark it as not written down."
+          />
+        </p>
+      )}
+    </div>
+  );
+}

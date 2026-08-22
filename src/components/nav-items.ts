@@ -4,6 +4,7 @@ import {
   CalendarClock,
   ClipboardList,
   Coins,
+  FileSignature,
   FileCheck,
   FileText,
   FolderOpen,
@@ -13,6 +14,7 @@ import {
   Languages,
   Receipt,
   ScrollText,
+  ClipboardCheck,
   Settings,
   Upload,
   Users,
@@ -77,7 +79,13 @@ export const NAV_ITEMS: NavItem[] = [
   // to see the ORIGINAL PHOTO of a document had no menu entry and no working link
   // path. It is the evidence behind every extracted field, so it gets a real entry.
   { href: "/inbox", icon: Upload, bm: "Rekod muat naik", zh: "上传记录", en: "Upload records" },
-  { href: "/minutes", icon: FileText, bm: "Minit", zh: "会议记录", en: "Minutes" },
+  // The /minutes flow, one row per step (2026-08-23 split). "Minutes" itself is
+  // the GROUP's name; these are the steps inside it. /minutes/history used to be
+  // reachable only from a link buried inside step 3.
+  { href: "/minutes", icon: FileText, bm: "Gambar & semak", zh: "拍照与核对", en: "Photo & check", exact: true },
+  { href: "/minutes/attendance", icon: ClipboardCheck, bm: "Kehadiran", zh: "出席者", en: "Attendance" },
+  { href: "/minutes/document", icon: FileSignature, bm: "Minit siap", zh: "做好的记录", en: "The document" },
+  { href: "/minutes/history", icon: History, bm: "Sejarah minit", zh: "记录历史", en: "Minutes history" },
   // The /money flow, one row per step (2026-08-23 split). "Money" itself is the
   // GROUP's name — see MONEY_GROUP below — and these are the steps inside it.
   { href: "/money", icon: Wallet, bm: "Baca lejar", zh: "读账页", en: "Read the ledger", exact: true },
@@ -140,7 +148,20 @@ export type NavEntry =
  */
 export const SIDEBAR_NAV: NavEntry[] = [
   { kind: "item", item: byHref("/") },
-  { kind: "item", item: byHref("/minutes") },
+  {
+    kind: "group",
+    id: "minutes",
+    icon: FileText,
+    bm: "Minit",
+    zh: "会议记录",
+    en: "Minutes",
+    children: [
+      byHref("/minutes"),
+      byHref("/minutes/attendance"),
+      byHref("/minutes/document"),
+      byHref("/minutes/history"),
+    ],
+  },
   // 2026-08-23: /money used to be ONE row leading to ONE 1734-line page. It is
   // now five steps, so it is a group — same shape as Documents, which is the
   // pattern the sidebar already knew. The GROUP carries the section's name

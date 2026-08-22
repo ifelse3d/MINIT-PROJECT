@@ -33,10 +33,10 @@ describe("menu structure", () => {
       e.kind === "item" ? e.item.href : "",
     );
     expect(topLevel).toContain("/");
-    expect(topLevel).toContain("/minutes");
-    // 2026-08-23: /money became a GROUP when the page was split into steps, so
-    // it is no longer a plain row. It stays one click away all the same — the
-    // group opens by itself whenever you are anywhere inside it.
+    // 2026-08-23: /minutes and /money became GROUPS when those pages were split
+    // into steps, so they are no longer plain rows. They stay one click away all
+    // the same — a group opens by itself whenever you are anywhere inside it.
+    expect(topLevel).not.toContain("/minutes");
     expect(topLevel).not.toContain("/money");
     expect(topLevel).toContain("/calendar");
     // 2026-07-28, user: "为什么 history 不在 sidebar 那边呢？" — you check what was
@@ -47,11 +47,26 @@ describe("menu structure", () => {
     expect(topLevel).toContain("/members");
   });
 
-  // 2026-08-23: two groups now — Money (the steps of one job, split out of a
-  // 1734-line page) and Documents (the occasional pages). The assertion exists
-  // so a THIRD group is a decision somebody makes, not something that happens.
-  it("keeps the sidebar to two groups", () => {
-    expect(SIDEBAR_NAV.filter((e) => e.kind === "group")).toHaveLength(2);
+  // 2026-08-23: three groups now — Minutes and Money (each the steps of ONE
+  // job, split out of a 2039- and a 1734-line page) and Documents (occasional
+  // pages that are not a flow). The assertion exists so a FOURTH group is a
+  // decision somebody makes, not something that happens.
+  it("keeps the sidebar to three groups", () => {
+    expect(SIDEBAR_NAV.filter((e) => e.kind === "group")).toHaveLength(3);
+  });
+
+  it("puts the minutes flow inside one group, in the order it is done", () => {
+    const group = SIDEBAR_NAV.find((e) => e.kind === "group" && e.id === "minutes");
+    if (!group || group.kind !== "group") throw new Error("expected a minutes group");
+    expect(group.children.map((c) => c.href)).toEqual([
+      "/minutes",
+      "/minutes/attendance",
+      "/minutes/document",
+      // 2026-08-07, J's UX list item N5: finding an old set of minutes was hard
+      // because /minutes/history was linked only from inside step 3.
+      "/minutes/history",
+    ]);
+    expect(group.children[0].exact).toBe(true);
   });
 
   it("puts the money flow inside one group, in the order it is done", () => {
