@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
 import { StepGroup } from "@/components/step-card";
@@ -8,6 +9,7 @@ import { formatDateLong, isIsoDate } from "@/lib/date-input";
 import { MEETING_TYPES, MEETING_TYPE_LABEL, meetingTypeLabel } from "@/lib/meeting-types";
 import { formatRm } from "@/lib/minutes-draft";
 import { parseRmToCents } from "@/lib/receipts";
+import { BeforeReading } from "./before-reading";
 import { FieldRow } from "./field-row";
 import { AddRowButton, DeletableRow } from "./row-controls";
 import { useMinutes, type TextLikeField } from "./minutes-store";
@@ -25,6 +27,16 @@ import { useMinutes, type TextLikeField } from "./minutes-store";
 
 export function NotesReview() {
   const t = useTriText();
+  /**
+   * The file somebody has chosen but not yet sent.
+   *
+   * There is now a step between choosing and reading — three optional boxes for
+   * what the person already knows (see before-reading.tsx). Two reasons, both
+   * J's own: 「想 type 跟他说这是什么会议没办法」, and the one no prompt can fix —
+   * a whiteboard carries the meeting's date AND the date of the event it agreed
+   * to hold, and on the board they look identical.
+   */
+  const [pending, setPending] = useState<File | null>(null);
   const {
     sourceLabel,
     photoDataUrl,
@@ -109,7 +121,7 @@ export function NotesReview() {
               className="hidden"
               disabled={aiBusy}
               onChange={(e) => {
-                onPhotoPicked(e.target.files?.[0] ?? null);
+                setPending(e.target.files?.[0] ?? null);
                 e.target.value = "";
               }}
             />
@@ -158,6 +170,19 @@ export function NotesReview() {
             </Button>
           )}
         </div>
+        {/* The step between choosing a file and spending a credit on it. */}
+        {pending && (
+          <BeforeReading
+            fileName={pending.name}
+            busy={aiBusy}
+            onCancel={() => setPending(null)}
+            onRead={(facts) => {
+              const file = pending;
+              setPending(null);
+              void onPhotoPicked(file, facts);
+            }}
+          />
+        )}
         {aiError && (
           <div className="rounded-md border border-red-300 bg-red-50 p-4 text-base text-red-900">
             {aiError}

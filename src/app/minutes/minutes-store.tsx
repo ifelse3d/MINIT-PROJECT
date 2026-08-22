@@ -27,6 +27,11 @@ import { dayIsoMalaysia } from "@/lib/history";
 import { type MinutesLang } from "@/lib/minutes-lang";
 import { consumeIntake } from "@/lib/intake-handoff";
 import { SAMPLE_ORG_NAME, sampleMeetingExtraction } from "@/lib/sample-data";
+import {
+  EMPTY_MEETING_FACTS,
+  applyKnownMeetingFacts,
+  type KnownMeetingFacts,
+} from "@/lib/meeting-facts";
 import { addRow, removeRow, rowHasContent, type RowList } from "@/lib/extraction-rows";
 import { saveConfirmedMinutes } from "./actions";
 import {
@@ -97,7 +102,13 @@ export type MinutesStore = {
   isSample: boolean;
   nothingYet: boolean;
 
-  onPhotoPicked: (file: File | null) => Promise<void>;
+  /**
+   * Read a page. `facts` is whatever the person told Minit BEFORE it looked —
+   * the meeting type, the date, the venue — and those override whatever the
+   * model reads. See lib/meeting-facts.ts for why the date in particular
+   * cannot be left to the model.
+   */
+  onPhotoPicked: (file: File | null, facts?: KnownMeetingFacts) => Promise<void>;
   /**
    * Start a set of minutes with no photo at all.
    *
@@ -356,7 +367,10 @@ export function MinutesProvider({
     [evRows],
   );
 
-  const onPhotoPicked = useCallback(async (file: File | null) => {
+  const onPhotoPicked = useCallback(async (
+    file: File | null,
+    facts: KnownMeetingFacts = EMPTY_MEETING_FACTS,
+  ) => {
     if (!file) return;
     setAiError(null);
     setAiBusy(true);
@@ -366,7 +380,20 @@ export function MinutesProvider({
       const res = await fetch("/api/extract-minutes", { method: "POST", body: form });
       const body = await res.json().catch(() => null);
       if (!res.ok) throw new Error(body?.error ?? joinUserError(USER_ERRORS.aiUnavailable));
-      setExtraction(body.extraction as MeetingNotesExtraction);
+      // AFTER the reading, not before: the response replaces the whole object,
+      // so anything seeded beforehand would be silently thrown away. Doing it
+      // here also makes the precedence explicit — on these three facts the
+      // person is the source, not a reviewer.
+      setExtraction(
+        applyKnownMeetingFacts(body.extraction as MeetingNotesExtraction, facts, {
+          location: t("diisi oleh anda", "由您填写", "entered by you"),
+          snippet: t(
+            "sebelum Minit membaca halaman ini",
+            "在 Minit 读这一页之前",
+            "before Minit read this page",
+          ),
+        }),
+      );
       setSourceLabel(file.name);
       setPhotoDataUrl(await compressPhoto(file));
       setTypedByHand(false);
@@ -379,7 +406,7 @@ export function MinutesProvider({
     } finally {
       setAiBusy(false);
     }
-  }, []);
+  }, [t]);
 
   /**
    * Nothing to photograph — start from a blank sheet and type.
