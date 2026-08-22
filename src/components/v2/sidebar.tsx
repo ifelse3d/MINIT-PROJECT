@@ -228,7 +228,7 @@ export function Sidebar() {
               <NavLink
                 key={entry.item.href}
                 item={entry.item}
-                active={isActivePath(pathname, entry.item.href)}
+                active={isActivePath(pathname, entry.item.href, entry.item.exact)}
                 collapsed={collapsed}
               />
             );
@@ -267,7 +267,7 @@ export function Sidebar() {
                     <NavLink
                       key={child.href}
                       item={child}
-                      active={isActivePath(pathname, child.href)}
+                      active={isActivePath(pathname, child.href, child.exact)}
                       collapsed={false}
                     />
                   ))}

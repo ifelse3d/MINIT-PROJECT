@@ -1,6 +1,9 @@
 import {
+  Banknote,
   Building2,
   CalendarClock,
+  ClipboardList,
+  Coins,
   FileCheck,
   FileText,
   FolderOpen,
@@ -8,6 +11,7 @@ import {
   Home,
   Landmark,
   Languages,
+  Receipt,
   ScrollText,
   Settings,
   Upload,
@@ -53,6 +57,15 @@ export type NavItem = {
    * the menusCoverAllItems() guard so it does not count as "silently dropped".
    */
   hidden?: true;
+  /**
+   * Highlight this row ONLY on its own URL, never on the routes underneath it.
+   *
+   * Needed since the 2026-08-23 split: /money is now the first STEP of the
+   * money flow as well as the folder containing /money/receipts and the rest.
+   * Without this, standing on /money/receipts lit up two rows at once — the
+   * step you are on and the step you are not.
+   */
+  exact?: true;
 };
 
 /** Every page that has a menu entry anywhere. */
@@ -65,7 +78,13 @@ export const NAV_ITEMS: NavItem[] = [
   // path. It is the evidence behind every extracted field, so it gets a real entry.
   { href: "/inbox", icon: Upload, bm: "Rekod muat naik", zh: "上传记录", en: "Upload records" },
   { href: "/minutes", icon: FileText, bm: "Minit", zh: "会议记录", en: "Minutes" },
-  { href: "/money", icon: Wallet, bm: "Wang", zh: "财务", en: "Money" },
+  // The /money flow, one row per step (2026-08-23 split). "Money" itself is the
+  // GROUP's name — see MONEY_GROUP below — and these are the steps inside it.
+  { href: "/money", icon: Wallet, bm: "Baca lejar", zh: "读账页", en: "Read the ledger", exact: true },
+  { href: "/money/receipts", icon: Receipt, bm: "Daftar & resit", zh: "登记与收据", en: "Register & receipts" },
+  { href: "/money/custody", icon: Coins, bm: "Serah wang", zh: "交现金", en: "Hand over cash" },
+  { href: "/money/einvois", icon: Banknote, bm: "Fail cukai", zh: "税务文件", en: "Tax file" },
+  { href: "/money/history", icon: ClipboardList, bm: "Sejarah resit", zh: "收据历史", en: "Receipt history" },
   { href: "/filings", icon: FileCheck, bm: "Pemfailan", zh: "申报", en: "Filings" },
   { href: "/agm-pack", icon: Landmark, bm: "Pek AGM", zh: "年度大会", en: "AGM" },
   { href: "/constitution", icon: ScrollText, bm: "Perlembagaan", zh: "章程", en: "Constitution" },
@@ -82,8 +101,8 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/settings", icon: Settings, bm: "Tetapan", zh: "设置", en: "Settings" },
 ];
 
-export function isActivePath(pathname: string, href: string): boolean {
-  if (href === "/") return pathname === "/";
+export function isActivePath(pathname: string, href: string, exact = false): boolean {
+  if (href === "/" || exact) return pathname === href;
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -122,7 +141,25 @@ export type NavEntry =
 export const SIDEBAR_NAV: NavEntry[] = [
   { kind: "item", item: byHref("/") },
   { kind: "item", item: byHref("/minutes") },
-  { kind: "item", item: byHref("/money") },
+  // 2026-08-23: /money used to be ONE row leading to ONE 1734-line page. It is
+  // now five steps, so it is a group — same shape as Documents, which is the
+  // pattern the sidebar already knew. The GROUP carries the section's name
+  // ("Wang / 财务 / Money"); the rows inside it are the steps.
+  {
+    kind: "group",
+    id: "money",
+    icon: Wallet,
+    bm: "Wang",
+    zh: "财务",
+    en: "Money",
+    children: [
+      byHref("/money"),
+      byHref("/money/receipts"),
+      byHref("/money/custody"),
+      byHref("/money/einvois"),
+      byHref("/money/history"),
+    ],
+  },
   { kind: "item", item: byHref("/calendar") },
   { kind: "item", item: byHref("/history") },
   { kind: "item", item: byHref("/members") },
@@ -159,7 +196,30 @@ export function groupHasActiveChild(
   pathname: string,
 ): boolean {
   if (entry.kind !== "group") return false;
-  return entry.children.some((child) => isActivePath(pathname, child.href));
+  return entry.children.some((child) => isActivePath(pathname, child.href, child.exact));
+}
+
+/**
+ * The three words the MENU uses for a section, wherever they live.
+ *
+ * Since the /money split a section can be a group whose own label is the
+ * section name while its children are named after the steps inside it. The
+ * activity feed still talks about "the money section" as one thing, so it needs
+ * to ask for the section's words rather than reading them off an item that may
+ * now be called "Read the ledger".
+ */
+export function sectionWords(href: string): { bm: string; zh: string; en: string } {
+  // Only a group that is a FLOW has a section name of its own, and the mark of
+  // one is an `exact` index route at its head (/money → /money/receipts → …).
+  // "Documents" is a folder of unrelated pages, so /filings keeps its own words.
+  const group = SIDEBAR_NAV.find(
+    (e) => e.kind === "group" && e.children[0].href === href && e.children[0].exact,
+  );
+  if (group && group.kind === "group") {
+    return { bm: group.bm, zh: group.zh, en: group.en };
+  }
+  const item = byHref(href);
+  return { bm: item.bm, zh: item.zh, en: item.en };
 }
 
 /**

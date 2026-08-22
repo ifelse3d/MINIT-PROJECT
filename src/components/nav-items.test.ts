@@ -6,6 +6,7 @@ import {
   groupHasActiveChild,
   isActivePath,
   menusCoverAllItems,
+  sectionWords,
   sidebarPages,
 } from "./nav-items";
 import { CATEGORY_STYLE } from "@/lib/activity-labels";
@@ -33,7 +34,10 @@ describe("menu structure", () => {
     );
     expect(topLevel).toContain("/");
     expect(topLevel).toContain("/minutes");
-    expect(topLevel).toContain("/money");
+    // 2026-08-23: /money became a GROUP when the page was split into steps, so
+    // it is no longer a plain row. It stays one click away all the same — the
+    // group opens by itself whenever you are anywhere inside it.
+    expect(topLevel).not.toContain("/money");
     expect(topLevel).toContain("/calendar");
     // 2026-07-28, user: "为什么 history 不在 sidebar 那边呢？" — you check what was
     // already recorded constantly, so it earns a row.
@@ -43,11 +47,31 @@ describe("menu structure", () => {
     expect(topLevel).toContain("/members");
   });
 
+  // 2026-08-23: two groups now — Money (the steps of one job, split out of a
+  // 1734-line page) and Documents (the occasional pages). The assertion exists
+  // so a THIRD group is a decision somebody makes, not something that happens.
+  it("keeps the sidebar to two groups", () => {
+    expect(SIDEBAR_NAV.filter((e) => e.kind === "group")).toHaveLength(2);
+  });
+
+  it("puts the money flow inside one group, in the order it is done", () => {
+    const group = SIDEBAR_NAV.find((e) => e.kind === "group" && e.id === "money");
+    if (!group || group.kind !== "group") throw new Error("expected a money group");
+    expect(group.children.map((c) => c.href)).toEqual([
+      "/money",
+      "/money/receipts",
+      "/money/custody",
+      "/money/einvois",
+      "/money/history",
+    ]);
+    // The index page must be `exact`, or standing on /money/receipts lights up
+    // two rows: the step you are on and the step you are not.
+    expect(group.children[0].exact).toBe(true);
+  });
+
   it("puts the occasional documents inside one group", () => {
-    const groups = SIDEBAR_NAV.filter((e) => e.kind === "group");
-    expect(groups).toHaveLength(1);
-    const group = groups[0];
-    if (group.kind !== "group") throw new Error("expected a group");
+    const group = SIDEBAR_NAV.find((e) => e.kind === "group" && e.id === "documents");
+    if (!group || group.kind !== "group") throw new Error("expected a documents group");
     expect(group.children.map((c) => c.href)).toEqual([
       "/filings",
       "/agm-pack",
@@ -96,7 +120,8 @@ describe("menu structure", () => {
 });
 
 describe("groupHasActiveChild", () => {
-  const group = SIDEBAR_NAV.find((e) => e.kind === "group")!;
+  const group = SIDEBAR_NAV.find((e) => e.kind === "group" && e.id === "documents")!;
+  const money = SIDEBAR_NAV.find((e) => e.kind === "group" && e.id === "money")!;
 
   it("opens the group when a child route is active", () => {
     expect(groupHasActiveChild(group, "/agm-pack")).toBe(true);
@@ -106,6 +131,22 @@ describe("groupHasActiveChild", () => {
   it("stays closed elsewhere", () => {
     expect(groupHasActiveChild(group, "/money")).toBe(false);
     expect(groupHasActiveChild(group, "/")).toBe(false);
+  });
+
+  // The money group must open on EVERY step of the flow, including the deep
+  // ones — otherwise you land on /money/custody from a link and the menu shows
+  // you nothing about where you are.
+  it("opens the money group anywhere inside the money flow", () => {
+    for (const path of [
+      "/money",
+      "/money/receipts",
+      "/money/custody",
+      "/money/einvois",
+      "/money/history",
+    ]) {
+      expect(groupHasActiveChild(money, path)).toBe(true);
+    }
+    expect(groupHasActiveChild(money, "/minutes")).toBe(false);
   });
 
   it("is false for plain items", () => {
@@ -128,6 +169,13 @@ describe("isActivePath", () => {
   it("does not false-match sibling prefixes", () => {
     expect(isActivePath("/minutes-archive", "/minutes")).toBe(false);
   });
+
+  // 2026-08-23: /money is both the first STEP and the folder holding the rest.
+  it("marks an `exact` row active only on its own URL", () => {
+    expect(isActivePath("/money", "/money", true)).toBe(true);
+    expect(isActivePath("/money/receipts", "/money", true)).toBe(false);
+    expect(isActivePath("/money/receipts", "/money/receipts")).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -146,14 +194,11 @@ describe("terminology is consistent between the nav and the activity feed", () =
     { href: "/calendar", category: "calendar" },
   ];
 
+  // sectionWords, not NAV_ITEMS, because since 2026-08-23 a section can be a
+  // GROUP whose own label is the section name ("Money") while its first child is
+  // named after a step ("Read the ledger"). The feed talks about the section.
   it.each(pairs)("uses the same three words for $href", ({ href, category }) => {
-    const navItem = NAV_ITEMS.find((i) => i.href === href);
-    if (!navItem) throw new Error(`no nav item for ${href}`);
     const label = CATEGORY_STYLE[category];
-    expect({ bm: label.bm, zh: label.zh, en: label.en }).toEqual({
-      bm: navItem.bm,
-      zh: navItem.zh,
-      en: navItem.en,
-    });
+    expect({ bm: label.bm, zh: label.zh, en: label.en }).toEqual(sectionWords(href));
   });
 });

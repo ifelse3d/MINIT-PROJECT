@@ -71,7 +71,7 @@ export function MobileTopBar() {
                   flat: a phone drawer has room, and headings only add text. */}
               <div className="grid grid-cols-2 gap-2">
                 {sidebarPages().map((item) => {
-                  const active = isActivePath(pathname, item.href);
+                  const active = isActivePath(pathname, item.href, item.exact);
                   const Icon = item.icon;
                   return (
                     <Link
@@ -94,7 +94,7 @@ export function MobileTopBar() {
               {/* Account: history, organisations, settings */}
               <div className="mt-2 grid grid-cols-2 gap-2 border-t border-white/40 pt-3 dark:border-white/10">
                 {ACCOUNT_NAV.map((item) => {
-                  const active = isActivePath(pathname, item.href);
+                  const active = isActivePath(pathname, item.href, item.exact);
                   const Icon = item.icon;
                   return (
                     <Link

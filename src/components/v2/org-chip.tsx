@@ -278,7 +278,7 @@ export function AccountControls({ className }: { className?: string }) {
           {!soleOrg && <div className="pb-2" />}
           {ACCOUNT_NAV.map((item) => {
             const Icon = item.icon;
-            const active = isActivePath(pathname, item.href);
+            const active = isActivePath(pathname, item.href, item.exact);
             return (
               <Link
                 key={item.href}
