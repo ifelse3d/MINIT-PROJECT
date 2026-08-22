@@ -564,7 +564,17 @@ export function RegisterProvider({
     }
   }, [commitCustody]);
 
-  /** Wipes the register on this device. Confirmation is the caller's job. */
+  /**
+   * Wipes the register on this device. Confirmation is the caller's job.
+   *
+   * 🔴 DELIBERATELY DOES NOT DELETE THE ORGANISATION'S RECORDS, and the button
+   * says so in those words ("every donation record on this device"). Receipts
+   * already issued live in `receipts` and hand-overs in `remittance_batches`;
+   * both are an audit trail, and a trail that any one device can erase is not
+   * one. So a reset here clears the working copy, and on the next load the
+   * organisation's hand-over history merges back in — which is correct, not a
+   * bug to fix by adding a remote delete.
+   */
   const deleteEverything = useCallback(() => {
     donationStore.reset();
     donationsRef.current = [];

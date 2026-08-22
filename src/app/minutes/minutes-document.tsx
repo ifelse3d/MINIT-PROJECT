@@ -29,6 +29,7 @@ const LANGUAGE_CHOICE: Record<MinutesLang, string> = {
 
 export function MinutesDocument() {
   const {
+    extraction,
     isReal,
     isSample,
     nothingYet,
@@ -416,8 +417,27 @@ export function MinutesDocument() {
         }
       >
       <div className="flex flex-col gap-3">
+        {(nothingYet || extraction.resolutions.length === 0) && (
+          <p className="text-base text-muted-foreground">
+            <Tri
+              bm="Belum ada keputusan dalam minit ini untuk dicari tarikhnya."
+              zh="这份记录里还没有决议，没有东西可以找日期。"
+              en="There are no resolutions in these minutes yet, so there is nothing to find dates in."
+            />
+          </p>
+        )}
         <div className="flex flex-wrap items-center gap-3">
-          <Button onClick={findEventsInMinutes} disabled={evBusy} variant="outline" size="lg">
+          {/* Disabled when there is nothing to search. This button SPENDS A
+              CREDIT, and running it over an empty extraction spends one to be
+              told there were no dates in a document that does not exist —
+              "choosing a file silently charged you" is already on the UX defect
+              list, and this is the same mistake with a different trigger. */}
+          <Button
+            onClick={findEventsInMinutes}
+            disabled={evBusy || nothingYet || extraction.resolutions.length === 0}
+            variant="outline"
+            size="lg"
+          >
             {evBusy ? (
               <Tri bm="⏳ AI sedang mencari…" zh="⏳ AI 寻找中…" en="⏳ AI is looking…" />
             ) : (
