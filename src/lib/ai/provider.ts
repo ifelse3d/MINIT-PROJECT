@@ -2,9 +2,10 @@
 // AI PROVIDER LAYER — SERVER-SIDE ONLY. Never import from client components.
 //
 // The app talks to "a vision model that returns JSON", never to a specific
-// vendor. Swap vendors with the AI_PROVIDER env var; compare quality without
-// touching feature code. Current providers: gemini (dev, free tier).
-// Anthropic slots in here later as another ~40-line file.
+// vendor. Swap vendors with the AI_MODEL_* env vars; compare quality without
+// touching feature code. Providers as of 2026-08-22: gemini and openai (in
+// use), anthropic and xai (slots built 2026-08-22, keys not set yet — an unset
+// key costs nothing until a task is actually routed there; see AI_PROVIDERS).
 //
 // PDPA WARNING (CLAUDE.md Hard Rule 5): free-tier providers may use inputs
 // for training. Sample/fictional data only until a paid tier is configured.
@@ -14,8 +15,10 @@
 // shipping the AI key path into the browser bundle.
 import "server-only";
 
+import { createAnthropicProvider } from "./anthropic";
 import { createGeminiProvider, GEMINI_DEFAULT_MODEL } from "./gemini";
 import { createOpenAiProvider } from "./openai";
+import { createXaiProvider } from "./xai";
 
 /**
  * What one vendor call actually cost. Captured from the vendor's own response
@@ -57,7 +60,32 @@ export type VisionJsonRequest = {
    * at a time. See src/app/api/extract-ledger/route.ts for the pattern.
    */
   onUsage?: (usage: TokenUsage) => void;
+  /**
+   * Sampling temperature. Defaults to DEFAULT_TEMPERATURE — see there for why
+   * this product never wants a creative answer. Only set it if a measurement
+   * says a particular task is better with variation.
+   */
+  temperature?: number;
 };
+
+/**
+ * 0. Not a hedge — a product decision (J, 2026-08-22: "这我不懂，所以你看怎样合适").
+ *
+ * Every single thing Minit asks a model to do is a reading job with one right
+ * answer: what does this handwritten page say, which of three document types is
+ * this, what do these minutes state. Temperature is the knob that makes a model
+ * pick a less likely word on purpose; there is no version of "less likely" that
+ * helps here. It costs accuracy on extraction (Hard Rule 1: never invent) and
+ * it makes bugs unreproducible — the same photo giving two different totals on
+ * two taps is a support call nobody can answer.
+ *
+ * It also makes the eval mean something: `npm run eval` compares models against
+ * golden cases, and a run that varies at random compares noise.
+ *
+ * Gemini has always used 0 here. OpenAI was silently running at ITS default of
+ * 1, which is why chat answers moved around between identical questions.
+ */
+export const DEFAULT_TEMPERATURE = 0;
 
 /** Default ceiling on generated tokens. Generous enough for a 30-clause
  *  constitution extraction, small enough that a runaway generation stops. */
@@ -93,7 +121,8 @@ export interface VisionJsonProvider {
 //     AI_MODEL_EXTRACT = openai:gpt-5.6-luna
 //     AI_MODEL_CLASSIFY = openai:gpt-5-nano
 //
-// Format is "provider:model". Provider is `gemini` or `openai`.
+// Format is "provider:model". Provider is one of AI_PROVIDERS below
+// (gemini · openai · anthropic · xai).
 // Full runbook: `2026-08-03-换模型手册.md`.
 // ---------------------------------------------------------------------------
 
@@ -109,7 +138,41 @@ const TASK_ENV: Record<AiTask, string> = {
   long_doc: "AI_MODEL_LONG_DOC",
 };
 
-export type ResolvedModel = { provider: "gemini" | "openai"; model: string };
+/**
+ * Every vendor this app can be pointed at. Adding a name here is HALF the job —
+ * the other half is a file in this folder and a row in PROVIDER_KEY_ENV below,
+ * or the routing will resolve to a vendor nothing knows how to call.
+ *
+ * 2026-08-22: anthropic and xai were added as EMPTY SLOTS, so that comparing
+ * Claude / Grok against Gemini becomes "paste a key, change one line" instead
+ * of "wait for a code change". Neither key is set yet; see AiProviderName below
+ * for what an unset key does (and does not) break.
+ */
+export const AI_PROVIDERS = ["gemini", "openai", "anthropic", "xai"] as const;
+export type AiProviderName = (typeof AI_PROVIDERS)[number];
+
+/**
+ * Which env var holds each vendor's key. Used by `npm run check:ai` to report
+ * "key present / key missing" WITHOUT ever printing a key.
+ *
+ * 🔴 A MISSING KEY IS NOT A CRASH. Every provider file reads its key inside
+ * extractJson(), i.e. at call time. An unset ANTHROPIC_API_KEY does nothing at
+ * all until some task is actually routed to anthropic — and then it fails that
+ * one request with a named error. The app boots, builds, and runs every other
+ * task normally. That is what makes an empty slot safe to ship.
+ */
+export const PROVIDER_KEY_ENV: Record<AiProviderName, string> = {
+  gemini: "GEMINI_API_KEY",
+  openai: "OPENAI_API_KEY",
+  anthropic: "ANTHROPIC_API_KEY",
+  xai: "XAI_API_KEY",
+};
+
+function isProviderName(s: string): s is AiProviderName {
+  return (AI_PROVIDERS as readonly string[]).includes(s);
+}
+
+export type ResolvedModel = { provider: AiProviderName; model: string };
 
 /**
  * Resolve one task to a provider + model.
@@ -122,12 +185,13 @@ export function resolveModel(task: AiTask): ResolvedModel {
   if (raw && raw.includes(":")) {
     const [provider, ...rest] = raw.split(":");
     const model = rest.join(":").trim();
-    if ((provider === "gemini" || provider === "openai") && model) {
+    if (isProviderName(provider) && model) {
       return { provider, model };
     }
     throw new Error(
-      `${TASK_ENV[task]}="${raw}" is not valid. Use "gemini:<model>" or "openai:<model>", ` +
-        `e.g. AI_MODEL_EXTRACT=gemini:${GEMINI_DEFAULT_MODEL}`,
+      `${TASK_ENV[task]}="${raw}" is not valid. Use one of ` +
+        AI_PROVIDERS.map((p) => `"${p}:<model>"`).join(" / ") +
+        `, e.g. AI_MODEL_EXTRACT=gemini:${GEMINI_DEFAULT_MODEL}`,
     );
   }
 
@@ -154,7 +218,16 @@ export function resolveModel(task: AiTask): ResolvedModel {
  */
 export function getVisionProvider(task: AiTask = "extract"): VisionJsonProvider {
   const { provider, model } = resolveModel(task);
-  return provider === "openai" ? createOpenAiProvider(model) : createGeminiProvider(model);
+  switch (provider) {
+    case "openai":
+      return createOpenAiProvider(model);
+    case "anthropic":
+      return createAnthropicProvider(model);
+    case "xai":
+      return createXaiProvider(model);
+    case "gemini":
+      return createGeminiProvider(model);
+  }
 }
 
 /** Strips markdown fences some models wrap around JSON, then parses. */

@@ -24,7 +24,7 @@
 import "server-only";
 
 import type { TokenUsage, VisionJsonProvider, VisionJsonRequest } from "./provider";
-import { DEFAULT_MAX_OUTPUT_TOKENS, parseModelJson } from "./provider";
+import { DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_TEMPERATURE, parseModelJson } from "./provider";
 
 const REQUEST_TIMEOUT_MS = 20_000;
 const MAX_ATTEMPTS = 3;
@@ -57,6 +57,13 @@ function isTransient(status: number): boolean {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * Models that answered "Unsupported parameter: 'temperature'" once already.
+ * Process-lifetime memory, deliberately not configuration: it is discovered
+ * from the vendor's own reply, so it stays right when OpenAI changes its mind.
+ */
+const MODELS_REJECTING_TEMPERATURE = new Set<string>();
+
 /** Pulls the text out of a Responses API payload without the SDK's
  *  `output_text` helper (we speak raw HTTP here, no SDK dependency). */
 function outputTextOf(json: {
@@ -80,6 +87,7 @@ export function createOpenAiProvider(model: string): VisionJsonProvider {
       imageBase64,
       mimeType,
       maxOutputTokens,
+      temperature,
       onUsage,
     }: VisionJsonRequest): Promise<unknown> {
       const key = process.env.OPENAI_API_KEY;
@@ -105,12 +113,25 @@ export function createOpenAiProvider(model: string): VisionJsonProvider {
         });
       }
 
-      const body = JSON.stringify({
-        model,
-        input: [{ role: "user", content }],
-        max_output_tokens: maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
-        text: { format: { type: "json_object" } },
-      });
+      // Rebuildable, because of the fallback below: some models in the GPT-5
+      // reasoning family reject `temperature` outright ("Unsupported parameter")
+      // instead of ignoring it, and which ones do is not something this file can
+      // know in advance — it is a per-model fact that changes when OpenAI ships.
+      // So: send it, and if THIS model says no, drop it and remember for the
+      // rest of the process. Refusing to send it at all would leave every
+      // OpenAI call running at the vendor default of 1 (see DEFAULT_TEMPERATURE).
+      const buildBody = (withTemperature: boolean) =>
+        JSON.stringify({
+          model,
+          input: [{ role: "user", content }],
+          max_output_tokens: maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
+          text: { format: { type: "json_object" } },
+          ...(withTemperature
+            ? { temperature: temperature ?? DEFAULT_TEMPERATURE }
+            : {}),
+        });
+
+      let body = buildBody(!MODELS_REJECTING_TEMPERATURE.has(model));
 
       let lastError: Error = new Error("OpenAI: no attempt was made.");
 
@@ -135,6 +156,22 @@ export function createOpenAiProvider(model: string): VisionJsonProvider {
             // PDPA: status + vendor message only, never the request contents.
             const detailText = await res.text().catch(() => "");
             const err = new Error(`OpenAI API ${res.status}: ${detailText.slice(0, 300)}`);
+
+            // "this model does not take a temperature" — not a failure, a fact
+            // about the model. Learn it, resend without the parameter. Only
+            // once per model per process; the flag makes the second call skip
+            // straight to the accepted shape.
+            if (
+              res.status === 400 &&
+              /temperature/i.test(detailText) &&
+              !MODELS_REJECTING_TEMPERATURE.has(model)
+            ) {
+              MODELS_REJECTING_TEMPERATURE.add(model);
+              body = buildBody(false);
+              lastError = err;
+              continue;
+            }
+
             if (isTransient(res.status) && attempt < MAX_ATTEMPTS - 1) {
               lastError = err;
               continue;

@@ -28,7 +28,7 @@ import {
   type Assumptions,
   type TaskKind,
 } from "../src/lib/unit-economics";
-import type { AiTask } from "../src/lib/ai/provider";
+import type { AiProviderName, AiTask } from "../src/lib/ai/provider";
 
 const ROOT = path.resolve(__dirname, "..");
 
@@ -42,12 +42,16 @@ import "./allow-server-only";
 // copy could drift and start reporting a routing the app does not use, which is
 // the exact bug this script exists to catch.
 /* eslint-disable @typescript-eslint/no-require-imports */
-const { resolveModel } =
+const { resolveModel, AI_PROVIDERS, PROVIDER_KEY_ENV } =
   require("../src/lib/ai/provider") as typeof import("../src/lib/ai/provider");
 const { PRICES_PER_MTOK_USD: GEMINI_PRICES } =
   require("../src/lib/ai/gemini") as typeof import("../src/lib/ai/gemini");
 const { PRICES_PER_MTOK_USD: OPENAI_PRICES } =
   require("../src/lib/ai/openai") as typeof import("../src/lib/ai/openai");
+const { PRICES_PER_MTOK_USD: ANTHROPIC_PRICES } =
+  require("../src/lib/ai/anthropic") as typeof import("../src/lib/ai/anthropic");
+const { PRICES_PER_MTOK_USD: XAI_PRICES } =
+  require("../src/lib/ai/xai") as typeof import("../src/lib/ai/xai");
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 // --- minimal .env.local loader (same pattern as scripts/seed-demo.ts) -------
@@ -72,8 +76,15 @@ const TASKS: readonly { task: AiTask; kind: TaskKind; envVar: string; what: stri
   { task: "long_doc", kind: "longDoc", envVar: "AI_MODEL_LONG_DOC", what: "30-page constitutions" },
 ];
 
-function priceTableFor(provider: "gemini" | "openai") {
-  return provider === "gemini" ? GEMINI_PRICES : OPENAI_PRICES;
+const PRICE_TABLES: Record<AiProviderName, Record<string, { in: number; out: number }>> = {
+  gemini: GEMINI_PRICES,
+  openai: OPENAI_PRICES,
+  anthropic: ANTHROPIC_PRICES,
+  xai: XAI_PRICES,
+};
+
+function priceTableFor(provider: AiProviderName) {
+  return PRICE_TABLES[provider];
 }
 
 /** Which published scenario, if any, does this exact routing correspond to? */
@@ -101,7 +112,7 @@ function main() {
     const raw = process.env[envVar];
     let line = `${envVar.padEnd(20)} `;
 
-    let resolved: { provider: "gemini" | "openai"; model: string };
+    let resolved: { provider: AiProviderName; model: string };
     try {
       resolved = resolveModel(task);
     } catch (err) {
@@ -148,14 +159,20 @@ function main() {
       return undefined;
     }
   }));
-  for (const [name, provider] of [
-    ["GEMINI_API_KEY", "gemini"],
-    ["OPENAI_API_KEY", "openai"],
-  ] as const) {
+  // Every provider is listed, including ones nothing is routed to. An empty
+  // slot is INFORMATION ("Claude is wired up, no key yet"), not a problem: a
+  // key is only required when the routing above actually sends work there.
+  for (const provider of AI_PROVIDERS) {
+    const name = PROVIDER_KEY_ENV[provider];
     const present = Boolean(process.env[name]);
     const needed = usedProviders.has(provider);
     const mark = present ? "present" : "absent";
-    console.log(`  ${name.padEnd(16)} ${mark}${needed ? "   ← required by the routing above" : ""}`);
+    const tail = needed
+      ? "   ← required by the routing above"
+      : present
+        ? ""
+        : "   (empty slot — harmless until something is routed here)";
+    console.log(`  ${name.padEnd(18)} ${mark}${tail}`);
     if (needed && !present) {
       problems.push(`${name} is missing but the routing above sends work to ${provider}.`);
     }

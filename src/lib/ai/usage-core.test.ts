@@ -13,7 +13,33 @@ import {
   RateLimitedError,
   usageMonthMalaysia,
   usageMonthUtcWindow,
+  usedPercent,
 } from "./usage-core";
+
+describe("usedPercent", () => {
+  it("is the spent share of the free quota, rounded", () => {
+    expect(usedPercent(0, 100)).toBe(0);
+    expect(usedPercent(1, 100)).toBe(1);
+    expect(usedPercent(34, 100)).toBe(34);
+    expect(usedPercent(100, 100)).toBe(100);
+    // 2/3 rounds to 67, not 66 — the gauge should not under-report.
+    expect(usedPercent(2, 3)).toBe(67);
+  });
+
+  it("clamps overspend to 100 instead of reporting 140%", () => {
+    // Reachable: purchased credits let usage run past the free quota.
+    expect(usedPercent(140, 100)).toBe(100);
+  });
+
+  it("treats a zero quota as fully spent rather than NaN", () => {
+    expect(usedPercent(0, 0)).toBe(100);
+    expect(usedPercent(5, 0)).toBe(100);
+  });
+
+  it("never goes below zero", () => {
+    expect(usedPercent(-5, 100)).toBe(0);
+  });
+});
 
 describe("computeUsageState", () => {
   it("normal month: remaining = quota - used + credits, not blocked", () => {

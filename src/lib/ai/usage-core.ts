@@ -82,6 +82,25 @@ export type UsageState = {
   totalRemaining: number;
   /** True when the next AI action would be refused */
   blocked: boolean;
+  /**
+   * How much of the MONTHLY FREE QUOTA is spent, 0–100, rounded.
+   *
+   * 2026-08-22: J asked for percentages instead of raw counts. This is the
+   * "both" answer (STATE.md §5 Q1 option c) — the number of actions left stays,
+   * because "99 left" is concrete for an older treasurer in a way "1% used" is
+   * not, and the percentage is the gauge that makes "am I about to run out"
+   * readable at a glance.
+   *
+   * 🔴 It deliberately measures the FREE quota only, not free + purchased
+   * credits. A percentage whose denominator grows every time you buy more is a
+   * gauge that goes DOWN when you spend money, which is the opposite of what it
+   * looks like it is saying. Purchased credits are a separate number.
+   *
+   * ⚠ Not the same thing as D1-L2 (charging by real cost rather than by count).
+   * That one still needs two weeks of live data; this one never did — which is
+   * why it sat unasked in STATE.md §5 for four days instead of being done.
+   */
+  usedPct: number;
 };
 
 export function computeUsageState(s: UsageSnapshot): UsageState {
@@ -94,7 +113,20 @@ export function computeUsageState(s: UsageSnapshot): UsageState {
     freeRemaining,
     totalRemaining,
     blocked: totalRemaining <= 0,
+    usedPct: usedPercent(s.usedThisMonth, s.monthlyFreeQuota),
   };
+}
+
+/**
+ * Spent share of a monthly quota as 0–100.
+ *
+ * Clamped at both ends on purpose: overspend (possible via purchased credits)
+ * must read as 100%, not 140%, and a quota of 0 must not produce NaN — an org
+ * with no free quota is fully spent by definition, not undefined.
+ */
+export function usedPercent(used: number, quota: number): number {
+  if (quota <= 0) return 100;
+  return Math.min(100, Math.max(0, Math.round((used / quota) * 100)));
 }
 
 /** What to do for ONE upcoming action, given the current snapshot. */

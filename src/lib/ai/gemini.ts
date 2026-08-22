@@ -27,7 +27,7 @@
 import "server-only";
 
 import type { TokenUsage, VisionJsonProvider, VisionJsonRequest } from "./provider";
-import { DEFAULT_MAX_OUTPUT_TOKENS, parseModelJson } from "./provider";
+import { DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_TEMPERATURE, parseModelJson } from "./provider";
 
 export const GEMINI_DEFAULT_MODEL = "gemini-3.5-flash-lite";
 
@@ -85,6 +85,7 @@ export function createGeminiProvider(model: string): VisionJsonProvider {
     imageBase64,
     mimeType,
     maxOutputTokens,
+    temperature,
     onUsage,
   }: VisionJsonRequest): Promise<unknown> {
     const key = process.env.GEMINI_API_KEY;
@@ -105,7 +106,8 @@ export function createGeminiProvider(model: string): VisionJsonProvider {
     const body = JSON.stringify({
       contents: [{ parts }],
       generationConfig: {
-        temperature: 0,
+        // 0 unless a caller overrides it — see DEFAULT_TEMPERATURE in provider.ts.
+        temperature: temperature ?? DEFAULT_TEMPERATURE,
         responseMimeType: "application/json",
         maxOutputTokens: maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
       },

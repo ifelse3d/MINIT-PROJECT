@@ -78,6 +78,15 @@ type CaseOutcome = {
   status: "scored" | "failed";
   error?: string;
   results: FieldResult[];
+  /** Wall-clock for this case, including the rule-7 retry and any 429 backoff. */
+  elapsedMs: number;
+  /** Summed from the vendor's own usage. null if ANY call came back unpriced —
+   *  see the price-table rule in gemini.ts. A null must never be shown as 0. */
+  costMicros: number | null;
+  inputTokens: number;
+  outputTokens: number;
+  /** How many times the vendor was actually reached (1, or 2 with a retry). */
+  vendorCalls: number;
 };
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -93,7 +102,12 @@ function isTransient(e: unknown): boolean {
 
 async function callWithBackoff(
   provider: ReturnType<typeof getVisionProvider>,
-  req: { prompt: string; imageBase64?: string; mimeType?: string }
+  req: {
+    prompt: string;
+    imageBase64?: string;
+    mimeType?: string;
+    onUsage?: (u: { inputTokens: number; outputTokens: number; costMicros: number | null }) => void;
+  }
 ): Promise<unknown> {
   let lastError: unknown;
   for (let attempt = 0; attempt <= BACKOFF_MS.length; attempt++) {
@@ -170,6 +184,30 @@ function parseAndScore(meta: CaseMeta, raw: unknown):
 }
 
 async function runCase(name: string): Promise<CaseOutcome> {
+  const startedMs = Date.now();
+  // What this case cost, from the vendor's own numbers. `unpriced` is tracked
+  // separately from 0 on purpose: "we do not know" and "it was free" are
+  // different answers, and only one of them may be added into a total.
+  let costMicros = 0;
+  let unpriced = false;
+  let inputTokens = 0;
+  let outputTokens = 0;
+  let vendorCalls = 0;
+  const onUsage = (u: { inputTokens: number; outputTokens: number; costMicros: number | null }) => {
+    vendorCalls += 1;
+    inputTokens += u.inputTokens;
+    outputTokens += u.outputTokens;
+    if (u.costMicros === null) unpriced = true;
+    else costMicros += u.costMicros;
+  };
+  const spend = () => ({
+    elapsedMs: Date.now() - startedMs,
+    costMicros: unpriced ? null : costMicros,
+    inputTokens,
+    outputTokens,
+    vendorCalls,
+  });
+
   const dir = path.join(CASES_DIR, name);
   const meta = JSON.parse(readFileSync(path.join(dir, "case.json"), "utf-8")) as CaseMeta;
   const input = findInput(dir);
@@ -179,7 +217,7 @@ async function runCase(name: string): Promise<CaseOutcome> {
 
   const prompt = buildPrompt(meta, textInput);
   const provider = getVisionProvider();
-  const req = { prompt, imageBase64, mimeType: input.mime ?? undefined };
+  const req = { prompt, imageBase64, mimeType: input.mime ?? undefined, onUsage };
 
   // One attempt = model call + JSON.parse + zod. A JSON SyntaxError (model wrote
   // broken JSON) is a model-output problem like a zod failure, NOT an infra
@@ -210,9 +248,12 @@ ${scored.issues}`;
       scored = await attempt(retryPrompt);
     }
     if (!scored.ok) {
-      return { name, type: meta.type, status: "failed", error: "invalid JSON after 2 attempts", results: [] };
+      return {
+        name, type: meta.type, status: "failed",
+        error: "invalid JSON after 2 attempts", results: [], ...spend(),
+      };
     }
-    return { name, type: meta.type, status: "scored", results: scored.results };
+    return { name, type: meta.type, status: "scored", results: scored.results, ...spend() };
   } catch (e) {
     return {
       name,
@@ -220,6 +261,7 @@ ${scored.issues}`;
       status: "failed",
       error: e instanceof Error ? e.message : String(e),
       results: [],
+      ...spend(),
     };
   }
 }
@@ -289,6 +331,56 @@ function renderReport(outcomes: CaseOutcome[], startedAt: Date): string {
   return lines.join("\n");
 }
 
+// --- the suite, callable from outside ------------------------------------------
+
+export type SuiteResult = {
+  outcomes: CaseOutcome[];
+  startedAt: Date;
+  /** provider:model that extraction ACTUALLY resolved to for this run. */
+  model: string;
+};
+
+/**
+ * Runs every golden case once and returns the outcomes.
+ *
+ * Deliberately takes NO model argument. `scripts/bench-models.ts` selects a
+ * model by setting AI_MODEL_EXTRACT before calling this, so a benchmark run
+ * goes through the SAME resolveModel() path a real request does. A second way
+ * to choose a model would be a second set of rules that can drift from the app.
+ */
+export async function runSuite(opts: { quiet?: boolean } = {}): Promise<SuiteResult> {
+  const caseNames = readdirSync(CASES_DIR, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .map((d) => d.name)
+    .sort();
+  if (caseNames.length === 0) throw new Error("No cases found in eval/cases.");
+
+  const startedAt = new Date();
+  const outcomes: CaseOutcome[] = [];
+  for (const [i, name] of caseNames.entries()) {
+    if (!opts.quiet) process.stdout.write(`[${i + 1}/${caseNames.length}] ${name} ... `);
+    const outcome = await runCase(name);
+    outcomes.push(outcome);
+    if (!opts.quiet) {
+      if (outcome.status === "failed") {
+        console.log(`FAILED (${outcome.error})`);
+      } else {
+        const s = summarize(outcome.results);
+        console.log(
+          `${s.overall.correct}/${s.overall.total} (${s.overall.pct}%)` +
+            `${s.inventedCount ? ` ⚠️ ${s.inventedCount} invented` : ""}`,
+        );
+      }
+    }
+    if (i < caseNames.length - 1) await sleep(PAUSE_MS);
+  }
+
+  const measured = resolveModel("extract");
+  return { outcomes, startedAt, model: `${measured.provider}:${measured.model}` };
+}
+
+export { loadEnvLocal, summarize, KINDS, pct, renderReport, REPORTS_DIR, ROOT };
+
 // --- main ---------------------------------------------------------------------
 
 async function main() {
@@ -300,31 +392,8 @@ async function main() {
     process.exit(1);
   }
 
-  const caseNames = readdirSync(CASES_DIR, { withFileTypes: true })
-    .filter((d) => d.isDirectory())
-    .map((d) => d.name)
-    .sort();
-  if (caseNames.length === 0) {
-    console.error("No cases found in eval/cases.");
-    process.exit(1);
-  }
-
-  const startedAt = new Date();
-  console.log(`\nMinit eval — ${caseNames.length} golden cases, running sequentially...\n`);
-
-  const outcomes: CaseOutcome[] = [];
-  for (const [i, name] of caseNames.entries()) {
-    process.stdout.write(`[${i + 1}/${caseNames.length}] ${name} ... `);
-    const outcome = await runCase(name);
-    outcomes.push(outcome);
-    if (outcome.status === "failed") {
-      console.log(`FAILED (${outcome.error})`);
-    } else {
-      const s = summarize(outcome.results);
-      console.log(`${s.overall.correct}/${s.overall.total} (${s.overall.pct}%)${s.inventedCount ? ` ⚠️ ${s.inventedCount} invented` : ""}`);
-    }
-    if (i < caseNames.length - 1) await sleep(PAUSE_MS);
-  }
+  console.log("\nMinit eval — running the golden cases sequentially...\n");
+  const { outcomes, startedAt } = await runSuite();
 
   // Console summary table
   const all = outcomes.flatMap((o) => o.results);
@@ -351,7 +420,11 @@ async function main() {
   console.log(`\nReports saved:\n  ${path.relative(ROOT, mdPath)}\n  ${path.relative(ROOT, jsonPath)}\n`);
 }
 
-main().catch((e) => {
-  console.error("eval crashed:", e instanceof Error ? e.message : e);
-  process.exit(1);
-});
+// Guarded so `npm run bench` can import runSuite() from this file without the
+// import itself kicking off a full single-model run.
+if (require.main === module) {
+  main().catch((e) => {
+    console.error("eval crashed:", e instanceof Error ? e.message : e);
+    process.exit(1);
+  });
+}

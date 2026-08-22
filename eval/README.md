@@ -18,6 +18,28 @@ This produces the deck's headline number:
 Each run makes real API calls (≈ RM0.10/photo on a paid tier; free on the
 free tier). Cases run one at a time with a pause, so 10 cases take ~1 minute.
 
+## Comparing MODELS — `npm run bench`
+
+`npm run eval` measures ONE model. Use it for "did my prompt change help".
+
+`npm run bench` runs this same suite once per model and prints one table:
+accuracy, invented-field count, cost per run, and seconds per case.
+
+```
+npm run bench                 # the default line-up (scripts/bench-models.ts)
+npm run bench --dry-run       # show the plan, call nothing
+npm run bench gemini:gemini-3.5-flash-lite anthropic:claude-haiku-4-5
+```
+
+A model whose key is not in `.env.local` is skipped with a reason, not run and
+failed. A model with no row in its vendor price table reports cost as `?`,
+never as 0.
+
+🔴 **Read the warning the table prints.** Every case below is a synthetic
+PRINTED .png, and Minit'''s hard job is HANDWRITTEN mixed-language pages. Winning
+this table proves a model reads printed text well and nothing more. Choosing the
+extractor on it alone would repeat the 95.2% mistake.
+
 ## Anatomy of a golden case
 
 ```
