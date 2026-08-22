@@ -23,8 +23,17 @@
 
 import "server-only";
 
-import type { TokenUsage, VisionJsonProvider, VisionJsonRequest } from "./provider";
+import type {
+  ToolChatProvider,
+  ToolChatRequest,
+  TokenUsage,
+  VisionJsonProvider,
+  VisionJsonRequest,
+} from "./provider";
 import { DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_TEMPERATURE, parseModelJson } from "./provider";
+import type { ToolTurn } from "./tool-core";
+import { openAiToolBody, readOpenAiTurn } from "./tool-wire";
+import { postVendorJson } from "./http";
 
 const REQUEST_TIMEOUT_MS = 20_000;
 const MAX_ATTEMPTS = 3;
@@ -232,6 +241,85 @@ export function createOpenAiProvider(model: string): VisionJsonProvider {
       }
 
       throw lastError;
+    },
+  };
+}
+
+
+// ---------------------------------------------------------------------------
+// FUNCTION CALLING (2026-08-23). Same endpoint and key as extractJson; the
+// body and the reply parser live in tool-wire.ts, with no network in them.
+//
+// The `temperature` dance is the same one extractJson does and for the same
+// reason: some models in the GPT-5 reasoning family REJECT the parameter
+// outright ("Unsupported parameter") rather than ignoring it, and which ones do
+// is a per-model fact that changes when OpenAI ships. So: send it, and if THIS
+// model says no, drop it, remember, and retry once. MODELS_REJECTING_TEMPERATURE
+// is shared with extractJson, so one model only has to teach us once.
+//
+// 🔴 UNVERIFIED AGAINST THE LIVE API, for the same reason as the Gemini one.
+// ---------------------------------------------------------------------------
+export function createOpenAiToolProvider(model: string): ToolChatProvider {
+  return {
+    name: "openai",
+
+    async chatWithTools(req: ToolChatRequest): Promise<ToolTurn> {
+      const key = process.env.OPENAI_API_KEY;
+      if (!key) {
+        throw new Error(
+          "OPENAI_API_KEY tiada dalam .env.local / missing — add it and restart the server."
+        );
+      }
+
+      const send = async (withTemperature: boolean): Promise<unknown> =>
+        postVendorJson({
+          vendor: "OpenAI",
+          url: "https://api.openai.com/v1/responses",
+          headers: { Authorization: `Bearer ${key}` },
+          body: openAiToolBody({
+            model,
+            system: req.system,
+            messages: req.messages,
+            tools: req.tools,
+            temperature: withTemperature ? req.temperature ?? DEFAULT_TEMPERATURE : null,
+            maxOutputTokens: req.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
+            forceAnswer: req.forceAnswer,
+          }),
+        });
+
+      let json: unknown;
+      const sendTemperature = !MODELS_REJECTING_TEMPERATURE.has(model);
+      try {
+        json = await send(sendTemperature);
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        if (sendTemperature && message.includes("temperature")) {
+          MODELS_REJECTING_TEMPERATURE.add(model);
+          json = await send(false);
+        } else {
+          throw e;
+        }
+      }
+
+      const usage = (json as { usage?: { input_tokens?: number; output_tokens?: number } }).usage;
+      if (req.onUsage && usage) {
+        const inTok = usage.input_tokens ?? 0;
+        const outTok = usage.output_tokens ?? 0;
+        const u: TokenUsage = {
+          inputTokens: inTok,
+          outputTokens: outTok,
+          model,
+          provider: "openai",
+          costMicros: costMicrosFor(model, inTok, outTok),
+        };
+        try {
+          req.onUsage(u);
+        } catch {
+          // Cost bookkeeping must never break the user's request.
+        }
+      }
+
+      return readOpenAiTurn(json);
     },
   };
 }

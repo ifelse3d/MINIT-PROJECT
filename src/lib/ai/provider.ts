@@ -15,9 +15,10 @@
 // shipping the AI key path into the browser bundle.
 import "server-only";
 
+import type { ToolMessage, ToolSpec, ToolTurn } from "./tool-core";
 import { createAnthropicProvider } from "./anthropic";
-import { createGeminiProvider, GEMINI_DEFAULT_MODEL } from "./gemini";
-import { createOpenAiProvider } from "./openai";
+import { createGeminiProvider, createGeminiToolProvider, GEMINI_DEFAULT_MODEL } from "./gemini";
+import { createOpenAiProvider, createOpenAiToolProvider } from "./openai";
 import { createXaiProvider } from "./xai";
 
 /**
@@ -95,6 +96,44 @@ export interface VisionJsonProvider {
   name: string;
   /** Sends prompt (+ optional image), returns the model's parsed JSON (unknown — caller zod-validates). */
   extractJson(req: VisionJsonRequest): Promise<unknown>;
+}
+
+// ---------------------------------------------------------------------------
+// FUNCTION CALLING — a SECOND, separate interface, on purpose.
+//
+// Every existing call site wants exactly one thing: prompt in, JSON out. Tool
+// use is a conversation with several round trips, its own stopping rules and
+// its own failure modes. Folding it into VisionJsonProvider would put a
+// `tools?` on sixteen call sites that will never pass one, and would make an
+// unrelated change to the path every extraction in the product runs through.
+//
+// Two vendors implement it: gemini and openai — the two with keys, and what
+// docs/助手重做-设计.md §5 asks for ("gemini ＋ openai 两家就够"). anthropic and
+// xai keep working for everything else and simply report that they cannot do
+// tools, so the caller falls back to the retrieval-first assistant that has
+// been shipping since 2026-08-22. Adding one later is a file, not a redesign.
+// ---------------------------------------------------------------------------
+
+export type ToolChatRequest = {
+  /** The system prompt. Kept out of the message list; both vendors want it apart. */
+  system: string;
+  messages: readonly ToolMessage[];
+  tools: readonly ToolSpec[];
+  /**
+   * Last round: the model must answer in words now.
+   *
+   * Enforced on the wire (tools withheld / tool_choice "none"), never by asking
+   * the model nicely — see tool-wire.ts.
+   */
+  forceAnswer?: boolean;
+  maxOutputTokens?: number;
+  temperature?: number;
+  onUsage?: (usage: TokenUsage) => void;
+};
+
+export interface ToolChatProvider {
+  name: string;
+  chatWithTools(req: ToolChatRequest): Promise<ToolTurn>;
 }
 
 // ---------------------------------------------------------------------------
@@ -227,6 +266,35 @@ export function getVisionProvider(task: AiTask = "extract"): VisionJsonProvider 
       return createXaiProvider(model);
     case "gemini":
       return createGeminiProvider(model);
+  }
+}
+
+/** Vendors that can run tools today. Everything else still works — it just
+ *  cannot be the one holding the tools. */
+export const TOOL_CAPABLE_PROVIDERS: readonly AiProviderName[] = ["gemini", "openai"];
+
+export function providerSupportsTools(provider: AiProviderName): boolean {
+  return TOOL_CAPABLE_PROVIDERS.includes(provider);
+}
+
+/**
+ * The tool-calling provider for a task, or null when the configured vendor
+ * cannot do tools.
+ *
+ * null is a normal answer, not an error: the caller falls back to the
+ * retrieval-first assistant. Throwing here would mean that pointing
+ * AI_MODEL_CHAT at Claude — a perfectly reasonable thing to try — broke the
+ * assistant outright instead of making it slightly less clever.
+ */
+export function getToolProvider(task: AiTask = "chat"): ToolChatProvider | null {
+  const { provider, model } = resolveModel(task);
+  switch (provider) {
+    case "gemini":
+      return createGeminiToolProvider(model);
+    case "openai":
+      return createOpenAiToolProvider(model);
+    default:
+      return null;
   }
 }
 

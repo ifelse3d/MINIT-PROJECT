@@ -26,8 +26,17 @@
 // imports this file, so GEMINI_API_KEY can never reach the browser.
 import "server-only";
 
-import type { TokenUsage, VisionJsonProvider, VisionJsonRequest } from "./provider";
+import type {
+  ToolChatProvider,
+  ToolChatRequest,
+  TokenUsage,
+  VisionJsonProvider,
+  VisionJsonRequest,
+} from "./provider";
 import { DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_TEMPERATURE, parseModelJson } from "./provider";
+import type { ToolTurn } from "./tool-core";
+import { geminiToolBody, readGeminiTurn } from "./tool-wire";
+import { postVendorJson } from "./http";
 
 export const GEMINI_DEFAULT_MODEL = "gemini-3.5-flash-lite";
 
@@ -207,5 +216,81 @@ export function createGeminiProvider(model: string): VisionJsonProvider {
 
     throw lastError;
   },
+  };
+}
+
+
+// ---------------------------------------------------------------------------
+// FUNCTION CALLING (2026-08-23).
+//
+// Same endpoint, same key, same retry rules — a different body and a different
+// reading of the reply, both of which live in tool-wire.ts with no network in
+// them so they can be tested. This function is the thin part: get the key,
+// post, report the cost, hand the reply to the parser.
+//
+// 🔴 UNVERIFIED AGAINST THE LIVE API. Nobody writing this could call Gemini:
+// the key is J's and the call is metered against a real society's credit. The
+// shape follows Google's documented functionCall/functionResponse format and is
+// unit-tested for consistency; the first real call is still the moment of truth.
+// ---------------------------------------------------------------------------
+export function createGeminiToolProvider(model: string): ToolChatProvider {
+  return {
+    name: "gemini",
+
+    async chatWithTools(req: ToolChatRequest): Promise<ToolTurn> {
+      const key = process.env.GEMINI_API_KEY;
+      if (!key) {
+        throw new Error(
+          "GEMINI_API_KEY tiada dalam .env.local / missing — add it and restart the server."
+        );
+      }
+
+      const json = await postVendorJson({
+        vendor: "Gemini",
+        url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+        headers: { "x-goog-api-key": key },
+        body: geminiToolBody({
+          system: req.system,
+          messages: req.messages,
+          tools: req.tools,
+          temperature: req.temperature ?? DEFAULT_TEMPERATURE,
+          maxOutputTokens: req.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
+          forceAnswer: req.forceAnswer,
+        }),
+      });
+
+      // Reported even when the reply turns out unusable: Google charged for it
+      // either way, so it must still appear in our numbers (D2).
+      const usage = (json as { usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number } })
+        .usageMetadata;
+      if (req.onUsage && usage) {
+        const inTok = usage.promptTokenCount ?? 0;
+        const outTok = usage.candidatesTokenCount ?? 0;
+        const u: TokenUsage = {
+          inputTokens: inTok,
+          outputTokens: outTok,
+          model,
+          provider: "gemini",
+          costMicros: costMicrosFor(model, inTok, outTok),
+        };
+        try {
+          req.onUsage(u);
+        } catch {
+          // Cost bookkeeping must never break the user's request.
+        }
+      }
+
+      // MAX_TOKENS means our ceiling cut the reply in half. Say so plainly,
+      // rather than letting it surface as an assistant that answered nothing.
+      const finish = (json as { candidates?: { finishReason?: string }[] }).candidates?.[0]
+        ?.finishReason;
+      if (finish === "MAX_TOKENS") {
+        throw new Error(
+          "Gemini stopped at maxOutputTokens — the answer was too long for one pass."
+        );
+      }
+
+      return readGeminiTurn(json);
+    },
   };
 }
