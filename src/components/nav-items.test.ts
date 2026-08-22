@@ -91,6 +91,9 @@ describe("menu structure", () => {
       "/filings",
       "/agm-pack",
       "/constitution",
+      // 2026-08-23, J's UX list N7: reading the constitution end to end, as
+      // opposed to asking it a question, is its own screen and its own row.
+      "/constitution/clauses",
       // 2026-08-19: the glossary was only reachable from Settings, i.e. not
       // reachable. It is set up once and then rarely, so it belongs in the
       // group rather than on a row of its own.

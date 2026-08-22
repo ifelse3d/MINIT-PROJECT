@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Tri, useTriText } from "@/components/language-provider";
@@ -374,6 +376,23 @@ export function ConstitutionReview({
               <Tri bm="Contoh" zh="示范" en="Example" />
             </Badge>
           ) : null}
+          {/* 2026-08-23: this screen answers a QUESTION about the constitution.
+              Reading it end to end is a different job and now has a different
+              page — and it has to be reachable from here, because here is where
+              somebody who wants to read it will look first. */}
+          {hasOwn && (
+            <Link
+              href="/constitution/clauses"
+              className="ml-auto text-base underline underline-offset-4"
+            >
+              <Tri
+                bm="Baca semua fasal"
+                zh="读整本条文"
+                en="Read all the clauses"
+              />{" "}
+              &rarr;
+            </Link>
+          )}
         </div>
         {hasOwn ? (
           <p className="text-base text-muted-foreground">

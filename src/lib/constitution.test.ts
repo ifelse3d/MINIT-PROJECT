@@ -13,6 +13,7 @@ import {
   tokenise,
   type ConfirmedClause,
 } from "./constitution";
+import { searchClauses, sortClauses } from "./constitution";
 import { sampleClauses } from "./sample-constitution";
 
 describe("tokenise", () => {
@@ -218,5 +219,109 @@ describe("isConfirmedClauseArray", () => {
 
   it("rejects the whole array when a single element is bad", () => {
     expect(isConfirmedClauseArray([clause(), { clause_no: "Fasal 2" }])).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Reading the constitution end to end, rather than asking it a question.
+// (docs/界面重做-计划.md §2 item 6 — the clauses were in the database with no
+// screen to read them on.)
+// ---------------------------------------------------------------------------
+
+const numbered = (clause_no: string, heading = "", text = "") => ({
+  clause_no,
+  heading,
+  text,
+  page_ref: "",
+});
+
+describe("sortClauses", () => {
+  // Plain string sort puts 12.10 before 12.2, which is the wrong order for a
+  // legal document and the reason this exists at all.
+  it("orders sub-clauses numerically, not alphabetically", () => {
+    const out = sortClauses([numbered("12.10"), numbered("12.2"), numbered("12.1")]);
+    expect(out.map((c) => c.clause_no)).toEqual(["12.1", "12.2", "12.10"]);
+  });
+
+  it("orders top-level clauses numerically", () => {
+    const out = sortClauses([numbered("10"), numbered("9"), numbered("2")]);
+    expect(out.map((c) => c.clause_no)).toEqual(["2", "9", "10"]);
+  });
+
+  // A constitution arrives as a stack of photos in whatever order they were
+  // taken; mergeClauses preserves first appearance, which is right for merging
+  // and wrong for reading.
+  it("puts a book photographed out of order back in order", () => {
+    const out = sortClauses([numbered("Fasal 7"), numbered("Fasal 2"), numbered("Fasal 15")]);
+    expect(out.map((c) => c.clause_no)).toEqual(["Fasal 2", "Fasal 7", "Fasal 15"]);
+  });
+
+  it("puts a bare number before the same number with a letter", () => {
+    const out = sortClauses([numbered("12a"), numbered("12")]);
+    expect(out.map((c) => c.clause_no)).toEqual(["12", "12a"]);
+  });
+
+  it("puts a shorter number before its own sub-clauses", () => {
+    const out = sortClauses([numbered("12.1"), numbered("12")]);
+    expect(out.map((c) => c.clause_no)).toEqual(["12", "12.1"]);
+  });
+
+  it("keeps an unnumbered clause at the end instead of in the middle", () => {
+    const out = sortClauses([numbered("3"), numbered(""), numbered("1")]);
+    expect(out.map((c) => c.clause_no)).toEqual(["1", "3", ""]);
+  });
+
+  it("does not mutate the array it was given", () => {
+    const input = [numbered("3"), numbered("1")];
+    sortClauses(input);
+    expect(input.map((c) => c.clause_no)).toEqual(["3", "1"]);
+  });
+});
+
+describe("searchClauses", () => {
+  const book = [
+    numbered("3", "Keahlian", "Ahli mesti berumur 18 tahun."),
+    numbered("12", "Mesyuarat Agung Tahunan", "Notis 14 hari diperlukan."),
+    numbered("12.3", "Kuorum", "Sekurang-kurangnya 30 ahli."),
+  ];
+
+  it("returns the whole book for an empty query — a reading page shows the book", () => {
+    expect(searchClauses(book, "")).toHaveLength(3);
+    expect(searchClauses(book, "   ")).toHaveLength(3);
+  });
+
+  // The thing filterClauses cannot do: somebody types a clause number and wants
+  // that clause.
+  it("finds a clause by its number", () => {
+    expect(searchClauses(book, "12.3").map((c) => c.clause_no)).toEqual(["12.3"]);
+  });
+
+  it("finds a clause by its heading, ignoring case", () => {
+    expect(searchClauses(book, "kuorum").map((c) => c.clause_no)).toEqual(["12.3"]);
+  });
+
+  it("finds a clause by words in its body", () => {
+    expect(searchClauses(book, "14 hari").map((c) => c.clause_no)).toEqual(["12"]);
+  });
+
+  // filterClauses caps at MAX_CANDIDATE_CLAUSES and reorders by score. For
+  // somebody reading their own constitution, dropping the seventh match and
+  // shuffling the rest would be a bug, not a feature.
+  it("returns EVERY match, in the order of the book", () => {
+    const out = searchClauses(book, "a");
+    expect(out.length).toBeGreaterThan(2);
+    expect(out.map((c) => c.clause_no)).toEqual(
+      book.filter((c) => out.includes(c)).map((c) => c.clause_no),
+    );
+  });
+
+  it("returns nothing when nothing matches, rather than a best guess", () => {
+    expect(searchClauses(book, "zzzz")).toEqual([]);
+  });
+
+  it("does not mutate the array it was given", () => {
+    const input = [...book];
+    searchClauses(input, "kuorum");
+    expect(input).toHaveLength(3);
   });
 });

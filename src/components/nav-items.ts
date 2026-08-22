@@ -1,5 +1,6 @@
 import {
   Banknote,
+  BookOpen,
   Building2,
   CalendarClock,
   ClipboardList,
@@ -95,7 +96,10 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/money/history", icon: ClipboardList, bm: "Sejarah resit", zh: "收据历史", en: "Receipt history" },
   { href: "/filings", icon: FileCheck, bm: "Pemfailan", zh: "申报", en: "Filings" },
   { href: "/agm-pack", icon: Landmark, bm: "Pek AGM", zh: "年度大会", en: "AGM" },
-  { href: "/constitution", icon: ScrollText, bm: "Perlembagaan", zh: "章程", en: "Constitution" },
+  { href: "/constitution", icon: ScrollText, bm: "Perlembagaan", zh: "章程", en: "Constitution", exact: true },
+  // 2026-08-23, J's UX list N7: the clauses were in the database, verbatim,
+  // answering questions, with no screen that simply showed them.
+  { href: "/constitution/clauses", icon: BookOpen, bm: "Fasal penuh", zh: "条文全文", en: "All clauses" },
   { href: "/calendar", icon: CalendarClock, bm: "Kalendar", zh: "日历", en: "Calendar" },
   { href: "/history", icon: History, bm: "Sejarah", zh: "历史", en: "History" },
   // 2026-08-19, user: "我也想这个系统有一个地方可以看到成员名单". Top-level, not
@@ -195,6 +199,7 @@ export const SIDEBAR_NAV: NavEntry[] = [
       byHref("/filings"),
       byHref("/agm-pack"),
       byHref("/constitution"),
+      byHref("/constitution/clauses"),
       byHref("/glossary"),
       byHref("/inbox"),
     ],

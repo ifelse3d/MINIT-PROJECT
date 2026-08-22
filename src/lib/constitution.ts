@@ -180,6 +180,84 @@ export function filterClauses(
   return matches.slice(0, MAX_CANDIDATE_CLAUSES);
 }
 
+// --- reading the whole thing ------------------------------------------------
+
+/**
+ * Order clauses the way the printed document does.
+ *
+ * The stored order is "order first photographed", because a constitution
+ * arrives as a stack of photos and mergeClauses preserves first appearance.
+ * That is right for merging and wrong for READING: photograph page 4 before
+ * page 2 and the book comes out shuffled. So the reading page sorts.
+ *
+ * Clause numbers are not integers — "12", "12.1", "12.10", "Fasal 3(a)" — so
+ * this compares them segment by segment, numerically where both segments are
+ * numeric and textually otherwise. That puts 12.2 before 12.10, which plain
+ * string sorting gets backwards, and it leaves unnumbered oddities in a stable
+ * place at the end rather than scattered through the middle.
+ */
+export function sortClauses(clauses: readonly ConfirmedClause[]): ConfirmedClause[] {
+  const segmentsOf = (no: string): (number | string)[] =>
+    no
+      .toLowerCase()
+      .split(/[^0-9a-z\u4e00-\u9fff]+/)
+      .filter((x) => x !== "")
+      .map((x) => (/^\d+$/.test(x) ? Number(x) : x));
+
+  return [...clauses].sort((a, b) => {
+    const A = segmentsOf(a.clause_no);
+    const B = segmentsOf(b.clause_no);
+    // A clause number with no digits or letters at all sorts LAST, so a stray
+    // blank sits at the end of the book instead of at the top of it.
+    if (A.length === 0 || B.length === 0) {
+      return (A.length === 0 ? 1 : 0) - (B.length === 0 ? 1 : 0);
+    }
+    for (let i = 0; i < Math.max(A.length, B.length); i++) {
+      const x = A[i];
+      const y = B[i];
+      if (x === undefined) return -1;
+      if (y === undefined) return 1;
+      if (typeof x === "number" && typeof y === "number") {
+        if (x !== y) return x - y;
+      } else {
+        // Numbers before words at the same depth: "12" before "12a".
+        const sx = typeof x === "number" ? String(x).padStart(8, "0") : "~" + x;
+        const sy = typeof y === "number" ? String(y).padStart(8, "0") : "~" + y;
+        if (sx !== sy) return sx < sy ? -1 : 1;
+      }
+    }
+    return 0;
+  });
+}
+
+/**
+ * Plain substring search across a constitution, for the person READING it
+ * rather than asking a question about it.
+ *
+ * Deliberately NOT filterClauses(). That one is the Q&A retriever: it expands
+ * synonyms across three languages, weighs headings double and returns the six
+ * best guesses. Excellent for "how much notice for an AGM"; wrong for somebody
+ * who typed "12.3" and wants clause 12.3 — and actively confusing when it
+ * silently drops the seventh match from a document they are trying to read in
+ * full. Here, a match is a match, everything that matches is returned, and the
+ * order of the book is preserved.
+ *
+ * An empty query returns everything, which is what a reading page should show.
+ */
+export function searchClauses(
+  clauses: readonly ConfirmedClause[],
+  query: string,
+): ConfirmedClause[] {
+  const q = query.trim().toLowerCase();
+  if (q === "") return [...clauses];
+  return clauses.filter(
+    (c) =>
+      c.clause_no.toLowerCase().includes(q) ||
+      c.heading.toLowerCase().includes(q) ||
+      c.text.toLowerCase().includes(q),
+  );
+}
+
 // --- answer / refusal text (deterministic, BM-first) ------------------------
 
 export const QA_DISCLAIMER_BM =
