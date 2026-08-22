@@ -42,6 +42,7 @@ type Turn = {
   button?: { href: string; bm: string; zh: string; en: string } | null;
   /** Clickable "this came from the 12 June meeting" links. */
   sources?: AnswerSource[] | null;
+  lookups?: string[] | null;
 };
 
 type ChatOk = {
@@ -50,6 +51,8 @@ type ChatOk = {
   button: { href: string; bm: string; zh: string; en: string } | null;
   /** Which of the society's own meetings the answer rests on (2026-08-22). */
   sources: AnswerSource[] | null;
+  /** Which record lookups ran for this answer (tool names). */
+  lookups: string[] | null;
   remaining: number | null;
   /** Share of the monthly free quota spent, 0–100 (2026-08-22). */
   usedPct: number | null;
@@ -156,6 +159,7 @@ export function AskBox({
           text: tidyReply(body.reply),
           button: body.button,
           sources: body.sources ?? null,
+          lookups: body.lookups ?? null,
         },
       ]);
       if (typeof body.remaining === "number") setRemaining(body.remaining);
@@ -416,7 +420,7 @@ export function AskBox({
                     </Link>
                   </Button>
                 )}
-                <AnswerSources sources={turn.sources ?? []} />
+                <AnswerSources sources={turn.sources ?? []} lookups={turn.lookups ?? []} />
               </div>
             ),
           )}
