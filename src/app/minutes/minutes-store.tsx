@@ -137,6 +137,17 @@ export type MinutesStore = {
   /** Everything except the attendees, which now live on their own page. */
   outstandingHereOutsideAttendance: number;
   firstUnfinished: "meeting" | "attendees" | "resolutions" | "figures" | "bearers" | undefined;
+  /**
+   * The first unfinished group ON THE /minutes PAGE — attendees excluded.
+   *
+   * 🔴 Not a tidier version of `firstUnfinished`, a bug fix. Since the
+   * 2026-08-23 split the attendees live on their own page, so if they were the
+   * first thing needing attention, `firstUnfinished` pointed at a group that is
+   * not rendered here — and NOTHING on /minutes opened itself. The page came up
+   * with every section collapsed and no sign of where to start, which is
+   * precisely the "我也不懂要如何下手" the grouping was built to fix.
+   */
+  firstUnfinishedHere: "meeting" | "resolutions" | "figures" | "bearers" | undefined;
   todayIso: string;
 
   // --- the document --------------------------------------------------------
@@ -523,6 +534,9 @@ export function MinutesProvider({
   const firstUnfinished = (
     ["meeting", "attendees", "resolutions", "figures", "bearers"] as const
   ).find((k) => groups[k].outstanding > 0);
+  const firstUnfinishedHere = (
+    ["meeting", "resolutions", "figures", "bearers"] as const
+  ).find((k) => groups[k].outstanding > 0);
   const todayIso = dayIsoMalaysia(new Date().toISOString()) as string;
 
   // "This is the person's own meeting" — from a photo OR typed by hand. Before
@@ -702,6 +716,7 @@ export function MinutesProvider({
         groups,
         outstandingHereOutsideAttendance,
         firstUnfinished,
+        firstUnfinishedHere,
         todayIso,
         minutesDraft,
         shownDocument,

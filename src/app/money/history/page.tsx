@@ -78,11 +78,9 @@ export default async function MoneyHistoryPage({
   if (!active) {
     return (
       <div className="mx-auto w-full max-w-3xl pb-10">
-        <h1 className="mb-4 text-3xl font-semibold tracking-tight">
-          <span className="v2-gradient-text">
-            <Tri bm="Sejarah Resit" zh="收据历史" en="Receipt History" />
-          </span>
-        </h1>
+        <h2 className="mb-4 text-2xl font-semibold tracking-tight">
+          <Tri bm="Sejarah Resit" zh="收据历史" en="Receipt History" />
+        </h2>
         <p className="text-muted-foreground">
           <Link href="/orgs" className="underline">
             <Tri
@@ -137,25 +135,22 @@ export default async function MoneyHistoryPage({
 
   return (
     <div className="mx-auto w-full max-w-4xl pb-10">
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            <span className="v2-gradient-text">
-              <Tri bm="Sejarah Resit" zh="收据历史" en="Receipt History" />
-            </span>
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {active.name} ·{" "}
-            <Tri
-              bm="Nama penderma disorok untuk melindungi privasi mereka"
-              zh="为保护捐款人隐私，姓名已隐藏"
-              en="Donor names are hidden to protect their privacy"
-            />
-          </p>
-        </div>
-        <Link href="/money" className="text-sm underline underline-offset-4">
-          ← <Tri bm="Kembali ke Wang" zh="返回财务" en="Back to Money" />
-        </Link>
+      {/* An h2, not an h1, and no "back to Money" link: since the 2026-08-23
+          split this page sits inside the /money layout, which already carries
+          the section's heading, the organisation's name and the tab rail. Two
+          h1s and two ways back is what you get when a page that used to stand
+          alone is put inside a frame and nobody looks at it afterwards. */}
+      <div className="mb-6">
+        <h2 className="text-2xl font-semibold tracking-tight">
+          <Tri bm="Sejarah Resit" zh="收据历史" en="Receipt History" />
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          <Tri
+            bm="Nama penderma disorok untuk melindungi privasi mereka"
+            zh="为保护捐款人隐私，姓名已隐藏"
+            en="Donor names are hidden to protect their privacy"
+          />
+        </p>
       </div>
 
       <ReceiptFilters q={q} from={from} to={to} active={anyFilter} />

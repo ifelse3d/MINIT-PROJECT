@@ -64,11 +64,9 @@ export default async function MinutesHistoryPage({
   if (!active) {
     return (
       <div className="mx-auto w-full max-w-3xl pb-10">
-        <h1 className="mb-4 text-3xl font-semibold tracking-tight">
-          <span className="v2-gradient-text">
-            <Tri bm="Sejarah Minit" zh="会议记录历史" en="Minutes History" />
-          </span>
-        </h1>
+        <h2 className="mb-4 text-2xl font-semibold tracking-tight">
+          <Tri bm="Sejarah Minit" zh="会议记录历史" en="Minutes History" />
+        </h2>
         <p className="text-muted-foreground">
           <Link href="/orgs" className="underline">
             <Tri
@@ -108,18 +106,12 @@ export default async function MinutesHistoryPage({
 
   return (
     <div className="mx-auto w-full max-w-3xl pb-10">
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            <span className="v2-gradient-text">
-              <Tri bm="Sejarah Minit" zh="会议记录历史" en="Minutes History" />
-            </span>
-          </h1>
-          <p className="text-sm text-[color:var(--v2-text-soft)]">{active.name}</p>
-        </div>
-        <Link href="/minutes" className="text-sm underline underline-offset-4">
-          ← <Tri bm="Kembali ke Minit" zh="返回会议记录" en="Back to Minutes" />
-        </Link>
+      {/* h2 and no back link — the /minutes layout above already carries the
+          section heading, the organisation and the tab rail. (2026-08-23.) */}
+      <div className="mb-6">
+        <h2 className="text-2xl font-semibold tracking-tight">
+          <Tri bm="Sejarah Minit" zh="会议记录历史" en="Minutes History" />
+        </h2>
       </div>
 
       <MinutesFilters type={type} from={from} to={to} q={q} active={anyFilter} />

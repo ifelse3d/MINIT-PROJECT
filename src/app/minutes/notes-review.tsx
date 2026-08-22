@@ -33,7 +33,7 @@ export function NotesReview() {
     nothingYet,
     outstandingHereOutsideAttendance,
     groups,
-    firstUnfinished,
+    firstUnfinishedHere,
     extraction,
     updateField,
     confirmField: confirm,
@@ -234,7 +234,7 @@ export function NotesReview() {
           titleEn="Meeting details"
           outstanding={groups.meeting.outstanding}
           total={groups.meeting.total}
-          defaultOpen={firstUnfinished === "meeting"}
+          defaultOpen={firstUnfinishedHere === "meeting"}
         >
           {/* The three boxes J filled in by hand on 2026-08-20. The type is a
               list and the date is a date picker because a box that cannot
@@ -395,7 +395,7 @@ export function NotesReview() {
           titleEn="What was decided"
           outstanding={groups.resolutions.outstanding}
           total={groups.resolutions.total}
-          defaultOpen={firstUnfinished === "resolutions"}
+          defaultOpen={firstUnfinishedHere === "resolutions"}
         >
           {extraction.resolutions.map((r, i) => (
             <DeletableRow
@@ -444,7 +444,7 @@ export function NotesReview() {
           titleEn="Money amounts in the notes"
           outstanding={groups.figures.outstanding}
           total={groups.figures.total}
-          defaultOpen={firstUnfinished === "figures"}
+          defaultOpen={firstUnfinishedHere === "figures"}
         >
           {extraction.figures.map((f, i) => (
             <DeletableRow
@@ -557,7 +557,7 @@ export function NotesReview() {
           titleEn="Who holds which position"
           outstanding={groups.bearers.outstanding}
           total={groups.bearers.total}
-          defaultOpen={firstUnfinished === "bearers"}
+          defaultOpen={firstUnfinishedHere === "bearers"}
         >
           {extraction.office_bearers.map((b, i) => (
             <DeletableRow
