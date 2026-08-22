@@ -28,6 +28,23 @@
 // The person can open that meeting and read it. An assistant whose every claim
 // about their records is checkable is harder to hallucinate with than one that
 // was simply told to refuse.
+//
+// 🔴 2026-08-23 — AND THE SECOND HALF OF THE SAME SENTENCE CAME OFF.
+// Rule 1 also said, of donations, receipts and the constitution: "these are NOT
+// in those excerpts: send money questions to the Money page". That was true and
+// necessary while minutes were the only thing the assistant could read. It stops
+// being true the moment it can be handed tools (docs/助手重做-设计.md §5 step 3,
+// src/lib/ai/org-tools.ts) — and a prompt that keeps saying it would produce
+// exactly the behaviour J complained about on 2026-08-20: asked how much was
+// collected in July, the assistant tells them to go and look for themselves,
+// while the answer sits one query away.
+//
+// So `tools` flips that paragraph. It is a PARAMETER and not a rewrite because
+// both states are real at the same time: anthropic and xai cannot be handed
+// tools, so pointing AI_MODEL_CHAT at Claude has to keep producing the older,
+// honest, narrower assistant rather than one that promises lookups it cannot do.
+// The rule that never moves is the one underneath both: state nothing about
+// their records that did not come back from a lookup.
 
 import { INJECTION_RULE, untrustedBlock } from "@/prompts/untrusted";
 
@@ -46,6 +63,15 @@ export type ChatPromptParams = {
    * assistant: there is nothing here it may quote.
    */
   minutesExcerpts?: string;
+  /**
+   * True when this vendor can be handed tools, so the assistant really can look
+   * up donations, receipts, the constitution, the committee and the deadlines.
+   *
+   * False keeps the older wording, which is not a downgrade but the truth for
+   * that vendor: promising a lookup it cannot perform is worse than saying
+   * which page to open.
+   */
+  tools?: boolean;
 };
 
 export function chatPrompt({
@@ -54,6 +80,7 @@ export function chatPrompt({
   history,
   question,
   minutesExcerpts = "",
+  tools = false,
 }: ChatPromptParams): string {
   const transcript = history
     .map((t) => `${t.role === "user" ? "PERSON" : "MINIT"}: ${t.text}`)
@@ -79,7 +106,18 @@ WHAT YOU CAN HELP WITH (society paperwork only)
 
 THE THINGS YOU MUST NOT DO
 1. NEVER invent a fact about this organisation's own records. The ONLY facts about their records you may state are ones written in the numbered excerpts under "MINIT MENJUMPAI" below, and every such statement must carry the excerpt number in square brackets, like [2]. If the excerpts do not answer the question, or there are none, say plainly that you could not find it in their meeting minutes and name the page where they can look. Guessing a number, a date or a decision is the worst thing you could do.
-   Only MEETING MINUTES are searched. Their donations, receipts and constitution are NOT in those excerpts: send money questions to the Money page and constitution questions to the Constitution page.
+${
+    tools
+      ? `   You can ALSO look things up yourself, by calling one of these:
+     - cari_derma — money the society received, by month or between two dates. Totals are already worked out for you; never add anything up yourself.
+     - cari_resit — one receipt by number, or a month of them.
+     - cari_fasal — their own constitution, clause by clause, exactly as written. Quote it, never paraphrase it.
+     - senarai_ajk — who holds which position.
+     - tarikh_akhir — what is due, and what has already been done.
+   Use them BEFORE answering anything about money, receipts, the constitution, the committee or a deadline. Do not tell somebody to go and look on a page for something you could have looked up for them.
+   What comes back from a lookup is the ONLY thing you may state about that subject. If a lookup returns nothing, or says it could not tell, say that plainly — do not fill the gap from what you know about Malaysian societies in general. If a lookup says its totals cover only some of the rows, say so in your answer; a partial total presented as the month's takings is the worst mistake you can make here.`
+      : `   Only MEETING MINUTES are searched. Their donations, receipts and constitution are NOT in those excerpts: send money questions to the Money page and constitution questions to the Constitution page.`
+}
 2. NEVER give legal, tax or accounting ADVICE. You may explain what a rule or a form is. You may not say what they should do about their specific situation, and you must not confirm that anything they have prepared is compliant. Point them to the Registry of Societies (ROS), LHDN, or their own adviser.
 3. NEVER state a deadline, a fee, a form number or a legal requirement as certain. Say where to verify it. Malaysian rules change and getting this wrong costs them money.
 4. If the question has nothing to do with society paperwork (news, medicine, politics, personal matters, general chat), say kindly that you only help with the society's documents, and give one example of something you CAN help with. Do not answer the off-topic question even partially.

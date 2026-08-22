@@ -17,6 +17,9 @@ import {
 } from "@/lib/ai/usage-core";
 import { getActiveOrg } from "@/lib/active-org";
 import { cariMinit, formatHitsForPrompt, type MinutesHit } from "@/lib/ai/cari-minit";
+import { getToolProvider, parseModelJson } from "@/lib/ai/provider";
+import { ORG_TOOL_SPECS, runOrgTool } from "@/lib/ai/org-tools";
+import { runToolConversation } from "@/lib/ai/tool-runner";
 import { ASK_ROUTES, type AskRouteKey } from "@/lib/ask-routes";
 import { chatPrompt, type ChatTurn } from "@/prompts/chat";
 import { dayIsoMalaysia } from "@/lib/history";
@@ -214,7 +217,47 @@ export async function POST(req: Request) {
 
     // 2026-08-18: attach what the vendor actually charged to the ai_usage row
     // that paid for it — the pattern extract-ledger has had since 2026-08-03.
-    const onUsage = createUsageRecorder(org.id, charge);
+    const recordUsage = createUsageRecorder(org.id, charge);
+    /**
+     * Did we actually reach the vendor?
+     *
+     * The refund rule (docs/助手重做-设计.md §4.5) is exactly one thing: refund
+     * when the vendor was NEVER reached. Since 2026-08-23 a chat answer can
+     * take several calls, and the tool loop can reach the vendor and still end
+     * up falling back — so "the last call threw" is no longer the same question
+     * as "we paid nothing". A usage callback only fires on a call that
+     * succeeded, which makes it the honest witness.
+     */
+    let reachedVendor = false;
+    const onUsage = (usage: Parameters<typeof recordUsage>[0]) => {
+      reachedVendor = true;
+      recordUsage(usage);
+    };
+
+    // --- The five other tools, when the vendor can be handed tools ---------
+    //
+    // docs/助手重做-设计.md §5 step 3. cari_minit below is retrieval-first and
+    // stays that way; THESE the model chooses, which is the whole point. Asked
+    // "how much did we collect in July", a retrieval-first assistant searches
+    // the minutes, finds nothing about July's total and says so — while the
+    // answer sits in the donations table it never thought to look at.
+    //
+    // 🔴 null is a normal answer. anthropic and xai cannot be handed tools yet,
+    // and pointing AI_MODEL_CHAT at Claude must make the assistant slightly
+    // less clever, not broken. Everything below falls back to the plain
+    // extractJson path that has been shipping since 2026-08-22.
+    //
+    // 💰 WHAT ONE ANSWER CAN COST. A tool conversation is up to
+    // MAX_TOOL_ROUNDS + 1 = 4 vendor calls, and the org is charged ONE action
+    // for it. That is deliberate and it is not a hole in the accounting:
+    // createUsageRecorder ACCUMULATES token counts and cost across every call
+    // onto the same ai_usage row, so what we actually paid is recorded
+    // truthfully and gross margin stays computable. What is fixed at one is
+    // what the MEMBER is charged — because charging somebody four actions
+    // because the model needed three lookups would be billing them for its
+    // indecision. The number to watch once there is real traffic is the average
+    // vendorCalls per chat answer; if it sits near 4, the ceiling is too loose.
+    const toolProvider = getToolProvider("chat");
 
     // --- cari_minit: what does this society's own record say? --------------
     //
@@ -245,11 +288,43 @@ export async function POST(req: Request) {
       history: history.slice(-CONTEXT_TURNS * 2) as ChatTurn[],
       question,
       minutesExcerpts: formatHitsForPrompt(hits),
+      // The prompt describes the tools only when this vendor can actually be
+      // handed them. Telling a model about a lookup it cannot perform is how you
+      // get an assistant that promises to check and then does not.
+      tools: toolProvider !== null,
     });
 
     let raw: unknown;
+    /** Which lookups actually ran, so the answer can say where it looked. */
+    let lookups: string[] = [];
+
+    if (toolProvider) {
+      try {
+        const run = await runToolConversation({
+          provider: toolProvider,
+          // The system prompt is the SAME one the plain path uses — it already
+          // carries the org, the date, the history and the required JSON shape.
+          // The tools are additional, not a different contract.
+          system: prompt,
+          messages: [{ role: "user", text: question }],
+          tools: ORG_TOOL_SPECS,
+          run: (name, args) => runOrgTool(name, args, { orgId: org.id, todayIso }),
+          onUsage,
+        });
+        lookups = [...new Set(run.used.map((u) => u.name))];
+        // The final round is asked with the tools withheld, so this should be
+        // the JSON the prompt describes. If it is not, we fall through to the
+        // plain path rather than failing the question — one extra call, only
+        // in the case where something already went wrong.
+        raw = parseModelJson(run.text);
+      } catch {
+        raw = undefined;
+        lookups = [];
+      }
+    }
+
     try {
-      raw = await provider.extractJson({ prompt, onUsage });
+      if (raw === undefined) raw = await provider.extractJson({ prompt, onUsage });
     } catch {
       // 2026-08-21: THIS is what a refund is for now. The throw means we never
       // reached the vendor at all — no tokens, no invoice — so charging for it
@@ -258,7 +333,11 @@ export async function POST(req: Request) {
       // model declined it.) Every extract-* route has done this since 0bd7c6b;
       // chat was the one that did not, so a network blip cost the member an
       // action. docs/助手重做-设计.md section 4.5.
-      await refundUsage(org.id, charge);
+      //
+      // 2026-08-23: guarded by reachedVendor, because the tool loop may already
+      // have made a call that SUCCEEDED and was paid for before this one failed.
+      // Refunding then would be giving back money we really did spend.
+      if (!reachedVendor) await refundUsage(org.id, charge);
       return NextResponse.json(
         { error: joinUserError(USER_ERRORS.aiUnavailable) },
         { status: 502 },
@@ -305,6 +384,11 @@ YOUR PREVIOUS ATTEMPT WAS NOT VALID JSON in the required shape. Respond with ONL
       reply: parsed.data.reply,
       inScope: parsed.data.in_scope,
       button: routeFor(parsed.data.suggested_page),
+      // Where the assistant looked, by tool name. Provenance for the facts that
+      // did NOT come from a meeting document: a total out of the donations
+      // table has no meeting to link to, but "I looked in your donation
+      // records" is still the difference between a citation and a claim.
+      lookups,
       // Every claim about their records, with the meeting it came from — the
       // person can open it and check. "每个事实带出处" (design doc §2).
       sources: citedSources(hits, parsed.data.used_sources),
