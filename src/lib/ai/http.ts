@@ -30,7 +30,17 @@ export const REQUEST_TIMEOUT_MS = 20_000;
 /** Attempts for TRANSIENT failures only. Bad JSON is rule 7's separate retry,
  *  one level up, and is not this function's business. */
 export const MAX_ATTEMPTS = 3;
-const BACKOFF_MS = [0, 900, 2_600];
+/**
+ * How long to wait before each attempt, in ms. Index 0 is the first attempt,
+ * so it is always 0.
+ *
+ * A real knob, not a test hook: Gemini's free tier hands out 429s as routine
+ * traffic control and deserves patience, while a paid endpoint returning 503
+ * is usually either fixed instantly or not for minutes. Overriding it also
+ * happens to keep the unit tests off a nine-second wall clock, which is the
+ * difference between a suite people run and one they skip.
+ */
+export const DEFAULT_BACKOFF_MS = [0, 900, 2_600];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -47,6 +57,8 @@ export type VendorHttpInput = {
   /** Name used in error messages, e.g. "Gemini". Never contains a key. */
   vendor: string;
   timeoutMs?: number;
+  /** Defaults to DEFAULT_BACKOFF_MS. */
+  backoffMs?: readonly number[];
 };
 
 /**
@@ -61,12 +73,13 @@ export async function postVendorJson({
   body,
   vendor,
   timeoutMs = REQUEST_TIMEOUT_MS,
+  backoffMs = DEFAULT_BACKOFF_MS,
 }: VendorHttpInput): Promise<unknown> {
   const payload = JSON.stringify(body);
   let lastError: Error = new Error(`${vendor}: no attempt was made.`);
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    if (BACKOFF_MS[attempt]) await sleep(BACKOFF_MS[attempt]);
+    if (backoffMs[attempt]) await sleep(backoffMs[attempt]);
 
     // AbortController, not a Promise.race: this actually cancels the socket, so
     // a hung vendor call stops occupying the serverless function rather than
