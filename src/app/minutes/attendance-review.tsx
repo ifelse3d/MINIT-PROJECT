@@ -8,6 +8,7 @@ import { NextStepLink, PageSection } from "@/components/page-section";
 import { ConfidenceBadge } from "@/components/confidence-badge";
 import { FieldRow } from "./field-row";
 import { AddRowButton, DeletableRow } from "./row-controls";
+import { RosterPicker } from "./roster-picker";
 import { useMinutes } from "./minutes-store";
 
 // ---------------------------------------------------------------------------
@@ -52,6 +53,7 @@ export function AttendanceReview() {
     editField: edit,
     markAbsent,
     addExtractionRow,
+    addNamedAttendees,
     removeExtractionRow,
     rowHasContent,
     noAttendeesRecorded,
@@ -317,6 +319,20 @@ export function AttendanceReview() {
               </p>
             </div>
           )}
+
+          {/* Ticking beats typing for the hundred-name case, and the committee
+              list already has most of those names on it. Shown above the
+              type-it-yourself button because it is the faster path when it
+              applies — and it renders nothing at all when the society has no
+              roster recorded, rather than offering an empty list. */}
+          <RosterPicker
+            alreadyThere={
+              new Set(
+                extraction.attendees.map((a) => a.name.value.trim().toLowerCase()),
+              )
+            }
+            onAdd={addNamedAttendees}
+          />
 
           <AddRowButton
             onClick={() => addExtractionRow("attendees")}

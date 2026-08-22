@@ -150,6 +150,19 @@ export type MinutesStore = {
   markAbsent: (f: TextLikeField) => void;
   /** J's UX list, root cause A: a line the AI never proposed. */
   addExtractionRow: (list: RowList) => void;
+  /**
+   * Add attendees by name, already confirmed.
+   *
+   * Used by the committee-list picker (roster-picker.tsx). A name ticked off
+   * the society's own committee list is a human ASSERTION that the person was
+   * there — so it arrives `confirmed`, and the source_ref says exactly that,
+   * which is what Hard Rule 1 requires of a non-missing field. It is not the
+   * AI having read anything, and the record must not suggest it was.
+   *
+   * Names already present are skipped: ticking somebody twice is a slip, not
+   * an instruction to record them twice.
+   */
+  addNamedAttendees: (names: string[]) => void;
   removeExtractionRow: (list: RowList, index: number) => void;
   /** True when deleting that row would lose something typed. */
   rowHasContent: (list: RowList, index: number) => boolean;
@@ -524,6 +537,36 @@ export function MinutesProvider({
     (list: RowList, index: number) => updateField((e) => removeRow(e, list, index)),
     [updateField],
   );
+  const addNamedAttendees = useCallback(
+    (names: string[]) => {
+      const clean = names.map((n) => n.trim()).filter((n) => n !== "");
+      if (clean.length === 0) return;
+      updateField((e) => {
+        const have = new Set(e.attendees.map((a) => a.name.value.trim().toLowerCase()));
+        for (const name of clean) {
+          if (have.has(name.toLowerCase())) continue;
+          have.add(name.toLowerCase());
+          e.attendees.push({
+            name: {
+              value: name,
+              confidence: "confirmed",
+              source_ref: {
+                location: t("ditanda oleh anda", "由您勾选", "ticked by you"),
+                snippet: t(
+                  "daripada senarai AJK",
+                  "从职位名单里选的",
+                  "from the committee list",
+                ),
+              },
+            },
+          });
+        }
+        return e;
+      });
+    },
+    [updateField, t],
+  );
+
   const rowHasContentHere = useCallback(
     (list: RowList, index: number) => rowHasContent(extraction, list, index),
     [extraction],
@@ -785,6 +828,7 @@ export function MinutesProvider({
         editField,
         markAbsent,
         addExtractionRow,
+        addNamedAttendees,
         removeExtractionRow,
         rowHasContent: rowHasContentHere,
         outstanding,
