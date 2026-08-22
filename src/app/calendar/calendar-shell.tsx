@@ -8,7 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Tri } from "@/components/language-provider";
 import type { ActivityRecord } from "@/lib/history";
 import type { ConfirmedAgm } from "@/lib/standard-deadlines";
-import { loadEvents, saveEvents, sortedByDate, type SimpleEvent } from "@/lib/local-events";
+import {
+  loadEvents,
+  mergeEvents,
+  saveEvents,
+  sortedByDate,
+  type SimpleEvent,
+} from "@/lib/local-events";
+import { deleteEvent, loadOrgEvents, saveEvent } from "./actions";
 import { ActivityCalendar } from "./activity-calendar";
 import { UpcomingSidebar } from "./upcoming-sidebar";
 
@@ -17,8 +24,21 @@ import { UpcomingSidebar } from "./upcoming-sidebar";
 // "Akan datang / Upcoming" sidebar right (stacks below on mobile). Adding
 // events happens on its own page (/calendar/add), reached from the primary
 // button in the header — it used to be a panel collapsed below the grid, which
-// nobody scrolled to. This component owns the localStorage events so the grid
-// and the sidebar always agree.
+// nobody scrolled to. This component owns the events so the grid and the
+// sidebar always agree.
+//
+// 2026-08-23 — the events now also reach the DATABASE (J's UX list, root cause
+// B: "换一台电脑登入，这个组织什么都没有"). The order of operations matters and
+// is deliberate:
+//
+//   1. localStorage first, always. It is instant, it works with no signal, and
+//      it is what makes an added event appear the moment it is typed.
+//   2. The database second, in the background. If it fails — no organisation
+//      chosen yet, no signal, or migration 20260825000000 not applied — the
+//      event is still on screen and still saved on this device.
+//   3. The failure is SAID, once, in one line. Silently not syncing is how you
+//      end up with a committee that thinks the calendar is shared when it is
+//      not, which is worse than not syncing at all.
 // ---------------------------------------------------------------------------
 
 export function CalendarShell({
@@ -36,7 +56,34 @@ export function CalendarShell({
   agm: ConfirmedAgm | null;
 }) {
   const [events, setEvents] = useState<SimpleEvent[]>([]);
-  useEffect(() => setEvents(loadEvents()), []);
+  /** Set when the organisation's copy could not be written. Told, not swallowed. */
+  const [syncFailed, setSyncFailed] = useState(false);
+
+  useEffect(() => {
+    // The device's list goes up immediately; the organisation's is merged in
+    // when it arrives. A union, never a replace — see mergeEvents for why
+    // taking either side wholesale deletes somebody's meeting.
+    const local = loadEvents();
+    setEvents(sortedByDate(local));
+    let cancelled = false;
+    void loadOrgEvents().then((remote) => {
+      if (cancelled || remote.length === 0) return;
+      const merged = mergeEvents(local, remote);
+      setEvents(merged);
+      saveEvents(merged);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /** Fire-and-forget: the event is already on screen and already on this device. */
+  function syncSave(ev: SimpleEvent) {
+    void saveEvent(ev).then((r) => setSyncFailed(!r.ok));
+  }
+  function syncDelete(id: string) {
+    void deleteEvent(id).then((r) => setSyncFailed(!r.ok));
+  }
 
   function persist(next: SimpleEvent[]) {
     const sorted = sortedByDate(next);
@@ -57,6 +104,7 @@ export function CalendarShell({
       saveEvents(sorted);
       return sorted;
     });
+    syncSave(ev);
   }
 
   function removeEvent(id: string) {
@@ -65,6 +113,7 @@ export function CalendarShell({
       saveEvents(sorted);
       return sorted;
     });
+    syncDelete(id);
   }
 
   return (
@@ -105,9 +154,30 @@ export function CalendarShell({
           onAddEvent={addEvent}
           onRemoveEvent={removeEvent}
         />
-        <UpcomingSidebar todayIso={todayIso} agm={agm} orgName={orgName} events={events} onRemove={(id) => persist(events.filter((e) => e.id !== id))} />
+        <UpcomingSidebar
+          todayIso={todayIso}
+          agm={agm}
+          orgName={orgName}
+          events={events}
+          onRemove={(id) => {
+            persist(events.filter((e) => e.id !== id));
+            syncDelete(id);
+          }}
+        />
       </div>
 
+      {/* One line, at the bottom, never a blocking dialog: the calendar itself
+          is working. What is NOT working is the part the committee cannot see,
+          which is exactly the part that has to be said out loud. */}
+      {syncFailed && (
+        <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-base text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+          <Tri
+            bm="Acara ini disimpan pada peranti ini sahaja — ia belum sampai ke rekod pertubuhan, jadi ahli jawatankuasa lain tidak akan melihatnya. Pilih pertubuhan anda, atau cuba lagi apabila ada talian."
+            zh="这些活动只存在这台设备上 —— 还没有进到机构的记录里，所以其他委员看不到。请选好您的机构，或者等有网络时再试。"
+            en="These events are on this device only — they have not reached the organisation's records, so other committee members will not see them. Choose your organisation, or try again when you have a signal."
+          />
+        </p>
+      )}
     </div>
   );
 }

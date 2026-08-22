@@ -19,7 +19,8 @@ import {
   type EventExtraction,
   type MeetingNotesExtraction,
 } from "@/lib/extraction";
-import { loadEvents, saveEvents, sortedByDate } from "@/lib/local-events";
+import { loadEvents, saveEvents, sortedByDate, type SimpleEvent } from "@/lib/local-events";
+import { saveEvent } from "@/app/calendar/actions";
 import { renderMinutesDraftBm } from "@/lib/minutes-draft";
 import { buildPastePack } from "@/lib/paste-pack";
 import { dayIsoMalaysia } from "@/lib/history";
@@ -299,17 +300,19 @@ export function MinutesProvider({
       if (!evRows) return;
       const r = evRows[idx];
       if (!r.dateIso) return;
-      saveEvents(
-        sortedByDate([
-          ...loadEvents(),
-          {
-            id: `${Date.now()}-m${idx}`,
-            title: r.title || "Acara",
-            dateIso: r.dateIso,
-            timeText: r.timeText,
-          },
-        ])
-      );
+      const event: SimpleEvent = {
+        id: `${Date.now()}-m${idx}`,
+        title: r.title || "Acara",
+        dateIso: r.dateIso,
+        timeText: r.timeText,
+      };
+      saveEvents(sortedByDate([...loadEvents(), event]));
+      // 2026-08-23: also into the organisation's records, so a date agreed at a
+      // meeting reaches the whole committee's calendar and not just the
+      // secretary's browser. Fire-and-forget for the same reason as /calendar:
+      // it is already on this device, and a failed sync must not undo a
+      // confirmation the person just made.
+      void saveEvent(event);
       setEvRows(evRows.map((x, i) => (i === idx ? { ...x, added: true } : x)));
     },
     [evRows],

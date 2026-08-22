@@ -7,6 +7,10 @@
 // to find it. The calendar header now carries a primary "Add events" button
 // that lands here; adding writes to the SAME localStorage key the calendar
 // reads (src/lib/local-events.ts), so going back shows the new events.
+//
+// 2026-08-23: and to the organisation's records, so the OTHER committee members
+// see them too. Device first, database second, failure said out loud — the same
+// three rules as calendar-shell.tsx, which explains why.
 // ---------------------------------------------------------------------------
 
 import { useEffect, useState } from "react";
@@ -20,11 +24,14 @@ import {
   sortedByDate,
   type SimpleEvent,
 } from "@/lib/local-events";
+import { saveEvent } from "../actions";
 import { EventsSection } from "../events-section";
 
 export default function AddEventsPage() {
   const [events, setEvents] = useState<SimpleEvent[]>([]);
   const [added, setAdded] = useState(0);
+  /** Set when the organisation's copy could not be written. Told, not swallowed. */
+  const [syncFailed, setSyncFailed] = useState(false);
 
   useEffect(() => setEvents(loadEvents()), []);
 
@@ -33,6 +40,9 @@ export default function AddEventsPage() {
     setEvents(next);
     saveEvents(next);
     setAdded((n) => n + 1);
+    // Fire-and-forget: the event is already on screen and already on this
+    // device, so a failed sync costs reach, not the person's typing.
+    void saveEvent(ev).then((r) => setSyncFailed(!r.ok));
   }
 
   return (
@@ -62,6 +72,16 @@ export default function AddEventsPage() {
       </div>
 
       <EventsSection onAdd={addEvent} />
+
+      {syncFailed && (
+        <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-base text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+          <Tri
+            bm="Acara ini disimpan pada peranti ini sahaja — ia belum sampai ke rekod pertubuhan, jadi ahli jawatankuasa lain tidak akan melihatnya. Pilih pertubuhan anda, atau cuba lagi apabila ada talian."
+            zh="这些活动只存在这台设备上 —— 还没有进到机构的记录里，所以其他委员看不到。请选好您的机构，或者等有网络时再试。"
+            en="These events are on this device only — they have not reached the organisation's records, so other committee members will not see them. Choose your organisation, or try again when you have a signal."
+          />
+        </p>
+      )}
     </div>
   );
 }
