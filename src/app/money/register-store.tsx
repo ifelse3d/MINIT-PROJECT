@@ -32,6 +32,7 @@ import { todayIsoMalaysia } from "@/lib/history";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
 import { consumeIntake } from "@/lib/intake-handoff";
 import { issueAndSaveReceipts } from "./actions";
+import { loadRemittanceBatches, saveRemittanceBatch } from "./custody-actions";
 
 // ---------------------------------------------------------------------------
 // THE MONEY REGISTER — one store, shared by every page under /money.
@@ -132,6 +133,16 @@ export type RegisterStore = {
   handOver: () => void;
   hqConfirm: () => void;
   deleteEverything: () => void;
+  /**
+   * True when a hand-over could not be written to the organisation's records,
+   * so it exists on this device only.
+   *
+   * Said out loud on /money/custody rather than swallowed. A hand-over is one
+   * person's claim that they gave money to another person; it is worth what the
+   * record BOTH of them can see. A treasurer who believes HQ can see it, when
+   * HQ cannot, is the failure this flag exists to prevent.
+   */
+  custodyLocalOnly: boolean;
 
   /**
    * The one error line for the whole /money section, rendered by the shared
@@ -212,6 +223,7 @@ export function RegisterProvider({
   const [addedRows, setAddedRows] = useState<Set<number>>(new Set());
 
   const [error, setError] = useState<string | null>(null);
+  const [custodyLocalOnly, setCustodyLocalOnly] = useState(false);
   const [issueBusy, setIssueBusy] = useState(false);
   const [issueNotice, setIssueNotice] = useState<IssueNotice | null>(null);
 
@@ -289,6 +301,28 @@ export function RegisterProvider({
     } finally {
       setAiBusy(false);
     }
+  }, []);
+
+  // The organisation's hand-over history, merged in once on mount so a SECOND
+  // device (HQ's computer, the branch's shared laptop) sees what the first one
+  // recorded. Same union rule as the calendar: a batch the remote has and this
+  // device does not is added; a batch only this device has is kept, because it
+  // may simply not have synced yet.
+  useEffect(() => {
+    let cancelled = false;
+    void loadRemittanceBatches().then((remote) => {
+      if (cancelled || remote.length === 0) return;
+      setBatches((local) => {
+        const byId = new Map(local.map((b) => [b.id, b]));
+        for (const b of remote) byId.set(b.id, b);
+        return [...byId.values()];
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+    // setBatches is stable (usePersistentState); this must run exactly once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Did the home page's "one door" just read a ledger page for us? Consume it
@@ -492,6 +526,12 @@ export function RegisterProvider({
       }
       if (created.length === 0) return;
       commitCustody(current, [...batchesRef.current, ...created]);
+      // Fire-and-forget, one call per batch: the hand-over has already happened
+      // in the room, and refusing to record it locally because the network is
+      // down would be recording it nowhere.
+      void Promise.all(created.map((b) => saveRemittanceBatch(b))).then((results) =>
+        setCustodyLocalOnly(results.some((r) => !r.ok)),
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -513,6 +553,12 @@ export function RegisterProvider({
       // than re-writing identical state.
       if (!changed) return;
       commitCustody(current, updated);
+      // Upsert on the same client_id, so this REWRITES each batch rather than
+      // adding a second one: "HQ confirmed it" is a change to the hand-over,
+      // not a new hand-over.
+      void Promise.all(updated.map((b) => saveRemittanceBatch(b))).then((results) =>
+        setCustodyLocalOnly(results.some((r) => !r.ok)),
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -602,6 +648,7 @@ export function RegisterProvider({
         handOver,
         hqConfirm,
         deleteEverything,
+        custodyLocalOnly,
         error,
         setError,
       }}

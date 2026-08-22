@@ -29,6 +29,7 @@ export function CashCustody() {
     receiptsIssued,
     cashInHandCents,
     availableMonths,
+    custodyLocalOnly,
   } = useRegister();
 
   return (
@@ -64,6 +65,19 @@ export function CashCustody() {
             bm="Jana resit di langkah 2 dahulu — wang hanya boleh diserahkan selepas setiap derma ada nombor resit, kalau tidak tiada apa-apa untuk diikat pada serahan itu."
             zh="请先在第 2 步开收据 —— 只有每笔捐款都有收据号码之后才能交接，否则交出去的钱没有凭据可以对。"
             en="Issue the receipts in step 2 first — cash can only be handed over once every donation has a receipt number, otherwise there is nothing to tie the hand-over to."
+          />
+        </p>
+      )}
+
+      {/* A hand-over is one person's claim that they gave money to another
+          person. It is worth what the record BOTH of them can see — so if it
+          only reached this device, that has to be on screen, not swallowed. */}
+      {custodyLocalOnly && (
+        <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+          <Tri
+            bm="Serahan ini tercatat pada peranti ini sahaja — ia belum sampai ke rekod pertubuhan, jadi HQ tidak dapat melihatnya lagi. Pilih pertubuhan anda, atau buka halaman ini semula apabila ada talian."
+            zh="这次交接只记在这台设备上 —— 还没有进到机构的记录里，所以总会那边看不到。请选好您的机构，或者等有网络时再打开这一页一次。"
+            en="This hand-over is recorded on this device only — it has not reached the organisation's records, so HQ cannot see it yet. Choose your organisation, or open this page again when you have a signal."
           />
         </p>
       )}
