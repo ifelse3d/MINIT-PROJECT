@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { GroupsCard } from "./groups-card";
 import { Tri } from "@/components/language-provider";
 import { ROLE_LABEL, labelFor } from "@/lib/status-labels";
 import { getSupabaseServer, getSessionUser } from "@/db/supabase-server";
@@ -232,7 +233,28 @@ export default async function MembersPage() {
             </CardContent>
           </Card>
 
-          {/* 2 — who can log in. A different question entirely. */}
+          {/* 2 — the society's OWN groupings. Not a filing; see groups-card.tsx. */}
+          <Card>
+            <CardHeader className="gap-2">
+              <CardTitle>
+                <Tri bm="Kumpulan anda" zh="你们自己的分组" en="Your own groups" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <GroupsCard
+                canEdit={canEdit}
+                committeeNames={[
+                  ...new Set(
+                    committee
+                      .map((m) => (m.person_name ?? "").trim())
+                      .filter((n) => n !== ""),
+                  ),
+                ]}
+              />
+            </CardContent>
+          </Card>
+
+          {/* 3 — who can log in. A different question entirely. */}
           <Card>
             <CardHeader className="gap-2">
               <CardTitle>
