@@ -37,6 +37,7 @@ export function MinutesChrome({ children }: { children: ReactNode }) {
     outstanding,
     outstandingHereOutsideAttendance,
     groups,
+    attendanceUnsettled,
     saveResult,
     storageNote,
     backToEmpty,
@@ -60,7 +61,10 @@ export function MinutesChrome({ children }: { children: ReactNode }) {
         ? "locked"
         : isSample
           ? "example"
-          : groups.attendees.outstanding > 0
+          : // An empty list is one thing outstanding, not none — see
+            // attendance-review.tsx. The tab used to show a green tick over a
+            // meeting that recorded nobody.
+            groups.attendees.outstanding > 0 || attendanceUnsettled
             ? "needs-you"
             : "done",
       count: groups.attendees.outstanding,
@@ -159,6 +163,12 @@ export function MinutesChrome({ children }: { children: ReactNode }) {
             bm="Mula di sini: ambil gambar nota mesyuarat tulisan tangan anda dan Minit akan membacanya — atau taip sendiri kalau tiada gambar."
             zh="从这里开始：拍下您手写的会议笔记，Minit 会读出来 —— 没有照片的话，也可以自己打字。"
             en="Start here: take a photo of your handwritten meeting notes and Minit reads it — or type it in yourself if there is no photo."
+          />
+        ) : outstanding === 0 && attendanceUnsettled ? (
+          <Tri
+            bm="Satu perkara lagi: tiada seorang pun direkodkan sebagai hadir. Buka “Kehadiran”."
+            zh="还差一件事：一个出席者都没有。请打开「出席者」。"
+            en="One thing left: nobody is recorded as having attended. Open “Attendance”."
           />
         ) : !allReviewed ? (
           <Tri

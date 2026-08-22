@@ -32,6 +32,14 @@ export type SavedMinutes = {
    * from a photo. Nothing has to be migrated.
    */
   typed?: boolean;
+  /**
+   * True when a human has said, in so many words, that this meeting's notes do
+   * not record who attended.
+   *
+   * Optional for the same reason `typed` is: a blob written before 2026-08-23
+   * has no such key, `undefined` reads as false, and the person is asked once.
+   */
+  noAttendees?: boolean;
 };
 
 export function loadSavedMinutes(): SavedMinutes | null {

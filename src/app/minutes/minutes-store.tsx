@@ -110,6 +110,25 @@ export type MinutesStore = {
   startTyping: () => void;
   /** True when this set of minutes was typed rather than photographed. */
   typedByHand: boolean;
+  /**
+   * A human has stated that these notes do not record who attended.
+   *
+   * 🔴 WHY THIS HAD TO EXIST (产品缺口盘点 §3 item 3). An empty attendee list
+   * counted as REVIEWED — "Who attended ✓ All checked (0)" — because
+   * `outstanding` counts unconfirmed FIELDS and no attendees means no fields.
+   * So a set of minutes recording nobody sailed through, and the number flows
+   * into eROSES as "Bilangan Ahli Hadir". Zero attendees at a meeting that
+   * happened is either a notes problem or a filing problem; either way it is
+   * not something to pass silently.
+   *
+   * It is a statement by a person, not a default, which is why it is stored
+   * rather than inferred: "the notes do not say" is a fact about the notes, and
+   * Hard Rule 1 says a human may assert it but nothing may assume it.
+   */
+  noAttendeesRecorded: boolean;
+  setNoAttendeesRecorded: (value: boolean) => void;
+  /** True while nobody has said whether the notes record attendance at all. */
+  attendanceUnsettled: boolean;
   openSample: () => void;
   backToEmpty: () => void;
 
@@ -213,6 +232,7 @@ export function MinutesProvider({
   const [aiError, setAiError] = useState<string | null>(null);
   const [storageNote, setStorageNote] = useState<SaveOutcome | null>(null);
   const [typedByHand, setTypedByHand] = useState(false);
+  const [noAttendeesRecorded, setNoAttendeesRecorded] = useState(false);
 
   // events-in-minutes bridge
   const [evRows, setEvRows] = useState<EvRow[] | null>(null);
@@ -251,6 +271,7 @@ export function MinutesProvider({
       setSourceLabel(saved.sourceLabel);
       setPhotoDataUrl(saved.photoDataUrl);
       setTypedByHand(saved.typed === true);
+      setNoAttendeesRecorded(saved.noAttendees === true);
     }
     setRestored(true);
   }, []);
@@ -267,13 +288,19 @@ export function MinutesProvider({
     // "Nothing to save yet" is now two conditions, not one: no photo AND not
     // typed. Without the second, everything a person typed vanished on refresh.
     if (sourceLabel === null && !typedByHand) return;
-    const outcome = saveMinutes({ extraction, sourceLabel, photoDataUrl, typed: typedByHand });
+    const outcome = saveMinutes({
+      extraction,
+      sourceLabel,
+      photoDataUrl,
+      typed: typedByHand,
+      noAttendees: noAttendeesRecorded,
+    });
     if (outcome === "photo-dropped" && photoDataUrl !== null) {
       // Clear it from state too, otherwise the failing write repeats forever.
       setPhotoDataUrl(null);
     }
     setStorageNote(outcome === "ok" ? null : outcome);
-  }, [extraction, sourceLabel, photoDataUrl, typedByHand, restored]);
+  }, [extraction, sourceLabel, photoDataUrl, typedByHand, noAttendeesRecorded, restored]);
 
   const findEventsInMinutes = useCallback(async () => {
     setEvError(null);
@@ -343,6 +370,9 @@ export function MinutesProvider({
       setSourceLabel(file.name);
       setPhotoDataUrl(await compressPhoto(file));
       setTypedByHand(false);
+      // A new photo is a new meeting: whatever somebody said about the LAST
+      // one's attendance has nothing to do with this one.
+      setNoAttendeesRecorded(false);
       setEvRows(null);
     } catch (e) {
       setAiError(e instanceof Error ? e.message : String(e));
@@ -368,6 +398,7 @@ export function MinutesProvider({
     setEvRows(null);
     setAiError(null);
     setTypedByHand(true);
+    setNoAttendeesRecorded(false);
   }, []);
 
   /** Clean, empty page: no example, no half-read photo, nothing saved. */
@@ -375,6 +406,7 @@ export function MinutesProvider({
     setExtraction(emptyMeetingNotesExtraction);
     setSourceLabel(null);
     setTypedByHand(false);
+    setNoAttendeesRecorded(false);
     setShowSample(false);
     setPhotoDataUrl(null);
     setEvRows(null);
@@ -393,6 +425,7 @@ export function MinutesProvider({
     setShowSample(true);
     setSourceLabel(null);
     setTypedByHand(false);
+    setNoAttendeesRecorded(false);
     setPhotoDataUrl(null);
     setEvRows(null);
     setAiError(null);
@@ -491,7 +524,20 @@ export function MinutesProvider({
     return fields.filter((f) => f.confidence !== "confirmed").length;
   }, [extraction]);
 
-  const allReviewed = outstanding === 0;
+  /**
+   * An empty attendee list is ONE outstanding thing, not zero.
+   *
+   * Counting fields is right for every other group and wrong for this one: no
+   * attendees means no fields to be unconfirmed, so "0 people" scored the same
+   * as "everybody checked". The one thing left to do is for a person to say
+   * which it is — they were not written down, or they have not been entered
+   * yet. Ticking "the notes do not record who attended" settles it.
+   */
+  // Read straight off the extraction rather than off `groups`, which is
+  // computed further down — and which would make this a forward reference for
+  // the sake of reusing one `.length`.
+  const attendanceUnsettled = extraction.attendees.length === 0 && !noAttendeesRecorded;
+  const allReviewed = outstanding === 0 && !attendanceUnsettled;
 
   /**
    * Outstanding / total per GROUP.
@@ -702,6 +748,9 @@ export function MinutesProvider({
         onPhotoPicked,
         startTyping,
         typedByHand,
+        noAttendeesRecorded,
+        setNoAttendeesRecorded,
+        attendanceUnsettled,
         openSample,
         backToEmpty,
         updateField,

@@ -31,6 +31,14 @@ import { useMinutes } from "./minutes-store";
 //
 // The names Minit is unsure about are never batch-confirmed: that button would
 // be a machine ticking its own homework.
+//
+// 🔴 AND AN EMPTY LIST IS NOT "ALL CHECKED". 产品缺口盘点 §3 item 3: this used
+// to read "Who attended ✓ All checked (0)", because the outstanding count
+// counts unconfirmed FIELDS and no attendees means no fields. So a set of
+// minutes recording nobody sailed through — and that number goes into eROSES
+// as "Bilangan Ahli Hadir". Zero people at a meeting that happened is either a
+// notes problem or a filing problem; either way it is not something to pass
+// silently. A person has to say which it is.
 // ---------------------------------------------------------------------------
 
 export function AttendanceReview() {
@@ -46,6 +54,9 @@ export function AttendanceReview() {
     addExtractionRow,
     removeExtractionRow,
     rowHasContent,
+    noAttendeesRecorded,
+    setNoAttendeesRecorded,
+    attendanceUnsettled,
   } = useMinutes();
 
   /** Rows opened for editing. A clean name stays one line until tapped. */
@@ -149,6 +160,59 @@ export function AttendanceReview() {
         )
       }
     >
+      {/* The one question an empty list has to answer. Not a validation error:
+          "the notes do not record who attended" is a perfectly normal thing for
+          a page of scribbled notes to be true of, and the person is the only
+          one who can say so (Hard Rule 1 — a human may assert it, nothing may
+          assume it). */}
+      {attendanceUnsettled && !nothingYet && (
+        <div className="flex flex-col gap-3 rounded-xl border-2 border-amber-400 bg-amber-50 p-4 dark:bg-amber-400/10">
+          <p className="text-base font-medium text-amber-900 dark:text-amber-100">
+            <Tri
+              bm="Tiada seorang pun direkodkan sebagai hadir."
+              zh="现在一个出席者都没有。"
+              en="Nobody is recorded as having attended."
+            />
+          </p>
+          <p className="text-base text-amber-900 dark:text-amber-100">
+            <Tri
+              bm="Bilangan ini masuk ke penyata tahunan eROSES (“Bilangan Ahli Hadir”), jadi Minit tidak boleh menganggap sifar bermakna anda sudah semak. Tambah nama di bawah — atau beritahu Minit yang nota mesyuarat memang tidak mencatat kehadiran."
+              zh="这个人数会进 eROSES 年度报告的「出席人数」，所以 Minit 不能把「0 个」当成您已经核对好了。请在下面加名字 —— 或者告诉 Minit，这份笔记本来就没有记出席。"
+              en="This number goes into the eROSES annual return (“Bilangan Ahli Hadir”), so Minit cannot treat zero as checked. Add names below — or tell Minit that the notes simply do not record attendance."
+            />
+          </p>
+          <Button
+            variant="outline"
+            size="lg"
+            className="self-start"
+            onClick={() => setNoAttendeesRecorded(true)}
+          >
+            <Tri
+              bm="Nota ini tidak mencatat kehadiran"
+              zh="这份笔记没有记出席"
+              en="These notes do not record attendance"
+            />
+          </Button>
+        </div>
+      )}
+
+      {/* Said, and reversible. Somebody who ticked it and then found the list
+          on the back of the page must be able to take it back. */}
+      {noAttendeesRecorded && groups.attendees.total === 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border-2 border-[color:var(--v2-border)] bg-white/60 p-3 dark:bg-white/5">
+          <p className="min-w-56 flex-1 text-base">
+            <Tri
+              bm="Anda beritahu Minit yang nota ini tidak mencatat kehadiran."
+              zh="您告诉了 Minit：这份笔记没有记出席。"
+              en="You told Minit these notes do not record attendance."
+            />
+          </p>
+          <Button variant="outline" onClick={() => setNoAttendeesRecorded(false)}>
+            <Tri bm="Sebenarnya ada" zh="其实有记" en="They do, actually" />
+          </Button>
+        </div>
+      )}
+
       {nothingYet && groups.attendees.total === 0 ? (
         <p className="rounded-xl border-2 border-dashed p-4 text-base text-muted-foreground">
           <Tri
