@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "eval": "tsx eval/run-eval.ts",
+    "eval:tools": "tsx scripts/eval-tool-choice.ts",
     "bench": "tsx scripts/bench-models.ts",
     "economics": "tsx scripts/unit-economics.ts",
     "check:ai": "tsx scripts/check-ai-routing.ts",
