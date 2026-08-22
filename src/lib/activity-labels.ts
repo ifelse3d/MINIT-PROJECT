@@ -25,7 +25,7 @@ export const CATEGORY_STYLE: Record<
   minutes: { dot: "bg-violet-500", ring: "", bm: "Minit", zh: "会议记录", en: "Minutes", future: false },
   money: { dot: "bg-green-600", ring: "", bm: "Wang", zh: "财务", en: "Money", future: false },
   filings: { dot: "bg-blue-500", ring: "", bm: "Pemfailan", zh: "申报", en: "Filings", future: false },
-  uploads: { dot: "bg-amber-500", ring: "", bm: "Rekod muat naik", zh: "上传记录", en: "Upload records", future: false },
+  uploads: { dot: "bg-amber-500", ring: "", bm: "Gambar asal", zh: "原始照片", en: "Original photos", future: false },
   agm: { dot: "bg-indigo-500", ring: "", bm: "Pek AGM", zh: "年度大会", en: "AGM", future: false },
   constitution: { dot: "bg-teal-600", ring: "", bm: "Perlembagaan", zh: "章程", en: "Constitution", future: false },
   calendar: { dot: "bg-sky-500", ring: "", bm: "Kalendar", zh: "日历", en: "Calendar", future: false },

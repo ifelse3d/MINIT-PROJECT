@@ -11,7 +11,11 @@ import {
 import { Tri } from "@/components/language-provider";
 import { getSupabaseServer } from "@/db/supabase-server";
 import { getActiveOrg } from "@/lib/active-org";
-import { meetingTypeLabelTri } from "@/lib/meeting-types";
+import { isMeetingType, meetingTypeLabelTri } from "@/lib/meeting-types";
+import { isIsoDate } from "@/lib/date-input";
+import { PAGE_SIZE, pageRange, pageSummary, parsePage } from "@/lib/list-page";
+import { Pager } from "@/components/pager";
+import { MinutesFilters } from "./filters";
 
 // /minutes/history — every confirmed minutes document saved for the active
 // org (Phase 7). User-scoped client: RLS decides visibility.
@@ -27,8 +31,35 @@ export const dynamic = "force-dynamic";
 // fails the WHOLE query — this page would go blank on any database where the
 // migration has not been pasted. It is added the day the migration is applied.
 
-export default async function MinutesHistoryPage() {
+/** Everything the URL is allowed to say about which minutes to show. */
+type Query = { type?: string; from?: string; to?: string; q?: string; page?: string };
+
+const one = (v: string | string[] | undefined): string =>
+  (Array.isArray(v) ? v[0] : v) ?? "";
+
+export default async function MinutesHistoryPage({
+  searchParams,
+}: {
+  searchParams: Promise<Query>;
+}) {
+  const sp = await searchParams;
   const active = await getActiveOrg();
+
+  // Every filter is validated before it reaches the query. `type` must be a
+  // known meeting type and the dates must be real ISO days — not because
+  // PostgREST would be injectable (it is parameterised), but because an
+  // unparseable date makes the whole query 400 and the page go blank, and a
+  // blank history is indistinguishable from "you have no minutes".
+  const typeRaw = one(sp.type);
+  const type = isMeetingType(typeRaw) ? typeRaw : "";
+  const fromRaw = one(sp.from);
+  const from = isIsoDate(fromRaw) ? fromRaw : "";
+  const toRaw = one(sp.to);
+  const to = isIsoDate(toRaw) ? toRaw : "";
+  const q = one(sp.q).trim().slice(0, 120);
+  const page = parsePage(sp.page);
+  const filters = { type, from, to, q };
+  const anyFilter = Boolean(type || from || to || q);
 
   if (!active) {
     return (
@@ -52,12 +83,28 @@ export default async function MinutesHistoryPage() {
   }
 
   const supabase = await getSupabaseServer();
-  const { data: docs } = await supabase
+  const { from: rangeFrom, to: rangeTo } = pageRange(page);
+  let query = supabase
     .from("minutes_docs")
-    .select("id, meeting_type, meeting_date, status, confirmed_by, confirmed_at, final_md")
-    .eq("org_id", active.id)
+    // `count: "exact"` on the SAME filtered query, so the number under the list
+    // is the number of things the list is showing part of — not the length of
+    // the array we happen to be holding, which is the bug this replaces.
+    .select("id, meeting_type, meeting_date, status, confirmed_by, confirmed_at, final_md", {
+      count: "exact",
+    })
+    .eq("org_id", active.id);
+  if (type) query = query.eq("meeting_type", type);
+  if (from) query = query.gte("meeting_date", from);
+  if (to) query = query.lte("meeting_date", to);
+  // The words somebody remembers are in the document, not in the metadata:
+  // "the meeting where we agreed the new premises".
+  if (q) query = query.ilike("final_md", `%${q}%`);
+  const { data: docs, count } = await query
     .order("id", { ascending: false })
-    .limit(100);
+    .range(rangeFrom, rangeTo);
+
+  const rows = docs ?? [];
+  const summary = pageSummary(count ?? 0, page, rows.length, PAGE_SIZE);
 
   return (
     <div className="mx-auto w-full max-w-3xl pb-10">
@@ -75,24 +122,49 @@ export default async function MinutesHistoryPage() {
         </Link>
       </div>
 
-      {(docs ?? []).length === 0 ? (
+      <MinutesFilters type={type} from={from} to={to} q={q} active={anyFilter} />
+
+      {rows.length === 0 ? (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">
-              <Tri bm="Belum ada minit disimpan" zh="还没有保存的会议记录" en="No minutes saved yet" />
-            </CardTitle>
-            <CardDescription>
-              <Tri
-                bm='Sahkan medan di Minit, tekan "Simpan ke Sejarah"'
-                zh="在会议记录页确认字段后，点「保存到历史」"
-                en='Confirm the fields on Minutes, press "Save to History"'
-              />
-            </CardDescription>
+            {anyFilter ? (
+              <>
+                {/* "Nothing matches" and "you have nothing" look identical on
+                    screen and mean completely different things. */}
+                <CardTitle className="text-base">
+                  <Tri
+                    bm="Tiada minit yang sepadan"
+                    zh="没有符合条件的会议记录"
+                    en="No minutes match that"
+                  />
+                </CardTitle>
+                <CardDescription>
+                  <Tri
+                    bm="Cuba longgarkan tarikh, atau tekan Kosongkan untuk melihat semuanya."
+                    zh="可以把日期放宽一点，或者按「清掉条件」看全部。"
+                    en="Try widening the dates, or tap Clear to see everything."
+                  />
+                </CardDescription>
+              </>
+            ) : (
+              <>
+                <CardTitle className="text-base">
+                  <Tri bm="Belum ada minit disimpan" zh="还没有保存的会议记录" en="No minutes saved yet" />
+                </CardTitle>
+                <CardDescription>
+                  <Tri
+                    bm='Sahkan medan di Minit, tekan "Simpan ke Sejarah"'
+                    zh="在会议记录页确认字段后，点「保存到历史」"
+                    en='Confirm the fields on Minutes, press "Save to History"'
+                  />
+                </CardDescription>
+              </>
+            )}
           </CardHeader>
         </Card>
       ) : (
         <div className="flex flex-col gap-3">
-          {(docs ?? []).map((d) => (
+          {rows.map((d) => (
             // id anchor: the activity calendar deep-links to #minutes-N
             <Card key={d.id} id={`minutes-${d.id}`} className="scroll-mt-24 target:border-amber-400">
               <CardHeader>
@@ -130,6 +202,15 @@ export default async function MinutesHistoryPage() {
           ))}
         </div>
       )}
+
+      <Pager
+        summary={summary}
+        basePath="/minutes/history"
+        params={filters}
+        nounBm="minit"
+        nounZh="份会议记录"
+        nounEn="minutes"
+      />
     </div>
   );
 }

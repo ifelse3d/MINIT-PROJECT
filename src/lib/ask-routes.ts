@@ -36,9 +36,9 @@ export const ASK_ROUTES: Record<AskRouteKey, AskRoute> = {
   },
   inbox: {
     href: "/inbox",
-    bm: "Arkib muat naik: dokumen yang telah diproses dan gambar asalnya.",
-    zh: "上传记录：已处理的文件和原始照片。",
-    en: "Upload records: documents already processed, with the original photo.",
+    bm: "Gambar asal: gambar sebenar setiap dokumen yang pernah dibaca oleh Minit.",
+    zh: "原始照片：Minit 读过的每一份文件，那张真正的照片。",
+    en: "Original photos: the actual photograph behind every document Minit has read.",
   },
   minutes: {
     href: "/minutes",

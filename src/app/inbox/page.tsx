@@ -12,9 +12,16 @@ import { Tri } from "@/components/language-provider";
 import { getSupabaseServer } from "@/db/supabase-server";
 import { getActiveOrg } from "@/lib/active-org";
 
-// /inbox — "Muat naik / Uploads": the archive of every document this org has
-// photographed, newest first, with its processing status and a link to the
-// original image.
+// /inbox — "Gambar asal / 原始照片 / Original photos": every document this org
+// has photographed, newest first, with its processing status and a link to the
+// image itself.
+//
+// RENAMED 2026-08-23 (J's UX list, D4: 「上传记录」放在文件底下，看的人不懂那是
+// 什么). "Upload records" described the MECHANISM — that a file was uploaded —
+// which is the one thing the reader does not care about. What is actually here
+// is the photograph behind every extracted field: the evidence you go and look
+// at when a number on a receipt or a name in the minutes looks wrong. So it is
+// called that, and the page now says so in a sentence rather than assuming.
 //
 // This page used to be the front door and carried a three-way "what did you
 // photograph?" menu. Those choices now live on HOME, one click from the pages
@@ -77,9 +84,16 @@ export default async function InboxPage() {
     <div className="mx-auto w-full max-w-3xl pb-10">
       <h1 className="mb-1 text-3xl font-semibold tracking-tight">
         <span className="v2-gradient-text">
-          <Tri bm="Rekod muat naik" zh="上传记录" en="Upload records" />
+          <Tri bm="Gambar asal" zh="原始照片" en="Original photos" />
         </span>
       </h1>
+      <p className="mb-1 text-base text-muted-foreground">
+        <Tri
+          bm="Setiap gambar yang pernah anda ambil untuk Minit. Buka mana-mana satu untuk melihat tulisan tangan asal di sebalik apa yang Minit baca."
+          zh="您为 Minit 拍过的每一张照片。点开任何一张，就能看到 Minit 所读内容背后的原始手写字。"
+          en="Every photo you have taken for Minit. Open any one to see the original handwriting behind what Minit read."
+        />
+      </p>
       <p className="mb-6 text-sm text-[color:var(--v2-text-soft)]">
         {active?.name}
       </p>

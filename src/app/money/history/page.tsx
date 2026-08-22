@@ -20,6 +20,10 @@ import { Tri } from "@/components/language-provider";
 import { getSupabaseServer } from "@/db/supabase-server";
 import { getActiveOrg } from "@/lib/active-org";
 import { formatRm } from "@/lib/minutes-draft";
+import { isIsoDate } from "@/lib/date-input";
+import { PAGE_SIZE, pageRange, pageSummary, parsePage } from "@/lib/list-page";
+import { Pager } from "@/components/pager";
+import { ReceiptFilters } from "./filters";
 
 // /money/history — every receipt saved for the active org (Phase 7).
 // PDPA (Hard Rule 5): this list shows ONLY the stored donor_masked value —
@@ -45,12 +49,31 @@ type ReceiptRow = {
   } | null;
 };
 
-/** How many rows this page shows at once. Not paging — see the note where it
- *  is used. */
-const PAGE_SIZE = 200;
+/** What the URL is allowed to say about which receipts to show. */
+type Query = { q?: string; from?: string; to?: string; page?: string };
 
-export default async function MoneyHistoryPage() {
+const one = (v: string | string[] | undefined): string =>
+  (Array.isArray(v) ? v[0] : v) ?? "";
+
+export default async function MoneyHistoryPage({
+  searchParams,
+}: {
+  searchParams: Promise<Query>;
+}) {
+  const sp = await searchParams;
   const active = await getActiveOrg();
+
+  // Dates are validated before they reach the query: an unparseable one makes
+  // PostgREST 400 and the page go blank, and a blank receipt history is
+  // indistinguishable from "this society has never issued a receipt".
+  const q = one(sp.q).trim().slice(0, 60);
+  const fromRaw = one(sp.from);
+  const from = isIsoDate(fromRaw) ? fromRaw : "";
+  const toRaw = one(sp.to);
+  const to = isIsoDate(toRaw) ? toRaw : "";
+  const page = parsePage(sp.page);
+  const filters = { q, from, to };
+  const anyFilter = Boolean(q || from || to);
 
   if (!active) {
     return (
@@ -76,29 +99,41 @@ export default async function MoneyHistoryPage() {
   const supabase = await getSupabaseServer();
   // count: "exact" costs one extra aggregate and buys the only thing that makes
   // the number below honest. J, 2026-08-22: 「我手上不算重複的就有超過 1000 了」
-  // — with 1000 receipts this page showed the newest 200 and printed their sum
-  // under the word "Total", which reads as the society's total and is not.
-  // Now the page says which it is showing, and says so out loud when there are
-  // more. (Real paging belongs with the history rework — docs/界面重做-计划.md.)
-  const { data, count } = await supabase
+  // — with 1000 receipts this page used to show the newest 200 and print their
+  // sum under the word "Total", which reads as the society's total and is not.
+  // 2026-08-22 made that sentence honest; 2026-08-23 makes the older receipts
+  // REACHABLE, which is the half that was missing.
+  const { from: rangeFrom, to: rangeTo } = pageRange(page);
+  let query = supabase
     .from("receipts")
     .select(
       "id, receipt_no, issued_at, donation:donations!receipts_donation_id_fkey (donor_masked, amount_cents, purpose, donated_at, custody_status)",
       { count: "exact" },
     )
-    .eq("org_id", active.id)
+    .eq("org_id", active.id);
+  // Receipt number only. The donor name is stored MASKED (Hard Rule 5), so
+  // searching it would match against "T** A* K**" and mostly find nothing — the
+  // form says so out loud rather than letting somebody conclude their receipt
+  // has gone missing.
+  if (q) query = query.ilike("receipt_no", "%" + q + "%");
+  // issued_at is a timestamptz, so `lte` against a bare date would exclude
+  // everything issued later that same day. The upper bound is the end of it.
+  if (from) query = query.gte("issued_at", from);
+  if (to) query = query.lte("issued_at", to + "T23:59:59.999Z");
+  const { data, count } = await query
     .order("id", { ascending: false })
-    .limit(PAGE_SIZE);
+    .range(rangeFrom, rangeTo);
 
   const rows = (data as unknown as ReceiptRow[]) ?? [];
-  const totalRows = count ?? rows.length;
-  const truncated = totalRows > rows.length;
+  const summary = pageSummary(count ?? 0, page, rows.length, PAGE_SIZE);
   // Money math in TypeScript (Hard Rule 2). This is the sum of what is ON THIS
-  // PAGE — labelled as such whenever it is not the whole story.
+  // PAGE — and it is now always labelled as such, because with paging it is the
+  // whole story only when the whole story fits on one page.
   const totalCents = rows.reduce(
     (sum, r) => sum + (r.donation?.amount_cents ?? 0),
     0,
   );
+  const wholeStory = summary.pageCount === 1;
 
   return (
     <div className="mx-auto w-full max-w-4xl pb-10">
@@ -123,44 +158,72 @@ export default async function MoneyHistoryPage() {
         </Link>
       </div>
 
+      <ReceiptFilters q={q} from={from} to={to} active={anyFilter} />
+
       {rows.length === 0 ? (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">
-              <Tri bm="Belum ada resit disimpan" zh="还没有保存的收据" en="No receipts saved yet" />
-            </CardTitle>
-            <CardDescription>
-              <Tri
-                bm="Jana resit di halaman Wang"
-                zh="请在财务页面生成收据"
-                en="Issue receipts on the Money page"
-              />
-            </CardDescription>
+            {anyFilter ? (
+              <>
+                {/* "Nothing matches" and "you have never issued a receipt" look
+                    identical on screen and mean very different things. */}
+                <CardTitle className="text-base">
+                  <Tri
+                    bm="Tiada resit yang sepadan"
+                    zh="没有符合条件的收据"
+                    en="No receipts match that"
+                  />
+                </CardTitle>
+                <CardDescription>
+                  <Tri
+                    bm="Resit anda yang lain masih tersimpan. Semak nombor resit, longgarkan tarikh, atau tekan Kosongkan."
+                    zh="您其他的收据都还在。检查一下收据号码，把日期放宽，或者按「清掉条件」。"
+                    en="Your other receipts are all still there. Check the number, widen the dates, or tap Clear."
+                  />
+                </CardDescription>
+              </>
+            ) : (
+              <>
+                <CardTitle className="text-base">
+                  <Tri bm="Belum ada resit disimpan" zh="还没有保存的收据" en="No receipts saved yet" />
+                </CardTitle>
+                <CardDescription>
+                  <Tri
+                    bm="Jana resit di halaman Wang"
+                    zh="请在财务页面生成收据"
+                    en="Issue receipts on the Money page"
+                  />
+                </CardDescription>
+              </>
+            )}
           </CardHeader>
         </Card>
       ) : (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
-              {truncated ? (
-                <Tri
-                  bm={`${rows.length} resit terbaharu daripada ${totalRows} · jumlah ${formatRm(totalCents)} bagi ${rows.length} ini sahaja`}
-                  zh={`共 ${totalRows} 张收据，这里显示最新的 ${rows.length} 张 · 这 ${rows.length} 张合计 ${formatRm(totalCents)}`}
-                  en={`Newest ${rows.length} of ${totalRows} receipts · ${formatRm(totalCents)} is the total of these ${rows.length} only`}
-                />
-              ) : (
+              {wholeStory && !anyFilter ? (
                 <>
-                  {rows.length} <Tri bm="resit" zh="张收据" en="receipts" /> ·{" "}
+                  {summary.total} <Tri bm="resit" zh="张收据" en="receipts" /> ·{" "}
                   <Tri bm="Jumlah" zh="总额" en="Total" /> {formatRm(totalCents)}
                 </>
+              ) : (
+                /* The sum of THIS PAGE, said in those words. A figure labelled
+                   "Total" that is the total of one page out of twenty-one is
+                   the exact defect this replaces. */
+                <Tri
+                  bm={"Jumlah " + rows.length + " resit di halaman ini: " + formatRm(totalCents)}
+                  zh={"这一页 " + rows.length + " 张收据合计：" + formatRm(totalCents)}
+                  en={"These " + rows.length + " receipts on this page: " + formatRm(totalCents)}
+                />
               )}
             </CardTitle>
-            {truncated && (
+            {!wholeStory && (
               <CardDescription>
                 <Tri
-                  bm="Resit yang lebih lama masih tersimpan dan tidak hilang — halaman ini belum boleh membuka semuanya. Guna Carian untuk mencari satu resit tertentu."
-                  zh="更早的收据都还在，没有不见 —— 只是这一页还不能一次翻完。要找某一张，请用「搜索」。"
-                  en="Older receipts are all still stored — this page just cannot page through them yet. Use Search to find a particular one."
+                  bm="Bukan jumlah keseluruhan pertubuhan — guna butang halaman di bawah untuk melihat yang lain."
+                  zh="这不是整个社团的总额 —— 用下面的翻页按钮可以看其余的。"
+                  en="Not the society's overall total — use the page buttons below to see the rest."
                 />
               </CardDescription>
             )}
@@ -224,6 +287,15 @@ export default async function MoneyHistoryPage() {
           </CardContent>
         </Card>
       )}
+
+      <Pager
+        summary={summary}
+        basePath="/money/history"
+        params={filters}
+        nounBm="resit"
+        nounZh="张收据"
+        nounEn="receipts"
+      />
     </div>
   );
 }

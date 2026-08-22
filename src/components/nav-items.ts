@@ -78,7 +78,7 @@ export const NAV_ITEMS: NavItem[] = [
   // imported by NOTHING (dead code, since deleted), so in practice the only place
   // to see the ORIGINAL PHOTO of a document had no menu entry and no working link
   // path. It is the evidence behind every extracted field, so it gets a real entry.
-  { href: "/inbox", icon: Upload, bm: "Rekod muat naik", zh: "上传记录", en: "Upload records" },
+  { href: "/inbox", icon: Upload, bm: "Gambar asal", zh: "原始照片", en: "Original photos" },
   // The /minutes flow, one row per step (2026-08-23 split). "Minutes" itself is
   // the GROUP's name; these are the steps inside it. /minutes/history used to be
   // reachable only from a link buried inside step 3.
