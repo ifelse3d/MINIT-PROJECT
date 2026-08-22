@@ -93,6 +93,36 @@ export type RegisterDonation = {
 };
 
 /**
+ * Shape guard for a register read back out of localStorage.
+ *
+ * usePersistentState's try/catch only handles MALFORMED json, not
+ * WRONG-SHAPED json — a blob written by an older build parses fine and then
+ * the money code reads `undefined.amountCents` and produces NaN totals. This
+ * is the validator that stops it.
+ *
+ * Moved out of money-review.tsx on 2026-08-23: the register now lives in a
+ * provider shared by four pages (src/app/money/register-store.tsx), and the
+ * guard belongs next to the type it guards.
+ */
+export function isRegisterDonationArray(parsed: unknown): boolean {
+  if (!Array.isArray(parsed)) return false;
+  return parsed.every((d) => {
+    if (typeof d !== "object" || d === null) return false;
+    const r = d as Record<string, unknown>;
+    return (
+      typeof r.id === "string" &&
+      typeof r.donorName === "string" &&
+      typeof r.amountCents === "number" &&
+      Number.isFinite(r.amountCents) &&
+      typeof r.donatedAtIso === "string" &&
+      (r.custodyStatus === "collected" ||
+        r.custodyStatus === "pending_remittance" ||
+        r.custodyStatus === "settled")
+    );
+  });
+}
+
+/**
  * Builds register rows from a fully human-confirmed ledger extraction.
  * Rows still carrying "check"/"missing" name, amount or date are NOT eligible:
  * a receipt is a legal-ish document — no receipt without confirmed facts.

@@ -81,6 +81,22 @@ export function dayIsoMalaysia(timestamp: string): string | null {
   return shifted.toISOString().slice(0, 10);
 }
 
+/**
+ * Today's calendar day in Malaysia (UTC+8), never UTC.
+ *
+ * Every receipt date, hand-over date and month-end boundary in /money is
+ * stamped with this. Using `new Date().toISOString().slice(0,10)` instead is
+ * wrong for eight hours a day: between midnight and 8am Malaysian time UTC is
+ * still on YESTERDAY, so a receipt issued at 1am carries the previous day —
+ * and, on the 1st of a month, the previous MONTH's e-Invois pack.
+ *
+ * Moved out of money-review.tsx on 2026-08-23 when that page was split into
+ * four; three of the four need it.
+ */
+export function todayIsoMalaysia(): string {
+  return dayIsoMalaysia(new Date().toISOString()) as string;
+}
+
 // --- month math (all UTC, deterministic) --------------------------------------
 
 const MONTH_RE = /^\d{4}-\d{2}$/;

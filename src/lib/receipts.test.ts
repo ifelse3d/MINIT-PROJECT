@@ -5,6 +5,7 @@ import {
   eligibleForReceipt,
   findDuplicateDonations,
   findSequenceGaps,
+  isRegisterDonationArray,
   formatReceiptNo,
   normalizeMyPhone,
   parseReceiptNo,
@@ -175,5 +176,48 @@ describe("ledger extraction contract + receipt eligibility", () => {
     const eligible = sampleLedgerExtraction.rows.map(eligibleForReceipt);
     // Row 3 (index 2) is the smudged one — everything else qualifies.
     expect(eligible).toEqual([true, true, false, true, true, true]);
+  });
+});
+
+// 2026-08-23: moved here from money-review.tsx when /money was split into four
+// pages. It is the ONLY thing standing between a stale localStorage blob and
+// NaN money totals, so it gets real coverage now that it has a home.
+describe("isRegisterDonationArray (localStorage shape guard)", () => {
+  const good = {
+    id: "d1",
+    donorName: "Tan Ah Kow",
+    donorPhone: null,
+    amountCents: 5000,
+    purpose: "Derma am",
+    donatedAtIso: "2026-08-23",
+    collector: "Bendahari",
+    receiptNo: null,
+    custodyStatus: "collected",
+  };
+
+  it("accepts an empty register and a well-formed one", () => {
+    expect(isRegisterDonationArray([])).toBe(true);
+    expect(isRegisterDonationArray([good])).toBe(true);
+  });
+
+  it("rejects anything that is not an array", () => {
+    expect(isRegisterDonationArray(null)).toBe(false);
+    expect(isRegisterDonationArray({ rows: [good] })).toBe(false);
+    expect(isRegisterDonationArray("[]")).toBe(false);
+  });
+
+  it("rejects a row whose amount is not a finite number", () => {
+    // The exact shape that produced NaN totals: JSON.stringify writes NaN as
+    // null, so a corrupted amount comes back as null, not as NaN.
+    expect(isRegisterDonationArray([{ ...good, amountCents: null }])).toBe(false);
+    expect(isRegisterDonationArray([{ ...good, amountCents: "50.00" }])).toBe(false);
+  });
+
+  it("rejects an unknown custody status", () => {
+    expect(isRegisterDonationArray([{ ...good, custodyStatus: "banked" }])).toBe(false);
+  });
+
+  it("rejects when ONE row in a long register is bad", () => {
+    expect(isRegisterDonationArray([good, good, { ...good, donorName: 42 }])).toBe(false);
   });
 });

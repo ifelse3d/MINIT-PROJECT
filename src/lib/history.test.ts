@@ -5,6 +5,7 @@ import {
   bucketByDay,
   dayCategories,
   dayIsoMalaysia,
+  todayIsoMalaysia,
   daySummary,
   feedDays,
   filterByCategory,
@@ -310,5 +311,27 @@ describe("recentRows (home dashboard slice)", () => {
   it("handles empty input and a zero limit", () => {
     expect(recentRows([], 7)).toEqual([]);
     expect(recentRows(recs, 0)).toEqual([]);
+  });
+});
+
+// 2026-08-23: moved here from money-review.tsx (the /money split). Every
+// receipt date and every month-end boundary is stamped with this, so "it is
+// the Malaysian day, not the UTC day" is worth a test rather than a comment.
+describe("todayIsoMalaysia", () => {
+  it("is a YYYY-MM-DD day", () => {
+    expect(todayIsoMalaysia()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it("agrees with dayIsoMalaysia on the current instant", () => {
+    const now = new Date().toISOString();
+    expect(todayIsoMalaysia()).toBe(dayIsoMalaysia(now));
+  });
+
+  it("is UTC+8, so 00:30 UTC is already the NEXT day in Malaysia", () => {
+    // The eight-hour window that made a 1am receipt carry yesterday's date —
+    // and, on the 1st, the previous month's e-Invois pack.
+    expect(dayIsoMalaysia("2026-08-23T00:30:00Z")).toBe("2026-08-23");
+    expect(dayIsoMalaysia("2026-08-22T17:30:00Z")).toBe("2026-08-23");
+    expect(dayIsoMalaysia("2026-08-22T15:30:00Z")).toBe("2026-08-22");
   });
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
+import { downloadFromApi } from "@/lib/download-file";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +22,7 @@ import {
   buildWaMeLink,
   eligibleForReceipt,
   findDuplicateDonations,
+  isRegisterDonationArray,
   parseRmToCents,
   receiptWhatsAppMessageBm,
   taxDeductibilityLineBm,
@@ -43,16 +45,11 @@ import {
   StepProgress,
 } from "@/components/step-card";
 import { consumeIntake } from "@/lib/intake-handoff";
-import { dayIsoMalaysia } from "@/lib/history";
+import { todayIsoMalaysia } from "@/lib/history";
 import { ManualIncomeForm } from "./manual-income";
 import { TypeDonations } from "./type-donations";
 import { issueAndSaveReceipts } from "./actions";
 import Link from "next/link";
-
-/** Today's date in Malaysia (UTC+8), never UTC — avoids the pre-8am off-by-one. */
-function todayIsoMalaysia(): string {
-  return dayIsoMalaysia(new Date().toISOString())!;
-}
 
 // ---------------------------------------------------------------------------
 // The MONEY screen (Phases 2–3 foundation). Ledger rows and pre-receipt
@@ -76,30 +73,6 @@ const CUSTODY_STYLE: Record<RegisterDonation["custodyStatus"], string> = {
   pending_remittance: "border-blue-300 bg-blue-100 text-blue-900",
   settled: "border-green-300 bg-green-100 text-green-800",
 };
-
-/** Fetches a generated file from an API route and triggers the browser download. */
-async function downloadFromApi(url: string, body: unknown, fallbackName: string): Promise<Response> {
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const detail = await res.json().catch(() => null);
-    throw new Error(detail?.error ?? joinUserError(USER_ERRORS.downloadFailed));
-  }
-  const blob = await res.blob();
-  const name =
-    /filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") ?? "")?.[1] ?? fallbackName;
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = name;
-  a.click();
-  // Revoking immediately races the download in Firefox/Safari.
-  const href = a.href;
-  setTimeout(() => URL.revokeObjectURL(href), 30_000);
-  return res;
-}
 
 /** Inline editor for a register row, shown only BEFORE a receipt is issued.
  *  Amount is parsed by deterministic TS (parseRmToCents) — never the AI. */
@@ -181,24 +154,6 @@ function DonationEditor({
  * Deliberately checks the fields the money code actually dereferences: an older
  * or foreign blob used to be accepted as-is and then produced NaN totals.
  */
-function isRegisterDonationArray(parsed: unknown): boolean {
-  if (!Array.isArray(parsed)) return false;
-  return parsed.every((d) => {
-    if (typeof d !== "object" || d === null) return false;
-    const r = d as Record<string, unknown>;
-    return (
-      typeof r.id === "string" &&
-      typeof r.donorName === "string" &&
-      typeof r.amountCents === "number" &&
-      Number.isFinite(r.amountCents) &&
-      typeof r.donatedAtIso === "string" &&
-      (r.custodyStatus === "collected" ||
-        r.custodyStatus === "pending_remittance" ||
-        r.custodyStatus === "settled")
-    );
-  });
-}
-
 export function MoneyReview({
   orgName,
   taxStatus,
