@@ -1,0 +1,402 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { Tri, useTriText } from "@/components/language-provider";
+import { Button } from "@/components/ui/button";
+import { parseRmToCents, type RegisterDonation } from "@/lib/receipts";
+import { dayIsoMalaysia } from "@/lib/history";
+
+// ---------------------------------------------------------------------------
+// TYPE A WHOLE COLLECTION IN ONE GO (2026-08-22)
+//
+// J: 「那些收捐款要記錄的可能可以有一個 PAGE 專門讓他們 TYPE，做好後再一次過發
+//     RECEIPT，類似這樣的功能，可以方便很多」— and the reason, from the same
+// message: 「賬單如果捐錢人多的話會到很多，因爲可能有些出小筆都有可能」.
+//
+// WHY THIS IS NOT A VIOLATION OF THE eROSES DESIGN LAW
+// CLAUDE.md says effort must flow from AI to human, and a data-entry form is
+// normally the wrong answer. It is the right answer here, and the difference is
+// worth stating so nobody "fixes" this later:
+//
+//   * The photo path already exists and stays first. This is for the case where
+//     THERE IS NO PAPER — a festival table where forty people hand over RM10
+//     and nobody wrote a ledger page at all. Photographing nothing is not an
+//     option, and the existing manual form asks for seven fields, opens a card,
+//     and closes again after ONE row. Forty donations through that form is
+//     forty open-close cycles.
+//   * The confirmation is still one action for the whole batch: type, look at
+//     the total, add them all, issue every receipt at once.
+//
+// SHAPE: a spreadsheet, deliberately. Name, amount, purpose, date, and a
+// keyboard that goes where a person's hands already expect — Enter at the end
+// of a row starts the next one, and there is always one blank row waiting.
+//
+// Money is parsed by parseRmToCents and the total is summed in TypeScript
+// (Hard Rule 2). Nothing here is sent to a model.
+//
+// Every row is tagged source: "manual", same as the single-entry form, so an
+// auditor can always see which rows had no original page.
+// ---------------------------------------------------------------------------
+
+type Draft = {
+  key: number;
+  name: string;
+  phone: string;
+  amount: string;
+  purpose: string;
+  date: string;
+};
+
+/** What a row is missing, or null when it is ready. Never blocks typing — a
+ *  half-typed row is normal; it only decides what "add them all" takes. */
+function problemWith(row: Draft): "empty" | "name" | "amount" | null {
+  const blank = !row.name.trim() && !row.amount.trim() && !row.phone.trim();
+  if (blank) return "empty";
+  if (!row.name.trim()) return "name";
+  const cents = parseRmToCents(row.amount);
+  if (cents === null || cents <= 0) return "amount";
+  return null;
+}
+
+/**
+ * Row identity, and only that: React needs a stable key so a row does not lose
+ * focus when the list changes shape. A module-level counter rather than a ref
+ * because the first rows are built inside useState's initialiser, i.e. during
+ * render, where reading a ref is not allowed. The value is never rendered, so
+ * it does not matter that the server and the browser start from different
+ * numbers.
+ */
+let keySeq = 0;
+
+function blankRow(purpose: string, date: string): Draft {
+  return { key: ++keySeq, name: "", phone: "", amount: "", purpose, date };
+}
+
+const inputClass =
+  "w-full rounded-md border border-input bg-background px-2 py-2 text-base shadow-sm " +
+  "focus:outline-none focus:ring-2 focus:ring-ring";
+
+export function TypeDonations({
+  onAddMany,
+  defaultCollector,
+  defaultPurpose = "Derma am",
+}: {
+  /** Called once with every completed row — one batch, one confirmation. */
+  onAddMany: (donations: RegisterDonation[]) => void;
+  defaultCollector: string;
+  defaultPurpose?: string;
+}) {
+  const t = useTriText();
+  const today = dayIsoMalaysia(new Date().toISOString())!;
+  const [open, setOpen] = useState(false);
+  const [collector, setCollector] = useState(defaultCollector);
+  const [error, setError] = useState<string | null>(null);
+  const [added, setAdded] = useState<number | null>(null);
+
+  const freshRows = (): Draft[] => [
+    blankRow(defaultPurpose, today),
+    blankRow(defaultPurpose, today),
+    blankRow(defaultPurpose, today),
+  ];
+  const [rows, setRows] = useState<Draft[]>(freshRows);
+
+  const ready = useMemo(() => rows.filter((r) => problemWith(r) === null), [rows]);
+  const totalCents = useMemo(
+    () => ready.reduce((sum, r) => sum + (parseRmToCents(r.amount) ?? 0), 0),
+    [ready],
+  );
+
+  function update(key: number, patch: Partial<Draft>) {
+    setAdded(null);
+    setRows((current) => {
+      const next = current.map((r) => (r.key === key ? { ...r, ...patch } : r));
+      // Always one empty row waiting at the bottom, so typing never stops to
+      // press a button. The date and purpose of the row above carry over —
+      // a collection is one afternoon, one purpose, forty names.
+      const last = next[next.length - 1]!;
+      if (problemWith(last) !== "empty") {
+        next.push(blankRow(last.purpose, last.date));
+      }
+      return next;
+    });
+  }
+
+  function removeRow(key: number) {
+    setRows((current) => {
+      const next = current.filter((r) => r.key !== key);
+      return next.length ? next : [blankRow(defaultPurpose, today)];
+    });
+  }
+
+  function addAll() {
+    setError(null);
+    const broken = rows.find((r) => {
+      const p = problemWith(r);
+      return p === "name" || p === "amount";
+    });
+    if (broken) {
+      setError(
+        problemWith(broken) === "name"
+          ? t(
+              "Ada baris tanpa nama. Isi nama, atau kosongkan baris itu sepenuhnya.",
+              "有一行没有名字。请填上名字，或者把那一行整行清空。",
+              "A row has no name. Fill in the name, or clear that row completely.",
+            )
+          : t(
+              "Ada jumlah yang tidak sah. Contoh yang betul: 10, 10.50, RM 10.50",
+              "有一行的金额无效。正确的写法：10、10.50、RM 10.50",
+              "A row has an amount that is not valid. Correct examples: 10, 10.50, RM 10.50",
+            ),
+      );
+      return;
+    }
+    if (ready.length === 0) {
+      setError(t("Belum ada baris untuk ditambah.", "还没有可以加入的行。", "No rows to add yet."));
+      return;
+    }
+
+    // One timestamp for the batch, plus the row's own index: `Date.now()` alone
+    // would give twenty rows added in the same millisecond the same id, and the
+    // register keys on it.
+    const stamp = Date.now();
+    onAddMany(
+      ready.map((r, i) => ({
+        id: `man-${stamp}-${i}`,
+        donorName: r.name.trim(),
+        donorPhone: r.phone.trim() || null,
+        amountCents: parseRmToCents(r.amount)!,
+        purpose: r.purpose.trim() || defaultPurpose,
+        donatedAtIso: r.date || today,
+        collector: collector.trim() || defaultCollector,
+        receiptNo: null,
+        custodyStatus: "collected" as const,
+        source: "manual" as const,
+      })),
+    );
+    setAdded(ready.length);
+    setRows(freshRows());
+  }
+
+  if (!open) {
+    return (
+      <div className="flex flex-col items-start gap-2">
+        <Button variant="outline" onClick={() => setOpen(true)}>
+          <Tri
+            bm="Ramai penderma, tiada kertas — taip senarai"
+            zh="很多人捐款、没有账页 —— 打字输入整份名单"
+            en="Many donors, no ledger page — type the list"
+          />
+        </Button>
+        {added !== null && (
+          <p className="rounded-xl border-2 border-green-400 bg-green-50 px-3 py-2 text-sm font-medium text-green-900 dark:bg-green-400/10 dark:text-green-100">
+            ✓{" "}
+            <Tri
+              bm={`${added} baris ditambah ke daftar. Keluarkan resitnya di bawah.`}
+              zh={`已经把 ${added} 笔加进名册了。收据在下面一次过开。`}
+              en={`${added} row(s) added to the register. Issue their receipts below.`}
+            />
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4 rounded-2xl border border-[color:var(--v2-border)] p-4">
+      <div>
+        <p className="text-base font-semibold">
+          <Tri
+            bm="Taip senarai derma"
+            zh="打字输入捐款名单"
+            en="Type the donation list"
+          />
+        </p>
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+          <Tri
+            bm="Untuk kutipan yang tiada halaman lejar — meja derma pada hari perayaan, contohnya. Taip satu baris seorang; baris baharu muncul sendiri. Tarikh dan tujuan baris sebelumnya diikut, jadi biasanya anda hanya menaip nama dan jumlah. Resit dikeluarkan sekali gus selepas ini."
+            zh="给没有账页的收款用 —— 例如庙会当天的捐款桌。一个人一行，打完会自己多出一行。日期和用途会跟着上一行，所以通常只需要打名字和金额。加进名册之后，收据在下面一次过开。"
+            en="For a collection with no ledger page — a festival donation table, for example. One line per person; a new line appears by itself. The date and purpose carry over from the line above, so usually you only type a name and an amount. Receipts are issued in one batch afterwards."
+          />
+        </p>
+      </div>
+
+      <label className="flex max-w-xs flex-col gap-1">
+        <span className="text-sm font-semibold">
+          <Tri bm="Dikutip oleh" zh="收款人" en="Collected by" />
+        </span>
+        <input
+          className={inputClass}
+          value={collector}
+          onChange={(e) => setCollector(e.target.value)}
+          placeholder={defaultCollector}
+        />
+      </label>
+
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[40rem] border-collapse text-sm">
+          <thead>
+            <tr className="text-left">
+              <th className="p-2 font-semibold">
+                <Tri bm="Nama penderma" zh="捐款人" en="Donor" />
+              </th>
+              <th className="p-2 font-semibold">
+                <Tri bm="Telefon (pilihan)" zh="电话（可不填）" en="Phone (optional)" />
+              </th>
+              <th className="p-2 font-semibold">
+                <Tri bm="Jumlah (RM)" zh="金额 (RM)" en="Amount (RM)" />
+              </th>
+              <th className="p-2 font-semibold">
+                <Tri bm="Tujuan" zh="用途" en="Purpose" />
+              </th>
+              <th className="p-2 font-semibold">
+                <Tri bm="Tarikh" zh="日期" en="Date" />
+              </th>
+              <th className="p-2" />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => {
+              const problem = problemWith(row);
+              return (
+                <tr key={row.key} className="border-t border-[color:var(--v2-border)]">
+                  <td className="p-1">
+                    <input
+                      className={inputClass}
+                      value={row.name}
+                      onChange={(e) => update(row.key, { name: e.target.value })}
+                      // A screen reader announces the row; sighted users have
+                      // the column header.
+                      aria-label={t(
+                        `Nama penderma, baris ${index + 1}`,
+                        `捐款人，第 ${index + 1} 行`,
+                        `Donor name, row ${index + 1}`,
+                      )}
+                    />
+                  </td>
+                  <td className="p-1">
+                    <input
+                      className={inputClass}
+                      inputMode="tel"
+                      value={row.phone}
+                      onChange={(e) => update(row.key, { phone: e.target.value })}
+                      aria-label={t(
+                        `Telefon, baris ${index + 1}`,
+                        `电话，第 ${index + 1} 行`,
+                        `Phone, row ${index + 1}`,
+                      )}
+                    />
+                  </td>
+                  <td className="p-1">
+                    <input
+                      className={`${inputClass} text-right font-mono ${
+                        problem === "amount" ? "border-red-400" : ""
+                      }`}
+                      inputMode="decimal"
+                      value={row.amount}
+                      onChange={(e) => update(row.key, { amount: e.target.value })}
+                      onKeyDown={(e) => {
+                        // Enter = "done with this person, next one". The blank
+                        // row already exists, so this only moves the cursor.
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          const inputs = Array.from(
+                            e.currentTarget
+                              .closest("table")!
+                              .querySelectorAll<HTMLInputElement>("tbody tr td:first-child input"),
+                          );
+                          inputs[index + 1]?.focus();
+                        }
+                      }}
+                      aria-label={t(
+                        `Jumlah RM, baris ${index + 1}`,
+                        `金额 RM，第 ${index + 1} 行`,
+                        `Amount RM, row ${index + 1}`,
+                      )}
+                    />
+                  </td>
+                  <td className="p-1">
+                    <input
+                      className={inputClass}
+                      value={row.purpose}
+                      onChange={(e) => update(row.key, { purpose: e.target.value })}
+                      aria-label={t(
+                        `Tujuan, baris ${index + 1}`,
+                        `用途，第 ${index + 1} 行`,
+                        `Purpose, row ${index + 1}`,
+                      )}
+                    />
+                  </td>
+                  <td className="p-1">
+                    <input
+                      type="date"
+                      className={inputClass}
+                      value={row.date}
+                      onChange={(e) => update(row.key, { date: e.target.value })}
+                      aria-label={t(
+                        `Tarikh, baris ${index + 1}`,
+                        `日期，第 ${index + 1} 行`,
+                        `Date, row ${index + 1}`,
+                      )}
+                    />
+                  </td>
+                  <td className="p-1 text-right">
+                    <button
+                      type="button"
+                      onClick={() => removeRow(row.key)}
+                      className="rounded-md px-2 py-1 text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                      aria-label={t(
+                        `Buang baris ${index + 1}`,
+                        `删掉第 ${index + 1} 行`,
+                        `Remove row ${index + 1}`,
+                      )}
+                    >
+                      <Tri bm="Buang" zh="删掉" en="Remove" />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* The running total is the check a treasurer actually does: it has to
+          match the cash in the tin before anything is added. Summed in
+          TypeScript, never by a model (Hard Rule 2). */}
+      <p className="text-base font-semibold">
+        <Tri
+          bm={`${ready.length} baris siap · jumlah RM ${(totalCents / 100).toFixed(2)}`}
+          zh={`${ready.length} 笔已填好 · 合计 RM ${(totalCents / 100).toFixed(2)}`}
+          en={`${ready.length} row(s) ready · total RM ${(totalCents / 100).toFixed(2)}`}
+        />
+      </p>
+
+      {error && (
+        <p className="rounded-xl border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900 dark:bg-red-400/10 dark:text-red-100">
+          {error}
+        </p>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" onClick={addAll} disabled={ready.length === 0}>
+          <Tri
+            bm={`Tambah ${ready.length} baris ke daftar`}
+            zh={`把这 ${ready.length} 笔加进名册`}
+            en={`Add ${ready.length} row(s) to the register`}
+          />
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            setRows(freshRows());
+            setError(null);
+            setOpen(false);
+          }}
+        >
+          <Tri bm="Tutup" zh="关闭" en="Close" />
+        </Button>
+      </div>
+    </div>
+  );
+}

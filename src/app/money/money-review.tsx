@@ -45,6 +45,7 @@ import {
 import { consumeIntake } from "@/lib/intake-handoff";
 import { dayIsoMalaysia } from "@/lib/history";
 import { ManualIncomeForm } from "./manual-income";
+import { TypeDonations } from "./type-donations";
 import { issueAndSaveReceipts } from "./actions";
 import Link from "next/link";
 
@@ -484,6 +485,13 @@ export function MoneyReview({
   // Manual income entry (the eROSES-test exception) appends a confirmed row.
   function addManualDonation(d: RegisterDonation) {
     setDonations((prev) => [...prev, d]);
+  }
+
+  /** A whole typed collection at once (see ./type-donations.tsx). One state
+   *  update, not one per row: forty setState calls in a loop would re-render
+   *  the register forty times and, worse, each would read a stale `prev`. */
+  function addManualDonations(rows: RegisterDonation[]) {
+    setDonations((prev) => [...prev, ...rows]);
   }
 
   // --- 1 · Ledger review data (extraction contract) ---
@@ -1449,6 +1457,15 @@ export function MoneyReview({
           {/* Manual entry lives INSIDE the register step now, not as a fifth
               top-level card competing with the photo flow. It is the fallback for
               a donation that was never written on paper. */}
+          {/* Two shapes of "there was no paper", because they are genuinely
+              different jobs: ONE gift with a category and a note (rental, a
+              grant, cash handed over) — and a COLLECTION, forty people at
+              RM10 each, where the only thing that varies row to row is a name
+              and an amount. J, 2026-08-22: 賬單如果捐錢人多的話會到很多. */}
+          <TypeDonations
+            onAddMany={addManualDonations}
+            defaultCollector={registerCollector}
+          />
           <ManualIncomeForm onAdd={addManualDonation} defaultCollector={registerCollector} />
         </div>
       </StepCard>
