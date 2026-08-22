@@ -114,12 +114,18 @@ export function LedgerReview() {
               </>
             ) : (
               <>
-                📷 <Tri bm="Pilih / ambil gambar lejar" zh="选择/拍摄账页照片" en="Choose / take a ledger photo" />
+                📷 <Tri bm="Ambil gambar lejar" zh="拍账页照片" en="Take a photo of the ledger" />
               </>
             )}
+            {/* THE CAMERA. `capture` and `accept="image/*"` belong together and
+                nowhere else: on a phone `capture` opens the camera directly,
+                which is the point — and which is also why a PDF could never be
+                chosen through this input, whatever `accept` claimed. This one
+                used to say "application/pdf" as well, so on a phone the label
+                promised something the input cannot do. (2026-08-23.) */}
             <input
               type="file"
-              accept="image/*,application/pdf"
+              accept="image/*"
               capture="environment"
               className="hidden"
               disabled={aiBusy}
@@ -129,6 +135,30 @@ export function LedgerReview() {
               }}
             />
           </label>
+
+          {/* THE FILE. No `capture`, so the file picker opens on every platform
+              and a scanned ledger is reachable. J, 2026-08-22:
+              「賬單如果捐錢人多的話會到很多」 — a long donation list arrives as a
+              multi-page PDF, and the page limit for a ledger is 20. */}
+          {!aiBusy && (
+            <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-md border-2 border-[color:var(--v2-border)] px-4 text-base font-medium hover:bg-accent">
+              📄{" "}
+              <Tri
+                bm="Pilih fail (gambar atau PDF)"
+                zh="选一个档案（照片或 PDF）"
+                en="Choose a file (photo or PDF)"
+              />
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                className="hidden"
+                onChange={(e) => {
+                  onLedgerPicked(e.target.files?.[0] ?? null);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+          )}
           <span className="text-sm text-muted-foreground">
             {ledgerSourceLabel ? (
               <>📄 {ledgerSourceLabel}</>
@@ -140,9 +170,9 @@ export function LedgerReview() {
               />
             ) : (
               <Tri
-                bm="Satu gambar, satu halaman lejar"
-                zh="一张照片拍一页账页"
-                en="One photo per ledger page"
+                bm="Satu gambar satu halaman, atau satu PDF (paling banyak 20 muka surat)"
+                zh="一张照片拍一页，或者一份 PDF（最多 20 页）"
+                en="One photo per page, or one PDF (up to 20 pages)"
               />
             )}
           </span>
