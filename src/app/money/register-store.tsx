@@ -107,6 +107,22 @@ export type RegisterStore = {
 
   // --- actions -------------------------------------------------------------
   saveDonation: (updated: RegisterDonation) => void;
+  /**
+   * Take a row back out of the register.
+   *
+   * J's UX list, root cause A: there was no way to remove a line anywhere in
+   * Minit. A donation typed twice, or read off a smudge that was never a
+   * donation, could only be edited — never deleted — so the register carried it
+   * into the receipts and the month-end tax file.
+   *
+   * 🔴 A row that already has a RECEIPT NUMBER cannot be deleted, here or
+   * anywhere. That number is issued, sequential and gap-free; deleting the row
+   * behind it would put a hole in the series, which is the one thing the
+   * numbering exists to make impossible. Void it in the receipt history
+   * instead. This function refuses silently rather than trusting the UI to have
+   * hidden the button.
+   */
+  deleteDonation: (id: string) => void;
   addManualDonation: (d: RegisterDonation) => void;
   addManualDonations: (rows: RegisterDonation[]) => void;
   issueReceipts: () => Promise<void>;
@@ -322,6 +338,15 @@ export function RegisterProvider({
   const saveDonation = useCallback(
     (updated: RegisterDonation) => {
       setDonations((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
+    },
+    [setDonations],
+  );
+
+  const deleteDonation = useCallback(
+    (id: string) => {
+      setDonations((prev) =>
+        prev.filter((d) => !(d.id === id && d.receiptNo === null)),
+      );
     },
     [setDonations],
   );
@@ -567,6 +592,7 @@ export function RegisterProvider({
         balances,
         availableMonths,
         saveDonation,
+        deleteDonation,
         addManualDonation,
         addManualDonations,
         issueReceipts,

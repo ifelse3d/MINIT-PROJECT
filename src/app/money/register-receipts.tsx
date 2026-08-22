@@ -46,6 +46,7 @@ export function RegisterAndReceipts() {
     receiptsIssued,
     cashInHandCents,
     saveDonation,
+    deleteDonation,
     addManualDonation,
     addManualDonations,
     issueReceipts,
@@ -351,6 +352,43 @@ export function RegisterAndReceipts() {
                   {!d.receiptNo && editingId !== d.id && (
                     <Button variant="outline" onClick={() => setEditingId(d.id)}>
                       ✏️ <Tri bm="Ubah butiran" zh="修改资料" en="Edit details" />
+                    </Button>
+                  )}
+                  {/* Only BEFORE a receipt exists. Once a number is issued the
+                      row is part of a gap-free series and deleting it would put
+                      a hole in the audit trail. */}
+                  {!d.receiptNo && (
+                    <Button
+                      variant="outline"
+                      className="text-red-700 hover:bg-red-50 hover:text-red-800 dark:hover:bg-red-400/10"
+                      onClick={() => {
+                        if (
+                          !window.confirm(
+                            t(
+                              `Buang derma ini daripada daftar?
+
+${maskName(d.donorName)} · ${formatRm(d.amountCents)}
+
+Resit belum dijana, jadi tiada nombor yang hilang. Tidak boleh dibatalkan.`,
+                              `要把这一笔从登记簿里删掉吗？
+
+${maskName(d.donorName)} · ${formatRm(d.amountCents)}
+
+还没开收据，所以不会有号码断掉。删了无法复原。`,
+                              `Remove this donation from the register?
+
+${maskName(d.donorName)} · ${formatRm(d.amountCents)}
+
+No receipt has been issued, so no number is lost. This cannot be undone.`,
+                            ),
+                          )
+                        ) {
+                          return;
+                        }
+                        deleteDonation(d.id);
+                      }}
+                    >
+                      🗑 <Tri bm="Buang baris ini" zh="删掉这一笔" en="Remove this row" />
                     </Button>
                   )}
                   {d.receiptNo && (

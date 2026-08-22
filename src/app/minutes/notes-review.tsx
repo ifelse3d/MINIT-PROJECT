@@ -9,6 +9,7 @@ import { MEETING_TYPES, MEETING_TYPE_LABEL, meetingTypeLabel } from "@/lib/meeti
 import { formatRm } from "@/lib/minutes-draft";
 import { parseRmToCents } from "@/lib/receipts";
 import { FieldRow } from "./field-row";
+import { AddRowButton, DeletableRow } from "./row-controls";
 import { useMinutes, type TextLikeField } from "./minutes-store";
 
 // ---------------------------------------------------------------------------
@@ -38,6 +39,9 @@ export function NotesReview() {
     confirmField: confirm,
     editField: edit,
     markAbsent,
+    addExtractionRow,
+    removeExtractionRow,
+    rowHasContent,
     onPhotoPicked,
     openSample,
     backToEmpty,
@@ -357,8 +361,13 @@ export function NotesReview() {
           defaultOpen={firstUnfinished === "resolutions"}
         >
           {extraction.resolutions.map((r, i) => (
-            <FieldRow
+            <DeletableRow
               key={`res-${i}`}
+              onDelete={() => removeExtractionRow("resolutions", i)}
+              hasContent={rowHasContent("resolutions", i)}
+              what={t(`Keputusan ${i + 1}`, `决议 ${i + 1}`, `Resolution ${i + 1}`)}
+            >
+            <FieldRow
               labelBm={`Keputusan ${i + 1}`}
               labelZh={`决议 ${i + 1}`}
               labelEn={`Resolution ${i + 1}`}
@@ -382,8 +391,14 @@ export function NotesReview() {
                 })
               }
             />
+            </DeletableRow>
           ))}
-
+          <AddRowButton
+            onClick={() => addExtractionRow("resolutions")}
+            labelBm="Tambah keputusan"
+            labelZh="自己加一条决议"
+            labelEn="Add a resolution"
+          />
         </StepGroup>
 
         <StepGroup
@@ -395,7 +410,12 @@ export function NotesReview() {
           defaultOpen={firstUnfinished === "figures"}
         >
           {extraction.figures.map((f, i) => (
-            <div key={`fig-${i}`}>
+            <DeletableRow
+              key={`fig-${i}`}
+              onDelete={() => removeExtractionRow("figures", i)}
+              hasContent={rowHasContent("figures", i)}
+              what={t(`Angka ${i + 1}`, `第 ${i + 1} 笔金额`, `Amount ${i + 1}`)}
+            >
             <FieldRow
               labelBm={`Angka ${i + 1} — perkara`}
               labelZh={`数字 ${i + 1} — 项目`}
@@ -484,9 +504,14 @@ export function NotesReview() {
                 })
               }
             />
-            </div>
+            </DeletableRow>
           ))}
-
+          <AddRowButton
+            onClick={() => addExtractionRow("figures")}
+            labelBm="Tambah angka"
+            labelZh="自己加一笔金额"
+            labelEn="Add an amount"
+          />
         </StepGroup>
 
         <StepGroup
@@ -498,7 +523,16 @@ export function NotesReview() {
           defaultOpen={firstUnfinished === "bearers"}
         >
           {extraction.office_bearers.map((b, i) => (
-            <div key={`ob-${i}`}>
+            <DeletableRow
+              key={`ob-${i}`}
+              onDelete={() => removeExtractionRow("office_bearers", i)}
+              hasContent={rowHasContent("office_bearers", i)}
+              what={t(
+                `Jawatan ${i + 1}`,
+                `第 ${i + 1} 个职位`,
+                `Position ${i + 1}`,
+              )}
+            >
             {/* The POSITION now has its own row.
                 Before this it was the only field counted by `outstanding` with no
                 control anywhere in the UI — this row bound `field={b.person_name}`
@@ -566,8 +600,14 @@ export function NotesReview() {
                 })
               }
             />
-            </div>
+            </DeletableRow>
           ))}
+          <AddRowButton
+            onClick={() => addExtractionRow("office_bearers")}
+            labelBm="Tambah jawatan"
+            labelZh="自己加一个职位"
+            labelEn="Add a position"
+          />
         </StepGroup>
 
           </div>

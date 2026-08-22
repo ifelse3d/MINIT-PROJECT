@@ -26,6 +26,7 @@ import { dayIsoMalaysia } from "@/lib/history";
 import { type MinutesLang } from "@/lib/minutes-lang";
 import { consumeIntake } from "@/lib/intake-handoff";
 import { SAMPLE_ORG_NAME, sampleMeetingExtraction } from "@/lib/sample-data";
+import { addRow, removeRow, rowHasContent, type RowList } from "@/lib/extraction-rows";
 import { saveConfirmedMinutes } from "./actions";
 import {
   MINUTES_STORE_KEY,
@@ -104,6 +105,11 @@ export type MinutesStore = {
   confirmField: (f: TextLikeField) => void;
   editField: (f: TextLikeField, value: string) => void;
   markAbsent: (f: TextLikeField) => void;
+  /** J's UX list, root cause A: a line the AI never proposed. */
+  addExtractionRow: (list: RowList) => void;
+  removeExtractionRow: (list: RowList, index: number) => void;
+  /** True when deleting that row would lose something typed. */
+  rowHasContent: (list: RowList, index: number) => boolean;
 
   // --- how much is left to check ------------------------------------------
   outstanding: number;
@@ -388,6 +394,23 @@ export function MinutesProvider({
     [t],
   );
 
+  // --- adding and removing rows by hand ------------------------------------
+  // The pure part lives in lib/extraction-rows.ts (18 tests). Here it only has
+  // to go through updateField, which structuredClones — see the warning at the
+  // top of that file about the shallow copy.
+  const addExtractionRow = useCallback(
+    (list: RowList) => updateField((e) => addRow(e, list)),
+    [updateField],
+  );
+  const removeExtractionRow = useCallback(
+    (list: RowList, index: number) => updateField((e) => removeRow(e, list, index)),
+    [updateField],
+  );
+  const rowHasContentHere = useCallback(
+    (list: RowList, index: number) => rowHasContent(extraction, list, index),
+    [extraction],
+  );
+
   const outstanding = useMemo(() => {
     const fields: { confidence: string }[] = [
       extraction.meeting_type,
@@ -620,6 +643,9 @@ export function MinutesProvider({
         confirmField,
         editField,
         markAbsent,
+        addExtractionRow,
+        removeExtractionRow,
+        rowHasContent: rowHasContentHere,
         outstanding,
         allReviewed,
         groups,

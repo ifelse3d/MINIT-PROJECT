@@ -1,8 +1,13 @@
 "use client";
 
-import { Tri } from "@/components/language-provider";
+import { useMemo, useState } from "react";
+import { Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tri, useTriText } from "@/components/language-provider";
 import { NextStepLink, PageSection } from "@/components/page-section";
+import { ConfidenceBadge } from "@/components/confidence-badge";
 import { FieldRow } from "./field-row";
+import { AddRowButton, DeletableRow } from "./row-controls";
 import { useMinutes } from "./minutes-store";
 
 // ---------------------------------------------------------------------------
@@ -14,12 +19,22 @@ import { useMinutes } from "./minutes-store";
 // to check. Attendance is also the one part somebody else can do while you deal
 // with the rest, and now it has an address to send them to.
 //
-// ⚠ Still one full row per person. Making this a compact one-line-per-name list
-// with the "please check" names lifted to the top, plus a batch "all correct",
-// is item 3 of docs/界面重做-计划.md §2 — the next thing after the split.
+// WHY IT LOOKS LIKE THIS (J's UX list, N4: "一百个出席者是一百张大卡片，滚不完").
+// Three changes, in the order they matter:
+//
+//   1. The names that NEED you come first. A hundred rows where three are amber
+//      is a hunt; the same hundred with those three at the top is three taps.
+//   2. A name Minit read cleanly is ONE LINE, not a card. It only turns into the
+//      full editing row when you tap it — which is the rare case.
+//   3. "All of these are correct" confirms every clean name at once. Reading a
+//      list and agreeing with it is one decision, not ninety.
+//
+// The names Minit is unsure about are never batch-confirmed: that button would
+// be a machine ticking its own homework.
 // ---------------------------------------------------------------------------
 
 export function AttendanceReview() {
+  const t = useTriText();
   const {
     extraction,
     groups,
@@ -28,7 +43,89 @@ export function AttendanceReview() {
     confirmField: confirm,
     editField: edit,
     markAbsent,
+    addExtractionRow,
+    removeExtractionRow,
+    rowHasContent,
   } = useMinutes();
+
+  /** Rows opened for editing. A clean name stays one line until tapped. */
+  const [openRows, setOpenRows] = useState<Set<number>>(new Set());
+  const toggleRow = (i: number) =>
+    setOpenRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+
+  // Original index kept on every entry: it is what every edit addresses, and
+  // sorting must never quietly renumber the extraction underneath.
+  const ordered = useMemo(() => {
+    const rows = extraction.attendees.map((a, i) => ({ a, i }));
+    const needsYou = rows.filter(({ a }) => a.name.confidence !== "confirmed");
+    const done = rows.filter(({ a }) => a.name.confidence === "confirmed");
+    return { needsYou, done };
+  }, [extraction.attendees]);
+
+  /** One tap agrees with every name Minit read cleanly. */
+  function confirmAllChecked() {
+    const toConfirm = extraction.attendees
+      .map((a, i) => ({ a, i }))
+      .filter(({ a }) => a.name.confidence === "check")
+      .map(({ i }) => i);
+    if (toConfirm.length === 0) return;
+    updateField((e) => {
+      for (const i of toConfirm) confirm(e.attendees[i].name);
+      return e;
+    });
+  }
+
+  /**
+   * How many the batch button would confirm.
+   *
+   * `check` only — NOT `missing`. A missing name is one Minit could not read at
+   * all, so there is nothing on screen for a person to be agreeing with; those
+   * keep their own row and their own three buttons.
+   */
+  const batchCount = extraction.attendees.filter(
+    (a) => a.name.confidence === "check",
+  ).length;
+
+  const fieldRowProps = (i: number) => ({
+    labelBm: `Hadir ${i + 1}`,
+    labelZh: `出席者 ${i + 1}`,
+    labelEn: `Attendee ${i + 1}`,
+    field: extraction.attendees[i].name,
+    onConfirm: () =>
+      updateField((e) => {
+        confirm(e.attendees[i].name);
+        return e;
+      }),
+    onEdit: (v: string) =>
+      updateField((e) => {
+        edit(e.attendees[i].name, v);
+        return e;
+      }),
+    onMarkAbsent: () =>
+      updateField((e) => {
+        markAbsent(e.attendees[i].name);
+        return e;
+      }),
+  });
+
+  const row = (i: number) => (
+    <DeletableRow
+      key={`att-${i}`}
+      onDelete={() => {
+        removeExtractionRow("attendees", i);
+        setOpenRows(new Set());
+      }}
+      hasContent={rowHasContent("attendees", i)}
+      what={t(`Hadir ${i + 1}`, `出席者 ${i + 1}`, `Attendee ${i + 1}`)}
+    >
+      <FieldRow {...fieldRowProps(i)} />
+    </DeletableRow>
+  );
 
   return (
     <PageSection
@@ -39,9 +136,9 @@ export function AttendanceReview() {
       summary={
         groups.attendees.total === 0 ? (
           <Tri
-            bm="Minit belum membaca sebarang nama."
-            zh="Minit 还没读到任何名字。"
-            en="Minit has not read any names yet."
+            bm="Minit belum membaca sebarang nama. Anda boleh menambah sendiri di bawah."
+            zh="Minit 还没读到任何名字。您可以在下面自己加。"
+            en="Minit has not read any names yet. You can add them yourself below."
           />
         ) : (
           <Tri
@@ -52,44 +149,118 @@ export function AttendanceReview() {
         )
       }
     >
-      {nothingYet ? (
+      {nothingYet && groups.attendees.total === 0 ? (
         <p className="rounded-xl border-2 border-dashed p-4 text-base text-muted-foreground">
           <Tri
-            bm="Ambil gambar nota mesyuarat dahulu — Minit hanya boleh menyemak nama yang ia sudah baca."
-            zh="请先拍下会议笔记 —— Minit 只能核对它已经读到的名字。"
-            en="Take a photo of the notes first — Minit can only check names it has read."
+            bm="Ambil gambar nota mesyuarat dahulu — atau tambah nama sendiri di bawah."
+            zh="请先拍下会议笔记 —— 或者在下面自己加名字。"
+            en="Take a photo of the notes first — or add the names yourself below."
           />
         </p>
       ) : (
-        <div className="flex flex-col">
-          {extraction.attendees.map((a, i) => (
-            <FieldRow
-              key={`att-${i}`}
-              labelBm={`Hadir ${i + 1}`}
-              labelZh={`出席者 ${i + 1}`}
-              labelEn={`Attendee ${i + 1}`}
-              field={a.name}
-              onConfirm={() =>
-                updateField((e) => {
-                  confirm(e.attendees[i].name);
-                  return e;
-                })
-              }
-              onEdit={(v) =>
-                updateField((e) => {
-                  edit(e.attendees[i].name, v);
-                  return e;
-                })
-              }
-              onMarkAbsent={() =>
-                updateField((e) => {
-                  markAbsent(e.attendees[i].name);
-                  return e;
-                })
-              }
-            />
-          ))}
-        </div>
+        <>
+          {/* 1 · The ones that need you, first. */}
+          {ordered.needsYou.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap items-center gap-3">
+                <h3 className="text-lg font-semibold">
+                  <Tri
+                    bm={`${ordered.needsYou.length} nama perlu disemak`}
+                    zh={`有 ${ordered.needsYou.length} 个名字要核对`}
+                    en={`${ordered.needsYou.length} name(s) need checking`}
+                  />
+                </h3>
+                {batchCount > 0 && (
+                  <Button variant="outline" onClick={confirmAllChecked} className="ml-auto">
+                    <Check aria-hidden className="size-5" strokeWidth={2.4} />
+                    <Tri
+                      bm={`Semua ${batchCount} ini betul`}
+                      zh={`这 ${batchCount} 个都没错`}
+                      en={`All ${batchCount} of these are correct`}
+                    />
+                  </Button>
+                )}
+              </div>
+              {batchCount > 0 && batchCount < ordered.needsYou.length && (
+                <p className="text-sm text-muted-foreground">
+                  <Tri
+                    bm="Butang itu hanya mengesahkan nama yang Minit sudah baca. Nama yang langsung tidak terbaca (merah) tetap perlu anda isi satu-satu."
+                    zh="那个按钮只会确认 Minit 已经读到的名字。完全读不出来的（红色）还是要您一个一个填。"
+                    en="That button only confirms names Minit did read. Ones it could not read at all (red) still need you, one by one."
+                  />
+                </p>
+              )}
+              <div className="flex flex-col">{ordered.needsYou.map(({ i }) => row(i))}</div>
+            </div>
+          )}
+
+          {/* 2 · The rest: one line each, until you tap one. */}
+          {ordered.done.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <h3 className="text-lg font-semibold">
+                <Tri
+                  bm={`${ordered.done.length} sudah disemak`}
+                  zh={`已经核对好的 ${ordered.done.length} 个`}
+                  en={`${ordered.done.length} already checked`}
+                />
+              </h3>
+              <ul className="divide-y rounded-xl border">
+                {ordered.done.map(({ a, i }) =>
+                  openRows.has(i) ? (
+                    <li key={`att-open-${i}`} className="px-3">
+                      {row(i)}
+                      <button
+                        type="button"
+                        onClick={() => toggleRow(i)}
+                        className="pb-3 text-sm text-muted-foreground underline underline-offset-4"
+                      >
+                        <Tri bm="Tutup" zh="收起来" en="Close" />
+                      </button>
+                    </li>
+                  ) : (
+                    <li key={`att-${i}`}>
+                      <button
+                        type="button"
+                        onClick={() => toggleRow(i)}
+                        className="flex min-h-11 w-full items-center gap-3 px-3 py-2 text-left text-base hover:bg-accent"
+                      >
+                        <span className="w-8 shrink-0 text-sm tabular-nums text-muted-foreground">
+                          {i + 1}
+                        </span>
+                        <span className="flex-1 truncate">
+                          {a.name.value || (
+                            <span className="text-muted-foreground">
+                              <Tri
+                                bm="(tiada dalam nota)"
+                                zh="（笔记里没写）"
+                                en="(not in the notes)"
+                              />
+                            </span>
+                          )}
+                        </span>
+                        <ConfidenceBadge level={a.name.confidence} />
+                      </button>
+                    </li>
+                  ),
+                )}
+              </ul>
+              <p className="text-sm text-muted-foreground">
+                <Tri
+                  bm="Tekan satu nama untuk mengubah atau membuangnya."
+                  zh="点一个名字就可以修改或删掉它。"
+                  en="Tap a name to change or remove it."
+                />
+              </p>
+            </div>
+          )}
+
+          <AddRowButton
+            onClick={() => addExtractionRow("attendees")}
+            labelBm="Tambah nama sendiri"
+            labelZh="自己加一个名字"
+            labelEn="Add a name myself"
+          />
+        </>
       )}
 
       <NextStepLink
