@@ -99,6 +99,20 @@ console.log(`
               select proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
               where n.nspname = 'minit_admin';
 
+          20260824000000_receipt_no_past_9999.sql only REPLACES a function's
+          body, so nothing about it is visible from outside either. It is not
+          urgent (an org must issue 9999 receipts in one year to hit the old
+          bug) but it is invisible, so check it the same way, by eye:
+
+            select lpad(10000::text, 4, '0');   -- the old behaviour: '1000'
+            select case when length(10000::text) >= 4 then 10000::text
+                        else lpad(10000::text, 4, '0') end;   -- want '10000'
+
+          and confirm the function itself carries the fix:
+
+            select prosrc like '%case when length(v_seq::text)%'
+              from pg_proc where proname = 'issue_receipts';
+
           Fourteen migration files. The probes above cover eleven of them
           (some probe two different columns of the same migration, on purpose:
           20260822000000 touches two tables and a half-run migration is worth

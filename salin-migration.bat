@@ -24,6 +24,8 @@ REM  all 13.
 REM
 REM  2026-08-22: No.14 ditambah (cari_minit) - jumlah 14.
 REM  2026-08-22: No.14 added (cari_minit) - 14 in total.
+REM  2026-08-23: No.15 ditambah (nombor resit lepas 9999) - jumlah 15.
+REM  2026-08-23: No.15 added (receipt numbers past 9999) - 15 in total.
 REM ============================================================
 cd /d "%~dp0"
 chcp 65001 >nul
@@ -55,6 +57,7 @@ echo         ^^^ SEBELUM No.13: buka extension "vector" dahulu
 echo             BEFORE No.13: enable the "vector" extension first
 echo             (Dashboard - Database - Extensions - cari "vector")
 echo    14.  20260823000000  cari_minit() - fungsi carian / the search function
+echo    15.  20260824000000  nombor resit lepas 9999 / receipt numbers past 9999
 echo         ^^^ 2026-08-22: No.13 buat JADUAL sahaja. Tanpa No.14 tiada
 echo             pintu masuk - kod tak boleh panggil jadual itu langsung.
 echo             No.13 makes the TABLE only. Without No.14 there is no door:
@@ -79,6 +82,7 @@ if "%pick%"=="11" set f=20260820000000_meeting_types_and_minutes_draft.sql& goto
 if "%pick%"=="12" set f=20260821000000_ai_usage_refunded_at.sql& goto copy
 if "%pick%"=="13" set f=20260822000000_minutes_search.sql& goto copy
 if "%pick%"=="14" set f=20260823000000_cari_minit_rpc.sql& goto copy
+if "%pick%"=="15" set f=20260824000000_receipt_no_past_9999.sql& goto copy
 
 echo.
 echo    Nombor tak sah / not a valid number.

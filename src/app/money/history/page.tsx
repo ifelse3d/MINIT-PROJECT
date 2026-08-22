@@ -45,6 +45,10 @@ type ReceiptRow = {
   } | null;
 };
 
+/** How many rows this page shows at once. Not paging — see the note where it
+ *  is used. */
+const PAGE_SIZE = 200;
+
 export default async function MoneyHistoryPage() {
   const active = await getActiveOrg();
 
@@ -70,17 +74,27 @@ export default async function MoneyHistoryPage() {
   }
 
   const supabase = await getSupabaseServer();
-  const { data } = await supabase
+  // count: "exact" costs one extra aggregate and buys the only thing that makes
+  // the number below honest. J, 2026-08-22: 「我手上不算重複的就有超過 1000 了」
+  // — with 1000 receipts this page showed the newest 200 and printed their sum
+  // under the word "Total", which reads as the society's total and is not.
+  // Now the page says which it is showing, and says so out loud when there are
+  // more. (Real paging belongs with the history rework — docs/界面重做-计划.md.)
+  const { data, count } = await supabase
     .from("receipts")
     .select(
       "id, receipt_no, issued_at, donation:donations!receipts_donation_id_fkey (donor_masked, amount_cents, purpose, donated_at, custody_status)",
+      { count: "exact" },
     )
     .eq("org_id", active.id)
     .order("id", { ascending: false })
-    .limit(200);
+    .limit(PAGE_SIZE);
 
   const rows = (data as unknown as ReceiptRow[]) ?? [];
-  // Money math in TypeScript (Hard Rule 2).
+  const totalRows = count ?? rows.length;
+  const truncated = totalRows > rows.length;
+  // Money math in TypeScript (Hard Rule 2). This is the sum of what is ON THIS
+  // PAGE — labelled as such whenever it is not the whole story.
   const totalCents = rows.reduce(
     (sum, r) => sum + (r.donation?.amount_cents ?? 0),
     0,
@@ -128,9 +142,28 @@ export default async function MoneyHistoryPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
-              {rows.length} <Tri bm="resit" zh="张收据" en="receipts" /> ·{" "}
-              <Tri bm="Jumlah" zh="总额" en="Total" /> {formatRm(totalCents)}
+              {truncated ? (
+                <Tri
+                  bm={`${rows.length} resit terbaharu daripada ${totalRows} · jumlah ${formatRm(totalCents)} bagi ${rows.length} ini sahaja`}
+                  zh={`共 ${totalRows} 张收据，这里显示最新的 ${rows.length} 张 · 这 ${rows.length} 张合计 ${formatRm(totalCents)}`}
+                  en={`Newest ${rows.length} of ${totalRows} receipts · ${formatRm(totalCents)} is the total of these ${rows.length} only`}
+                />
+              ) : (
+                <>
+                  {rows.length} <Tri bm="resit" zh="张收据" en="receipts" /> ·{" "}
+                  <Tri bm="Jumlah" zh="总额" en="Total" /> {formatRm(totalCents)}
+                </>
+              )}
             </CardTitle>
+            {truncated && (
+              <CardDescription>
+                <Tri
+                  bm="Resit yang lebih lama masih tersimpan dan tidak hilang — halaman ini belum boleh membuka semuanya. Guna Carian untuk mencari satu resit tertentu."
+                  zh="更早的收据都还在，没有不见 —— 只是这一页还不能一次翻完。要找某一张，请用「搜索」。"
+                  en="Older receipts are all still stored — this page just cannot page through them yet. Use Search to find a particular one."
+                />
+              </CardDescription>
+            )}
           </CardHeader>
           <CardContent>
             <Table>
