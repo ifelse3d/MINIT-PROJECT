@@ -5,6 +5,7 @@ import {
   checkPageLimit,
   countPdfPages,
   DEFAULT_AI_DOC_MAX_PAGES,
+  DEFAULT_PAGE_LIMITS,
 } from "@/lib/pdf-pages";
 
 // Real PDFs, built here rather than checked in as fixtures: a page cap that is
@@ -32,18 +33,46 @@ describe("countPdfPages", () => {
 });
 
 describe("aiDocMaxPages", () => {
-  it("uses the provisional default when nothing is configured", () => {
-    expect(aiDocMaxPages(undefined)).toBe(DEFAULT_AI_DOC_MAX_PAGES);
+  it("uses the per-kind default when nothing is configured", () => {
+    expect(aiDocMaxPages("minutes", {})).toBe(5);
+    expect(aiDocMaxPages("ledger", {})).toBe(5);
+    expect(aiDocMaxPages("roster", {})).toBe(20);
+    expect(aiDocMaxPages("constitution", {})).toBe(DEFAULT_AI_DOC_MAX_PAGES);
   });
 
-  it("takes the number from the environment", () => {
-    expect(aiDocMaxPages("12")).toBe(12);
+  it("gives the front door the most generous limit", () => {
+    // /api/intake does not know what the page is until the classifier answers,
+    // so it must admit the longest legitimate document.
+    expect(aiDocMaxPages("unknown", {})).toBe(
+      Math.max(...Object.values(DEFAULT_PAGE_LIMITS)),
+    );
+  });
+
+  it("takes the number from the kind's own env var", () => {
+    expect(aiDocMaxPages("minutes", { AI_DOC_MAX_PAGES_MINUTES: "12" })).toBe(12);
+  });
+
+  it("still honours the old single AI_DOC_MAX_PAGES for every kind", () => {
+    // A deployment that set the global var before the per-kind ones existed
+    // must keep the cap it configured, not silently get a stricter one.
+    const env = { AI_DOC_MAX_PAGES: "9" };
+    expect(aiDocMaxPages("minutes", env)).toBe(9);
+    expect(aiDocMaxPages("constitution", env)).toBe(9);
+  });
+
+  it("prefers the kind's var over the global one", () => {
+    expect(
+      aiDocMaxPages("minutes", { AI_DOC_MAX_PAGES: "9", AI_DOC_MAX_PAGES_MINUTES: "3" }),
+    ).toBe(3);
   });
 
   it("falls back rather than switching the cap off on a bad value", () => {
     // A typo in an env var must never read as "no limit".
     for (const bad of ["", "abc", "0", "-5"]) {
-      expect(aiDocMaxPages(bad)).toBe(DEFAULT_AI_DOC_MAX_PAGES);
+      expect(aiDocMaxPages("minutes", { AI_DOC_MAX_PAGES_MINUTES: bad })).toBe(5);
+      expect(aiDocMaxPages("constitution", { AI_DOC_MAX_PAGES: bad })).toBe(
+        DEFAULT_AI_DOC_MAX_PAGES,
+      );
     }
   });
 });
@@ -72,6 +101,18 @@ describe("checkPageLimit", () => {
       50,
     );
     expect(result).toEqual({ ok: false, pages: 60, limit: 50 });
+  });
+
+  it("takes a document kind instead of a number", async () => {
+    // A 12-page set of "minutes" is a scanner left on the wrong setting. The
+    // same file is unremarkable as a constitution.
+    const twelve = await pdfWithPages(12);
+    expect(await checkPageLimit(twelve, "application/pdf", "minutes")).toEqual({
+      ok: false,
+      pages: 12,
+      limit: 5,
+    });
+    expect((await checkPageLimit(twelve, "application/pdf", "constitution")).ok).toBe(true);
   });
 
   it("lets an unparseable PDF through — a known, deliberate hole", async () => {

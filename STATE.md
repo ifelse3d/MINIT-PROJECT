@@ -9,7 +9,15 @@
 > 以 `minit-v2` 那一份为准**，champion 那一份就不要再改了 —— 两份各自长大是这份文件
 > 存在的意义的反面。改的时候两份一起改，或者直接 copy 过去。
 
-**最后更新：2026-08-21 凌晨（MYT）· Claude Code session（迁移 B→E）**
+**最后更新：2026-08-22 晚（MYT）· Claude Code session（第 14 支 migration 已套用 · J 回答了 8 题 · temperature/页数/收据字号/MIN_SCORE 全部落地）**
+
+> 🔴 **交接在 `C:\dev\_J-要做的事\14-HANDOFF-给下一个session-20260822晚.md`，先读那一份的第 0 节。**
+> （`11-HANDOFF-给下一个session-20260822.md` 已过时，被 14- 取代。）
+> 那一节记着 J 2026-08-22 讲的工作方式：**要的功能就做，不要先论证来不及。**
+> 上一个 session 连续推掉三件 J 明确要求的事，J 因此发火 —— 那是真的发生了。
+>
+> 🔴 **不要再把要 J 知道的事写进这一份。** 这份有 83KB，J 从来没被要求读它，
+> 第 5 节那 17 个未决问题在里面躺了四天没人看见。**给 J 的东西写进 `C:\dev\_J-要做的事\`。**
 **先跑 `npm run status`（在 `C:\dev\minit`）。** 这份文件说什么都不算数，那支程式现场问出来的才算。
 
 ---
@@ -48,6 +56,92 @@
 [做完] 收工    CLAUDE.md 第 9、10 条                    2e7f4b2
 [做完] 追加    force-dynamic（切 demo 引起的回归）      b36a8f8
 [做完] 阶段 E  建 minit-v2 · npm install · 四道关 · git init(main) · 第一个 commit
+[做完] 08-22    厂商插槽 + npm run bench + 密码确认/重设 + 额度百分比 —— 🔴 尚未 commit
+[做完] 08-22    HANDOFF 第 4 节那三件，全部做完，四道关全绿 —— 🔴 尚未 commit
+                4.1 设定页「更改密码」  src/app/settings/change-password-card.tsx
+                    要先输入现在的密码（signInWithPassword 验一次）再 updateUser。
+                    密码规则沿用 login/glass.ts 的 passwordRequirementProblem()，没有第二份。
+                    /reset-password 原封不动留在登入门外 —— 那是给进不去的人的，不能搬。
+                4.2 百分比穿到助手徽章  徽章现在印「剩 99 · 用了 1%」
+                    /api/ask 的 5 处收进一个 usageFields() helper；/api/chat 多带 usedPct；
+                    layout → app-shell → ai-dock → ai-panel、page → ask-box 都多一个 prop。
+                    ⚠ 徽章上带了「用了 / guna / used」这个词：光写「剩 99 · 1%」会被读成
+                    「只剩 1%」，跟实际意思相反。
+                4.3 建社团后跳章程上传（J 选 (a)）
+                    /orgs/new 建完 → router.replace("/constitution?setup=1")，
+                    新档 src/app/constitution/new-org-banner.tsx 是那一页顶上的横幅，
+                    原本建社团成功面板那两颗 onboarding 按钮搬进横幅当「跳过」路径。
+                    建社团表单留了一行手动连结，router.replace 失败时不会又变死路。
+[做完] 08-22 晚 🟢 **第 14 支 migration（20260823000000 cari_minit）J 已经在 SQL Editor 跑掉了。**
+                `npm run check:migrations` 现在会真的去 CALL 那支函式（POST /rest/v1/rpc/cari_minit，
+                768 个 0 当查询向量），14 支全部 [APPLIED]。不再是「用眼睛看」。
+                ⚠ 还有一件只有眼睛能看：`select proname, prosecdef from pg_proc where proname='cari_minit';`
+                  prosecdef 必须是 false（探针只能证明函式在，证明不了它是怎么宣告的）。
+[做完] 08-22 晚 J 回答了 HANDOFF 第 4 节的未决问题，全部落地 —— 🔴 尚未 commit
+                temperature   provider 层新增 DEFAULT_TEMPERATURE = 0，四家厂商都吃这个值。
+                              🔴 之前 **OpenAI 根本没送 temperature**，等于跑在厂商预设的 1 上，
+                              而 chat 和 classify 都在 OpenAI —— 「同一个问题两次答案不一样」就是这个。
+                              gpt-5.x 有些型号会拒收 temperature，openai.ts 收到 400 会记住并重送一次不带的。
+                              实测：gpt-5.6-luna 与 gpt-5-nano 都接受 temperature=0。
+                MIN_SCORE     0.55（猜的）→ **0.65（量出来的）**。新指令 `npm run tune:minscore`：
+                              10 段假会议记录 × 15 个问题（马来文/中文混写，5 个问不存在的事），
+                              用同一支模型同样的 task hint 算余弦相似度，扫门槛印 precision/recall/F1。
+                              该中的 0.663–0.791，不该中的 0.483–0.675 —— 两堆几乎黏在一起，
+                              所以 0.55 每个问题会拖进约 4 段无关内容。0.65 是**还找得到全部该找的**里最严的。
+                              🔴 是假资料。J 的真会议记录进来之后要重跑一次。
+                页数上限      一个 50 页对所有文件 → 按文件类型分：会议 5 / 帐目 5 / 名单 20 / 章程 50
+                              （J：一般会议 5 页，PERLEMBAGAAN 给多一些）。env 可覆写，旧的
+                              AI_DOC_MAX_PAGES 仍然有效。`/api/intake` 现在**验两次**：进门先用最宽的，
+                              分类完之后用真正那一类的上限**再验一次，而且在扣 extract 那一格之前**。
+                收据字号      DB 早就是「每个 org 一套、开过第一张就冻结、跨年从 0001 重来」。
+                              缺的是 UI：所有 org 都是预设的 'MIN'，两个分会都印 MIN-2026-0001。
+                              新增设定页那一行 + `setReceiptPrefix()`（user-scoped，冻结是 DB trigger 管的）。
+[做完] 08-22    J 看完实机后的第二轮 —— 四道关全绿，446 测试 —— 🔴 尚未 commit
+                🔴 **迁移新树时 `docs/` 只搬了一半**：`UX-问题清单.md`（J 的 20 条）、
+                    `UX决策-D1D2D4-计划.md`、`无障碍对比度审查.md` 留在了旧树。
+                    今天 copy 进来了，并新增 `docs/界面重做-计划.md`
+                    —— 那 20 条逐条拿 v2 的程式码重新核实过（4 条已解决、7 条还真的）。
+                    白话版给 J：`C:\dev\_J-要做的事
+-界面重做-给J看的.md`。
+                密码栏位眼睛     src/components/password-input.tsx，六个栏位全换过去
+                设定页重做       长卡片 → 五个分区的单行列表，长解释收进 <details>。
+                                 新档 app/settings/ui.tsx；appearance-card/ai-usage-card/
+                                 change-password-card 三支改名成 *-rows.tsx
+                章程读机构身份   src/lib/constitution-identity.ts（13 个测试，纯 TS）
+                                 findRegisteredName() 读注册名称、findAmendmentRule() 读
+                                 「修改章程要开会」那一条。⚠ 只引用社团自己的条文，
+                                 一句法律都不讲（CLAUDE.md 第 10 条）。找不到 = 说找不到，
+                                 不准说「你的章程没有这一条」。
+                                 UI：app/constitution/org-identity-panel.tsx
+                                 改名：orgs/actions.ts renameOrg()，走 user-scoped client
+                建社团直接上传   /orgs/new 有章程上传框；档案先握着，createOrg 回来才送去
+                                 /api/extract-constitution（在那之前没有 org 就没有额度），
+                                 再用 intake-handoff 交给 /constitution?setup=1
+[做完] 08-22    🔴 **助手重做第 1 步：`cari_minit` 做好了** —— 8/20 的决定，终于动工
+                四道关：tsc 0 · lint 25（跟基准一样）· test **469** · build ✓ —— 尚未 commit
+                🔴 **要 J 跑两支 migration**（D8：写好了，我不执行）
+                     20260822000000_minutes_search.sql   ← 之前就写好的，表
+                     20260823000000_cari_minit_rpc.sql   ← 🆕 搜寻函式。少了它，
+                       supabase-js 根本送不出 pgvector 的 <=>，上一支等于有地基没有门。
+                       🔴 SECURITY INVOKER，不准改成 DEFINER —— 一字之差 = 助手读得到
+                       全资料库每一个社团的会议记录。
+                新档
+                  src/lib/minutes-chunks.ts       切段 ＋ FNV 杂凑（19 个测试，纯 TS）
+                  src/lib/ai/embed.ts             gemini/openai embedding，768 维在边界上验
+                  src/lib/ai/minutes-index.ts     确认那一刻建索引（service role，best-effort）
+                  src/lib/ai/cari-minit.ts        搜寻（🔴 user-scoped client）
+                  src/components/v2/answer-sources.tsx  答案底下可点的出处
+                  scripts/backfill-embeddings.ts  npm run embed:backfill
+                改的
+                  src/prompts/chat.ts   🔴 拿掉了「你看不到他们的记录」那一句
+                                        （CLAUDE.md 第 10 条要求：只能跟第一支工具同一支
+                                        改动里拿掉，不准提早）。改成「只能讲摘录里有的，
+                                        每句带 [n]」。CLAUDE.md 第 10 条的状态段也更新了
+                  src/app/api/chat/route.ts       每一轮先搜、把摘录塞进 prompt、回传 sources
+                  src/app/minutes/actions.ts      确认存档后顺手建索引
+                ⚠️ 现在是 **retrieval-first**，不是设计稿写的「模型自己选工具」——
+                   那要四家厂商的 function calling，provider 层还没有。其余五支工具
+                   （捐款／收据／章程／名单／死线）还没做，见设计稿 §5 第 3 项。
    ↓
 [等 J] ① push 旧树 ② 建新 Supabase（先决定 region）③ 13 支 migration 一支一支贴
        ④ 填 minit-v2\.env.local（照 docs/env.local.新树范本.txt）
@@ -75,6 +169,91 @@
 ```
 
 🔴 **新树的四道关是在「没有 `.env.local`」的情况下跑的**，跟旧树完全一样。
+
+---
+
+### 厂商插槽（2026-08-22，尚未 commit）
+
+`src/lib/ai/` 以前只认得 `gemini` 和 `openai` 两个字。现在四个：
+
+| provider | 档 | 金钥 | 价格表 |
+|---|---|---|---|
+| `gemini` | `gemini.ts` | `GEMINI_API_KEY` | 有 |
+| `openai` | `openai.ts` | `OPENAI_API_KEY` | 有 |
+| `anthropic` 🆕 | `anthropic.ts` | `ANTHROPIC_API_KEY`（空） | 有（haiku-4-5 / sonnet-5 / sonnet-4-6 / opus-5） |
+| `xai` 🆕 | `xai.ts` | `XAI_API_KEY`（空） | 🔴 **空的** —— Grok 的 cost_micros 会是 null |
+
+它们是「插槽」：**金钥在呼叫的那一刻才读，不是开机时读。**
+空着的 key 只会弄坏「真的被路由到那家」的那一个请求，build、其他任务、整个 app 都照常。
+`npm run check:ai` 会把空插槽印成「(empty slot — harmless until something is routed here)」。
+
+四道关在这个改动之后重跑过，**数字跟上面那张表一模一样**。
+
+🔴 **两件开着的尾巴：**
+1. `anthropic.ts` 是直接打 HTTP，**没装 @anthropic-ai/sdk**（理由写在该档档头）。
+   之后助手要用 Claude 做工具呼叫的时候，**必须改成用官方套件**，不要手写扩充它。
+2. `claude-sonnet-5` 价格表写的是 **优惠结束后** 的 3.00 / 15.00。
+   现在（2026-08 底之前）实际收的是 2.00 / 10.00。这是故意的：
+   本月做的成本比较不可以引用一个 9 天后就消失的价钱。
+
+**真正挡住「比出来」的不是插槽，是样本：** `eval/cases/` 那 10 个 case
+全部是合成的印刷体 .png。拿它选模型 = 重演 95.2% 那次的错误。
+需要 J 拍的 3～4 张真实手写照片＋标准答案。
+
+---
+
+### 密码：确认栏 ＋ 忘记密码（2026-08-22，尚未 commit）
+
+**怎么发现的**：J 2026-08-22 第一次真的注册，当场指出「没有二次确认，简单密码也过」。
+查下去还有第三件他没看到的：**这个 app 完全没有重设密码的画面** ——
+注册时打错一个字，那个帐号就永远打不开，app 里没有任何方法救。
+对拿来管社团帐目的人，那是整个社团的文件锁在一扇没钥匙的门后面。
+
+两半一起修的：
+
+| | |
+|---|---|
+| `src/app/login/glass.tsx` 🆕 | 登入画面的视觉语言（玻璃卡、输入框、背景、`MIN_PASSWORD_LENGTH`）。两个画面共用一份，不要各抄一份 |
+| `src/app/login/page.tsx` | 注册多一个「再输入一次密码」栏；最低 6 → **8**；新增 `forgot` 模式寄重设信 |
+| `src/app/reset-password/page.tsx` 🆕 | 信里那条连结的落点。只做一件事：`updateUser({ password })` |
+| `src/proxy.ts` | `PUBLIC_PATHS` 从 `["/login"]` 变成 `["/login", "/reset-password"]` |
+| `src/proxy.test.ts` | 那条测试改成钉住**两个**公开路径，并加上 `/reset-password/`、`/reset-passwordx` 这些像但不是的 |
+
+🔴 **登入端故意维持宽松**（只检查非空）。收紧规则**绝不能把已经存在的旧帐号锁在外面** ——
+密码对不对是伺服器说了算，不是这支表单。
+
+🔴 **两件在程式码外面、少一件就不会动的事：**
+1. **Supabase 自己的最低长度**（`Authentication` → `Sign In / Providers` → `Email` 里面）。
+   程式里那个 8 只是浏览器的规矩，直接打 API 的人不会跑它。
+2. **Redirect URLs 要放行 `/reset-password`**（`URL Configuration`），
+   Vercel 网址和 localhost 两个都要。少了，信寄得出去但连结打不开。
+
+四道关在这个改动之后重跑过：tsc 0 · lint 25（跟基准一样）· 429 测试全过 · build ok。
+
+⬜ **还没做**：Supabase 的「Leaked password protection」（`Attack Protection` 那页现在是 DISABLED）。
+一个开关的事，跟这次的程式码无关。
+
+---
+
+### npm run bench（2026-08-22，尚未 commit）
+
+`scripts/bench-models.ts`。跑同一套 golden case，一个模型跑一轮，印一张表：
+准确率 · invented 数 · 每轮成本 · 每个 case 几秒。
+
+- 选模型的方式是**设 `AI_MODEL_EXTRACT` 然后呼叫 `runSuite()`** ——
+  刻意走 app 自己的 `resolveModel()`，不另外写一套选模型的规则（会 drift）
+- 成本来自各家自己回报的 usage，走的是 production 写 `ai_usage.cost_micros`
+  的同一条 `onUsage` 路径，不是从试算表抄的
+- 没设 key 的模型**跳过并说明原因**，不会跑十次然后十次都失败
+- 价格表里没有的模型，成本印 `?`，**不印 0**
+
+`eval/run-eval.ts` 因此改了三处：`CaseOutcome` 多了 elapsedMs／costMicros／
+tokens／vendorCalls；`runCase` 接上 `onUsage`；case 迴圈抽成 `export runSuite()`，
+档尾的 `main()` 用 `require.main === module` 包起来（不然 import 它就会自己跑一轮）。
+**`npm run eval` 的行为和输出没有变。**
+
+🔴 **这张表现在还不能拿来选模型。** `eval/cases` 那 10 个 case 全是合成印刷体 .png。
+脚本自己每次都会把这句警告印在表格下面，就是为了让人没办法不带警告地引用它。
 
 ---
 
@@ -368,18 +547,19 @@
 
 1. **额度显示要不要改百分比。** 查清楚了：被两周资料挡住的是 **D1-L2「把额度单位从次换成成本」**，**「显示成百分比」不需要等任何资料，今天就能做**。<br>选项：(a) 只留「还剩 99 次」 (b) 换成「用了 1%」 (c) 两个都给（「还剩 99 次 · 1%」）。<br>考量：对长辈，「还剩 99 次」比百分比具体；「用了 1%」比较像仪表。**建议 (c)。**
 2. **要不要干脆全搬 OpenAI（J 2026-08-18 问的）。** 值得认真对待，因为**它会一秒解掉总阻塞** —— OpenAI 已经付费了。<br>**钱不是理由**：全 OpenAI 每组织 RM18.07（75.4%）vs 现在分流 RM19.56（73.4%），差 RM1.5。<br>**真正的理由是失败的形状**：8/07 三轮 eval，`gpt-5.6-luna` 读章程会**在句子中间吃掉字**且不标缺漏，三轮稳定复现。`invented=0` 挡不住「安静地漏掉」。<br>⚠️ **但要诚实**：那三轮量的是**印刷体合成图，不是手写**，所以「OpenAI 读手写比较差」**并没有被证明过**。<br>**目前建议先付 Gemini**，理由是时间不是技术：对外讲的 95.2% 是在 `gemini-3.5-flash-lite` 上量的，换掉读手写那一格，那个数字当场作废，12 天内没时间重量。**「全搬 OpenAI」留成活选项，等第 3 节 c 的真实手写 eval 时一起比。**
-3. **chat 要不要设 `temperature = 0`。** 换来「同一个问题永远同一个答案」，代价是回答变呆板。长辈导向的产品**倾向设 0**，但这是产品决策。（8/18 J 看到的「两次答案不一样」就是这个，不是 bug。）
+3. ~~**chat 要不要设 `temperature = 0`。**~~ → **已答（2026-08-22，J 交给这边决定）：设 0，而且四家厂商全部设 0**（`DEFAULT_TEMPERATURE`，`src/lib/ai/provider.ts`）。理由：Minit 要模型做的每一件事都是「读」，都只有一个正确答案；temperature 是「故意挑一个比较不可能的字」的旋钮，这里没有一种「比较不可能」是有帮助的。附带修掉一个真的 bug：**OpenAI 那条路以前根本没送 temperature，跑在厂商预设的 1 上**，而 chat 和 classify 都在 OpenAI。
 
 **必须现在决定：**
 
-4. **法律实体是谁？** 个人还是 Sdn Bhd？`legal/` 要填控制者名字和地址。**用个人名义营运一个装着他人敏感个资的系统，责任无限。**
-5. **分会是各自一套收据号码，还是共用总部的？** 影响 `issue_receipts()` 用 `org_id` 还是 root org 配号，事后改很痛。
+4. **法律实体是谁？** 个人还是 Sdn Bhd？`legal/` 要填控制者名字和地址。**用个人名义营运一个装着他人敏感个资的系统，责任无限。**<br>2026-08-22 J：「现在是拿去比赛阶段，先不用管，不过要做成之后可以改的」→ **接受，`legal/` 里的控制者名字保持一个明显的占位符，不要写死任何人**；程式码里没有任何地方依赖它。但第 15 题（用真实资料）一旦成真，这题就跟着到期了。
+5. ~~**分会是各自一套收据号码，还是共用总部的？**~~ → **已答（2026-08-22，J）：各自一套**「才能知道是谁发出来的」。资料库本来就是按 `org_id` 配号，所以不用改 `issue_receipts()`；缺的是**每个分会的字母要不一样**（以前全部预设 'MIN'），已经补上设定页那一行。
 
 **🔴 2026-08-20 新增，全部未答 —— J 走过一次系统之后浮出来的（细节见 `docs/产品缺口盘点.md` 第 5 节）：**
 
 14. **这几天要做哪一个形状？** A（两天，主流程走得通）／B（五六天，真能给社团用）／C（十一天全押产品，竞赛证据放弃）。**未选定之前不要动程式码。** 算术在那份文件第 7 节：23 条全做完整版是 **26–29 个专注工作日**，而剩 11 天。
-15. **真实资料现在放不放？** J 要「用自己的社团真正使用」。技术上的挡已经拆了（Gemini Tier 1），剩下的是第 4 题（法律实体）与 PDPA 同意。选项：全放／只放知情的理事、捐款人先不进／先用假资料。
-16. **谁去拿真的 eROSES 网站逐栏核对粘贴包？** 从来没有人做过。这一格错了叫不实呈报。**不是程式工作。**
+15. ~~**真实资料现在放不放？**~~ → **已答（2026-08-22，J）：直接用真实资料。** 厂商那一关早就过了（Gemini `Tier 1` 付费层，8/20 画面确认；OpenAI 本来就是付费）—— 所以**免费层「拿你的输入去训练」不再适用**。<br>🔴 **剩下的唯一前置是书面同意**：捐款人／会员的名字进系统之前，社团要拿到他们的同意（`legal/PDPA-合规说明.md`；庙宇捐款名册算不算敏感个资是第 6 题，要律师）。这不是程式工作，也不是可以「之后补」的东西 —— 资料一旦进去就已经处理过了。<br>务实的做法：**理事名单（本人知情）先进，捐款人名册等同意书**。
+16. **谁去拿真的 eROSES 网站逐栏核对粘贴包？**（J 2026-08-22 说不懂这题是什么意思 —— 白话解释写在 `C:\dev\_J-要做的事
+-回答与决定-20260822晚.md` 第 2 节）从来没有人做过。这一格错了叫不实呈报。**不是程式工作。**
 17. **语音要做到哪一段？** J 说「两个都要，A 先」。A＝栏位口述（浏览器内建，不花额度，约 1 天）；B＝整场录音变会议记录（第二条产品线，4 天以上，准确率零实证，而且录音是一种新的敏感资料）。
 
 **要问律师／要去查：**
@@ -390,11 +570,11 @@
 
 **产品／定价（7/29 留下来的）：**
 
-9. 收据字号谁来定 —— 社团自己填，还是从 PPM 号推导？（建议自己填）
-10. 收据跨年归零？（建议先不做开关）
-11. 免费试用给 1 个真实 org 还是 0 个
+9. ~~收据字号谁来定~~ → **已答（2026-08-22，J）：系统直接定，另外给一个 setting，但定了就不能改。**「他们一般不会想这些」。三件都做好了：预设 `MIN`、设定页可改、开出第一张收据之后 DB trigger 拒绝再改。
+10. ~~收据跨年归零？~~ → **已答：归零**，而且**本来就是这样**（`issue_receipts()` 按马来西亚时间的年份配号，`PSH-2026-0001`）。不做开关。
+11. ~~免费试用给几个 org~~ → **已答（2026-08-22，J）：1 个。** ⚠ 还没有地方执行这个数字：现在的上限是 `MAX_ROOT_ORGS_PER_USER = 3`（防滥用），跟「试用方案给 1 个」是两回事 —— 后者要等方案／订阅那一层才有地方挂。
 12. 方案价格与各方案席位数 · 分会方案的分会数上限（⚠ `business-model.md` 还有一张 RM200 的过期价格表，与 deck 的 RM39/99/188 对不上；**毛利模型建在 RM39/99/188 上，动价格就要重算**）
-13. 单份文件最多几页 · 一次性试用额度给多少
+13. ~~单份文件最多几页~~ → **已答（2026-08-22，J）：会议 5 页，章程给多一些。** 做成按类型分：会议 5 / 帐目 5 / 名单 20 / 章程 50，env 可覆写（`src/lib/pdf-pages.ts`）。「一次性试用额度给多少」仍未答。
 
 **✅ 已答（不要再问）：**
 

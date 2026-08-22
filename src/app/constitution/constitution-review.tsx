@@ -26,6 +26,8 @@ import type { ConstitutionExtraction } from "@/lib/extraction";
 import { usePersistentState } from "@/lib/use-persistent-state";
 import { consumeIntake } from "@/lib/intake-handoff";
 import { saveConstitutionClauses } from "./actions";
+import { NewOrgBanner } from "./new-org-banner";
+import { OrgIdentityPanel } from "./org-identity-panel";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
 import {
   sampleClauses,
@@ -111,6 +113,9 @@ type AskResult =
 export function ConstitutionReview({
   initialQuestion = "",
   orgClauses = [],
+  justCreatedOrg = false,
+  orgName = null,
+  orgId = null,
 }: {
   /** Pre-filled by "Tanya Minit" (?q=…) — asked automatically on arrival. */
   initialQuestion?: string;
@@ -122,6 +127,16 @@ export function ConstitutionReview({
    * while someone is photographing page 3 the device copy is the newer one.
    */
   orgClauses?: ConfirmedClause[];
+  /**
+   * True when /orgs/new sent the person straight here after creating their
+   * organisation (?setup=1). Adds a banner and nothing else — see
+   * new-org-banner.tsx.
+   */
+  justCreatedOrg?: boolean;
+  /** The name Minit currently uses for the active org, for the identity panel. */
+  orgName?: string | null;
+  /** null when there is no active org — then nothing can be renamed. */
+  orgId?: number | null;
 }) {
   const [question, setQuestion] = useState(initialQuestion);
   const [result, setResult] = useState<AskResult | null>(null);
@@ -328,6 +343,12 @@ export function ConstitutionReview({
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 pb-10 text-base">
+      {/* Only for the person who has just created an organisation, and only
+          until they have a constitution of their own — congratulating someone
+          on an org they made last month, over clauses Minit has already read,
+          is noise. */}
+      {justCreatedOrg && !hasOwn && <NewOrgBanner />}
+
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-100/80 text-3xl ring-1 ring-white/60 backdrop-blur dark:bg-purple-400/15 dark:ring-white/10">
@@ -391,6 +412,19 @@ export function ConstitutionReview({
           </p>
         )}
       </div>
+
+      {/* What Minit read about the society itself: the registered name, and
+          what this constitution says about changing itself.
+
+          🔴 `hasOwn ? clauses : []` and not `clauses`: when the sample is on
+          screen, `clauses` is the FICTIONAL constitution. Reading a registered
+          name out of that and offering to rename the real organisation to it is
+          the single worst thing this panel could do. */}
+      <OrgIdentityPanel
+        clauses={hasOwn ? clauses : []}
+        orgName={orgName}
+        orgId={orgId}
+      />
 
       {/* 0 — Photograph your constitution (the real AI) */}
       <Card className="border-2 border-purple-200 bg-purple-50/40">

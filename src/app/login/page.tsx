@@ -3,7 +3,15 @@
 import { useState } from "react";
 import { Loader2, Sparkles } from "lucide-react";
 import { Tri, useTriText } from "@/components/language-provider";
+import { PasswordInput } from "@/components/password-input";
 import { getSupabaseBrowser } from "@/db/supabase-browser";
+import {
+  GLASS_CARD,
+  LoginBackdrop,
+  MIN_PASSWORD_LENGTH,
+  glassInputClass,
+  passwordRequirementProblem,
+} from "./glass";
 
 // ---------------------------------------------------------------------------
 // /login — email + password sign-in and sign-up (Phase 7).
@@ -21,17 +29,19 @@ import { getSupabaseBrowser } from "@/db/supabase-browser";
 // errors here — failures surface in the UI only.
 // ---------------------------------------------------------------------------
 
-type Mode = "signin" | "signup";
-
-/** Glass panel fill + border + inset highlight, shared by card and inputs. */
-const GLASS_CARD =
-  "border border-white/[0.16] bg-gradient-to-br from-white/[0.04] to-white/[0.01] shadow-[0_22px_52px_rgba(8,6,30,0.22),inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-[6px] backdrop-saturate-150";
+/** "forgot" only collects an email and asks Supabase to mail a recovery link;
+ *  the new password is typed on /reset-password, where that link lands. */
+type Mode = "signin" | "signup" | "forgot";
 
 export default function LoginPage() {
   const t = useTriText();
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  // Sign-up only. See the validation block in submit() for why this field
+  // exists at all — it is the only thing standing between a typo and an
+  // account nobody can ever get into.
+  const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -40,12 +50,82 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     setNotice(null);
-    if (!email.trim() || password.length < 6) {
+    // ---------------------------------------------------------------------
+    // 2026-08-22: sign-up used to accept any 6 characters and asked for the
+    // password ONCE, and there was no way to reset one. A single typo in that
+    // one field created an account its owner could never get into — for a
+    // treasurer, the whole organisation's paperwork behind a door with no key.
+    // Both halves were fixed together: this confirmation field stops the typo,
+    // and /reset-password is the way back for everything else.
+    //
+    // Sign-IN stays lenient on purpose: it only checks the field is not empty.
+    // Tightening the rule must never lock out an account that already exists
+    // under the old one — the server is the authority on whether it is right.
+    //
+    // ⚠ MIN_PASSWORD_LENGTH is the BROWSER's rule. Someone calling the Supabase
+    //   API directly does not run this code. Raise the project's own minimum in
+    //   Supabase → Authentication → Sign In / Providers → Email to make it real.
+    // ---------------------------------------------------------------------
+    if (!email.trim()) {
+      setError(t("Isikan e-mel", "请填写电邮", "Enter an email"));
+      return;
+    }
+    if (mode === "forgot") {
+      setBusy(true);
+      try {
+        // The reply is deliberately the same whether or not the address has an
+        // account: telling a stranger "no such user" turns this box into a way
+        // to find out who is registered (PDPA, Hard Rule 5). Supabase behaves
+        // the same way, so the error is not inspected either.
+        await getSupabaseBrowser().auth.resetPasswordForEmail(email.trim(), {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        setNotice(
+          t(
+            "Jika akaun itu wujud, pautan sudah dihantar ke e-mel itu",
+            "如果那个账户存在，重设连结已经寄过去了",
+            "If that account exists, a link has been sent to that email",
+          ),
+        );
+        setMode("signin");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    if (mode === "signin" && password.length === 0) {
+      setError(t("Isikan kata laluan", "请填写密码", "Enter a password"));
+      return;
+    }
+    if (mode === "signup") {
+      const problem = passwordRequirementProblem(password);
+      if (problem === "length") {
+        setError(
+          t(
+            `Kata laluan sekurang-kurangnya ${MIN_PASSWORD_LENGTH} aksara`,
+            `密码至少 ${MIN_PASSWORD_LENGTH} 个字符`,
+            `Password must be at least ${MIN_PASSWORD_LENGTH} characters`,
+          ),
+        );
+        return;
+      }
+      if (problem === "classes") {
+        setError(
+          t(
+            "Perlu huruf besar, huruf kecil, nombor dan simbol (contoh: ! ? @ #)",
+            "需要大写字母、小写字母、数字和符号（例如：! ? @ #）",
+            "Needs an uppercase letter, a lowercase letter, a number and a symbol (e.g. ! ? @ #)",
+          ),
+        );
+        return;
+      }
+    }
+    if (mode === "signup" && password !== confirm) {
       setError(
         t(
-          "Isikan e-mel dan kata laluan (min. 6 aksara)",
-          "请填写电邮和密码（至少6个字符）",
-          "Enter an email and a password (min. 6 characters)",
+          "Kata laluan tidak sama — taip semula",
+          "两次输入的密码不一样——请重新输入",
+          "The two passwords do not match — type it again",
         ),
       );
       return;
@@ -104,14 +184,7 @@ export default function LoginPage() {
     }
   }
 
-  // Placeholder colour is set explicitly: the browser default is unreadable on
-  // glass. Error state reddens the border of both credential fields.
-  const inputCls = [
-    "w-full rounded-[14px] border bg-white/[0.02] px-[18px] py-[15px] text-base text-white",
-    "placeholder:text-white/50 outline-none backdrop-blur-[4px] transition-[background,border-color,box-shadow] duration-150",
-    "focus:border-white/75 focus:bg-white/[0.26] focus:shadow-[0_0_0_4px_rgba(139,123,255,0.28)]",
-    error ? "border-[rgba(255,150,150,0.7)]" : "border-white/[0.16]",
-  ].join(" ");
+  const inputCls = glassInputClass(Boolean(error));
 
   return (
     <>
@@ -147,10 +220,22 @@ export default function LoginPage() {
           <h1 className="text-center text-[25px] font-bold leading-tight tracking-[-0.01em] text-white [text-shadow:0_1px_12px_rgba(10,6,40,0.35)]">
             {mode === "signin" ? (
               <Tri bm="Log Masuk" zh="登录" en="Sign in" />
-            ) : (
+            ) : mode === "signup" ? (
               <Tri bm="Daftar Akaun" zh="注册账户" en="Create account" />
+            ) : (
+              <Tri bm="Lupa Kata Laluan" zh="忘记密码" en="Forgot password" />
             )}
           </h1>
+
+          {mode === "forgot" && (
+            <p className="text-pretty text-center text-base leading-relaxed text-white/[0.72]">
+              <Tri
+                bm="Masukkan e-mel anda. Kami hantar pautan untuk menetapkan kata laluan baharu."
+                zh="输入你的电邮。我们会寄一条连结给你，让你设定新密码。"
+                en="Enter your email. We will send a link for setting a new password."
+              />
+            </p>
+          )}
 
           <form onSubmit={submit} className="flex flex-col gap-5">
             <label className="flex flex-col gap-2">
@@ -167,23 +252,62 @@ export default function LoginPage() {
                 required
               />
             </label>
-            <label className="flex flex-col gap-2">
+            {/* Hidden in "forgot": that mode only needs the address. A password
+                box there invites people to type the one they cannot remember. */}
+            <label className={`flex-col gap-2 ${mode === "forgot" ? "hidden" : "flex"}`}>
               <span className="text-sm font-semibold text-white/[0.88]">
                 <Tri bm="Kata laluan" zh="密码" en="Password" />
               </span>
-              <input
-                type="password"
+              <PasswordInput
+                tone="dark"
                 autoComplete={
                   mode === "signin" ? "current-password" : "new-password"
                 }
                 placeholder="••••••••••••"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className={`${inputCls} tracking-[0.08em]`}
-                required
-                minLength={6}
+                onChange={setPassword}
+                className={inputCls}
+                // Not `required` in "forgot": a required control that is
+                // display:none blocks submit with a validation message the
+                // browser cannot even scroll to.
+                required={mode !== "forgot"}
+                minLength={mode === "signup" ? MIN_PASSWORD_LENGTH : 1}
               />
+              {mode === "signup" && (
+                <span className="text-sm leading-relaxed text-white/[0.62]">
+                  <Tri
+                    bm={`${MIN_PASSWORD_LENGTH} aksara ke atas, dengan huruf besar, huruf kecil, nombor dan simbol (contoh: Bulan#2026)`}
+                    zh={`${MIN_PASSWORD_LENGTH} 个字符以上，要有大写字母、小写字母、数字和符号（例如：Bulan#2026）`}
+                    en={`${MIN_PASSWORD_LENGTH}+ characters with an uppercase letter, a lowercase letter, a number and a symbol (e.g. Bulan#2026)`}
+                  />
+                </span>
+              )}
             </label>
+
+            {/* Sign-up only. Asking twice is not politeness: an unnoticed typo
+                here costs the person a round-trip through their email before
+                they can get in at all. */}
+            {mode === "signup" && (
+              <label className="flex flex-col gap-2">
+                <span className="text-sm font-semibold text-white/[0.88]">
+                  <Tri
+                    bm="Taip kata laluan sekali lagi"
+                    zh="再输入一次密码"
+                    en="Type the password again"
+                  />
+                </span>
+                <PasswordInput
+                  tone="dark"
+                  autoComplete="new-password"
+                  placeholder="••••••••••••"
+                  value={confirm}
+                  onChange={setConfirm}
+                  className={inputCls}
+                  required
+                  minLength={MIN_PASSWORD_LENGTH}
+                />
+              </label>
+            )}
 
             {error && <p className="text-base text-[#ffb4b4]">{error}</p>}
             {notice && <p className="text-base text-[#ffe0a8]">{notice}</p>}
@@ -197,11 +321,33 @@ export default function LoginPage() {
               {busy && <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.4} />}
               {mode === "signin" ? (
                 <Tri bm="Log Masuk" zh="登录" en="Sign in" />
-              ) : (
+              ) : mode === "signup" ? (
                 <Tri bm="Daftar" zh="注册" en="Sign up" />
+              ) : (
+                <Tri bm="Hantar pautan" zh="寄出连结" en="Send the link" />
               )}
             </button>
           </form>
+
+          {mode === "signin" && (
+            <p className="-mt-1 text-center text-base">
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("forgot");
+                  setError(null);
+                  setNotice(null);
+                }}
+                className="text-white/[0.72] underline decoration-white/40 underline-offset-[3px] hover:text-white hover:decoration-white"
+              >
+                <Tri
+                  bm="Lupa kata laluan?"
+                  zh="忘记密码？"
+                  en="Forgot your password?"
+                />
+              </button>
+            </p>
+          )}
 
           <p className="text-center text-base text-white/[0.72]">
             <button
@@ -210,6 +356,9 @@ export default function LoginPage() {
                 setMode(mode === "signin" ? "signup" : "signin");
                 setError(null);
                 setNotice(null);
+                // Half-typed confirmation must not survive the switch, or the
+                // next sign-up starts with a mismatch nobody typed.
+                setConfirm("");
               }}
               className="font-semibold text-white underline decoration-white/60 underline-offset-[3px] hover:decoration-white"
             >
@@ -219,11 +368,17 @@ export default function LoginPage() {
                   zh="还没有账户？在此注册"
                   en="No account yet? Sign up here"
                 />
-              ) : (
+              ) : mode === "signup" ? (
                 <Tri
                   bm="Sudah ada akaun? Log masuk"
                   zh="已有账户？登录"
                   en="Already have an account? Sign in"
+                />
+              ) : (
+                <Tri
+                  bm="Kembali ke log masuk"
+                  zh="回到登录"
+                  en="Back to sign in"
                 />
               )}
             </button>
@@ -239,26 +394,5 @@ export default function LoginPage() {
         </p>
       </div>
     </>
-  );
-}
-
-/**
- * Full-bleed backdrop, layered back to front per the handoff:
- *   1. #0f1020 fallback — shows if the photo is missing, never a white flash
- *   2. the photo at public/login-bg.jpg, cover/centred, drifting very slowly
- *   3. dark scrim (115deg) — tuned so white type on 4% glass stays legible
- *   4. purple glow, centred slightly above the middle
- *
- * Fixed at z-0 (not a negative z-index: the shell's .v2-root paints its own
- * background, which would swallow a layer behind it) with the form above at
- * z-10. aria-hidden because it carries no information.
- */
-function LoginBackdrop() {
-  return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-[#0f1020]">
-      <div className="v2-login-photo absolute inset-0" />
-      <div className="absolute inset-0 bg-[linear-gradient(115deg,rgba(20,16,48,0.86)_0%,rgba(28,22,60,0.62)_42%,rgba(12,32,40,0.55)_100%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(120%_90%_at_50%_40%,rgba(124,92,255,0.16)_0%,rgba(0,0,0,0)_60%)]" />
-    </div>
   );
 }

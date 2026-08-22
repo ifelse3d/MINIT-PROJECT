@@ -93,7 +93,7 @@ export async function POST(req: Request) {
     // long one. See src/lib/pdf-pages.ts.
     const bytes = hasFile ? await file.arrayBuffer() : null;
     if (hasFile && bytes) {
-      const pages = await checkPageLimit(bytes, file.type);
+      const pages = await checkPageLimit(bytes, file.type, "roster");
       if (!pages.ok) {
         return NextResponse.json(
           {

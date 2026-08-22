@@ -53,16 +53,23 @@ describe("Next.js Proxy authentication boundary", () => {
 
   // The guard on PUBLIC_PATHS. Removing the demo branch touched exactly the
   // code that decides who gets in without a session, so this pins the answer:
-  // /login, and nothing that merely looks like it.
-  it("treats /login as the only public path", async () => {
-    const open = await proxy(request("/login"));
-    expect(open.status).toBe(200);
-    expect(open.headers.get("x-middleware-next")).toBe("1");
+  // two exact paths, and nothing that merely looks like either of them.
+  // 2026-08-22: /reset-password was added — it must be public because the
+  // recovery session arrives with the page load, not before it.
+  it("treats /login and /reset-password as the only public paths", async () => {
+    for (const path of ["/login", "/reset-password"]) {
+      const open = await proxy(request(path));
+      expect(open.status, `${path} must be public`).toBe(200);
+      expect(open.headers.get("x-middleware-next")).toBe("1");
+    }
 
     for (const lookalike of [
       "/login/",
       "/login/extra",
       "/loginx",
+      "/reset-password/",
+      "/reset-password/extra",
+      "/reset-passwordx",
       "/health",
       "/orgs/new",
       "/",

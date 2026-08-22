@@ -106,7 +106,7 @@ export async function POST(req: Request) {
     // is one tap and a large part of a month's AI quota, and there is no
     // confirmation screen between the two. See src/lib/pdf-pages.ts.
     const bytes = await file.arrayBuffer();
-    const pages = await checkPageLimit(bytes, file.type);
+    const pages = await checkPageLimit(bytes, file.type, "unknown");
     if (!pages.ok) {
       return NextResponse.json(
         {
@@ -177,6 +177,30 @@ export async function POST(req: Request) {
     }
 
     const kind: Handled = classification.kind;
+
+    // --- the page cap, again, now that we know WHAT this is ----------------
+    //
+    // The check at the top of this route had to use the most generous limit,
+    // because at that point a 40-page upload could still have been a perfectly
+    // ordinary constitution. Now the classifier has answered, so the real cap
+    // for this kind applies — and it applies BEFORE the extract action is
+    // charged, which is the whole point: a 40-page "meeting record" is a
+    // scanner left on the wrong setting, and reading it is the expensive half.
+    // (2026-08-22, J: minutes are 5 pages; a constitution gets more.)
+    const kindLimit = await checkPageLimit(
+      bytes,
+      file.type,
+      kind === "meeting_notes" ? "minutes" : kind === "ledger_page" ? "ledger" : "constitution",
+    );
+    if (!kindLimit.ok) {
+      return NextResponse.json(
+        {
+          kind,
+          error: joinUserError(tooManyPagesError(kindLimit.pages, kindLimit.limit)),
+        },
+        { status: 400 },
+      );
+    }
 
     // --- step 2: charge and run the matching extractor ---------------------
     const extractAction =

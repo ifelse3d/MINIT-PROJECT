@@ -1,0 +1,223 @@
+import { describe, expect, it } from "vitest";
+import {
+  clauseNumberOf,
+  constitutionCoverage,
+  findAmendmentRule,
+  findRegisteredName,
+} from "./constitution-identity";
+import type { ConfirmedClause } from "./constitution";
+
+// These fixtures are written the way real ROS-approved constitutions are
+// written — including the photocopied Chinese ones and the typewritten ones
+// with no printed headings. Both jobs of constitution-identity.ts change what a
+// person believes about their legal obligations, so "it happened to work on the
+// one document we tried" is not good enough.
+
+function clause(
+  clause_no: string,
+  heading: string,
+  text: string,
+): ConfirmedClause {
+  return { clause_no, heading, text, page_ref: "" };
+}
+
+describe("findRegisteredName", () => {
+  it("reads the quoted name out of the NAMA clause", () => {
+    const found = findRegisteredName([
+      clause(
+        "Fasal 1",
+        "NAMA",
+        'Pertubuhan ini dikenali dengan nama "PERSATUAN PENDUDUK TAMAN SRI MUDA". Selepas ini disebut "Pertubuhan".',
+      ),
+    ]);
+    expect(found?.name).toBe("PERSATUAN PENDUDUK TAMAN SRI MUDA");
+    expect(found?.clause.clause_no).toBe("Fasal 1");
+  });
+
+  it("reads an unquoted name and stops at the end of the sentence", () => {
+    const found = findRegisteredName([
+      clause(
+        "1",
+        "Nama",
+        "Nama pertubuhan ini ialah Persatuan Kebajikan Cahaya Harapan. Alamat berdaftar ialah No. 12, Jalan Besar.",
+      ),
+    ]);
+    expect(found?.name).toBe("Persatuan Kebajikan Cahaya Harapan");
+  });
+
+  it("reads a Chinese constitution", () => {
+    const found = findRegisteredName([
+      clause("第一条", "名称", "本会定名为「雪兰莪新民班同学会」。"),
+    ]);
+    expect(found?.name).toBe("雪兰莪新民班同学会");
+  });
+
+  it("finds the name when no heading was printed", () => {
+    const found = findRegisteredName([
+      clause("1", "", "The society shall be known as SUNRISE WELFARE ASSOCIATION."),
+    ]);
+    expect(found?.name).toBe("SUNRISE WELFARE ASSOCIATION");
+  });
+
+  // Hard Rule 1. A wrong society name is printed on every receipt the
+  // organisation ever issues, so silence beats a guess.
+  it("returns null rather than guessing when no name clause was read", () => {
+    expect(
+      findRegisteredName([
+        clause("Fasal 7", "KEAHLIAN", "Keahlian terbuka kepada semua warganegara."),
+      ]),
+    ).toBeNull();
+  });
+
+  it("does not read clause 1 as a name when clause 1 is about something else", () => {
+    expect(
+      findRegisteredName([
+        clause("1", "TAFSIRAN", "Dalam undang-undang ini, melainkan konteks."),
+      ]),
+    ).toBeNull();
+  });
+
+  it("rejects a misread that contains no letters", () => {
+    expect(
+      findRegisteredName([clause("Fasal 1", "NAMA", 'Dikenali dengan nama "—— ///".')]),
+    ).toBeNull();
+  });
+});
+
+describe("findAmendmentRule", () => {
+  it("reads the meeting, the notice period and the majority", () => {
+    const rule = findAmendmentRule([
+      clause(
+        "Fasal 14",
+        "PINDAAN UNDANG-UNDANG",
+        "Undang-undang ini tidak boleh dipinda kecuali dengan kelulusan dua pertiga daripada ahli yang hadir di Mesyuarat Agung, dan notis 14 hari hendaklah diberi kepada semua ahli.",
+      ),
+    ]);
+    expect(rule?.requiresGeneralMeeting).toBe(true);
+    expect(rule?.noticeDays).toBe(14);
+    expect(rule?.majority).toBe("dua pertiga");
+    expect(rule?.clause.clause_no).toBe("Fasal 14");
+  });
+
+  it("notices when the Registrar's approval is named", () => {
+    const rule = findAmendmentRule([
+      clause(
+        "Fasal 15",
+        "PINDAAN",
+        "Sebarang pindaan hendaklah mendapat kelulusan Pendaftar Pertubuhan sebelum berkuatkuasa.",
+      ),
+    ]);
+    expect(rule?.needsRegistrarApproval).toBe(true);
+    // Nothing in this clause says which meeting or how many days — and the rule
+    // must NOT invent either of them.
+    expect(rule?.requiresGeneralMeeting).toBe(false);
+    expect(rule?.noticeDays).toBeNull();
+    expect(rule?.majority).toBeNull();
+  });
+
+  it("finds the clause from its text when no heading was printed", () => {
+    const rule = findAmendmentRule([
+      clause(
+        "12",
+        "",
+        "Perlembagaan ini boleh dipinda di Mesyuarat Agung Luar Biasa dengan sokongan 2/3 ahli.",
+      ),
+    ]);
+    expect(rule?.requiresGeneralMeeting).toBe(true);
+    expect(rule?.majority).toBe("2/3");
+  });
+
+  it("reads a Chinese amendment clause", () => {
+    const rule = findAmendmentRule([
+      clause("第十四条", "修改章程", "本章程之修改，须经会员大会三分之二通过。"),
+    ]);
+    expect(rule?.requiresGeneralMeeting).toBe(true);
+    expect(rule?.majority).toBe("三分之二");
+  });
+
+  // The back pages of a constitution are the ones people forget to photograph,
+  // so "not found" is a normal outcome and must be distinguishable from
+  // "there is no such rule".
+  it("returns null when the amendment clause has not been read yet", () => {
+    expect(
+      findAmendmentRule([
+        clause("Fasal 3", "TUJUAN", "Menggalakkan kebajikan ahli-ahli."),
+      ]),
+    ).toBeNull();
+  });
+
+  it("does not mistake amending a MOTION for amending the constitution", () => {
+    expect(
+      findAmendmentRule([
+        clause(
+          "Fasal 9",
+          "",
+          "Sesuatu usul boleh dipinda oleh pencadang sebelum diundi.",
+        ),
+      ]),
+    ).toBeNull();
+  });
+});
+
+describe("clauseNumberOf", () => {
+  it("reads the notations constitutions are actually printed in", () => {
+    expect(clauseNumberOf("Fasal 12")).toBe(12);
+    expect(clauseNumberOf("12.1")).toBe(12);
+    expect(clauseNumberOf("12(a)")).toBe(12);
+    expect(clauseNumberOf("Clause 7")).toBe(7);
+    expect(clauseNumberOf("第十四条")).toBe(14);
+    expect(clauseNumberOf("第十条")).toBe(10);
+    expect(clauseNumberOf("第二十一條")).toBe(21);
+    expect(clauseNumberOf("第三条")).toBe(3);
+  });
+
+  it("gives up rather than guessing on something it cannot read", () => {
+    expect(clauseNumberOf("")).toBeNull();
+    expect(clauseNumberOf("Lampiran A")).toBeNull();
+  });
+});
+
+describe("constitutionCoverage", () => {
+  const c = (no: string) => clause(no, "", "x");
+
+  it("reports no holes when the clauses run 1..N", () => {
+    const cov = constitutionCoverage([c("1"), c("2"), c("3")]);
+    expect(cov.gapFree).toBe(true);
+    expect(cov.missing).toEqual([]);
+    expect(cov.highest).toBe(3);
+  });
+
+  // This is the whole point: Minit can PROVE clause 4 is not in what it holds,
+  // so it must say so by number instead of waving at "the last pages".
+  it("names the clauses that are provably absent", () => {
+    const cov = constitutionCoverage([c("1"), c("2"), c("3"), c("5"), c("6")]);
+    expect(cov.gapFree).toBe(false);
+    expect(cov.missing).toEqual([4]);
+  });
+
+  it("folds sub-clauses into their parent", () => {
+    const cov = constitutionCoverage([c("1"), c("2.1"), c("2.2"), c("3")]);
+    expect(cov.missing).toEqual([]);
+    expect(cov.present).toEqual([1, 2, 3]);
+  });
+
+  it("counts Chinese clause numbers", () => {
+    const cov = constitutionCoverage([c("第一条"), c("第三条")]);
+    expect(cov.missing).toEqual([2]);
+    expect(cov.highest).toBe(3);
+  });
+
+  it("ignores a clause number it cannot parse instead of calling it a hole", () => {
+    const cov = constitutionCoverage([c("1"), c("Lampiran A"), c("2")]);
+    expect(cov.gapFree).toBe(true);
+  });
+
+  it("is empty, not broken, when there is nothing to count", () => {
+    expect(constitutionCoverage([])).toEqual({
+      present: [],
+      missing: [],
+      highest: 0,
+      gapFree: true,
+    });
+  });
+});

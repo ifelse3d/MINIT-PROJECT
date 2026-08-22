@@ -25,7 +25,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = new Set(["/login"]);
+// 2026-08-22: /reset-password joined /login. It is NOT a second entrance —
+// reaching it usefully still requires a one-time recovery token that only
+// Supabase can mint, and the page itself does nothing but change the password
+// of whoever that token belongs to. It has to be listed here because the
+// recovery session is established BY the page load: gate it, and the redirect
+// to /login throws the token away and the link can never work.
+const PUBLIC_PATHS = new Set(["/login", "/reset-password"]);
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.has(pathname);

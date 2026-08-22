@@ -60,7 +60,7 @@ export async function POST(req: Request) {
     // is one tap and a large part of a month's AI quota, and there is no
     // confirmation screen between the two. See src/lib/pdf-pages.ts.
     const bytes = await photo.arrayBuffer();
-    const pages = await checkPageLimit(bytes, photo.type);
+    const pages = await checkPageLimit(bytes, photo.type, "ledger");
     if (!pages.ok) {
       return NextResponse.json(
         {
