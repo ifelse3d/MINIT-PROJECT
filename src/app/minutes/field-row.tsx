@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ConfidenceBadge } from "@/components/confidence-badge";
 import { Tri, useTriText } from "@/components/language-provider";
 import { formatDateLong, isIsoDate, toIsoDate } from "@/lib/date-input";
-import type { TextLikeField } from "./minutes-store";
+import { useMinutes, type TextLikeField } from "./minutes-store";
 
 // ---------------------------------------------------------------------------
 // One reviewable row: label + value + badge + where the AI read it + the three
@@ -81,6 +81,12 @@ export function FieldRow({
   const [problem, setProblem] = useState<ReactNode>(null);
   const nativeDate = useNativeDateInput();
   const t = useTriText();
+  // Whether this set of minutes came from a photo or was typed from nothing
+  // changes what an EMPTY field means, and therefore what to say about it: "the
+  // AI could not find this in your notes" is nonsense when there are no notes
+  // and no AI ran. Read from the store rather than threaded through as a prop —
+  // there are a dozen call sites and none of them care. (2026-08-23.)
+  const { typedByHand } = useMinutes();
 
   const isMissing = field.confidence === "missing";
 
@@ -216,11 +222,15 @@ export function FieldRow({
               }
             >
               {isMissing ? (
-                <Tri
-                  bm="— tiada dalam nota —"
-                  zh="— 记录中没有 —"
-                  en="— not in the notes —"
-                />
+                typedByHand ? (
+                  <Tri bm="— belum diisi —" zh="— 还没填 —" en="— not filled in yet —" />
+                ) : (
+                  <Tri
+                    bm="— tiada dalam nota —"
+                    zh="— 记录中没有 —"
+                    en="— not in the notes —"
+                  />
+                )
               ) : (
                 display ?? field.value
               )}
@@ -243,7 +253,11 @@ export function FieldRow({
             </Button>
             {isMissing && onMarkAbsent && (
               <Button variant="outline" onClick={onMarkAbsent}>
-                <Tri bm="Tiada dalam nota" zh="笔记里没写" en="Not in the notes" />
+                {typedByHand ? (
+                  <Tri bm="Tiada / tidak berkenaan" zh="没有这一项" en="Leave this out" />
+                ) : (
+                  <Tri bm="Tiada dalam nota" zh="笔记里没写" en="Not in the notes" />
+                )}
               </Button>
             )}
           </>
@@ -282,11 +296,19 @@ export function FieldRow({
       )}
       {isMissing && (
         <p className="text-base text-muted-foreground">
-          <Tri
-            bm="AI tidak jumpa ini dalam nota anda. Isi sendiri, atau tandakan tiada dalam nota."
-            zh="AI 在您的笔记里找不到这一项。可以自己填写，或标示笔记里没写。"
-            en="The AI could not find this in your notes. Fill it in yourself, or mark it as not written down."
-          />
+          {typedByHand ? (
+            <Tri
+              bm="Taip apa yang berlaku, atau tandakan tiada kalau memang tidak berkenaan."
+              zh="把实际情况打进去；如果本来就没有这一项，就标示没有。"
+              en="Type what happened, or mark it as not applicable if there genuinely was none."
+            />
+          ) : (
+            <Tri
+              bm="AI tidak jumpa ini dalam nota anda. Isi sendiri, atau tandakan tiada dalam nota."
+              zh="AI 在您的笔记里找不到这一项。可以自己填写，或标示笔记里没写。"
+              en="The AI could not find this in your notes. Fill it in yourself, or mark it as not written down."
+            />
+          )}
         </p>
       )}
     </div>

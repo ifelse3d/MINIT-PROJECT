@@ -23,6 +23,15 @@ export type SavedMinutes = {
   extraction: MeetingNotesExtraction;
   sourceLabel: string | null;
   photoDataUrl: string | null;
+  /**
+   * True when this set of minutes was TYPED, not photographed — so there is no
+   * file name and no original image, and that is correct rather than missing.
+   *
+   * Optional on purpose: a blob written before 2026-08-23 has no such key, and
+   * `undefined` reads as false, which is exactly right for work that did come
+   * from a photo. Nothing has to be migrated.
+   */
+  typed?: boolean;
 };
 
 export function loadSavedMinutes(): SavedMinutes | null {

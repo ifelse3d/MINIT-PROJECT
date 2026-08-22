@@ -97,6 +97,18 @@ export type MinutesStore = {
   nothingYet: boolean;
 
   onPhotoPicked: (file: File | null) => Promise<void>;
+  /**
+   * Start a set of minutes with no photo at all.
+   *
+   * J's UX list, N1 (2026-08-07): Minit only accepted photos and some PDFs.
+   * Typing is the cheapest input there is — no model, no credit, no upload —
+   * and it is what somebody reaches for when the notes are already on a laptop,
+   * when the photo will not read, or when the meeting had four people in a
+   * kopitiam and nobody wrote anything down.
+   */
+  startTyping: () => void;
+  /** True when this set of minutes was typed rather than photographed. */
+  typedByHand: boolean;
   openSample: () => void;
   backToEmpty: () => void;
 
@@ -188,6 +200,7 @@ export function MinutesProvider({
   const [aiBusy, setAiBusy] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [storageNote, setStorageNote] = useState<SaveOutcome | null>(null);
+  const [typedByHand, setTypedByHand] = useState(false);
 
   // events-in-minutes bridge
   const [evRows, setEvRows] = useState<EvRow[] | null>(null);
@@ -225,6 +238,7 @@ export function MinutesProvider({
       setExtraction(saved.extraction);
       setSourceLabel(saved.sourceLabel);
       setPhotoDataUrl(saved.photoDataUrl);
+      setTypedByHand(saved.typed === true);
     }
     setRestored(true);
   }, []);
@@ -238,14 +252,16 @@ export function MinutesProvider({
     // as a filing-ready eROSES paste-pack with per-field Copy buttons and a
     // green "minutes processed ✓" tick. Nothing is saved until the user has
     // actually photographed something (sourceLabel !== null).
-    if (sourceLabel === null) return;
-    const outcome = saveMinutes({ extraction, sourceLabel, photoDataUrl });
+    // "Nothing to save yet" is now two conditions, not one: no photo AND not
+    // typed. Without the second, everything a person typed vanished on refresh.
+    if (sourceLabel === null && !typedByHand) return;
+    const outcome = saveMinutes({ extraction, sourceLabel, photoDataUrl, typed: typedByHand });
     if (outcome === "photo-dropped" && photoDataUrl !== null) {
       // Clear it from state too, otherwise the failing write repeats forever.
       setPhotoDataUrl(null);
     }
     setStorageNote(outcome === "ok" ? null : outcome);
-  }, [extraction, sourceLabel, photoDataUrl, restored]);
+  }, [extraction, sourceLabel, photoDataUrl, typedByHand, restored]);
 
   const findEventsInMinutes = useCallback(async () => {
     setEvError(null);
@@ -312,6 +328,7 @@ export function MinutesProvider({
       setExtraction(body.extraction as MeetingNotesExtraction);
       setSourceLabel(file.name);
       setPhotoDataUrl(await compressPhoto(file));
+      setTypedByHand(false);
       setEvRows(null);
     } catch (e) {
       setAiError(e instanceof Error ? e.message : String(e));
@@ -320,10 +337,30 @@ export function MinutesProvider({
     }
   }, []);
 
+  /**
+   * Nothing to photograph — start from a blank sheet and type.
+   *
+   * The extraction stays EMPTY and every field stays `missing`: typing does not
+   * make a fact true, the person filling each row in does, and that goes
+   * through the same edit path that stamps "entered by you" (Hard Rule 1). So a
+   * typed set of minutes is held to exactly the same standard as a
+   * photographed one — it just skips the model.
+   */
+  const startTyping = useCallback(() => {
+    setExtraction(emptyMeetingNotesExtraction);
+    setSourceLabel(null);
+    setPhotoDataUrl(null);
+    setShowSample(false);
+    setEvRows(null);
+    setAiError(null);
+    setTypedByHand(true);
+  }, []);
+
   /** Clean, empty page: no example, no half-read photo, nothing saved. */
   const backToEmpty = useCallback(() => {
     setExtraction(emptyMeetingNotesExtraction);
     setSourceLabel(null);
+    setTypedByHand(false);
     setShowSample(false);
     setPhotoDataUrl(null);
     setEvRows(null);
@@ -341,6 +378,7 @@ export function MinutesProvider({
     setExtraction(sampleMeetingExtraction);
     setShowSample(true);
     setSourceLabel(null);
+    setTypedByHand(false);
     setPhotoDataUrl(null);
     setEvRows(null);
     setAiError(null);
@@ -388,10 +426,16 @@ export function MinutesProvider({
       // asserted the fact is not in them. That is recorded, not invented.
       f.source_ref = {
         location: t("disemak oleh anda", "由您核对", "reviewed by you"),
-        snippet: t("tiada dalam nota", "笔记里没写", "not written down in the notes"),
+        // The provenance has to be TRUE, not just reassuring: for typed minutes
+        // there are no notes for the fact to be absent from, so recording
+        // "not written down in the notes" would be inventing a source — the
+        // exact thing Hard Rule 1 exists to stop.
+        snippet: typedByHand
+          ? t("tiada / tidak berkenaan", "没有这一项", "none / not applicable")
+          : t("tiada dalam nota", "笔记里没写", "not written down in the notes"),
       };
     },
-    [t],
+    [t, typedByHand],
   );
 
   // --- adding and removing rows by hand ------------------------------------
@@ -478,7 +522,9 @@ export function MinutesProvider({
   ).find((k) => groups[k].outstanding > 0);
   const todayIso = dayIsoMalaysia(new Date().toISOString()) as string;
 
-  const isReal = sourceLabel !== null;
+  // "This is the person's own meeting" — from a photo OR typed by hand. Before
+  // 2026-08-23 it meant "a photo was read", which is why typing was impossible.
+  const isReal = sourceLabel !== null || typedByHand;
   const isSample = !isReal && showSample;
   const nothingYet = !isReal && !showSample;
   // The example keeps the fictional temple's name so nobody mistakes it for
@@ -637,6 +683,8 @@ export function MinutesProvider({
         isSample,
         nothingYet,
         onPhotoPicked,
+        startTyping,
+        typedByHand,
         openSample,
         backToEmpty,
         updateField,

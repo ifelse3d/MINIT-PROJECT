@@ -43,6 +43,8 @@ export function NotesReview() {
     removeExtractionRow,
     rowHasContent,
     onPhotoPicked,
+    startTyping,
+    typedByHand,
     openSample,
     backToEmpty,
   } = useMinutes();
@@ -57,11 +59,17 @@ export function NotesReview() {
         summary={
           sourceLabel ? (
             <>📄 {sourceLabel}</>
+          ) : typedByHand ? (
+            <Tri
+              bm="Ditaip sendiri — tiada gambar. Isi setiap perkara di bawah."
+              zh="自己打字的 —— 没有照片。请在下面把每一项填好。"
+              en="Typed in by hand — no photo. Fill in each item below."
+            />
           ) : (
             <Tri
-              bm="Satu gambar, satu halaman. Minit membaca tulisan tangan Bahasa Malaysia, Cina dan Inggeris."
-              zh="一张照片拍一页。Minit 能读马来文、中文和英文的手写字。"
-              en="One photo per page. Minit reads handwriting in Malay, Chinese and English."
+              bm="Satu gambar, satu halaman. Minit membaca tulisan tangan Bahasa Malaysia, Cina dan Inggeris. Atau taip sendiri."
+              zh="一张照片拍一页。Minit 能读马来文、中文和英文的手写字。也可以自己打字。"
+              en="One photo per page. Minit reads handwriting in Malay, Chinese and English. Or type it in yourself."
             />
           )
         }
@@ -96,7 +104,25 @@ export function NotesReview() {
               }}
             />
           </label>
-          {sourceLabel && !aiBusy && (
+          {/* J's UX list N1: Minit only took photos. Typing costs no credit, no
+              upload and no model — and it is the answer when the photo will not
+              read, when the notes are already on a laptop, or when four people
+              met in a kopitiam and nobody wrote anything down. */}
+          {!typedByHand && !sourceLabel && !aiBusy && (
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={startTyping}
+            >
+              ⌨️{" "}
+              <Tri
+                bm="Taip sendiri, tanpa gambar"
+                zh="不用照片，自己打字"
+                en="Type it in, no photo"
+              />
+            </Button>
+          )}
+          {(sourceLabel || typedByHand) && !aiBusy && (
             <Button
               variant="outline"
               onClick={() => {
@@ -170,15 +196,26 @@ export function NotesReview() {
 
       <PageSection
         step={2}
-        titleBm="Semak apa yang Minit baca"
-        titleZh="核对 Minit 读到的内容"
-        titleEn="Check what Minit read"
+        titleBm={typedByHand ? "Isi butiran mesyuarat" : "Semak apa yang Minit baca"}
+        titleZh={typedByHand ? "填写会议内容" : "核对 Minit 读到的内容"}
+        titleEn={typedByHand ? "Fill in the meeting" : "Check what Minit read"}
         summary={
-          <Tri
-            bm="Untuk setiap perkara: “Betul” kalau Minit baca dengan tepat, “Ubah” kalau salah, atau “Tiada dalam nota” kalau memang tidak ditulis."
-            zh="每一项请按：读对了按「没错」，读错了按「修改」，笔记里本来就没写就按「笔记里没写」。"
-            en="For each item: “Correct” if Minit read it right, “Edit” if not, or “Not in the notes” if it was never written down."
-          />
+          typedByHand ? (
+            /* Nothing was read, so there is nothing to agree or disagree with —
+               "Correct / Edit / Not in the notes" is the wrong sentence for
+               somebody starting from a blank sheet. */
+            <Tri
+              bm="Tekan “Ubah” pada setiap baris dan taip apa yang berlaku. Guna “Tambah” untuk baris baharu."
+              zh="每一行按「修改」，把内容打进去。要多一行就按「自己加一行」。"
+              en="Tap “Edit” on each row and type what happened. Use “Add” for a new row."
+            />
+          ) : (
+            <Tri
+              bm="Untuk setiap perkara: “Betul” kalau Minit baca dengan tepat, “Ubah” kalau salah, atau “Tiada dalam nota” kalau memang tidak ditulis."
+              zh="每一项请按：读对了按「没错」，读错了按「修改」，笔记里本来就没写就按「笔记里没写」。"
+              en="For each item: “Correct” if Minit read it right, “Edit” if not, or “Not in the notes” if it was never written down."
+            />
+          )
         }
       >
         {nothingYet ? (

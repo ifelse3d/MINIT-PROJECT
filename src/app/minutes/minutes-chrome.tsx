@@ -28,6 +28,7 @@ export function MinutesChrome({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const {
     sourceLabel,
+    typedByHand,
     documentOrgName,
     isReal,
     isSample,
@@ -95,6 +96,10 @@ export function MinutesChrome({ children }: { children: ReactNode }) {
               the person asks for it, still says so. */}
           {sourceLabel ? (
             <Badge variant="secondary">📷 {sourceLabel}</Badge>
+          ) : typedByHand ? (
+            <Badge variant="secondary">
+              ⌨️ <Tri bm="Ditaip sendiri" zh="自己打字" en="Typed in" />
+            </Badge>
           ) : isSample ? (
             <Badge variant="secondary">
               <Tri bm="Contoh" zh="示范" en="Example" />
@@ -151,9 +156,9 @@ export function MinutesChrome({ children }: { children: ReactNode }) {
       <p className="rounded-2xl border-2 border-[color:var(--v2-border)] bg-white/60 p-4 text-base font-medium dark:bg-white/5">
         {!isReal ? (
           <Tri
-            bm="Mula di sini: ambil gambar nota mesyuarat tulisan tangan anda. Minit akan membacanya dan mengisi semuanya."
-            zh="从这里开始：拍下您手写的会议笔记。Minit 会读出来，把内容都填好。"
-            en="Start here: take a photo of your handwritten meeting notes. Minit reads it and fills everything in."
+            bm="Mula di sini: ambil gambar nota mesyuarat tulisan tangan anda dan Minit akan membacanya — atau taip sendiri kalau tiada gambar."
+            zh="从这里开始：拍下您手写的会议笔记，Minit 会读出来 —— 没有照片的话，也可以自己打字。"
+            en="Start here: take a photo of your handwritten meeting notes and Minit reads it — or type it in yourself if there is no photo."
           />
         ) : !allReviewed ? (
           <Tri
