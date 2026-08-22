@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Check, Undo2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
@@ -18,13 +19,22 @@ import {
   computeStandardDeadlines,
   type ConfirmedAgm,
 } from "@/lib/standard-deadlines";
+import { loadDoneDeadlines, setDeadlineDone } from "./deadline-actions";
 import { AddToCalendar } from "./add-to-calendar";
 
 // ---------------------------------------------------------------------------
 // "Akan datang / Upcoming" sidebar — the condensed version of the old
 // Deadlines tab: deadline cards (created BY CODE from confirmed minutes) and
 // society events, each with the WhatsApp-copy and Google/.ics buttons.
-// Read-only; event ENTRY lives in events-section.tsx.
+// Event ENTRY lives in events-section.tsx.
+//
+// 2026-08-23 — a deadline can finally be TICKED OFF. lib/deadlines.ts has had a
+// "done" urgency since it was written and `deadlines.status` has had a 'done'
+// value since the first migration, but nothing in the app ever set it. So a
+// treasurer who filed the annual return in June watched Minit keep shouting
+// about it, in red, for the rest of the year — and the only fix available was
+// to stop believing the reminders, which is the last thing a compliance product
+// should teach anybody. The deadline stays COMPUTED; only the tick is stored.
 // ---------------------------------------------------------------------------
 
 export function UpcomingSidebar({
@@ -44,6 +54,46 @@ export function UpcomingSidebar({
 }) {
   const t = useTriText();
   const [copied, setCopied] = useState<string | null>(null);
+  /** `kind:due_date` of every deadline somebody has ticked off. */
+  const [done, setDone] = useState<Set<string>>(new Set());
+  /** Set when a tick could not be written, so it exists on this device only. */
+  const [tickFailed, setTickFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadDoneDeadlines().then((keys) => {
+      if (!cancelled && keys.length > 0) setDone(new Set(keys));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /**
+   * Tick optimistically, then tell the truth if the write failed.
+   *
+   * The optimistic half is right — the person knows whether they filed it, and
+   * making them wait on a round-trip to say so is rude. The honest half matters
+   * more: a tick that only reached this device means the deadline is still red
+   * on everybody else's screen, and they need to know that rather than assume
+   * the committee has been told.
+   */
+  function toggleDone(d: Deadline) {
+    const key = d.kind + ":" + d.dueDateIso;
+    const next = !done.has(key);
+    setDone((prev) => {
+      const copy = new Set(prev);
+      if (next) copy.add(key);
+      else copy.delete(key);
+      return copy;
+    });
+    void setDeadlineDone({
+      kind: d.kind,
+      dueDateIso: d.dueDateIso,
+      source: d.source,
+      done: next,
+    }).then((r) => setTickFailed(!r.ok));
+  }
 
   const deadlines = useMemo(
     () => computeStandardDeadlines(todayIso, { agm }),
@@ -83,7 +133,12 @@ export function UpcomingSidebar({
       {/* Deadlines, condensed */}
       <div className="flex flex-col gap-3">
         {deadlines.map((d) => {
-          const u = deadlineUrgency(d, todayIso);
+          // The stored tick is applied to the COMPUTED deadline here, at the
+          // last moment, rather than being baked into computeStandardDeadlines:
+          // that function is pure and unit-tested against the statutory rules,
+          // and "a human says this one is handled" is not one of them.
+          const isDone = done.has(d.kind + ":" + d.dueDateIso);
+          const u = deadlineUrgency(isDone ? { ...d, status: "done" } : d, todayIso);
           const s = URGENCY_BADGE[u];
           const label = DEADLINE_LABELS[d.kind];
           const key = d.kind + d.dueDateIso;
@@ -121,11 +176,39 @@ export function UpcomingSidebar({
                     uidKey: `deadline-${d.kind}-${d.dueDateIso}`,
                   }}
                 />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => toggleDone(d)}
+                  className={isDone ? "" : "text-green-800 dark:text-green-200"}
+                >
+                  {isDone ? (
+                    <>
+                      <Undo2 aria-hidden className="size-4" strokeWidth={2.2} />
+                      <Tri bm="Belum lagi" zh="其实还没做" en="Not done after all" />
+                    </>
+                  ) : (
+                    <>
+                      <Check aria-hidden className="size-4" strokeWidth={2.6} />
+                      <Tri bm="Sudah difailkan" zh="已经做了" en="Already filed" />
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
           );
         })}
       </div>
+
+      {tickFailed && (
+        <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+          <Tri
+            bm="Tanda “sudah difailkan” ini ada pada peranti ini sahaja — ahli jawatankuasa lain masih akan nampak tarikh akhir ini merah. Pilih pertubuhan anda, atau cuba lagi apabila ada talian."
+            zh="这个「已经做了」的标记只在这台设备上 —— 其他委员看到的这条死线还是红的。请选好您的机构，或者等有网络时再试。"
+            en="This “already filed” tick is on this device only — other committee members will still see this deadline in red. Choose your organisation, or try again when you have a signal."
+          />
+        </p>
+      )}
 
       {/* Society events, condensed */}
       <h3 className="text-sm font-semibold text-muted-foreground">
