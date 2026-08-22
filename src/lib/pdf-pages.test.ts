@@ -35,7 +35,8 @@ describe("countPdfPages", () => {
 describe("aiDocMaxPages", () => {
   it("uses the per-kind default when nothing is configured", () => {
     expect(aiDocMaxPages("minutes", {})).toBe(5);
-    expect(aiDocMaxPages("ledger", {})).toBe(5);
+    // 20, not 5: a collection book after a festival is dozens of small gifts.
+    expect(aiDocMaxPages("ledger", {})).toBe(20);
     expect(aiDocMaxPages("roster", {})).toBe(20);
     expect(aiDocMaxPages("constitution", {})).toBe(DEFAULT_AI_DOC_MAX_PAGES);
   });

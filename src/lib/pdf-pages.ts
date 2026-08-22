@@ -64,7 +64,13 @@ export type DocKind = "minutes" | "ledger" | "roster" | "constitution" | "unknow
  * 我們就給多一些」— so:
  *
  *   minutes       5   a handwritten meeting record is 1-3 pages. 5 is generous.
- *   ledger        5   a donation ledger page is 1; a batch is a few.
+ *   ledger       20   RAISED FROM 5 the same day it shipped. J: 「賬單如果捐錢人
+ *                     多的話會到很多，因爲可能有些出小筆都有可能」— a temple
+ *                     collection book after a festival is dozens of names at
+ *                     RM10 each, and 5 pages would have refused the exact
+ *                     document this product exists to read. Cost is bounded
+ *                     anyway: a multi-page ledger is ONE extract action, so the
+ *                     page count moves tokens, not the quota count.
  *   roster       20   a 100-member committee list does run to several pages,
  *                     and it is a once-a-year job, so it gets more room.
  *   constitution 50   20-40 pages is normal, and it is THE expensive job.
@@ -83,7 +89,7 @@ export type DocKind = "minutes" | "ledger" | "roster" | "constitution" | "unknow
  */
 export const DEFAULT_PAGE_LIMITS: Record<DocKind, number> = {
   minutes: 5,
-  ledger: 5,
+  ledger: 20,
   roster: 20,
   constitution: 50,
   unknown: 50,

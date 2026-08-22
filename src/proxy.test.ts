@@ -56,8 +56,11 @@ describe("Next.js Proxy authentication boundary", () => {
   // two exact paths, and nothing that merely looks like either of them.
   // 2026-08-22: /reset-password was added — it must be public because the
   // recovery session arrives with the page load, not before it.
-  it("treats /login and /reset-password as the only public paths", async () => {
-    for (const path of ["/login", "/reset-password"]) {
+  // 2026-08-22: /terms and /privacy joined them — sign-up asks people to agree
+  // to those documents, and a consent link you need an account to open is not
+  // consent.
+  it("treats login, reset-password, terms and privacy as the only public paths", async () => {
+    for (const path of ["/login", "/reset-password", "/terms", "/privacy"]) {
       const open = await proxy(request(path));
       expect(open.status, `${path} must be public`).toBe(200);
       expect(open.headers.get("x-middleware-next")).toBe("1");
@@ -70,6 +73,9 @@ describe("Next.js Proxy authentication boundary", () => {
       "/reset-password/",
       "/reset-password/extra",
       "/reset-passwordx",
+      "/terms/",
+      "/termsx",
+      "/privacy/extra",
       "/health",
       "/orgs/new",
       "/",

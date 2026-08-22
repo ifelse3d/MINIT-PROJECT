@@ -19,7 +19,8 @@
     "cap:sync": "cap sync",
     "cap:android": "cap sync android && cap open android",
     "cap:ios": "cap sync ios && cap open ios",
-    "tune:minscore": "tsx scripts/tune-min-score.ts"
+    "tune:minscore": "tsx scripts/tune-min-score.ts",
+    "legal:sync": "node scripts/sync-legal.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.0.0",

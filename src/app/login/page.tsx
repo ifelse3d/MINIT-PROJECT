@@ -5,6 +5,7 @@ import { Loader2, Sparkles } from "lucide-react";
 import { Tri, useTriText } from "@/components/language-provider";
 import { PasswordInput } from "@/components/password-input";
 import { getSupabaseBrowser } from "@/db/supabase-browser";
+import { LEGAL_VERSIONS } from "@/legal/documents";
 import {
   GLASS_CARD,
   LoginBackdrop,
@@ -42,6 +43,9 @@ export default function LoginPage() {
   // exists at all — it is the only thing standing between a typo and an
   // account nobody can ever get into.
   const [confirm, setConfirm] = useState("");
+  // Sign-up only. Unticked by default and never remembered: a pre-ticked box is
+  // not consent under the PDPA, and neither is one the person never saw.
+  const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -120,6 +124,16 @@ export default function LoginPage() {
         return;
       }
     }
+    if (mode === "signup" && !agreed) {
+      setError(
+        t(
+          "Sila baca dan setuju dengan Syarat Penggunaan dan Notis Privasi dahulu",
+          "请先阅读并同意《使用条款》和《隐私权告知》",
+          "Please read and agree to the Terms of Use and the Privacy Notice first",
+        ),
+      );
+      return;
+    }
     if (mode === "signup" && password !== confirm) {
       setError(
         t(
@@ -154,6 +168,21 @@ export default function LoginPage() {
         const { data, error } = await supabase.auth.signUp({
           email: email.trim(),
           password,
+          // WHAT THEY AGREED TO, AND WHICH TEXT IT WAS (2026-08-22).
+          // The versions are content hashes of legal/*.md (scripts/sync-legal.mjs),
+          // so a later edit to a clause cannot quietly claim this person agreed
+          // to the new wording. Stored on the auth user, which needs no table
+          // and survives everything except deleting the account itself.
+          // PDPA Hard Rule 5: this records THAT consent was given and against
+          // which text — no document content, no personal data beyond the
+          // account that is being created anyway.
+          options: {
+            data: {
+              terms_accepted_at: new Date().toISOString(),
+              terms_version: LEGAL_VERSIONS.terms,
+              privacy_notice_version: LEGAL_VERSIONS.privacy,
+            },
+          },
         });
         if (error) {
           setError(
@@ -309,12 +338,59 @@ export default function LoginPage() {
               </label>
             )}
 
+            {/* CONSENT (2026-08-22). Unticked, and the button below is disabled
+                until it is ticked — an agreement somebody had to actively give
+                is the only kind that means anything. Both links open in a new
+                tab so a half-filled form is never lost to reading the notice,
+                and both pages are public (src/proxy.ts) so they can be read
+                before there is an account. */}
+            {mode === "signup" && (
+              <label className="flex items-start gap-3 text-sm leading-relaxed text-white/[0.88]">
+                <input
+                  type="checkbox"
+                  checked={agreed}
+                  onChange={(e) => setAgreed(e.target.checked)}
+                  className="mt-1 h-5 w-5 shrink-0 rounded border-white/50 accent-[#9a83ff]"
+                />
+                <span>
+                  <Tri
+                    bm="Saya telah membaca dan bersetuju dengan"
+                    zh="我已阅读并同意"
+                    en="I have read and agree to the"
+                  />{" "}
+                  <a
+                    href="/terms"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-semibold underline decoration-white/60 underline-offset-[3px] hover:decoration-white"
+                  >
+                    <Tri bm="Syarat Penggunaan" zh="《使用条款》" en="Terms of Use" />
+                  </a>{" "}
+                  <Tri bm="dan" zh="和" en="and the" />{" "}
+                  <a
+                    href="/privacy"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-semibold underline decoration-white/60 underline-offset-[3px] hover:decoration-white"
+                  >
+                    <Tri bm="Notis Privasi" zh="《隐私权告知》" en="Privacy Notice" />
+                  </a>
+                  .{" "}
+                  <Tri
+                    bm="Saya faham Minit menghasilkan DRAF yang mesti disemak oleh manusia, dan bahawa saya bertanggungjawab mendapatkan kebenaran penderma dan ahli sebelum memasukkan data peribadi mereka."
+                    zh="我明白 Minit 产生的是草稿，必须由人核对；也明白在输入捐款人和会员的个人资料之前，要先取得他们的同意。"
+                    en="I understand Minit produces DRAFTS that a human must check, and that I am responsible for obtaining the consent of donors and members before entering their personal data."
+                  />
+                </span>
+              </label>
+            )}
+
             {error && <p className="text-base text-[#ffb4b4]">{error}</p>}
             {notice && <p className="text-base text-[#ffe0a8]">{notice}</p>}
 
             <button
               type="submit"
-              disabled={busy}
+              disabled={busy || (mode === "signup" && !agreed)}
               className="mt-1 flex w-full items-center justify-center gap-2 rounded-[14px] bg-gradient-to-r from-[#6d5ae6] to-[#9a83ff] p-4 text-base font-semibold text-white shadow-[0_12px_28px_rgba(88,60,220,0.38)] transition-[filter,box-shadow,transform] duration-150 hover:shadow-[0_16px_34px_rgba(88,60,220,0.46)] hover:brightness-105 active:translate-y-px disabled:cursor-wait disabled:opacity-80"
             >
               {/* Spinner sits beside a stable label so the button never resizes */}
@@ -359,6 +435,7 @@ export default function LoginPage() {
                 // Half-typed confirmation must not survive the switch, or the
                 // next sign-up starts with a mismatch nobody typed.
                 setConfirm("");
+                setAgreed(false);
               }}
               className="font-semibold text-white underline decoration-white/60 underline-offset-[3px] hover:decoration-white"
             >
