@@ -218,7 +218,7 @@ export default function LoginPage() {
       {/* Brand block */}
       <div className="flex flex-col items-center gap-3">
         <div className="flex items-center gap-3">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[color:var(--v2-primary)] text-2xl font-bold text-white">
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[color:var(--v2-primary-fill)] text-2xl font-bold text-white">
             M
           </span>
           <span className="text-4xl font-bold leading-none tracking-tight">Minit</span>
@@ -377,7 +377,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={busy || (mode === "signup" && !agreed)}
-            className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-[color:var(--v2-primary)] p-3.5 text-base font-semibold text-white transition-[filter] duration-150 hover:brightness-105 active:translate-y-px disabled:cursor-wait disabled:opacity-60"
+            className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-[color:var(--v2-primary-fill)] p-3.5 text-base font-semibold text-white transition-[filter] duration-150 hover:brightness-105 active:translate-y-px disabled:cursor-wait disabled:opacity-60"
           >
             {/* Spinner sits beside a stable label so the button never resizes */}
             {busy && <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.4} />}

@@ -156,7 +156,7 @@ export default async function PlanPage() {
         {contactEmail !== "" ? (
           <a
             href={`mailto:${contactEmail}?subject=Minit%20plan%20upgrade%20-%20${encodeURIComponent(active.name)}`}
-            className="inline-flex min-h-11 items-center rounded-xl bg-[color:var(--v2-primary)] px-5 text-base font-semibold text-white"
+            className="inline-flex min-h-11 items-center rounded-xl bg-[color:var(--v2-primary-fill)] px-5 text-base font-semibold text-white"
           >
             <Tri bm="Hubungi kami" zh="联络我们" en="Contact us" />
           </a>

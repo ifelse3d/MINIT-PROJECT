@@ -177,7 +177,8 @@
   /* --- the one brand accent ------------------------------------------- */
   /* White text on this measures 6.14:1 (kept from the audit). The "gradient"
      pair now holds ONE colour twice: primary buttons are flat. */
-  --v2-primary: #5b4bd6;
+  --v2-primary: #5b4bd6;        /* accent for TEXT and icons */
+  --v2-primary-fill: #5b4bd6;   /* filled controls carrying WHITE text (6.14:1) */
   --v2-primary-soft: #eceafc;
   --v2-grad-from: #5b4bd6;
   --v2-grad-to: #5b4bd6;
@@ -210,7 +211,12 @@
 }
 
 .dark .v2-root {
+  /* TWO tokens on purpose (found in the dark-mode screenshot pass):
+     the light lavender that reads well as TEXT on the dark page (#8d80f0,
+     ~7:1) fails as a FILL under white text (~2.5:1). Fills keep the deep
+     audited purple; text accents keep the light one. */
   --v2-primary: #8d80f0;
+  --v2-primary-fill: #6f5ef2;   /* white text on this: 4.61:1 (audited) */
   --v2-primary-soft: rgba(141, 128, 240, 0.16);
   --v2-page: #12151c;
   --v2-card: #1a1e28;
@@ -319,9 +325,10 @@
   font-weight: 600;
   transition: background 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
 }
+
 .v2-pill-primary {
   color: #fff;
-  background: var(--v2-primary);
+  background: var(--v2-primary-fill);
   box-shadow: var(--v2-shadow-soft);
 }
 .v2-pill-primary:hover {

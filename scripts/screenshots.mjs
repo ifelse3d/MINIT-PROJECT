@@ -95,6 +95,8 @@ async function rest(pathname, opts = {}) {
 }
 
 const BASE = "http://localhost:3000";
+const DARK = process.argv.includes("--dark");
+const SUFFIX = DARK ? "-dark" : "";
 const ORG_NAME = "ZZZ 测试社团（截图用，可删）";
 
 async function run() {
@@ -108,6 +110,16 @@ async function run() {
   });
   const page = await browser.newPage();
   page.setDefaultTimeout(30000);
+  const consoleErrors = [];
+  page.on("console", (m) => {
+    if (m.type() === "error") consoleErrors.push(m.text().slice(0, 200));
+  });
+  page.on("pageerror", (e) => consoleErrors.push("PAGEERROR " + String(e).slice(0, 200)));
+  if (DARK) {
+    await page.evaluateOnNewDocument(() => {
+      try { localStorage.setItem("minit.theme.v1", "dark"); } catch {}
+    });
+  }
 
   // Pre-set the language cookie + choice so the first-run picker is not in
   // front of every screenshot (we screenshot the picker separately).
@@ -115,7 +127,7 @@ async function run() {
   await page.goto(`${BASE}/login`, { waitUntil: "networkidle2" });
 
   // 0. the first-run language picker itself (once, desktop)
-  await page.screenshot({ path: path.join(OUT, "s-lang-picker-1280.png") });
+  await page.screenshot({ path: path.join(OUT, `s-lang-picker-1280${SUFFIX}.png`) });
 
   // choose 中文 to dismiss
   const zhBtn = await page.$$("button");
@@ -132,7 +144,7 @@ async function run() {
   for (const [w, h, tag] of [[360, 800, "360"], [768, 1024, "768"], [1280, 900, "1280"]]) {
     await page.setViewport({ width: w, height: h });
     await page.goto(`${BASE}/login`, { waitUntil: "networkidle2" });
-    await page.screenshot({ path: path.join(OUT, `s-login-${tag}.png`) });
+    await page.screenshot({ path: path.join(OUT, `s-login-${tag}${SUFFIX}.png`) });
   }
 
   // 2. sign in
@@ -148,7 +160,7 @@ async function run() {
 
   // 3. home WITHOUT an org (the single-card state)
   await page.goto(`${BASE}/`, { waitUntil: "networkidle2" });
-  await page.screenshot({ path: path.join(OUT, "s-home-no-org-1280.png") });
+  await page.screenshot({ path: path.join(OUT, `s-home-no-org-1280${SUFFIX}.png`) });
 
   // 4. create the test org through the UI
   await page.goto(`${BASE}/orgs/new`, { waitUntil: "networkidle2" });
@@ -163,7 +175,7 @@ async function run() {
   }
   await new Promise((r) => setTimeout(r, 6000));
   console.log("after create, at", page.url());
-  await page.screenshot({ path: path.join(OUT, "s-onboarding-1280.png") });
+  await page.screenshot({ path: path.join(OUT, `s-onboarding-1280${SUFFIX}.png`) });
 
   // 5. the pages, at three widths
   const shots = [
@@ -181,7 +193,7 @@ async function run() {
     for (const [route, name] of shots) {
       await page.goto(`${BASE}${route}`, { waitUntil: "networkidle2" });
       await new Promise((r) => setTimeout(r, 600));
-      await page.screenshot({ path: path.join(OUT, `s-${name}-${tag}.png`) });
+      await page.screenshot({ path: path.join(OUT, `s-${name}-${tag}${SUFFIX}.png`) });
     }
     console.log("done width", tag);
   }
@@ -199,6 +211,8 @@ async function run() {
   }
   await deleteTestUser(userId);
   console.log("cleanup done");
+  console.log("console errors seen:", consoleErrors.length);
+  for (const e of consoleErrors.slice(0, 12)) console.log("  -", e);
 }
 
 run().catch((e) => {

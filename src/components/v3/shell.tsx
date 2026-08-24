@@ -135,7 +135,7 @@ function Rail({ pathname }: { pathname: string }) {
       aria-label="Navigation"
     >
       <div className="flex items-center gap-2 px-5 pb-4 pt-5">
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[color:var(--v2-primary)] text-lg font-bold text-white">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[color:var(--v2-primary-fill)] text-lg font-bold text-white">
           M
         </span>
         <span className="text-xl font-semibold tracking-tight">Minit</span>
@@ -154,7 +154,7 @@ function Rail({ pathname }: { pathname: string }) {
                     className={cn(
                       "flex min-h-11 items-center gap-3 rounded-xl px-3 text-base font-medium transition-colors",
                       active
-                        ? "bg-[color:var(--v2-primary)] text-white"
+                        ? "bg-[color:var(--v2-primary-fill)] text-white"
                         : "text-[color:var(--v2-text)] hover:bg-[color:var(--v2-primary-soft)]",
                     )}
                   >
@@ -198,7 +198,7 @@ function Rail({ pathname }: { pathname: string }) {
                             className={cn(
                               "flex min-h-9 items-center rounded-lg px-2.5 text-[0.95rem] transition-colors",
                               active
-                                ? "bg-[color:var(--v2-primary)] font-medium text-white"
+                                ? "bg-[color:var(--v2-primary-fill)] font-medium text-white"
                                 : "text-[color:var(--v2-text-soft)] hover:bg-[color:var(--v2-primary-soft)] hover:text-[color:var(--v2-text)]",
                             )}
                           >
@@ -231,7 +231,7 @@ function MobileTopBar() {
   return (
     <header className="flex items-center justify-between gap-3 md:hidden">
       <div className="flex items-center gap-2">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[color:var(--v2-primary)] text-base font-bold text-white">
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[color:var(--v2-primary-fill)] text-base font-bold text-white">
           M
         </span>
         <span className="text-lg font-semibold tracking-tight">Minit</span>

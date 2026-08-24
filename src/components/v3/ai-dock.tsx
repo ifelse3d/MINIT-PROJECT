@@ -193,7 +193,7 @@ export function AIDock({
           onClick={() => setOpen(true)}
           // bottom-20 on phones: the v3 tab bar owns the bottom edge (Stage R),
           // and a launcher sitting ON the 更多 tab is a mis-tap machine.
-          className="v2-pill fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[color:var(--v2-primary)] text-white shadow-lg md:bottom-5 md:right-5"
+          className="v2-pill fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[color:var(--v2-primary-fill)] text-white shadow-lg md:bottom-5 md:right-5"
           style={{ marginBottom: "env(safe-area-inset-bottom)" }}
         >
           <Sparkles className="h-6 w-6" strokeWidth={1.8} />

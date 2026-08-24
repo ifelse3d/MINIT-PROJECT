@@ -138,7 +138,7 @@ export function IconChip({
       className={cn(
         "inline-flex h-11 w-11 items-center justify-center rounded-xl",
         gradient
-          ? "bg-[color:var(--v2-primary)] text-white"
+          ? "bg-[color:var(--v2-primary-fill)] text-white"
           : "bg-[color:var(--v2-primary-soft)] text-[color:var(--v2-primary)]",
         className
       )}

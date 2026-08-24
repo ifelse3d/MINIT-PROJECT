@@ -17,7 +17,9 @@ import { useMinutes } from "./minutes-store";
 // ---------------------------------------------------------------------------
 
 const MINUTES_TABS = [
-  { href: "/minutes", labelBm: "Gambar & semak", labelZh: "拍照与核对", labelEn: "Photo & check" },
+  // R-4 (2026-08-25): named for what the person DOES, and typing is a first-
+  // class way in — not "photo & check", the pipeline's name for itself.
+  { href: "/minutes", labelBm: "Ambil / taip", labelZh: "拍或打字", labelEn: "Photo or type" },
   { href: "/minutes/attendance", labelBm: "Kehadiran", labelZh: "出席者", labelEn: "Attendance" },
   { href: "/minutes/document", labelBm: "Minit siap", labelZh: "做好的记录", labelEn: "The document" },
   { href: "/minutes/history", labelBm: "Sejarah", labelZh: "历史", labelEn: "History" },

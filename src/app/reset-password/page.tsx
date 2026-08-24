@@ -139,7 +139,7 @@ export default function ResetPasswordPage() {
     <>
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center gap-7 px-4 py-10 sm:py-16">
         <div className="flex items-center gap-3">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[color:var(--v2-primary)] text-2xl font-bold text-white">
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[color:var(--v2-primary-fill)] text-2xl font-bold text-white">
             M
           </span>
           <span className="text-4xl font-bold leading-none tracking-tight">Minit</span>
@@ -190,7 +190,7 @@ export default function ResetPasswordPage() {
               <button
                 type="button"
                 onClick={() => window.location.assign("/")}
-                className="flex w-full items-center justify-center rounded-xl bg-[color:var(--v2-primary)] p-3.5 text-base font-semibold text-white"
+                className="flex w-full items-center justify-center rounded-xl bg-[color:var(--v2-primary-fill)] p-3.5 text-base font-semibold text-white"
               >
                 <Tri bm="Teruskan" zh="继续" en="Continue" />
               </button>
@@ -245,7 +245,7 @@ export default function ResetPasswordPage() {
               <button
                 type="submit"
                 disabled={busy}
-                className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-[color:var(--v2-primary)] p-3.5 text-base font-semibold text-white transition-[filter] duration-150 hover:brightness-105 active:translate-y-px disabled:cursor-wait disabled:opacity-60"
+                className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-[color:var(--v2-primary-fill)] p-3.5 text-base font-semibold text-white transition-[filter] duration-150 hover:brightness-105 active:translate-y-px disabled:cursor-wait disabled:opacity-60"
               >
                 {busy && <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.4} />}
                 <Tri bm="Simpan kata laluan" zh="保存密码" en="Save password" />
