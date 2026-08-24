@@ -202,6 +202,31 @@ async function run() {
     check("S0-1 receipt number found on page", false);
   }
 
+  // --- S0-1b: the month-end e-Invois file from month alone ------------------
+  {
+    const month = new Date().toISOString().slice(0, 7);
+    const ok = await page.evaluate(async (m) => {
+      const r = await fetch("/api/einvois-xlsx", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ month: m, fileIndex: 0 }),
+      });
+      return { status: r.status, type: r.headers.get("content-type") ?? "" };
+    }, month);
+    check("S0-1 /api/einvois-xlsx 200 + xlsx from month alone (server data)",
+      ok.status === 200 && ok.type.includes("spreadsheet"), `status=${ok.status}`);
+    const empty = await page.evaluate(async () => {
+      const r = await fetch("/api/einvois-xlsx", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ month: "2020-01", fileIndex: 0 }),
+      });
+      return r.status;
+    });
+    check("S0-1 empty month → 4xx, never an invented tax file",
+      empty >= 400 && empty < 500, `status=${empty}`);
+  }
+
   // --- F-4: a hard reload hydrates the register from the DB ----------------
   await page.evaluate(() => {
     for (let i = localStorage.length - 1; i >= 0; i--) {
