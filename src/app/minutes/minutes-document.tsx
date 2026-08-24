@@ -198,9 +198,9 @@ export function MinutesDocument() {
                 </Button>
                 <span className="text-sm text-muted-foreground">
                   <Tri
-                    bm="Guna 1 daripada kuota AI anda."
-                    zh="会用掉 1 次 AI 额度。"
-                    en="Uses 1 of your AI allowance."
+                    bm="Kira-kira 1% daripada penggunaan AI bulanan."
+                    zh="约占本月 AI 用量的 1%。"
+                    en="About 1% of the monthly AI allowance."
                   />
                 </span>
               </div>

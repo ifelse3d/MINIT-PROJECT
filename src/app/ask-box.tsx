@@ -31,6 +31,7 @@ import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
 import { writeIntake, type IntakeKind } from "@/lib/intake-handoff";
 import { tidyReply } from "@/lib/tidy-reply";
+import { pctOfQuota } from "@/lib/ai/usage-display";
 import {
   AnswerSources,
   type AnswerSource,
@@ -483,32 +484,19 @@ export function AskBox({
             en="This month's AI help is used up. It starts again on the 1st of next month — all your records and documents still open as normal."
           />
         ) : (
-          /* 2026-08-22: the percentage of the month's free quota now travels
-             with the count here too, so this line, the assistant badge and
-             /settings all read the same meter. It always says what the
-             percentage is OF ("guna / 用了 / used") — a bare percentage beside
-             a remaining count reads as the remaining percentage. */
+          /* F-1 (2026-08-25, J's decision #4): the meter reads as a PERCENTAGE
+             of the month, everywhere. It always says what the percentage is OF
+             ("guna / 用了 / used") — a bare percentage reads as the remaining
+             one, which is the opposite. */
           <Tri
-            bm={`Setiap soalan guna 1 bantuan AI; setiap gambar guna 2. ${
-              remaining === null
-                ? ""
-                : `Tinggal ${remaining} bulan ini${
-                    usedPct === null ? "" : ` (${usedPct}% kuota percuma sudah diguna)`
-                  }.`
+            bm={`Setiap soalan guna kira-kira ${pctOfQuota(1)}% daripada penggunaan AI bulanan; setiap gambar kira-kira ${pctOfQuota(2)}%.${
+              usedPct === null ? "" : ` Bulan ini sudah guna ${usedPct}%.`
             }`}
-            zh={`每问一次用掉 1 次 AI；每张照片用掉 2 次。${
-              remaining === null
-                ? ""
-                : `这个月还剩 ${remaining} 次${
-                    usedPct === null ? "" : `（免费额度已经用了 ${usedPct}%）`
-                  }。`
+            zh={`每问一次约占本月 AI 用量 ${pctOfQuota(1)}%；每张照片约 ${pctOfQuota(2)}%。${
+              usedPct === null ? "" : `本月 AI 用量已用 ${usedPct}%。`
             }`}
-            en={`Each question uses 1 AI action; each photo uses 2. ${
-              remaining === null
-                ? ""
-                : `${remaining} left this month${
-                    usedPct === null ? "" : ` (${usedPct}% of the free quota used)`
-                  }.`
+            en={`Each question uses about ${pctOfQuota(1)}% of the monthly AI allowance; each photo about ${pctOfQuota(2)}%.${
+              usedPct === null ? "" : ` ${usedPct}% used this month.`
             }`}
           />
         )}

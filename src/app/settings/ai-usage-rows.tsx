@@ -88,9 +88,9 @@ export function AiUsageRows({ usage }: { usage: UsageState }) {
       ) : (
         <p className="text-sm text-muted-foreground">
           <Tri
-            bm={`Baki ${usage.totalRemaining} tindakan. Setiap pengekstrakan gambar atau carian AI mengguna 1–2 tindakan.`}
-            zh={`剩余 ${usage.totalRemaining} 次。每次照片提取或 AI 搜索用 1～2 次。`}
-            en={`${usage.totalRemaining} actions left. Each photo extraction or AI search uses 1–2 actions.`}
+            bm={`Sudah guna ${pct}% bulan ini. Setiap pengekstrakan gambar atau carian AI mengguna kira-kira 1–2%.`}
+            zh={`本月 AI 用量已用 ${pct}%。每次照片提取或 AI 搜索约占 1～2%。`}
+            en={`${pct}% used this month. Each photo extraction or AI search uses about 1–2%.`}
           />
         </p>
       )}

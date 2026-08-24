@@ -228,9 +228,9 @@ export function CreateOrgForm({
           )}
           <p className="text-sm text-muted-foreground">
             <Tri
-              bm="Sekali sahaja seumur hidup pertubuhan. Ia mengambil 1 daripada 100 bantuan AI bulan ini."
-              zh="一个社团一辈子做一次。会用掉这个月 100 次 AI 里的 1 次。"
-              en="Once in the life of the society. It uses 1 of this month's 100 AI actions."
+              bm="Sekali sahaja seumur hidup pertubuhan. Kira-kira 1% daripada penggunaan AI bulan ini."
+              zh="一个社团一辈子做一次。约占本月 AI 用量的 1%。"
+              en="Once in the life of the society. About 1% of this month's AI allowance."
             />
           </p>
         </div>

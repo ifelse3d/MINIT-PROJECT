@@ -29,6 +29,7 @@ import { Tri, useTriText } from "@/components/language-provider";
 import { GlassBadge } from "./surfaces";
 import { AnswerSources, type AnswerSource } from "./answer-sources";
 import { tidyReply } from "@/lib/tidy-reply";
+import { pctOfQuota } from "@/lib/ai/usage-display";
 
 type Turn = {
   role: "user" | "assistant";
@@ -195,9 +196,9 @@ export function AIPanel({
           </p>
           <p className="text-base text-[color:var(--v2-text-soft)]">
             <Tri
-              bm="Setiap soalan guna 1 bantuan AI"
-              zh="每问一次用掉 1 次 AI"
-              en="Each question uses 1 AI action"
+              bm={`Setiap soalan guna kira-kira ${pctOfQuota(1)}% penggunaan bulanan`}
+              zh={`每问一次约占本月 AI 用量 ${pctOfQuota(1)}%`}
+              en={`Each question uses about ${pctOfQuota(1)}% of the monthly allowance`}
             />
           </p>
         </div>
@@ -207,12 +208,15 @@ export function AIPanel({
             run out" readable at a glance. The word "guna / 用了 / used" is
             carried with the figure on purpose — "Baki 99 · 1%" on its own reads
             as "1% LEFT", which is the opposite of what it says. */}
+        {/* F-1 (2026-08-25, J's decision #4): the badge reads the percentage,
+            with "used" carried on it so it cannot be misread as "X% left".
+            The raw count only appears when the percentage is unknown. */}
         {remaining !== null && (
           <GlassBadge tone={remaining > 0 ? "info" : "missing"}>
             <Tri
-              bm={`Baki ${remaining}${usedPct === null ? "" : ` · ${usedPct}% guna`}`}
-              zh={`剩 ${remaining}${usedPct === null ? "" : ` · 用了 ${usedPct}%`}`}
-              en={`${remaining} left${usedPct === null ? "" : ` · ${usedPct}% used`}`}
+              bm={usedPct === null ? `Baki ${remaining}` : `${usedPct}% guna bulan ini`}
+              zh={usedPct === null ? `剩 ${remaining}` : `本月已用 ${usedPct}%`}
+              en={usedPct === null ? `${remaining} left` : `${usedPct}% used this month`}
             />
           </GlassBadge>
         )}

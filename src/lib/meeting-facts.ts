@@ -39,12 +39,21 @@ export type KnownMeetingFacts = {
   meetingDateIso: string;
   /** Free text, or "". */
   venue: string;
+  /**
+   * F-2 (2026-08-25, J's dropped ask "聊天式補充框"): free text for
+   * abbreviations, names and dates the notes use — "LKY = 林國源", "初八 is
+   * the lunar date". Unlike the three fields above it does NOT overlay the
+   * extraction afterwards; it travels TO the model as labelled DATA in the
+   * prompt (untrustedBlock), so the reading itself gets better.
+   */
+  notes: string;
 };
 
 export const EMPTY_MEETING_FACTS: KnownMeetingFacts = {
   meetingType: "",
   meetingDateIso: "",
   venue: "",
+  notes: "",
 };
 
 /** True when the person filled in nothing at all — nothing to apply. */

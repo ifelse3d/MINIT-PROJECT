@@ -402,6 +402,10 @@ export function MinutesProvider({
     try {
       const form = new FormData();
       form.append("photo", file);
+      // F-2: the supplement box travels WITH the photo, so the model reads
+      // with the person's own knowledge (abbreviations, names, which date is
+      // which). Sent only when something was typed.
+      if (facts.notes.trim() !== "") form.append("context", facts.notes.trim());
       const res = await fetch("/api/extract-minutes", { method: "POST", body: form });
       const body = await res.json().catch(() => null);
       if (!res.ok) throw new Error(body?.error ?? joinUserError(USER_ERRORS.aiUnavailable));

@@ -4,6 +4,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfidenceBadge } from "@/components/confidence-badge";
 import { Tri, useTriText } from "@/components/language-provider";
+import { VoiceButton } from "@/components/voice-input";
 import { formatDateLong, isIsoDate, toIsoDate } from "@/lib/date-input";
 import { useMinutes, type TextLikeField } from "./minutes-store";
 
@@ -151,26 +152,41 @@ export function FieldRow({
                 aria-label={labelEn}
               />
             ) : (
-              <input
-                autoFocus
-                value={draft}
-                inputMode={editor.kind === "date" ? "numeric" : undefined}
-                placeholder={
-                  editor.kind === "date"
-                    ? t(
-                        "hari/bulan/tahun — 2/2/2026",
-                        "日/月/年 —— 2/2/2026",
-                        "day/month/year — 2/2/2026",
-                      )
-                    : undefined
-                }
-                onChange={(ev) => {
-                  setDraft(ev.target.value);
-                  setProblem(null);
-                }}
-                className="h-12 w-full max-w-md rounded-lg border border-input bg-white px-3 text-base dark:bg-transparent"
-                aria-label={labelEn}
-              />
+              <>
+                <input
+                  autoFocus
+                  value={draft}
+                  inputMode={editor.kind === "date" ? "numeric" : undefined}
+                  placeholder={
+                    editor.kind === "date"
+                      ? t(
+                          "hari/bulan/tahun — 2/2/2026",
+                          "日/月/年 —— 2/2/2026",
+                          "day/month/year — 2/2/2026",
+                        )
+                      : undefined
+                  }
+                  onChange={(ev) => {
+                    setDraft(ev.target.value);
+                    setProblem(null);
+                  }}
+                  className="h-12 w-full max-w-md rounded-lg border border-input bg-white px-3 text-base dark:bg-transparent"
+                  aria-label={labelEn}
+                />
+                {/* F-3: speak instead of type. Free-text rows only — an enum
+                    or a date box cannot accept dictation. Renders nothing in
+                    browsers without speech support. */}
+                {editor.kind === "text" && (
+                  <VoiceButton
+                    onText={(spoken) => {
+                      setDraft((prev) =>
+                        prev.trim() === "" ? spoken : `${prev} ${spoken}`,
+                      );
+                      setProblem(null);
+                    }}
+                  />
+                )}
+              </>
             )}
             <Button
               onClick={() => {

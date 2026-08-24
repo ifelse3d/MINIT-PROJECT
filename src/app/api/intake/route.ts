@@ -8,9 +8,13 @@ import { getVisionProvider } from "@/lib/ai/provider";
 import {
   checkAndRecordUsage,
   createUsageRecorder,
+  refundUsage,
   requireAiQuota,
   type UsageCharge,
 } from "@/lib/ai/usage";
+import { glossaryPromptBlockForReading } from "@/lib/glossary";
+import { loadGlossary } from "@/lib/glossary-server";
+import { demoteSuspectPhones } from "@/lib/verbatim";
 import { QuotaExceededError } from "@/lib/ai/usage-core";
 import {
   classificationSchema,
@@ -240,9 +244,17 @@ export async function POST(req: Request) {
 
     const onExtractUsage = createUsageRecorder(gate.org.id, extractCharge);
 
+    // F-2 (2026-08-25): the home page's "one door" now reads with the SAME
+    // prompt the /minutes camera uses — including the society's own glossary.
+    // Before this, the same photo read differently depending on which page it
+    // was dropped on, and nobody could see why.
+    const glossaryBlock =
+      kind === "meeting_notes"
+        ? glossaryPromptBlockForReading(await loadGlossary(gate.org.id))
+        : "";
     const prompt =
       kind === "meeting_notes"
-        ? extractMeetingNotesPrompt({ orgName, todayIso })
+        ? extractMeetingNotesPrompt({ orgName, todayIso, glossaryBlock })
         : kind === "ledger_page"
           ? extractLedgerPrompt({ orgName, todayIso })
           : extractConstitutionPrompt({ orgName });
@@ -263,6 +275,10 @@ export async function POST(req: Request) {
         onUsage: onExtractUsage,
       });
     } catch {
+      // F-2 parity with /api/extract-minutes: the vendor was never reached (or
+      // threw) — the extract action is refunded (CLAUDE.md rule 10). Until
+      // tonight this was the ONE reading path that charged for a failure.
+      await refundUsage(gate.org.id, extractCharge);
       return NextResponse.json(
         { error: joinUserError(USER_ERRORS.aiUnavailable) },
         { status: 502 },
@@ -293,11 +309,23 @@ ${issues}`,
     }
 
     if (!parsed.success) {
+      // Two attempts, nothing readable came back: the person is left with
+      // nothing, so the extract action is refunded (rule 10) — same as
+      // /api/extract-minutes. The classify action stays charged: the file WAS
+      // recognised.
+      await refundUsage(gate.org.id, extractCharge);
       return NextResponse.json(
         { kind, error: joinUserError(USER_ERRORS.aiCouldNotRead) },
         { status: 422 },
       );
     }
+
+    // S0-7 parity: a "confirmed" phone with the wrong digit count is an
+    // unflagged truncation — demote to "check" before it reaches the review.
+    const extraction =
+      kind === "ledger_page"
+        ? demoteSuspectPhones(parsed.data as Parameters<typeof demoteSuspectPhones>[0]).extraction
+        : parsed.data;
 
     // Keep the page + a history row (best-effort), so the original stays
     // checkable against every field Minit read off it.
@@ -316,7 +344,7 @@ ${issues}`,
       page: DESTINATION[kind].page,
       language: classification.language_detected,
       fileName: file.name,
-      extraction: parsed.data,
+      extraction,
       provider: provider.name,
     });
   } catch {

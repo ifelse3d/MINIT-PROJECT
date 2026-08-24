@@ -256,7 +256,7 @@ export class QuotaExceededError extends Error {
  * instruction. Everything the user can still do themselves is now spelled out.
  */
 export const QUOTA_BLOCKED_MESSAGE = {
-  bm: "Bantuan AI untuk bulan ini sudah habis digunakan (setiap gambar yang dibaca AI mengambil 1–2 daripadanya). Ia akan bermula semula pada 1 hari bulan depan. Sementara itu, semua rekod, resit dan dokumen anda masih boleh dibuka dan dimuat turun seperti biasa — hanya pembacaan gambar baharu yang terhenti. Untuk menambah sekarang, hubungi orang yang memasang Minit untuk pertubuhan anda.",
-  zh: "这个月的 AI 用量已经用完了（AI 每读一张照片会用掉 1～2 次）。下个月 1 号会自动重新开始。在这之前，您所有的记录、收据和文件都还能照常打开和下载，只是不能再让 AI 读新的照片。想现在增加用量，请联系帮您安装 Minit 的人。",
-  en: "This month's AI help has all been used (each photo the AI reads uses 1–2 of it). It starts again on the 1st of next month. Until then all your records, receipts and documents still open and download as normal — only reading new photos is paused. To add more now, contact whoever set Minit up for your organisation.",
+  bm: "Bantuan AI untuk bulan ini sudah habis digunakan (setiap gambar yang dibaca AI mengambil kira-kira 1–2% daripadanya). Ia akan bermula semula pada 1 hari bulan depan. Sementara itu, semua rekod, resit dan dokumen anda masih boleh dibuka dan dimuat turun seperti biasa — hanya pembacaan gambar baharu yang terhenti. Untuk menambah sekarang, hubungi orang yang memasang Minit untuk pertubuhan anda.",
+  zh: "这个月的 AI 用量已经用完了（AI 每读一张照片约占 1～2%）。下个月 1 号会自动重新开始。在这之前，您所有的记录、收据和文件都还能照常打开和下载，只是不能再让 AI 读新的照片。想现在增加用量，请联系帮您安装 Minit 的人。",
+  en: "This month's AI help has all been used (each photo the AI reads uses about 1–2% of it). It starts again on the 1st of next month. Until then all your records, receipts and documents still open and download as normal — only reading new photos is paused. To add more now, contact whoever set Minit up for your organisation.",
 } as const;

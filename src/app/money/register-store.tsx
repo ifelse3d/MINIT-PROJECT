@@ -33,6 +33,7 @@ import { todayIsoMalaysia } from "@/lib/history";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
 import { consumeIntake } from "@/lib/intake-handoff";
 import { issueAndSaveReceipts } from "./actions";
+import { loadRegisterDonations } from "./register-actions";
 import { loadRemittanceBatches, saveRemittanceBatch } from "./custody-actions";
 
 // ---------------------------------------------------------------------------
@@ -332,6 +333,29 @@ export function RegisterProvider({
       cancelled = true;
     };
     // setBatches is stable (usePersistentState); this must run exactly once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // F-4 (2026-08-25): the REGISTER hydrates from the database too, so signing
+  // in on another computer shows the organisation's money instead of an empty
+  // page ("换装置钱不见了" — on the UX list since 8/20). Same union rule as the
+  // batches above: DB rows win on a collision (they are what every other
+  // device sees); rows only this device has — unreceipted drafts, offline
+  // work — are kept. localStorage is now the offline draft, not the record.
+  useEffect(() => {
+    let cancelled = false;
+    void loadRegisterDonations().then((remote) => {
+      if (cancelled || remote.length === 0) return;
+      setDonations((local) => {
+        const byId = new Map(local.map((d) => [d.id, d]));
+        for (const d of remote) byId.set(d.id, d);
+        return [...byId.values()];
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+    // setDonations is stable (usePersistentState); run exactly once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

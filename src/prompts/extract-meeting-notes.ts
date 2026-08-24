@@ -13,12 +13,21 @@ export type ExtractMeetingNotesPromptParams = {
    * glossary existed.
    */
   glossaryBlock?: string;
+  /**
+   * F-2 (2026-08-25): what the person typed into the supplement box before
+   * the reading — abbreviations, names, which date is which — ALREADY wrapped
+   * by untrustedBlock() (it is user text and must arrive labelled as data).
+   * Empty string leaves this prompt byte-identical to what the eval measured,
+   * exactly like the glossary block above.
+   */
+  contextBlock?: string;
 };
 
 export function extractMeetingNotesPrompt({
   orgName,
   todayIso,
   glossaryBlock = "",
+  contextBlock = "",
 }: ExtractMeetingNotesPromptParams): string {
   return `You extract facts from photographed handwritten meeting notes for the Malaysian society "${orgName}". Notes may mix Bahasa Malaysia, Chinese (中文) and English in one page. Today is ${todayIso}.
 
@@ -66,5 +75,5 @@ Amounts: extract as integer sen (RM 3,500.00 => 350000). Extract ONLY numbers yo
 Dates: normalise to YYYY-MM-DD; resolve 2-digit years to the most recent past date relative to today; if the date is not written anywhere, it is missing.
 Names: keep the spelling as written; put alternate scripts (e.g. 陈亚九) in the snippet.
 Name characters: Chinese given names often use an uncommon character that resembles a common one (昶/湘, 骐/骑, 倩/情, 妮/呢). A substituted character is a DIFFERENT PERSON, so never "correct" a name into the character you expect. If a name character is not unmistakably legible, output what you see and mark that name "check" so a human verifies it — an honest "check" is always better than a confident wrong name.
-Empty page sections are not errors — output empty arrays.${glossaryBlock}`;
+Empty page sections are not errors — output empty arrays.${glossaryBlock}${contextBlock}`;
 }

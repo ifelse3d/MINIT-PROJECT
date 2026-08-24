@@ -245,9 +245,9 @@ export function ImportCommittee() {
               </span>
               <span className="block text-sm text-muted-foreground">
                 <Tri
-                  bm="Untuk senarai bergambar atau format lain. Guna 1 kuota AI."
-                  zh="给照片、PDF、或格式不对的名单。会用掉 1 次 AI 额度。"
-                  en="For a photographed list or any other format. Uses 1 AI credit."
+                  bm="Untuk senarai bergambar atau format lain. Kira-kira 1% daripada penggunaan AI bulanan."
+                  zh="给照片、PDF、或格式不对的名单。约占本月 AI 用量的 1%。"
+                  en="For a photographed list or any other format. About 1% of the monthly AI allowance."
                 />
               </span>
             </button>
@@ -403,8 +403,8 @@ Setiausaha, 林小美
                       ) : (
                         <Tri
                           bm="Tak difahami? Biar Minit yang baca · guna 1 kuota AI"
-                          zh="看不懂？让 Minit 帮你读 · 会用掉 1 次 AI 额度"
-                          en="Not understood? Let Minit read it · uses 1 AI credit"
+                          zh="看不懂？让 Minit 帮你读 · 约占本月 AI 用量的 1%"
+                          en="Not understood? Let Minit read it · about 1% of the monthly AI allowance"
                         />
                       )}
                     </Button>

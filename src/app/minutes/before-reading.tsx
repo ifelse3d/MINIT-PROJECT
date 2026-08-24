@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
+import { VoiceButton } from "@/components/voice-input";
 import { MEETING_TYPES, MEETING_TYPE_LABEL } from "@/lib/meeting-types";
 import { toIsoDate } from "@/lib/date-input";
 import { EMPTY_MEETING_FACTS, type KnownMeetingFacts } from "@/lib/meeting-facts";
@@ -134,6 +135,43 @@ export function BeforeReading({
         </label>
       </div>
 
+      {/* F-2 (2026-08-25): the chat-style supplement box. What goes in here is
+          sent WITH the photo, as labelled data, so the model reads with the
+          person's own knowledge — abbreviations, spellings, which date is
+          which. This is the fix for "想 type 跟他说没办法". */}
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-muted-foreground">
+          <Tri
+            bm="Ada singkatan, nama atau tarikh yang Minit patut tahu? (pilihan)"
+            zh="有缩写、人名、日期要补充给 Minit 吗？（可以不填）"
+            en="Any abbreviations, names or dates Minit should know? (optional)"
+          />
+        </span>
+        <span className="flex items-start gap-2">
+          <textarea
+            value={facts.notes}
+            onChange={(e) => setFacts((f) => ({ ...f, notes: e.target.value }))}
+            rows={2}
+            maxLength={2000}
+            placeholder={t(
+              'cth. "LKY = Lim Kok Yuan · mesyuarat di dewan lama"',
+              "例如：「LKY = 林国源 · 初八是农历 · 开会在旧礼堂」",
+              'e.g. "LKY = Lim Kok Yuan · the meeting was in the old hall"',
+            )}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          {/* F-3: dictate the supplement instead of typing it. */}
+          <VoiceButton
+            onText={(spoken) =>
+              setFacts((f) => ({
+                ...f,
+                notes: f.notes.trim() === "" ? spoken : `${f.notes} ${spoken}`,
+              }))
+            }
+          />
+        </span>
+      </label>
+
       <div className="flex flex-wrap items-center gap-3">
         <Button size="lg" className="text-base" disabled={busy} onClick={() => onRead(facts)}>
           {busy ? (
@@ -149,9 +187,9 @@ export function BeforeReading({
             file silently charged you" is on the UX defect list. */}
         <span className="text-sm text-muted-foreground">
           <Tri
-            bm="Ini menggunakan 1 daripada bantuan AI bulan ini."
-            zh="这会用掉这个月 1 次 AI 帮忙。"
-            en="This uses 1 of this month's AI helps."
+            bm="Ini menggunakan kira-kira 1% daripada penggunaan AI bulan ini."
+            zh="这会用掉本月 AI 用量的约 1%。"
+            en="This uses about 1% of the monthly AI allowance."
           />
         </span>
       </div>

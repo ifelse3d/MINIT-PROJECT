@@ -4,6 +4,7 @@ import { getVisionProvider } from "@/lib/ai/provider";
 import { createUsageRecorder, refundUsage, requireAiQuota } from "@/lib/ai/usage";
 import { parseMeetingNotesExtraction } from "@/lib/extraction";
 import { extractMeetingNotesPrompt } from "@/prompts/extract-meeting-notes";
+import { untrustedBlock } from "@/prompts/untrusted";
 import { dayIsoMalaysia } from "@/lib/history";
 import { checkPageLimit } from "@/lib/pdf-pages";
 import { recordUpload } from "@/lib/record-upload";
@@ -103,7 +104,19 @@ export async function POST(req: Request) {
     const glossaryBlock = glossaryPromptBlockForReading(
       await loadGlossary(gate.org.id),
     );
-    const prompt = extractMeetingNotesPrompt({ orgName, todayIso, glossaryBlock });
+    // F-2 (2026-08-25): the supplement box — abbreviations, names, which date
+    // is which. User text, so it arrives as LABELLED DATA (untrustedBlock),
+    // never as instructions. Absent → the prompt is byte-identical to what the
+    // eval measured. PDPA: like the photo, never logged.
+    const personalContext = String(form.get("context") ?? "").trim().slice(0, 2000);
+    const contextBlock =
+      personalContext === ""
+        ? ""
+        : `\n\n${untrustedBlock(
+            "NOTES THE PERSON TYPED BEFORE THIS READING (their own abbreviations, spellings and date hints — prefer these spellings when the handwriting matches)",
+            personalContext,
+          )}`;
+    const prompt = extractMeetingNotesPrompt({ orgName, todayIso, glossaryBlock, contextBlock });
     const provider = getVisionProvider();
 
     // 2026-08-18: attach what the vendor actually charged to the ai_usage row
