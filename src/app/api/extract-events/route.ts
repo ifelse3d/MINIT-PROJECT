@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { demoteEventsNotInSource } from "@/lib/verbatim";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
 import { recordUpload } from "@/lib/record-upload";
 import { getVisionProvider } from "@/lib/ai/provider";
@@ -151,7 +152,16 @@ ${issues}`;
     // Phase 7: keep the file + a history row for the active org (best-effort).
     if (uploadedFile) await recordUpload(uploadedFile, "other");
 
-    return NextResponse.json({ events: parsed.data.events, provider: provider.name });
+    // S0-7: when the input was TEXT, every verbatim field must actually appear
+    // in it — a "confirmed" title the model paraphrased (or truncated) is
+    // demoted to "check" so a human looks. Photo inputs have no source text to
+    // compare against, so the check honestly skips them.
+    const checked =
+      !imageBase64 && text
+        ? demoteEventsNotInSource(parsed.data, text).extraction
+        : parsed.data;
+
+    return NextResponse.json({ events: checked.events, provider: provider.name });
   } catch {
     return NextResponse.json({ error: joinUserError(USER_ERRORS.serverError) }, { status: 500 });
   }

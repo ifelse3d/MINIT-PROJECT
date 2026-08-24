@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tri } from "@/components/language-provider";
+import { clearMinitLocalData } from "@/lib/storage-scope-core";
 import { deleteOrg, type DeleteOrgState } from "./actions";
 
 const INITIAL: DeleteOrgState = { error: null, ok: false };
@@ -21,6 +22,13 @@ export function DeleteOrgSection({
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
   const [state, formAction, pending] = useActionState(deleteOrg, INITIAL);
+
+  // S0-4: deleting the organisation also clears this browser's local copies
+  // (register, half-checked minutes, constitution) — the server delete cannot
+  // reach localStorage, and "delete everything" must mean everything.
+  useEffect(() => {
+    if (state.ok) clearMinitLocalData();
+  }, [state.ok]);
 
   if (state.ok) {
     return (

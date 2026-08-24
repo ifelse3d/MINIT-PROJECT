@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
+
+import { adoptLegacyKey } from "@/lib/storage-scope-core";
 
 // ---------------------------------------------------------------------------
 // usePersistentState — a demo persistence layer backed by the browser's
@@ -41,17 +43,13 @@ export type PersistMeta = {
   reset: () => void;
 };
 
-/**
- * Move an unreadable blob aside instead of losing it, so a human can still
- * recover it from the browser console if it mattered. Best-effort only.
- */
-function preserveUnreadable(key: string, raw: string): void {
-  try {
-    window.localStorage.setItem(`${key}:unreadable-${Date.now()}`, raw);
-  } catch {
-    // Storage is full or disabled — nothing more we can do.
-  }
-}
+// S0-4 (2026-08-25): the old `preserveUnreadable` helper is GONE. It copied an
+// unreadable blob to a second key "so a human could recover it from the
+// console" — but these blobs hold donor names and phone numbers, and a second
+// copy under a key nothing ever clears is a PDPA leak, not a favour. The
+// original blob already survives under its own key while `corrupt` is true
+// (the write-back below is suppressed), which is all the recovery window a
+// human needs.
 
 export function usePersistentState<T>(
   key: string,
@@ -62,41 +60,58 @@ export function usePersistentState<T>(
    * (e.g. a boolean preference).
    */
   validate?: (parsed: unknown) => boolean,
+  /**
+   * S0-4: the pre-scoping (global) key this data used to live under. When the
+   * scoped key is empty and the legacy key holds something, the blob is MOVED
+   * to the scoped key once, then read as normal.
+   */
+  legacyKey?: string,
 ): [T, Dispatch<SetStateAction<T>>, PersistMeta] {
   const [value, setValue] = useState<T>(initial);
-  const [loaded, setLoaded] = useState(false);
+  // The seed, pinned: callers pass literals, and the hydrate effect must be
+  // able to fall back to it on a key change without re-running per render.
+  const initialRef = useRef(initial);
+  // WHICH key has been hydrated, not just whether one has: on a key change
+  // (org switch) the write-back below must stay silent until the NEW key's
+  // read has landed, or it would copy the previous scope's records into the
+  // new scope's key.
+  const [hydratedKey, setHydratedKey] = useState<string | null>(null);
+  const loaded = hydratedKey !== null;
   const [corrupt, setCorrupt] = useState(false);
   const [quotaFull, setQuotaFull] = useState(false);
 
-  // Hydrate once on mount.
+  // Hydrate once on mount (and again if the key changes — S0-4: the key now
+  // carries the user/org scope, so switching organisation re-hydrates).
   useEffect(() => {
+    setCorrupt(false);
     try {
+      if (legacyKey && legacyKey !== key) {
+        adoptLegacyKey(key, legacyKey);
+      }
       const raw = window.localStorage.getItem(key);
+      if (raw == null) {
+        // A key change (org switch) with nothing stored under the new key must
+        // not keep showing the PREVIOUS scope's records.
+        setValue(initialRef.current);
+      }
       if (raw != null) {
         const parsed: unknown = JSON.parse(raw);
         if (!validate || validate(parsed)) {
           setValue(parsed as T);
         } else {
           // Recognisable JSON of the wrong shape. Keep the seed rather than
-          // handing malformed records to the money code — but PRESERVE the raw
-          // string first. The UI tells the treasurer "the saved records could not
-          // be read"; if we had already overwritten them with the seed that
-          // message would be describing data we ourselves destroyed.
-          preserveUnreadable(key, raw);
+          // handing malformed records to the money code. The blob stays under
+          // its own key (the write-back below is suppressed while `corrupt`),
+          // so nothing is destroyed — and no second copy of personal data is
+          // made (S0-4).
           setCorrupt(true);
         }
       }
     } catch {
       // Malformed JSON or storage disabled — fall back to the initial value.
-      try {
-        const raw = window.localStorage.getItem(key);
-        if (raw != null) preserveUnreadable(key, raw);
-      } catch {
-        // Storage is unreadable entirely; nothing to preserve.
-      }
       setCorrupt(true);
     }
-    setLoaded(true);
+    setHydratedKey(key);
     // `validate` is expected to be a stable module-level function; including it
     // in the deps would re-hydrate on every render for inline-arrow callers.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -105,7 +120,8 @@ export function usePersistentState<T>(
   // Persist on every change, but only after the first hydration read so we
   // never overwrite stored data with the seed on the very first render.
   useEffect(() => {
-    if (!loaded) return;
+    // Only write once THIS key's own hydration has landed (see hydratedKey).
+    if (hydratedKey !== key) return;
     // Do NOT write while we are showing "your saved records could not be read":
     // this effect runs on the render where `loaded` flips, i.e. immediately after
     // hydration, so without this guard the seed would overwrite the unreadable
@@ -119,7 +135,7 @@ export function usePersistentState<T>(
       // visit, but the user MUST be told, because closing the tab loses it.
       setQuotaFull(true);
     }
-  }, [key, value, loaded, corrupt]);
+  }, [key, value, hydratedKey, corrupt]);
 
   const reset = useCallback(() => {
     try {

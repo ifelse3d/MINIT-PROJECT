@@ -1,30 +1,42 @@
 import { NextResponse } from "next/server";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
-import { z } from "zod";
+import { receiptPdfBodySchema } from "@/lib/document-request";
 import { buildReceiptPdf } from "@/lib/receipt-pdf";
+import { getSupabaseServer } from "@/db/supabase-server";
+import { dayIsoMalaysia } from "@/lib/history";
 import { getDocumentIdentity, NOT_SIGNED_IN } from "@/lib/doc-identity";
 
-// POST /api/receipt-pdf — body: the donation facts only. Returns the PDF bytes.
+// POST /api/receipt-pdf — body: { receiptNo } ONLY. Returns the PDF bytes.
 //
-// The organisation name, its s.44(6) tax status and the confirming person are
-// NOT accepted from the body — they are read server-side from the signed-in
-// user's active org (see src/lib/doc-identity.ts). Trusting the body here let
-// any signed-in user mint a forged tax-deductible receipt for any org.
-// PDPA (Hard Rule 5): the body contains donor data — NEVER log it.
+// 2026-08-25 (S0-1): the body used to carry the donor name, the amount, the
+// date, the purpose and the collector, and the server printed whatever it was
+// sent. Any signed-in user could therefore mint a receipt for their own org
+// with ANY contents — a forged legal document whose number happens to be real.
+// Now the body names a receipt and nothing else; every printed fact is read
+// back from `receipts` + `donations` under RLS. No row = 404, no PDF.
+// PDPA (Hard Rule 5): donor data flows out in the PDF — NEVER into a log.
 
-const bodySchema = z.object({
-  // No DB column exists for these two yet, so they still come from the client.
-  // TODO(Phase B): add registration_no / address to `orgs` and derive them here.
-  orgRegistrationNo: z.string().optional(),
-  orgAddress: z.string().optional(),
-  receiptNo: z.string().min(1),
-  donorName: z.string().min(1),
-  amountCents: z.number().int().nonnegative(),
-  dateIso: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  purpose: z.string(),
-  collector: z.string().min(1),
-  confirmedOnIso: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-});
+const bodySchema = receiptPdfBodySchema;
+
+/** The columns the PDF needs, verbatim from the database. */
+const RECEIPT_SELECT =
+  "receipt_no, issued_at, donation:donations!receipts_donation_id_fkey (donor_name, amount_cents, purpose, donated_at, collector_name)" as const;
+/** Fallback while migration 20260827000000 (collector_name) is not yet applied:
+ *  PostgREST fails the WHOLE query over one unknown column. */
+const RECEIPT_SELECT_LEGACY =
+  "receipt_no, issued_at, donation:donations!receipts_donation_id_fkey (donor_name, amount_cents, purpose, donated_at)" as const;
+
+type ReceiptRow = {
+  receipt_no: string;
+  issued_at: string;
+  donation: {
+    donor_name: string | null;
+    amount_cents: number;
+    purpose: string | null;
+    donated_at: string | null;
+    collector_name?: string | null;
+  } | null;
+};
 
 export async function POST(request: Request): Promise<Response> {
   const identity = await getDocumentIdentity();
@@ -32,22 +44,56 @@ export async function POST(request: Request): Promise<Response> {
 
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
-    // Only zod's field paths — never the submitted values (PDPA).
     return NextResponse.json(
-      {
-        error: joinUserError(USER_ERRORS.downloadFailed),
-      // Field paths are for the developer, never the person: shown only in dev
-      // (PDPA also forbids echoing the submitted values). (2026-07-28 audit.)
-      ...(process.env.NODE_ENV === "development"
-        ? { fields: parsed.error.issues.map((i) => i.path.join(".")) }
-        : {}),
-      },
+      { error: joinUserError(USER_ERRORS.downloadFailed) },
       { status: 400 }
     );
   }
 
+  const supabase = await getSupabaseServer();
+  let { data, error } = await supabase
+    .from("receipts")
+    .select(RECEIPT_SELECT)
+    .eq("org_id", identity.orgId)
+    .eq("receipt_no", parsed.data.receiptNo)
+    .maybeSingle<ReceiptRow>();
+  if (error) {
+    // 42703 = undefined column: the collector_name migration has not been run
+    // yet. The receipt is still printable without a collector line.
+    const retry = await supabase
+      .from("receipts")
+      .select(RECEIPT_SELECT_LEGACY)
+      .eq("org_id", identity.orgId)
+      .eq("receipt_no", parsed.data.receiptNo)
+      .maybeSingle<ReceiptRow>();
+    data = retry.data;
+    error = retry.error;
+  }
+  if (error) {
+    return NextResponse.json(
+      { error: joinUserError(USER_ERRORS.serverError) },
+      { status: 500 }
+    );
+  }
+  if (!data || !data.donation) {
+    // No such receipt in THIS org. 404, never a PDF of made-up facts.
+    return NextResponse.json(
+      { error: joinUserError(USER_ERRORS.downloadFailed) },
+      { status: 404 }
+    );
+  }
+
+  const issuedIso = dayIsoMalaysia(data.issued_at) ?? "";
   const bytes = await buildReceiptPdf({
-    ...parsed.data,
+    receiptNo: data.receipt_no,
+    donorName: data.donation.donor_name ?? "",
+    amountCents: Number(data.donation.amount_cents),
+    dateIso: data.donation.donated_at ?? issuedIso,
+    purpose: data.donation.purpose ?? "",
+    // Until collector_name exists in the DB the honest fallback is the person
+    // whose audit line is on the document anyway.
+    collector: data.donation.collector_name ?? identity.confirmedBy,
+    confirmedOnIso: issuedIso,
     orgName: identity.orgName,
     taxStatus: identity.taxStatus,
     confirmedBy: identity.confirmedBy,
@@ -55,7 +101,7 @@ export async function POST(request: Request): Promise<Response> {
   return new Response(new Uint8Array(bytes), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="resit-${parsed.data.receiptNo}.pdf"`,
+      "Content-Disposition": `attachment; filename="resit-${data.receipt_no}.pdf"`,
       "Cache-Control": "no-store",
     },
   });

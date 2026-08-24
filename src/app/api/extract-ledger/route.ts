@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { demoteSuspectPhones } from "@/lib/verbatim";
 import {
   joinUserError,
   tooManyPagesError,
@@ -147,7 +148,12 @@ ${issues}`;
     // Keep the photo + a history row for the active org (best-effort).
     await recordUpload(photo, "ledger_page");
 
-    return NextResponse.json({ extraction: parsed.data, provider: provider.name });
+    // S0-7: a "confirmed" phone with the wrong digit count is a truncation the
+    // model did not flag (proven by the 08-24 eval) — demote it to "check" so
+    // a human looks before it is printed on a receipt.
+    const { extraction: checked } = demoteSuspectPhones(parsed.data);
+
+    return NextResponse.json({ extraction: checked, provider: provider.name });
   } catch {
     // No contents in logs (PDPA).
     return NextResponse.json({ error: joinUserError(USER_ERRORS.serverError) }, { status: 500 });

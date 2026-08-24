@@ -35,7 +35,7 @@ import {
 import { addRow, removeRow, rowHasContent, type RowList } from "@/lib/extraction-rows";
 import { saveConfirmedMinutes } from "./actions";
 import {
-  MINUTES_STORE_KEY,
+  minutesStoreKey,
   compressPhoto,
   loadSavedMinutes,
   saveMinutes,
@@ -453,7 +453,7 @@ export function MinutesProvider({
     setAiError(null);
     setStorageNote(null);
     try {
-      localStorage.removeItem(MINUTES_STORE_KEY);
+      localStorage.removeItem(minutesStoreKey());
     } catch {
       // Storage unavailable: state is already reset, nothing more to do.
     }
@@ -776,10 +776,25 @@ export function MinutesProvider({
   const [saveBusy, setSaveBusy] = useState(false);
   const [saveResult, setSaveResult] = useState<"ok" | string | null>(null);
 
+  // S0-3 (2026-08-25): one idempotency key per DOCUMENT, not per attempt. A
+  // double tap or a timed-out retry re-sends the SAME key, and the server
+  // refuses to store the same document twice. A new extraction is a new
+  // document, so the key resets with it.
+  const saveClientIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    saveClientIdRef.current = null;
+  }, [extraction]);
+
   const saveToHistory = useCallback(async () => {
     setSaveBusy(true);
     setSaveResult(null);
     try {
+      if (!saveClientIdRef.current) {
+        saveClientIdRef.current =
+          typeof crypto !== "undefined" && "randomUUID" in crypto
+            ? crypto.randomUUID()
+            : `save-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      }
       // The server re-renders the document from this extraction using the org
       // and signer from the session (Hard Rule 8); we deliberately do not send
       // a rendered document or a confirmer name.
@@ -787,6 +802,7 @@ export function MinutesProvider({
         extraction,
         aiDraftMd: edited ?? aiDraft ?? undefined,
         language: docLang,
+        clientId: saveClientIdRef.current,
       });
       setSaveResult(result.ok ? "ok" : result.error ?? "error");
     } catch {

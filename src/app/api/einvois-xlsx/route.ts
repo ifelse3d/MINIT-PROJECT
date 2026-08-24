@@ -1,35 +1,47 @@
 import { NextResponse } from "next/server";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
-import { z } from "zod";
+import { einvoisXlsxBodySchema } from "@/lib/document-request";
 import { buildMonthEndPack, EInvoisError } from "@/lib/einvois";
 import { buildEInvoisXlsxFiles } from "@/lib/einvois-xlsx";
+import { getSupabaseServer } from "@/db/supabase-server";
 import { getDocumentIdentity, NOT_SIGNED_IN } from "@/lib/doc-identity";
+import type { RegisterDonation } from "@/lib/receipts";
 
-// POST /api/einvois-xlsx — body: confirmed donations + month (+ fileIndex when
-// the month splits past 100 documents). Returns ONE .xlsx.
+// POST /api/einvois-xlsx — body: { month, fileIndex } ONLY. Returns ONE .xlsx.
 //
-// The organisation name is read server-side from the signed-in user's active
-// org, never from the body — a MyInvois submission file naming the wrong
-// organisation is a false tax filing.
-// PDPA (Hard Rule 5): donor data in the body — NEVER log it.
+// 2026-08-25 (S0-1): the body used to carry the whole donation list — names,
+// phones, amounts — and the server built a tax submission file out of whatever
+// the browser said. A signed-in user could file a month of invented donations
+// under their own org's name. Now the server reads that month's donations back
+// from the database under RLS; the browser only names the month.
+// PDPA (Hard Rule 5): donor data goes into the file — NEVER into a log.
 
-const donationSchema = z.object({
-  id: z.string(),
-  donorName: z.string(),
-  donorPhone: z.string().nullable(),
-  amountCents: z.number().int().nonnegative(),
-  purpose: z.string(),
-  donatedAtIso: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  collector: z.string(),
-  receiptNo: z.string().nullable(),
-  custodyStatus: z.enum(["collected", "pending_remittance", "settled"]),
-});
+const bodySchema = einvoisXlsxBodySchema;
 
-const bodySchema = z.object({
-  donations: z.array(donationSchema),
-  month: z.string().regex(/^\d{4}-\d{2}$/),
-  fileIndex: z.number().int().nonnegative().default(0),
-});
+const DONATION_SELECT =
+  "id, donor_name, donor_phone, amount_cents, purpose, donated_at, custody_status, collector_name, receipt:receipts!donations_receipt_id_fkey (receipt_no)" as const;
+/** While migration 20260827000000 (collector_name) is not applied, PostgREST
+ *  fails the whole query over the unknown column — retry without it. */
+const DONATION_SELECT_LEGACY =
+  "id, donor_name, donor_phone, amount_cents, purpose, donated_at, custody_status, receipt:receipts!donations_receipt_id_fkey (receipt_no)" as const;
+
+type DonationRow = {
+  id: number;
+  donor_name: string | null;
+  donor_phone: string | null;
+  amount_cents: number;
+  purpose: string | null;
+  donated_at: string | null;
+  custody_status: "collected" | "pending_remittance" | "settled";
+  collector_name?: string | null;
+  receipt: { receipt_no: string } | null;
+};
+
+function lastDayOfMonth(month: string): string {
+  const [y, m] = month.split("-").map(Number);
+  const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  return `${month}-${String(last).padStart(2, "0")}`;
+}
 
 export async function POST(request: Request): Promise<Response> {
   const identity = await getDocumentIdentity();
@@ -38,29 +50,56 @@ export async function POST(request: Request): Promise<Response> {
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json(
-      {
-        error: joinUserError(USER_ERRORS.downloadFailed),
-      // Field paths are for the developer, never the person: shown only in dev
-      // (PDPA also forbids echoing the submitted values). (2026-07-28 audit.)
-      ...(process.env.NODE_ENV === "development"
-        ? { fields: parsed.error.issues.map((i) => i.path.join(".")) }
-        : {}),
-      },
+      { error: joinUserError(USER_ERRORS.downloadFailed) },
       { status: 400 }
     );
   }
+  const { month, fileIndex } = parsed.data;
+
+  const supabase = await getSupabaseServer();
+  const query = (select: string) =>
+    supabase
+      .from("donations")
+      .select(select)
+      .eq("org_id", identity.orgId)
+      .gte("donated_at", `${month}-01`)
+      .lte("donated_at", lastDayOfMonth(month));
+
+  let { data, error } = await query(DONATION_SELECT).returns<DonationRow[]>();
+  if (error) {
+    const retry = await query(DONATION_SELECT_LEGACY).returns<DonationRow[]>();
+    data = retry.data;
+    error = retry.error;
+  }
+  if (error) {
+    return NextResponse.json(
+      { error: joinUserError(USER_ERRORS.serverError) },
+      { status: 500 }
+    );
+  }
+
+  const donations: RegisterDonation[] = (data ?? []).map((d) => ({
+    id: String(d.id),
+    donorName: d.donor_name ?? "",
+    donorPhone: d.donor_phone,
+    amountCents: Number(d.amount_cents),
+    purpose: d.purpose ?? "",
+    donatedAtIso: d.donated_at ?? "",
+    collector: d.collector_name ?? "",
+    receiptNo: d.receipt?.receipt_no ?? null,
+    custodyStatus: d.custody_status,
+  }));
 
   try {
-    const { donations, month, fileIndex } = parsed.data;
     const orgName = identity.orgName;
     const pack = buildMonthEndPack(donations, { month, orgName });
     const files = await buildEInvoisXlsxFiles(pack, { orgName });
     const file = files[fileIndex];
     if (!file) {
       return NextResponse.json(
-        // Was raw developer English reaching a red banner in front of an
-            // 80-year-old ("fileIndex 3 out of range — pack has 2 file(s)").
-            { error: joinUserError(USER_ERRORS.downloadFailed) },
+        // Also reached when the month has no receipted donations at all: an
+        // empty month has no files, and index 0 finds nothing.
+        { error: joinUserError(USER_ERRORS.downloadFailed) },
         { status: 400 }
       );
     }
@@ -88,8 +127,6 @@ export async function POST(request: Request): Promise<Response> {
         { status: 422 },
       );
     }
-    // Anything else used to `throw`, escaping the handler as an unstyled 500
-    // instead of the bilingual JSON error every sibling route returns.
     return NextResponse.json(
       { error: joinUserError(USER_ERRORS.serverError) },
       { status: 500 },

@@ -48,6 +48,8 @@ const probes = [
   ["20260825000000 calendar+custody+deadline writable", "remittance_batches", "collector_name"],
   ["20260825000000 calendar+custody+deadline writable", "deadlines", "client_id"],
   ["20260826000000 member groups", "member_groups", "group_name"],
+  ["20260827000000 donations collector_name", "donations", "collector_name"],
+  ["20260828000000 minutes_docs client_id", "minutes_docs", "client_id"],
 ];
 
 const headers = { apikey: key, Authorization: `Bearer ${key}` };

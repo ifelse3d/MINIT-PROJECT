@@ -16,7 +16,6 @@ import {
 import { formatRm } from "@/lib/minutes-draft";
 import { maskName } from "@/lib/mask";
 import { downloadFromApi } from "@/lib/download-file";
-import { todayIsoMalaysia } from "@/lib/history";
 import { DonationEditor } from "./donation-editor";
 import { ManualIncomeForm } from "./manual-income";
 import { TypeDonations } from "./type-donations";
@@ -79,18 +78,11 @@ export function RegisterAndReceipts() {
     try {
       await downloadFromApi(
         "/api/receipt-pdf",
-        {
-          // orgName, taxStatus and confirmedBy are deliberately NOT sent:
-          // the server reads them from the signed-in user's organisation so a
-          // receipt can never claim the wrong org or a false tax status.
-          receiptNo: d.receiptNo,
-          donorName: d.donorName,
-          amountCents: d.amountCents,
-          dateIso: d.donatedAtIso,
-          purpose: d.purpose,
-          collector: d.collector,
-          confirmedOnIso: todayIsoMalaysia(),
-        },
+        // ONLY the receipt number. Every printed fact — donor, amount, date,
+        // purpose, org, tax status — is read back from the database on the
+        // server (S0-1), so this device's copy of the row cannot change what
+        // the official PDF says.
+        { receiptNo: d.receiptNo },
         `resit-${d.receiptNo}.pdf`
       );
     } catch (e) {
@@ -267,21 +259,42 @@ export function RegisterAndReceipts() {
             />
           </p>
         )}
-        {issueNotice === "reconcile" && (
-          <p className="rounded-xl border-2 border-red-300 bg-red-50 p-3 text-base font-semibold text-red-900 dark:bg-red-400/10 dark:text-red-100">
-            <Tri
-              bm="BERHENTI. Sebahagian rekod mungkin sudah masuk ke pangkalan data dan Minit tidak dapat membersihkannya. JANGAN tekan lagi. Buka “Sejarah resit” dan lihat apa yang sudah ada di sana dahulu."
-              zh="请停一下。有部分记录可能已经写进资料库，而 Minit 没能清理干净。请不要重复点击。先打开「收据历史」，看看那边已经有了什么。"
-              en="STOP. Some records may already be in the database and Minit could not clean them up. Do NOT tap again. Open “Receipt history” and see what is already there first."
-            />
-          </p>
+        {issueNotice === "needs_prefix" && (
+          <div className="flex flex-col gap-2 rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-base text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+            <p className="font-medium">
+              <Tri
+                bm="Sebelum resit pertama: pilih huruf resit pertubuhan anda dahulu (contoh: PSH-2026-0001). Setiap cawangan perlu huruf sendiri supaya resit menunjukkan siapa yang mengeluarkannya. Selepas resit pertama, huruf itu dikunci."
+                zh="开第一张收据之前：请先为您的机构选一组收据字母（例如 PSH-2026-0001）。每个分会要有自己的字母，收据才看得出是谁开的。开出第一张之后，字母就不能再改了。"
+                en="Before the first receipt: choose your organisation's receipt letters (e.g. PSH-2026-0001). Each branch needs its own letters so a receipt shows who issued it. After the first receipt they are locked."
+              />
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button size="lg" className="text-base" asChild>
+                <Link href="/settings">
+                  <Tri bm="Pilih huruf di Tetapan" zh="去设置选字母" en="Choose letters in Settings" />
+                </Link>
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="text-base"
+                disabled={issueBusy}
+                onClick={() => void issueReceipts({ acceptDefaultPrefix: true })}
+              >
+                <Tri bm="Guna 'MIN' sahaja" zh="就用 MIN 继续" en="Continue with 'MIN'" />
+              </Button>
+            </div>
+          </div>
         )}
         {issueNotice === "error" && (
           <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">
+            {/* issue_receipts() is one DB transaction (2026-08-25): a failure
+                writes nothing, so trying again is safe — say so instead of the
+                old "we cannot tell what happened" alarm. */}
             <Tri
-              bm="Tidak pasti sama ada resit telah dijana. JANGAN tekan lagi — semak “Sejarah resit” dahulu."
-              zh="无法确定收据是否已生成。请勿重复点击——请先查看“收据历史”。"
-              en="We could not confirm whether the receipts were issued. Do NOT tap again — check “Receipt history” first."
+              bm="Resit tidak dijana — tiada apa-apa disimpan. Sila cuba sekali lagi. Jika masih gagal, semak “Sejarah resit”."
+              zh="收据没有生成——什么都没有写入。请再试一次；若还是失败，请看「收据历史」。"
+              en="The receipts were not issued — nothing was saved. Please try again; if it keeps failing, check “Receipt history”."
             />
           </p>
         )}

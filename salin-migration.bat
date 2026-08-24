@@ -65,6 +65,8 @@ echo    15.  20260824000000  nombor resit lepas 9999 / receipt numbers past 9999
 echo    16.  20260825000000  kalendar + serahan tunai + tanda siap
 echo         calendar + cash hand-over + tick a deadline done
 echo    17.  20260826000000  kumpulan ahli / member groups
+echo    18.  20260827000000  nama pemungut pada derma / collector name on donations
+echo    19.  20260828000000  kunci anti-duplikasi minit / minutes anti-duplicate key
 echo.
 echo     0.  Keluar / Quit
 echo.
@@ -88,6 +90,8 @@ if "%pick%"=="14" set f=20260823000000_cari_minit_rpc.sql& goto copy
 if "%pick%"=="15" set f=20260824000000_receipt_no_past_9999.sql& goto copy
 if "%pick%"=="16" set f=20260825000000_events_deadlines_custody_writable.sql& goto copy
 if "%pick%"=="17" set f=20260826000000_member_groups.sql& goto copy
+if "%pick%"=="18" set f=20260827000000_donations_collector_name.sql& goto copy
+if "%pick%"=="19" set f=20260828000000_minutes_docs_client_id.sql& goto copy
 
 echo.
 echo    Nombor tak sah / not a valid number.

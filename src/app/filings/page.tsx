@@ -1,4 +1,4 @@
-import { getLatestConfirmedAgm } from "@/db/agm";
+import { getLatestConfirmedAgm, getLatestConfirmedExtraction } from "@/db/agm";
 import { FilingsView } from "./filings-view";
 
 // ---------------------------------------------------------------------------
@@ -15,6 +15,12 @@ import { FilingsView } from "./filings-view";
 export const dynamic = "force-dynamic";
 
 export default async function FilingsPage() {
-  const agm = await getLatestConfirmedAgm();
-  return <FilingsView agm={agm} />;
+  // S0-5 (2026-08-25): the paste-pack is built from the latest CONFIRMED
+  // minutes in the database — a signed document — never from this browser's
+  // half-checked draft. Different devices now see the same pack.
+  const [agm, confirmed] = await Promise.all([
+    getLatestConfirmedAgm(),
+    getLatestConfirmedExtraction(),
+  ]);
+  return <FilingsView agm={agm} confirmed={confirmed} />;
 }

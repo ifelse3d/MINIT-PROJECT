@@ -15,6 +15,7 @@ import { LogOut, Settings } from "lucide-react";
 import { Tri, useTriText } from "@/components/language-provider";
 import { ACCOUNT_NAV, isActivePath } from "@/components/nav-items";
 import { getSupabaseBrowser } from "@/db/supabase-browser";
+import { clearMinitLocalData } from "@/lib/storage-scope-core";
 import { cn } from "./glass";
 
 function readActiveOrgId(): number | null {
@@ -48,6 +49,10 @@ export function useAuthEmail(): string | null {
 
 /** Sign out and land on /login — used by the top bar and mobile drawer. */
 export async function signOutToLogin(): Promise<void> {
+  // S0-4: a shared laptop must not hand this person's register, minutes and
+  // constitution to whoever signs in next. Device preferences (text size,
+  // theme, language) survive — they are the device's, not the account's.
+  clearMinitLocalData();
   await getSupabaseBrowser().auth.signOut();
   window.location.assign("/login");
 }

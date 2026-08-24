@@ -16,6 +16,7 @@ import {
   type ConfirmedClause,
 } from "@/lib/constitution";
 import { usePersistentState } from "@/lib/use-persistent-state";
+import { useScopedKey } from "@/lib/storage-scope";
 
 // ---------------------------------------------------------------------------
 // THE CONSTITUTION, TO READ.
@@ -38,7 +39,8 @@ import { usePersistentState } from "@/lib/use-persistent-state";
 // ---------------------------------------------------------------------------
 
 /** The same localStorage blob constitution-review.tsx writes. */
-const CONSTITUTION_STORE_KEY = "minit.constitution.v1";
+/** Pre-S0-4 global key — adopted into the scoped key once, then removed. */
+const CONSTITUTION_LEGACY_KEY = "minit.constitution.v1";
 
 type StoredConstitution = {
   title: string;
@@ -69,9 +71,12 @@ export function ClauseBook({
   // before it is anywhere else, and a reader who has just finished
   // photographing should not be told their constitution is empty.
   const [stored] = usePersistentState<StoredConstitution | null>(
-    CONSTITUTION_STORE_KEY,
+    // S0-4: scoped per user+org — a shared laptop must not show one
+    // account's constitution to the next.
+    useScopedKey("constitution:v1"),
     null,
     (p) => p === null || isStoredConstitution(p),
+    CONSTITUTION_LEGACY_KEY,
   );
 
   // mergeClauses, not concat: the two copies overlap on almost every clause,

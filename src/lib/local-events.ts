@@ -29,11 +29,21 @@ export type SimpleEvent = {
   note?: string;
 };
 
-const EVENTS_KEY = "minit.events";
+import { adoptLegacyKey, scopedKey } from "@/lib/storage-scope-core";
+
+/** Pre-S0-4 global key — adopted into the scoped key once, then removed. */
+const EVENTS_LEGACY_KEY = "minit.events";
+
+/** S0-4: scoped per user+org, like every other record key. */
+function eventsKey(): string {
+  return scopedKey("events:v1");
+}
 
 export function loadEvents(): SimpleEvent[] {
   try {
-    const raw = localStorage.getItem(EVENTS_KEY);
+    const key = eventsKey();
+    adoptLegacyKey(key, EVENTS_LEGACY_KEY);
+    const raw = localStorage.getItem(key);
     const arr = raw ? (JSON.parse(raw) as SimpleEvent[]) : [];
     return Array.isArray(arr) ? arr : [];
   } catch {
@@ -43,7 +53,7 @@ export function loadEvents(): SimpleEvent[] {
 
 export function saveEvents(events: SimpleEvent[]): void {
   try {
-    localStorage.setItem(EVENTS_KEY, JSON.stringify(events));
+    localStorage.setItem(eventsKey(), JSON.stringify(events));
   } catch {
     // storage unavailable — events just won't persist
   }

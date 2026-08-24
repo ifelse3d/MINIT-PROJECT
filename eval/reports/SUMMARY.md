@@ -19,9 +19,9 @@
 | | |
 |---|---|
 | 狀態 | ✅ **已量測 —— 但量的是印刷體合成圖,⏳ 仍未以真實手寫樣本量測** |
-| 最後一次跑 | **2026-08-07**(供應商對照,三輪)· 公佈數字仍來自 **2026-08-06** 那一輪 |
-| 結果 | **95.2%**(119/125 欄位正確),**invented = 0** |
-| 為什麼公佈的還是 08-06 那一輪 | 08-07 跑的是 `gpt-5.6-luna` 的對照,**結論是不採用**,抽取仍在 `gemini-3.5-flash-lite` 上。<br>詳見下方〈供應商對照(2026-08-07)〉 |
+| 最後一次跑 | **2026-08-24**(現行 prompt 重跑)· 對外公佈數字以這一輪為準 |
+| 結果 | **92.9%**(117/126 欄位正確),**invented = 1**(case-04)。舊數字 95.2%/invented=0 量的是 08-06 的舊 prompt,已不描述現行系統,**對外不要再引用** |
+| 為什麼換成 08-24 那一輪 | prompt 在 08-18 之後改過(出席名單、office_bearers、罕用字等 19 行),08-06 的 95.2% 量的是舊 prompt。08-24 以現行 prompt 重跑,92.9%/invented=1 才是今天系統的誠實描述。08-07 的 `gpt-5.6-luna` 對照(結論不採用)見下方 |
 | ⚠️ 最重要的限制 | 那 10 個 case 全是 **900px 寬的電腦排版合成圖**,量的是「AI 讀印刷體」,<br>**不是** Minit 在賣的「讀手寫混語」。**這個數字不能拿來回答「你們讀手寫多準?」** |
 
 ---
@@ -181,8 +181,10 @@
 **現在能講的(印刷體):**
 
 ```
-95.2% of fields across 10 synthetic typeset pages, 0 invented,
-on gemini-3.5-flash-lite (2026-08-06). Method and cases in the repo.
+92.9% of fields (117/126) across 10 synthetic typeset pages, 1 invented,
+on gemini-3.5-flash-lite (2026-08-24, current prompt). Method and cases in the repo.
+(An earlier build scored 95.2% / 0 invented on 2026-08-06 — that build's prompt
+is no longer what runs, so do not quote it alone.)
 ```
 
 **還不能講的(手寫)——真實樣本跑完才填:**

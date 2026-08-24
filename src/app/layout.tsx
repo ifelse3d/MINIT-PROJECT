@@ -7,7 +7,9 @@ import {
   AppearanceProvider,
 } from "@/components/appearance-provider";
 import { getActiveOrg } from "@/lib/active-org";
+import { getSessionUser } from "@/db/supabase-server";
 import { getUsage } from "@/lib/ai/usage";
+import { StorageScopeProvider } from "@/lib/storage-scope";
 import { AppShell } from "@/components/v2/app-shell";
 
 // Inter stands in for SF Pro Display (Apple's face isn't web-licensable).
@@ -67,6 +69,11 @@ export default async function RootLayout({
   // home-page mount).
   const active = await getActiveOrg().catch(() => null);
   const usage = active ? await getUsage(active.id).catch(() => null) : null;
+  // S0-4: localStorage records are namespaced by person AND organisation, so a
+  // second member on a shared laptop can never read or overwrite the first
+  // member's register. Resolved here, on the server — a page cannot invent it.
+  const user = await getSessionUser().catch(() => null);
+  const storageScope = `${user?.id ?? "anon"}:${active?.id ?? "none"}`;
   return (
     <html
       lang="ms"
@@ -93,20 +100,22 @@ export default async function RootLayout({
           actually hard to read. The root size is now a SETTING, applied to
           <html> by AppearanceProvider, where it scales type and spacing together. */}
       <body className="min-h-full" suppressHydrationWarning>
-        <AppearanceProvider>
-          <LanguageProvider>
-            {/* AppShell picks the chrome for the route: full shell everywhere,
-                bare (language switcher only) on /login. */}
-            <AppShell
-              showAiLauncher={Boolean(active)}
-              aiRemaining={usage?.totalRemaining ?? null}
-              aiUsedPct={usage?.usedPct ?? null}
-              aiBlocked={usage?.blocked ?? false}
-            >
-              {children}
-            </AppShell>
-          </LanguageProvider>
-        </AppearanceProvider>
+        <StorageScopeProvider scope={storageScope}>
+          <AppearanceProvider>
+            <LanguageProvider>
+              {/* AppShell picks the chrome for the route: full shell everywhere,
+                  bare (language switcher only) on /login. */}
+              <AppShell
+                showAiLauncher={Boolean(active)}
+                aiRemaining={usage?.totalRemaining ?? null}
+                aiUsedPct={usage?.usedPct ?? null}
+                aiBlocked={usage?.blocked ?? false}
+              >
+                {children}
+              </AppShell>
+            </LanguageProvider>
+          </AppearanceProvider>
+        </StorageScopeProvider>
       </body>
     </html>
   );

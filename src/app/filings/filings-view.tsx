@@ -37,13 +37,12 @@ import { dayIsoMalaysia } from "@/lib/history";
 
 // ---------------------------------------------------------------------------
 // /filings — a THIN aggregation page (FIX 5). Nothing is rebuilt here:
-// the paste-pack comes from the same saved minutes + buildPastePack the
-// /minutes page uses, and the deadlines come from the same
-// computeStandardDeadlines the /calendar sidebar uses. Read-only — no
-// data-entry forms (the eROSES test).
+// the paste-pack comes from the latest CONFIRMED minutes in the database
+// (S0-5, 2026-08-25 — it used to read this browser's half-checked draft, so a
+// government filing could be pasted from a document no human had signed), and
+// the deadlines come from the same computeStandardDeadlines the /calendar
+// sidebar uses. Read-only — no data-entry forms (the eROSES test).
 // ---------------------------------------------------------------------------
-
-const MINUTES_STORE_KEY = "minit.minutes.v1";
 
 const URGENCY_STYLE: Record<Urgency, string> = {
   overdue: "border-red-300 bg-red-100 text-red-900",
@@ -52,24 +51,21 @@ const URGENCY_STYLE: Record<Urgency, string> = {
   done: "border-slate-300 bg-slate-100 text-slate-700",
 };
 
-export function FilingsView({ agm }: { agm: ConfirmedAgm | null }) {
+export function FilingsView({
+  agm,
+  confirmed,
+}: {
+  agm: ConfirmedAgm | null;
+  /** The latest CONFIRMED minutes' extraction, from the server (S0-5). */
+  confirmed: { extraction: MeetingNotesExtraction; confirmedOnIso: string | null } | null;
+}) {
   const t = useTriText();
-  const [extraction, setExtraction] = useState<MeetingNotesExtraction | null>(null);
+  const extraction = confirmed?.extraction ?? null;
   const [copied, setCopied] = useState<string | null>(null);
   const [todayIso, setTodayIso] = useState<string | null>(null);
 
-  // Same saved-minutes store the /minutes page uses (client only).
   useEffect(() => {
     setTodayIso(dayIsoMalaysia(new Date().toISOString()));
-    try {
-      const raw = window.localStorage.getItem(MINUTES_STORE_KEY);
-      if (raw) {
-        const saved = JSON.parse(raw) as { extraction?: MeetingNotesExtraction };
-        if (saved?.extraction) setExtraction(saved.extraction);
-      }
-    } catch {
-      // unreadable store — behave like "no minutes yet"
-    }
   }, []);
 
   const pastePack = useMemo(
@@ -182,9 +178,9 @@ export function FilingsView({ agm }: { agm: ConfirmedAgm | null }) {
           ) : (
             <p className="text-muted-foreground">
               <Tri
-                bm="Belum ada minit disahkan pada peranti ini."
-                zh="此设备上还没有已确认的会议记录。"
-                en="No confirmed minutes on this device yet."
+                bm="Pertubuhan ini belum ada minit mesyuarat yang DISAHKAN. Pek tampal hanya dibina daripada dokumen yang sudah disahkan."
+                zh="这个机构还没有「已确认」的会议记录。粘贴包只会用已经确认过的文件来做。"
+                en="This organisation has no CONFIRMED minutes yet. The paste-pack is only built from a confirmed document."
               />{" "}
               <Link href="/minutes" className="underline underline-offset-4">
                 <Tri bm="Pergi ke Minit" zh="前往会议记录" en="Go to Minutes" /> →

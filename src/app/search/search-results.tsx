@@ -1,6 +1,7 @@
 "use client";
 
 import { MINUTES_STATUS_LABEL, labelFor } from "@/lib/status-labels";
+import { scopedKey } from "@/lib/storage-scope-core";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -52,7 +53,8 @@ export type DbMinutesHit = {
  */
 function loadOwnClauses(): ConfirmedClause[] {
   try {
-    const raw = localStorage.getItem("minit.constitution.v1");
+    // S0-4: scoped per user+org, matching /constitution's own store.
+    const raw = localStorage.getItem(scopedKey("constitution:v1"));
     if (!raw) return [];
     const parsed = JSON.parse(raw) as { clauses?: unknown };
     if (!Array.isArray(parsed.clauses)) return [];
@@ -103,7 +105,7 @@ export function SearchResults({
     const ql = query.toLowerCase();
     // Same store /money uses (usePersistentState key).
     try {
-      const raw = window.localStorage.getItem("minit:money:donations:v1");
+      const raw = window.localStorage.getItem(scopedKey("money:donations:v1"));
       const donations = raw ? (JSON.parse(raw) as RegisterDonation[]) : [];
       setLocalDonations(
         donations

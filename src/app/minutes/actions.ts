@@ -57,6 +57,14 @@ export async function saveConfirmedMinutes(input: {
    *  line are re-stamped in the same one. Ignored for the template fallback,
    *  which is Bahasa Malaysia. */
   language?: string;
+  /**
+   * S0-3 (2026-08-25) — idempotency key, one per DOCUMENT. A double tap or a
+   * timed-out retry re-sends the same key and the earlier save is returned
+   * instead of a duplicate row. The unique (org_id, client_id) constraint is
+   * migration 20260828000000; until it is applied the check-then-insert below
+   * still stops the common double-tap.
+   */
+  clientId?: string;
 }): Promise<SaveMinutesState> {
   const user = await getSessionUser();
   const active = await getActiveOrg();
@@ -139,6 +147,24 @@ export async function saveConfirmedMinutes(input: {
   const meetingDateIso = extraction.meeting_date.value ?? "";
 
   const supabase = await getSupabaseServer();
+
+  // Idempotency: has THIS confirmation already been stored? (check-then-insert;
+  // the unique constraint in migration 20260828000000 closes the remaining
+  // race). If the client_id column does not exist yet the select errors — that
+  // is treated as "not found" and the save proceeds exactly as before.
+  const clientId = (input.clientId ?? "").trim().slice(0, 64);
+  if (clientId !== "") {
+    const { data: existing, error: existingErr } = await supabase
+      .from("minutes_docs")
+      .select("id")
+      .eq("org_id", active.id)
+      .eq("client_id", clientId)
+      .maybeSingle();
+    if (!existingErr && existing?.id) {
+      return { error: null, ok: true };
+    }
+  }
+
   const customLabel = (extraction.meeting_type_label ?? "").trim();
   const row: Record<string, unknown> = {
     org_id: active.id,
@@ -150,6 +176,11 @@ export async function saveConfirmedMinutes(input: {
     status: "confirmed",
     confirmed_by: identity.confirmedBy,
     confirmed_at: new Date().toISOString(),
+    // S0-5: the reviewed extraction is stored WITH the confirmation, so
+    // /filings can build the eROSES paste-pack from a signed document on the
+    // server instead of from this browser's half-checked draft. The column
+    // exists since migration 20260820000000 (applied).
+    extraction,
   };
   // meeting_type_label only exists from migration 20260820000000. Sending a
   // column PostgREST does not know about fails the whole INSERT, so it is only
@@ -157,12 +188,33 @@ export async function saveConfirmedMinutes(input: {
   // choosing "other", which that same migration is what allows. Every save that
   // worked yesterday still sends exactly the columns it sent yesterday.
   if (customLabel !== "") row.meeting_type_label = customLabel;
+  if (clientId !== "") row.client_id = clientId;
 
-  const { data: saved, error } = await supabase
+  let { data: saved, error } = await supabase
     .from("minutes_docs")
     .insert(row)
     .select("id")
     .maybeSingle();
+
+  // client_id only exists from migration 20260828000000. If the column is not
+  // there yet, retry once without it — the save must not depend on tomorrow's
+  // migration.
+  if (error && clientId !== "" && /client_id/i.test(error.message ?? "")) {
+    delete row.client_id;
+    const retry = await supabase
+      .from("minutes_docs")
+      .insert(row)
+      .select("id")
+      .maybeSingle();
+    saved = retry.data;
+    error = retry.error;
+  }
+
+  // 23505 on (org_id, client_id): a concurrent duplicate of THIS save won the
+  // race — which means the document IS stored. That is success, not an error.
+  if (error && error.code === "23505" && clientId !== "") {
+    return { error: null, ok: true };
+  }
 
   if (error) {
     // The CHECK on meeting_type is the one failure here with a specific, fast

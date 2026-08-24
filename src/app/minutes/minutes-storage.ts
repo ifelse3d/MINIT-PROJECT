@@ -17,7 +17,17 @@ import type { MeetingNotesExtraction } from "@/lib/extraction";
 // --- keep work on this device so navigating away loses NOTHING (Phase 7
 // moves this into the shared database). Photo is stored compressed so the
 // original handwriting can always be checked against the extraction.
-export const MINUTES_STORE_KEY = "minit.minutes.v1";
+
+import { adoptLegacyKey, scopedKey } from "@/lib/storage-scope-core";
+
+/** Pre-S0-4 global key — adopted into the scoped key once, then removed. */
+const MINUTES_STORE_LEGACY_KEY = "minit.minutes.v1";
+
+/** S0-4: scoped per user+org, so a shared laptop cannot show one member's
+ *  half-checked minutes (photo included) to the next member who signs in. */
+export function minutesStoreKey(): string {
+  return scopedKey("minutes:v1");
+}
 
 export type SavedMinutes = {
   extraction: MeetingNotesExtraction;
@@ -44,7 +54,9 @@ export type SavedMinutes = {
 
 export function loadSavedMinutes(): SavedMinutes | null {
   try {
-    const raw = localStorage.getItem(MINUTES_STORE_KEY);
+    const key = minutesStoreKey();
+    adoptLegacyKey(key, MINUTES_STORE_LEGACY_KEY);
+    const raw = localStorage.getItem(key);
     return raw ? (JSON.parse(raw) as SavedMinutes) : null;
   } catch {
     return null;
@@ -56,7 +68,7 @@ export type SaveOutcome = "ok" | "photo-dropped" | "failed";
 
 export function saveMinutes(state: SavedMinutes): SaveOutcome {
   try {
-    localStorage.setItem(MINUTES_STORE_KEY, JSON.stringify(state));
+    localStorage.setItem(minutesStoreKey(), JSON.stringify(state));
     return "ok";
   } catch {
     // Quota exceeded — keep the fields rather than losing everything, but the
@@ -66,7 +78,7 @@ export function saveMinutes(state: SavedMinutes): SaveOutcome {
     // We now report the outcome so the UI can say so. (2026-07-28 audit.)
     try {
       localStorage.setItem(
-        MINUTES_STORE_KEY,
+        minutesStoreKey(),
         JSON.stringify({ ...state, photoDataUrl: null }),
       );
       return "photo-dropped";

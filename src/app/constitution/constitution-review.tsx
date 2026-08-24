@@ -26,6 +26,7 @@ import {
 import type { ConfirmedClause } from "@/lib/constitution";
 import type { ConstitutionExtraction } from "@/lib/extraction";
 import { usePersistentState } from "@/lib/use-persistent-state";
+import { useScopedKey } from "@/lib/storage-scope";
 import { consumeIntake } from "@/lib/intake-handoff";
 import { saveConstitutionClauses } from "./actions";
 import { NewOrgBanner } from "./new-org-banner";
@@ -56,7 +57,8 @@ import {
 // ---------------------------------------------------------------------------
 
 /** localStorage key for the clauses read off this device's own constitution. */
-const CONSTITUTION_STORE_KEY = "minit.constitution.v1";
+/** Pre-S0-4 global key — adopted into the scoped key once, then removed. */
+const CONSTITUTION_LEGACY_KEY = "minit.constitution.v1";
 
 type StoredConstitution = {
   title: string;
@@ -145,9 +147,12 @@ export function ConstitutionReview({
   const t = useTriText();
 
   const [stored, setStored, storeMeta] = usePersistentState<StoredConstitution | null>(
-    CONSTITUTION_STORE_KEY,
+    // S0-4: scoped per user+org — a shared laptop must not show one
+    // account's constitution to the next.
+    useScopedKey("constitution:v1"),
     null,
     (p) => p === null || isStoredConstitution(p),
+    CONSTITUTION_LEGACY_KEY,
   );
   const [aiBusy, setAiBusy] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);

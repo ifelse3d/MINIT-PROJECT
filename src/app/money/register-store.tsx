@@ -28,6 +28,7 @@ import {
   type RemittanceBatch,
 } from "@/lib/custody";
 import { usePersistentState, type PersistMeta } from "@/lib/use-persistent-state";
+import { useScopedKey } from "@/lib/storage-scope";
 import { todayIsoMalaysia } from "@/lib/history";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
 import { consumeIntake } from "@/lib/intake-handoff";
@@ -61,8 +62,10 @@ import { loadRemittanceBatches, saveRemittanceBatch } from "./custody-actions";
 // Those stay local, so a page can be read without reading this file.
 // ---------------------------------------------------------------------------
 
-/** What issuing receipts told us, for the message shown afterwards. */
-export type IssueNotice = "saved" | "local" | "error" | "readonly" | "reconcile";
+/** What issuing receipts told us, for the message shown afterwards.
+ *  ("reconcile" retired 2026-08-25: issue_receipts() is one DB transaction,
+ *  so a partial write can no longer happen.) */
+export type IssueNotice = "saved" | "local" | "error" | "readonly" | "needs_prefix";
 
 export type RegisterStore = {
   // --- identity, resolved on the server (never client-chosen) --------------
@@ -126,7 +129,7 @@ export type RegisterStore = {
   deleteDonation: (id: string) => void;
   addManualDonation: (d: RegisterDonation) => void;
   addManualDonations: (rows: RegisterDonation[]) => void;
-  issueReceipts: () => Promise<void>;
+  issueReceipts: (opts?: { acceptDefaultPrefix?: boolean }) => Promise<void>;
   issueBusy: boolean;
   issueNotice: IssueNotice | null;
   setIssueNotice: Dispatch<SetStateAction<IssueNotice | null>>;
@@ -193,10 +196,15 @@ export function RegisterProvider({
   // receipts") would have burned real, gap-free, non-reusable receipt numbers
   // against invented people. The register starts EMPTY; the sample LEDGER on
   // the first page is still there to show how the flow works.
+  // S0-4: keys are scoped per user+org, so a shared laptop cannot leak one
+  // member's register to the next. The old global key is adopted once.
+  const donationsKey = useScopedKey("money:donations:v1");
+  const batchesKey = useScopedKey("money:batches:v1");
   const [donations, setDonations, donationStore] = usePersistentState<RegisterDonation[]>(
-    "minit:money:donations:v1",
+    donationsKey,
     [],
     isRegisterDonationArray,
+    "minit:money:donations:v1",
   );
   // AUDIT FIX (2026-07-28, P0): batches lived in plain React state while the
   // donations they refer to were persisted. So after "Hand over to HQ" a page
@@ -206,8 +214,10 @@ export function RegisterProvider({
   // unreachable in the state machine forever while custody.ts kept reporting it
   // as outstanding.
   const [batches, setBatches] = usePersistentState<RemittanceBatch[]>(
-    "minit:money:batches:v1",
+    batchesKey,
     [],
+    undefined,
+    "minit:money:batches:v1",
   );
 
   const [ledger, setLedger] = useState<LedgerExtraction>(emptyLedgerExtraction);
@@ -404,7 +414,7 @@ export function RegisterProvider({
   // stay sequential across devices and sessions, and every receipt is saved to
   // history. Without an active org (pure demo), numbering falls back to the
   // local series — clearly flagged as not saved.
-  const issueReceipts = useCallback(async () => {
+  const issueReceipts = useCallback(async (opts?: { acceptDefaultPrefix?: boolean }) => {
     const need = donations.filter((d) => d.receiptNo === null);
     if (need.length === 0) return;
     setIssueBusy(true);
@@ -419,7 +429,10 @@ export function RegisterProvider({
           purpose: d.purpose,
           donatedAtIso: d.donatedAtIso,
           custodyStatus: d.custodyStatus,
+          source: d.source,
+          collectorName: d.collector,
         })),
+        opts,
       );
       if (result.saved) {
         setDonations((prev) =>
@@ -452,8 +465,10 @@ export function RegisterProvider({
         setIssueNotice("readonly");
         return;
       }
-      if (result.reason === "needs_reconciliation") {
-        setIssueNotice("reconcile");
+      if (result.reason === "needs_prefix") {
+        // The org still has the shared default prefix and no receipts yet —
+        // send the person to Settings to pick their own letters first.
+        setIssueNotice("needs_prefix");
         return;
       }
       setIssueNotice("error");

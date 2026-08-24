@@ -68,17 +68,19 @@ export function EInvoisPack() {
     setDownloadBusy("einvois");
     try {
       // First request tells us how many ≤100-doc files the month needs.
+      // ONLY the month is sent (S0-1): the server reads that month's confirmed
+      // donations back from the database, so this device's copy of the register
+      // cannot change what goes into a tax submission file.
       const first = await downloadFromApi(
         "/api/einvois-xlsx",
-        // orgName comes from the server session, not from here.
-        { donations, month: einvoisMonth, fileIndex: 0 },
+        { month: einvoisMonth, fileIndex: 0 },
         `einvois-${einvoisMonth}.xlsx`
       );
       const count = Number(first.headers.get("X-Einvois-File-Count") ?? "1");
       for (let i = 1; i < count; i++) {
         await downloadFromApi(
           "/api/einvois-xlsx",
-          { donations, month: einvoisMonth, fileIndex: i },
+          { month: einvoisMonth, fileIndex: i },
           `einvois-${einvoisMonth}-${i + 1}.xlsx`
         );
       }
@@ -97,25 +99,25 @@ export function EInvoisPack() {
       titleEn="Month-end tax file (e-Invois)"
       summary={
         <Tri
-          bm="Sekali sebulan sahaja. Minit gabungkan semua resit bulan itu jadi SATU fail Excel untuk anda muat naik ke laman LHDN."
-          zh="一个月只需要做一次。Minit 把当月所有收据合并成一个 Excel 文件，让您上传到税务局的网站。"
-          en="Once a month only. Minit combines that month's receipts into ONE Excel file for you to upload to the tax office's site."
+          bm="Sekali sebulan sahaja. Minit gabungkan semua resit bulan itu jadi SATU fail Excel — anda salin angkanya ke dalam templat rasmi LHDN sebelum muat naik."
+          zh="一个月只需要做一次。Minit 把当月所有收据合并成一个 Excel 文件 —— 您再把里面的数字抄进税务局的官方模板后上传。"
+          en="Once a month only. Minit combines that month's receipts into ONE Excel file — you copy its figures into LHDN's official template before uploading."
         />
       }
     >
       <p className="text-base text-muted-foreground">
         {/* "e-Invois", "LHDN", "consolidation", "batch upload" and ".xlsx"
             were all shown with no explanation anywhere. (2026-07-28 audit.) */}
+        {/* S0-6 honesty fix (2026-08-25): this used to say "upload the file
+            there", presenting our spreadsheet AS the official template. Its
+            column layout follows LHDN's documentation but has never been
+            verified against a real MyInvois upload — so the honest instruction
+            is: download the official Batch Upload template from MyInvois, copy
+            these figures into it, and upload THAT. */}
         <Tri
-          bm="Setiap bulan, semua resit bulan itu digabungkan menjadi SATU fail Excel (.xlsx). Anda muat turun fail itu di sini, kemudian log masuk ke laman MyInvois LHDN (Lembaga Hasil Dalam Negeri — jabatan cukai) dan muat naik fail itu di sana. Minit tidak menghantarnya untuk anda."
-          zh="每个月，Minit 会把当月所有收据合并成一个 Excel 文件（.xlsx）。您在这里下载这个文件，然后登入税务局（LHDN）的 MyInvois 网站，把文件上传上去。Minit 不会替您送出。"
-          en="Each month all that month's receipts are combined into ONE Excel file (.xlsx). You download it here, then sign in to the tax office's (LHDN) MyInvois website and upload the file there. Minit does not submit it for you."
-        />
-        <br />⚠{" "}
-        <Tri
-          bm="Semak templat dengan LHDN sebelum guna."
-          zh="使用前请对照税务局的官方模板核对。"
-          en="Check the template against LHDN's official one before use."
+          bm="Setiap bulan, semua resit bulan itu digabungkan menjadi SATU fail Excel (.xlsx). Muat turun fail itu di sini, kemudian log masuk ke laman MyInvois LHDN (jabatan cukai), muat turun templat rasmi 'Batch Upload' mereka, salin angka daripada fail Minit ke dalam templat itu, dan muat naik templat rasmi tersebut. Minit tidak menghantarnya untuk anda."
+          zh="每个月，Minit 会把当月所有收据合并成一个 Excel 文件（.xlsx）。您在这里下载它，然后登入税务局（LHDN）的 MyInvois 网站，下载他们的官方「Batch Upload」模板，把 Minit 文件里的数字抄进官方模板，再上传那份官方模板。Minit 不会替您送出。"
+          en="Each month all that month's receipts are combined into ONE Excel file (.xlsx). Download it here, then sign in to LHDN's MyInvois site, download their official 'Batch Upload' template, copy the figures from Minit's file into that template, and upload the official one. Minit does not submit it for you."
         />
       </p>
 
