@@ -19,6 +19,11 @@ v2.1" which resolves to the /en/terms page.
 - Minit's fit: civic tech + multilingual LLMs + citizen-service automation
   (eROSES filings, LHDN e-Invois compliance for citizen-run organisations).
 
+## Registration status
+- **Registration: COMPLETED July 2026** (J, confirmed 2026-08-24 in person).
+  Nobody needs to ask this again — any session or reviewer asking "did we
+  register?" reads THIS line. Fee paid at the July rate.
+
 ## Deadlines & fees — THE CORRECTED PICTURE
 - Application window: **11 June → 31 August 2026, 23:59 MYT** — hard close.
 - **Capped at 300 teams, first-come first-served** — late = possibly locked out.

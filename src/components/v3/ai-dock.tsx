@@ -191,7 +191,9 @@ export function AIDock({
           aria-label="Minit AI"
           aria-expanded={false}
           onClick={() => setOpen(true)}
-          className="v2-pill fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[#5b4bd6] via-[#6f5ef2] to-[#67cea4] text-white shadow-[0_16px_40px_-10px_rgba(124,108,245,0.7)]"
+          // bottom-20 on phones: the v3 tab bar owns the bottom edge (Stage R),
+          // and a launcher sitting ON the 更多 tab is a mis-tap machine.
+          className="v2-pill fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[color:var(--v2-primary)] text-white shadow-lg md:bottom-5 md:right-5"
           style={{ marginBottom: "env(safe-area-inset-bottom)" }}
         >
           <Sparkles className="h-6 w-6" strokeWidth={1.8} />
