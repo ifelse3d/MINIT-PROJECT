@@ -45,6 +45,7 @@ export function MinutesDocument() {
     edited,
     setEdited,
     saveBusy,
+    alreadySaved,
     saveResult,
     saveToHistory,
     pastePack,
@@ -284,10 +285,15 @@ export function MinutesDocument() {
                 onClick={saveToHistory}
                 // Neither the example nor an empty page may enter a real
                 // organisation's audit trail — hence isReal, not !isSample.
-                disabled={!allReviewed || saveBusy || !isReal}
+                // `alreadySaved`: THIS document is stored; a second press
+                // must not store it twice (S0-3 — found by e2e-minutes.mjs).
+                // Editing anything unlocks the button again.
+                disabled={!allReviewed || saveBusy || !isReal || alreadySaved}
               >
                 {saveBusy ? (
                   <Tri bm="Menyimpan…" zh="保存中…" en="Saving…" />
+                ) : alreadySaved ? (
+                  <Tri bm="✓ Sudah disimpan" zh="✓ 已保存" en="✓ Saved" />
                 ) : (
                   <Tri bm="Simpan ke Sejarah" zh="保存到历史" en="Save to History" />
                 )}

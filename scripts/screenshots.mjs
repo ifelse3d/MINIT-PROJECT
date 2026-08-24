@@ -7,7 +7,7 @@ import path from "node:path";
 import puppeteer from "puppeteer-core";
 
 const ROOT = "C:/dev/minit-v2";
-const OUT = path.join(ROOT, "competition/screenshots");
+const OUT = process.env.SHOTS_OUT ?? path.join(ROOT, "competition/screenshots");
 mkdirSync(OUT, { recursive: true });
 
 const env = Object.fromEntries(
@@ -178,16 +178,21 @@ async function run() {
   await page.screenshot({ path: path.join(OUT, `s-onboarding-1280${SUFFIX}.png`) });
 
   // 5. the pages, at three widths
-  const shots = [
-    ["/", "home"],
-    ["/minutes", "minutes"],
-    ["/money", "money"],
-    ["/money/receipts", "receipts"],
-    ["/more", "more"],
-    ["/settings", "settings"],
-    ["/settings/plan", "plan"],
-    ["/filings", "filings"],
-  ];
+  const shots = process.env.SHOTS_ROUTES
+    ? process.env.SHOTS_ROUTES.split(",").map((raw) => {
+        const r = raw.startsWith("/") ? raw : `/${raw}`; // Git Bash mangles leading slashes
+        return [r, r.replace(/\W+/g, "-").replace(/^-|-$/g, "") || "home"];
+      })
+    : [
+        ["/", "home"],
+        ["/minutes", "minutes"],
+        ["/money", "money"],
+        ["/money/receipts", "receipts"],
+        ["/more", "more"],
+        ["/settings", "settings"],
+        ["/settings/plan", "plan"],
+        ["/filings", "filings"],
+      ];
   for (const [w, h, tag] of [[360, 800, "360"], [768, 1024, "768"], [1280, 900, "1280"]]) {
     await page.setViewport({ width: w, height: h });
     for (const [route, name] of shots) {

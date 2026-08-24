@@ -215,9 +215,7 @@ async function run() {
   check("F-4 register hydrates from the DB after local wipe",
     /MIN-\d{4}-0001/.test(afterReload));
 
-  // --- S0-2 idempotency: issuing again must not burn new numbers -----------
-  const before = await (await rest(`/receipts?select=id&org_id=in.(select id from orgs)`, { method: "GET" })).text;
-  // (count via REST below instead — the embedded select above is not PostgREST syntax)
+  // --- receipts really are in the database ---------------------------------
   const orgRow = await (await rest(`/orgs?name=eq.${encodeURIComponent(ORG_NAME)}&select=id`)).json();
   const orgId = orgRow[0]?.id;
   const countReceipts = async () => {

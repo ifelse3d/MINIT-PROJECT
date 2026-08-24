@@ -221,6 +221,15 @@ export type MinutesStore = {
   setEdited: (text: string | null) => void;
   saveBusy: boolean;
   saveResult: "ok" | string | null;
+  /**
+   * S0-3 UI half (2026-08-25, found by scripts/e2e-minutes.mjs): THIS exact
+   * document has already been stored. The save button locks on it, so a
+   * double press cannot store twice even while migration 20260828000000
+   * (the DB unique constraint) is not applied. Any edit produces a new
+   * extraction object and unlocks the button — an edited document is a new
+   * save, which is correct.
+   */
+  alreadySaved: boolean;
   saveToHistory: () => Promise<void>;
 
   // --- eROSES + calendar ---------------------------------------------------
@@ -823,6 +832,11 @@ export function MinutesProvider({
   // --- Phase 7: save the confirmed minutes to the org's history -------------
   const [saveBusy, setSaveBusy] = useState(false);
   const [saveResult, setSaveResult] = useState<"ok" | string | null>(null);
+  // WHICH extraction object was stored — object identity, so any edit (which
+  // clones the extraction) unlocks saving again. See `alreadySaved` on the
+  // store type for why this exists (found by scripts/e2e-minutes.mjs).
+  const [savedFor, setSavedFor] = useState<MeetingNotesExtraction | null>(null);
+  const alreadySaved = saveResult === "ok" && savedFor === extraction;
 
   // S0-3 (2026-08-25): one idempotency key per DOCUMENT, not per attempt. A
   // double tap or a timed-out retry re-sends the SAME key, and the server
@@ -853,6 +867,7 @@ export function MinutesProvider({
         clientId: saveClientIdRef.current,
       });
       setSaveResult(result.ok ? "ok" : result.error ?? "error");
+      if (result.ok) setSavedFor(extraction);
     } catch {
       setSaveResult(
         "Tidak berjaya disimpan — cuba lagi / 没有保存成功 —— 请再试一次 / Could not save — try again",
@@ -917,6 +932,7 @@ export function MinutesProvider({
         setEdited,
         saveBusy,
         saveResult,
+        alreadySaved,
         saveToHistory,
         pastePack,
         evRows,
