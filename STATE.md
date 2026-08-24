@@ -18,7 +18,11 @@
 
 - 四道关：`tsc` **0** · `eslint` **21（20 errors/1 warning，与基准逐字相同）** ·
   `vitest` **670 全过（50 档）** · `build` ✓
-- 本机 `main` 新增 **6 支 commit**（Stage 0 / R / F / S / W 各一＋深色模式 QA 修正），**未 push**（push 是 J 的事）
+- 本机 `main` 新增 **10 支 commit**（Stage 0/R/F/S/W ＋深色 QA、端到端测试、连按保存修正），**未 push**（push 是 J 的事）
+- 端到端实测：`npm run e2e:money`（16 项）＋ `npm run e2e:minutes`（11 项）**全部 PASS**，
+  在真 dev server＋真资料库上验过 RPC 开收据、PDF/xlsx server 回查、DB 读回、双按保存防重复、
+  /filings server 贴上包、删机构。测试自建自删，跑完资料库 0 org / 0 记录、只剩 J 的帐号（实查）。
+  🔴 顺带抓到并修掉：migration 19 未跑时「保存到历史」连按会存两份 → 保存钮成功后锁定（8c43fef）
 - 截图：`competition/screenshots/` **60 张**（360/768/1280 三档 × 9 页 × 浅色＋深色；语言选择器/无机构态/onboarding 也有）。自动走页 console 零错误。
   工具：`scripts/screenshots.mjs`（headless Chrome，自建自删测试帐号，跑完清干净）
 
