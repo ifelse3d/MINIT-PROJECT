@@ -18,8 +18,8 @@
 
 - 四道关：`tsc` **0** · `eslint` **21（20 errors/1 warning，与基准逐字相同）** ·
   `vitest` **670 全过（50 档）** · `build` ✓
-- 本机 `main` 新增 **5 支 commit**（Stage 0 / R / F / S / W 各一），**未 push**（push 是 J 的事）
-- 截图：`competition/screenshots/` **31 张**（360/768/1280 三档 × 登录/主页/会议/钱/收据/更多/设置/方案/申报＋语言选择器＋无机构态＋onboarding）。
+- 本机 `main` 新增 **6 支 commit**（Stage 0 / R / F / S / W 各一＋深色模式 QA 修正），**未 push**（push 是 J 的事）
+- 截图：`competition/screenshots/` **60 张**（360/768/1280 三档 × 9 页 × 浅色＋深色；语言选择器/无机构态/onboarding 也有）。自动走页 console 零错误。
   工具：`scripts/screenshots.mjs`（headless Chrome，自建自删测试帐号，跑完清干净）
 
 ### 今晚做了什么（一句话版；细节看 22-報告 与 5 支 commit message）
