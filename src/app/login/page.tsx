@@ -1,28 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Tri, useTriText } from "@/components/language-provider";
 import { PasswordInput } from "@/components/password-input";
 import { getSupabaseBrowser } from "@/db/supabase-browser";
 import { LEGAL_VERSIONS } from "@/legal/documents";
 import {
-  GLASS_CARD,
-  LoginBackdrop,
+  AUTH_CARD,
   MIN_PASSWORD_LENGTH,
-  glassInputClass,
+  authInputClass,
   passwordRequirementProblem,
 } from "./glass";
 
 // ---------------------------------------------------------------------------
 // /login — email + password sign-in and sign-up (Phase 7).
 //
-// Visual design follows the "Minit Sign In" handoff: a full-bleed Malaysian NGO
-// photograph, a dark tinted scrim, and translucent "liquid glass" panels on top
-// (card fill 4% white, 6px blur, 1px white/16 border, inset top highlight).
-// Because the surface is dark in BOTH themes, this screen deliberately does not
-// use the light-glass Card component or dark: variants — it is dark by design.
-// The brand mark is the app's own (gradient tile + sparkle), per the handoff.
+// Stage R (2026-08-25): one centred card on the app's own clean background, in
+// the visitor's ONE chosen language. The photo backdrop, dark scrim and glass
+// panels are gone — they ghosted on phones and failed contrast, and this is
+// the first and hardest screen for our users.
 //
 // Open sign-up is safe by design: a brand-new account belongs to NO org, so
 // RLS shows it zero rows until it creates its own organisation (or an
@@ -213,263 +210,251 @@ export default function LoginPage() {
     }
   }
 
-  const inputCls = glassInputClass(Boolean(error));
+  const inputCls = authInputClass(Boolean(error));
+  const labelCls = "text-sm font-semibold text-[color:var(--v2-text-soft)]";
 
   return (
-    <>
-      {/* Sibling of the form, never its child: the backdrop is positioned
-          (fixed) and positioned elements paint AFTER non-positioned content, so
-          nesting it inside the form's container covered the whole form. */}
-      <LoginBackdrop />
-
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[460px] flex-col items-center justify-center gap-[34px] px-[18px] py-10 sm:px-6 sm:py-16">
-        {/* Brand block — the app's own mark, kept at its existing lockup */}
-        <div className="v2-rise v2-rise-1 flex flex-col items-center gap-4">
-          <div className="flex items-center gap-[18px]">
-            <span className="flex h-[62px] w-[62px] items-center justify-center rounded-[18px] bg-gradient-to-br from-[#9c8dff] to-[#6d5ae6] text-white shadow-[0_14px_34px_rgba(60,36,170,0.5)]">
-              <Sparkles className="h-[30px] w-[30px]" strokeWidth={1.7} />
-            </span>
-            <span className="text-4xl font-bold leading-none tracking-[-0.02em] text-white sm:text-[46px]">
-              Minit
-            </span>
-          </div>
-          <p className="text-pretty text-center text-[17px] leading-relaxed text-white/[0.78]">
-            <Tri
-              bm="Pembantu pematuhan untuk persatuan & NGO"
-              zh="社团与非政府组织的合规助手"
-              en="Compliance assistant for societies & NGOs"
-            />
-          </p>
+    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center gap-7 px-4 py-10 sm:py-16">
+      {/* Brand block */}
+      <div className="flex flex-col items-center gap-3">
+        <div className="flex items-center gap-3">
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[color:var(--v2-primary)] text-2xl font-bold text-white">
+            M
+          </span>
+          <span className="text-4xl font-bold leading-none tracking-tight">Minit</span>
         </div>
-
-        {/* Sign-in card */}
-        <div
-          className={`v2-rise v2-rise-2 flex w-full flex-col gap-5 rounded-[26px] px-5 pb-[22px] pt-[26px] sm:px-8 sm:pb-7 sm:pt-[34px] ${GLASS_CARD}`}
-        >
-          <h1 className="text-center text-[25px] font-bold leading-tight tracking-[-0.01em] text-white [text-shadow:0_1px_12px_rgba(10,6,40,0.35)]">
-            {mode === "signin" ? (
-              <Tri bm="Log Masuk" zh="登录" en="Sign in" />
-            ) : mode === "signup" ? (
-              <Tri bm="Daftar Akaun" zh="注册账户" en="Create account" />
-            ) : (
-              <Tri bm="Lupa Kata Laluan" zh="忘记密码" en="Forgot password" />
-            )}
-          </h1>
-
-          {mode === "forgot" && (
-            <p className="text-pretty text-center text-base leading-relaxed text-white/[0.72]">
-              <Tri
-                bm="Masukkan e-mel anda. Kami hantar pautan untuk menetapkan kata laluan baharu."
-                zh="输入你的电邮。我们会寄一条连结给你，让你设定新密码。"
-                en="Enter your email. We will send a link for setting a new password."
-              />
-            </p>
-          )}
-
-          <form onSubmit={submit} className="flex flex-col gap-5">
-            <label className="flex flex-col gap-2">
-              <span className="text-sm font-semibold text-white/[0.88]">
-                <Tri bm="E-mel" zh="电邮" en="Email" />
-              </span>
-              <input
-                type="email"
-                autoComplete="email"
-                placeholder="you@organisation.org"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={inputCls}
-                required
-              />
-            </label>
-            {/* Hidden in "forgot": that mode only needs the address. A password
-                box there invites people to type the one they cannot remember. */}
-            <label className={`flex-col gap-2 ${mode === "forgot" ? "hidden" : "flex"}`}>
-              <span className="text-sm font-semibold text-white/[0.88]">
-                <Tri bm="Kata laluan" zh="密码" en="Password" />
-              </span>
-              <PasswordInput
-                tone="dark"
-                autoComplete={
-                  mode === "signin" ? "current-password" : "new-password"
-                }
-                placeholder="••••••••••••"
-                value={password}
-                onChange={setPassword}
-                className={inputCls}
-                // Not `required` in "forgot": a required control that is
-                // display:none blocks submit with a validation message the
-                // browser cannot even scroll to.
-                required={mode !== "forgot"}
-                minLength={mode === "signup" ? MIN_PASSWORD_LENGTH : 1}
-              />
-              {mode === "signup" && (
-                <span className="text-sm leading-relaxed text-white/[0.62]">
-                  <Tri
-                    bm={`${MIN_PASSWORD_LENGTH} aksara ke atas, dengan huruf besar, huruf kecil, nombor dan simbol (contoh: Bulan#2026)`}
-                    zh={`${MIN_PASSWORD_LENGTH} 个字符以上，要有大写字母、小写字母、数字和符号（例如：Bulan#2026）`}
-                    en={`${MIN_PASSWORD_LENGTH}+ characters with an uppercase letter, a lowercase letter, a number and a symbol (e.g. Bulan#2026)`}
-                  />
-                </span>
-              )}
-            </label>
-
-            {/* Sign-up only. Asking twice is not politeness: an unnoticed typo
-                here costs the person a round-trip through their email before
-                they can get in at all. */}
-            {mode === "signup" && (
-              <label className="flex flex-col gap-2">
-                <span className="text-sm font-semibold text-white/[0.88]">
-                  <Tri
-                    bm="Taip kata laluan sekali lagi"
-                    zh="再输入一次密码"
-                    en="Type the password again"
-                  />
-                </span>
-                <PasswordInput
-                  tone="dark"
-                  autoComplete="new-password"
-                  placeholder="••••••••••••"
-                  value={confirm}
-                  onChange={setConfirm}
-                  className={inputCls}
-                  required
-                  minLength={MIN_PASSWORD_LENGTH}
-                />
-              </label>
-            )}
-
-            {/* CONSENT (2026-08-22). Unticked, and the button below is disabled
-                until it is ticked — an agreement somebody had to actively give
-                is the only kind that means anything. Both links open in a new
-                tab so a half-filled form is never lost to reading the notice,
-                and both pages are public (src/proxy.ts) so they can be read
-                before there is an account. */}
-            {mode === "signup" && (
-              <label className="flex items-start gap-3 text-sm leading-relaxed text-white/[0.88]">
-                <input
-                  type="checkbox"
-                  checked={agreed}
-                  onChange={(e) => setAgreed(e.target.checked)}
-                  className="mt-1 h-5 w-5 shrink-0 rounded border-white/50 accent-[#9a83ff]"
-                />
-                <span>
-                  <Tri
-                    bm="Saya telah membaca dan bersetuju dengan"
-                    zh="我已阅读并同意"
-                    en="I have read and agree to the"
-                  />{" "}
-                  <a
-                    href="/terms"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-semibold underline decoration-white/60 underline-offset-[3px] hover:decoration-white"
-                  >
-                    <Tri bm="Syarat Penggunaan" zh="《使用条款》" en="Terms of Use" />
-                  </a>{" "}
-                  <Tri bm="dan" zh="和" en="and the" />{" "}
-                  <a
-                    href="/privacy"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-semibold underline decoration-white/60 underline-offset-[3px] hover:decoration-white"
-                  >
-                    <Tri bm="Notis Privasi" zh="《隐私权告知》" en="Privacy Notice" />
-                  </a>
-                  .{" "}
-                  <Tri
-                    bm="Saya faham Minit menghasilkan DRAF yang mesti disemak oleh manusia, dan bahawa saya bertanggungjawab mendapatkan kebenaran penderma dan ahli sebelum memasukkan data peribadi mereka."
-                    zh="我明白 Minit 产生的是草稿，必须由人核对；也明白在输入捐款人和会员的个人资料之前，要先取得他们的同意。"
-                    en="I understand Minit produces DRAFTS that a human must check, and that I am responsible for obtaining the consent of donors and members before entering their personal data."
-                  />
-                </span>
-              </label>
-            )}
-
-            {error && <p className="text-base text-[#ffb4b4]">{error}</p>}
-            {notice && <p className="text-base text-[#ffe0a8]">{notice}</p>}
-
-            <button
-              type="submit"
-              disabled={busy || (mode === "signup" && !agreed)}
-              className="mt-1 flex w-full items-center justify-center gap-2 rounded-[14px] bg-gradient-to-r from-[#6d5ae6] to-[#9a83ff] p-4 text-base font-semibold text-white shadow-[0_12px_28px_rgba(88,60,220,0.38)] transition-[filter,box-shadow,transform] duration-150 hover:shadow-[0_16px_34px_rgba(88,60,220,0.46)] hover:brightness-105 active:translate-y-px disabled:cursor-wait disabled:opacity-80"
-            >
-              {/* Spinner sits beside a stable label so the button never resizes */}
-              {busy && <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.4} />}
-              {mode === "signin" ? (
-                <Tri bm="Log Masuk" zh="登录" en="Sign in" />
-              ) : mode === "signup" ? (
-                <Tri bm="Daftar" zh="注册" en="Sign up" />
-              ) : (
-                <Tri bm="Hantar pautan" zh="寄出连结" en="Send the link" />
-              )}
-            </button>
-          </form>
-
-          {mode === "signin" && (
-            <p className="-mt-1 text-center text-base">
-              <button
-                type="button"
-                onClick={() => {
-                  setMode("forgot");
-                  setError(null);
-                  setNotice(null);
-                }}
-                className="text-white/[0.72] underline decoration-white/40 underline-offset-[3px] hover:text-white hover:decoration-white"
-              >
-                <Tri
-                  bm="Lupa kata laluan?"
-                  zh="忘记密码？"
-                  en="Forgot your password?"
-                />
-              </button>
-            </p>
-          )}
-
-          <p className="text-center text-base text-white/[0.72]">
-            <button
-              type="button"
-              onClick={() => {
-                setMode(mode === "signin" ? "signup" : "signin");
-                setError(null);
-                setNotice(null);
-                // Half-typed confirmation must not survive the switch, or the
-                // next sign-up starts with a mismatch nobody typed.
-                setConfirm("");
-                setAgreed(false);
-              }}
-              className="font-semibold text-white underline decoration-white/60 underline-offset-[3px] hover:decoration-white"
-            >
-              {mode === "signin" ? (
-                <Tri
-                  bm="Belum ada akaun? Daftar di sini"
-                  zh="还没有账户？在此注册"
-                  en="No account yet? Sign up here"
-                />
-              ) : mode === "signup" ? (
-                <Tri
-                  bm="Sudah ada akaun? Log masuk"
-                  zh="已有账户？登录"
-                  en="Already have an account? Sign in"
-                />
-              ) : (
-                <Tri
-                  bm="Kembali ke log masuk"
-                  zh="回到登录"
-                  en="Back to sign in"
-                />
-              )}
-            </button>
-          </p>
-        </div>
-
-        <p className="v2-rise v2-rise-2 text-center text-base text-white/60">
+        <p className="text-pretty text-center text-base text-[color:var(--v2-text-soft)]">
           <Tri
-            bm="Sedia untuk Jabatan Pendaftaran Pertubuhan (ROS) · Malaysia"
-            zh="支持社团注册局（ROS）· 马来西亚"
-            en="Registry of Societies (ROS) ready · Malaysia"
+            bm="Pembantu pematuhan untuk persatuan & NGO"
+            zh="社团与非政府组织的合规助手"
+            en="Compliance assistant for societies & NGOs"
           />
         </p>
       </div>
-    </>
+
+      {/* The one card */}
+      <div className={`flex w-full flex-col gap-5 ${AUTH_CARD}`}>
+        <h1 className="text-center text-2xl font-bold leading-tight tracking-tight">
+          {mode === "signin" ? (
+            <Tri bm="Log Masuk" zh="登录" en="Sign in" />
+          ) : mode === "signup" ? (
+            <Tri bm="Daftar Akaun" zh="注册账户" en="Create account" />
+          ) : (
+            <Tri bm="Lupa Kata Laluan" zh="忘记密码" en="Forgot password" />
+          )}
+        </h1>
+
+        {mode === "forgot" && (
+          <p className="text-pretty text-center text-base leading-relaxed text-[color:var(--v2-text-soft)]">
+            <Tri
+              bm="Masukkan e-mel anda. Kami hantar pautan untuk menetapkan kata laluan baharu."
+              zh="输入你的电邮。我们会寄一条连结给你，让你设定新密码。"
+              en="Enter your email. We will send a link for setting a new password."
+            />
+          </p>
+        )}
+
+        <form onSubmit={submit} className="flex flex-col gap-5">
+          <label className="flex flex-col gap-2">
+            <span className={labelCls}>
+              <Tri bm="E-mel" zh="电邮" en="Email" />
+            </span>
+            <input
+              type="email"
+              autoComplete="email"
+              placeholder="you@organisation.org"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={inputCls}
+              required
+            />
+          </label>
+          {/* Hidden in "forgot": that mode only needs the address. A password
+              box there invites people to type the one they cannot remember. */}
+          <label className={`flex-col gap-2 ${mode === "forgot" ? "hidden" : "flex"}`}>
+            <span className={labelCls}>
+              <Tri bm="Kata laluan" zh="密码" en="Password" />
+            </span>
+            <PasswordInput
+              autoComplete={
+                mode === "signin" ? "current-password" : "new-password"
+              }
+              placeholder="••••••••••••"
+              value={password}
+              onChange={setPassword}
+              className={inputCls}
+              // Not `required` in "forgot": a required control that is
+              // display:none blocks submit with a validation message the
+              // browser cannot even scroll to.
+              required={mode !== "forgot"}
+              minLength={mode === "signup" ? MIN_PASSWORD_LENGTH : 1}
+            />
+            {mode === "signup" && (
+              <span className="text-sm leading-relaxed text-[color:var(--v2-text-soft)]">
+                <Tri
+                  bm={`${MIN_PASSWORD_LENGTH} aksara ke atas, dengan huruf besar, huruf kecil, nombor dan simbol (contoh: Bulan#2026)`}
+                  zh={`${MIN_PASSWORD_LENGTH} 个字符以上，要有大写字母、小写字母、数字和符号（例如：Bulan#2026）`}
+                  en={`${MIN_PASSWORD_LENGTH}+ characters with an uppercase letter, a lowercase letter, a number and a symbol (e.g. Bulan#2026)`}
+                />
+              </span>
+            )}
+          </label>
+
+          {/* Sign-up only. Asking twice is not politeness: an unnoticed typo
+              here costs the person a round-trip through their email before
+              they can get in at all. */}
+          {mode === "signup" && (
+            <label className="flex flex-col gap-2">
+              <span className={labelCls}>
+                <Tri
+                  bm="Taip kata laluan sekali lagi"
+                  zh="再输入一次密码"
+                  en="Type the password again"
+                />
+              </span>
+              <PasswordInput
+                autoComplete="new-password"
+                placeholder="••••••••••••"
+                value={confirm}
+                onChange={setConfirm}
+                className={inputCls}
+                required
+                minLength={MIN_PASSWORD_LENGTH}
+              />
+            </label>
+          )}
+
+          {/* CONSENT (2026-08-22). Unticked, and the button below is disabled
+              until it is ticked — an agreement somebody had to actively give
+              is the only kind that means anything. Both links open in a new
+              tab so a half-filled form is never lost to reading the notice,
+              and both pages are public (src/proxy.ts) so they can be read
+              before there is an account. */}
+          {mode === "signup" && (
+            <label className="flex items-start gap-3 text-sm leading-relaxed">
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={(e) => setAgreed(e.target.checked)}
+                className="mt-1 h-5 w-5 shrink-0 rounded accent-[color:var(--v2-primary)]"
+              />
+              <span>
+                <Tri
+                  bm="Saya telah membaca dan bersetuju dengan"
+                  zh="我已阅读并同意"
+                  en="I have read and agree to the"
+                />{" "}
+                <a
+                  href="/terms"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-semibold underline underline-offset-2"
+                >
+                  <Tri bm="Syarat Penggunaan" zh="《使用条款》" en="Terms of Use" />
+                </a>{" "}
+                <Tri bm="dan" zh="和" en="and the" />{" "}
+                <a
+                  href="/privacy"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-semibold underline underline-offset-2"
+                >
+                  <Tri bm="Notis Privasi" zh="《隐私权告知》" en="Privacy Notice" />
+                </a>
+                .{" "}
+                <Tri
+                  bm="Saya faham Minit menghasilkan DRAF yang mesti disemak oleh manusia, dan bahawa saya bertanggungjawab mendapatkan kebenaran penderma dan ahli sebelum memasukkan data peribadi mereka."
+                  zh="我明白 Minit 产生的是草稿，必须由人核对；也明白在输入捐款人和会员的个人资料之前，要先取得他们的同意。"
+                  en="I understand Minit produces DRAFTS that a human must check, and that I am responsible for obtaining the consent of donors and members before entering their personal data."
+                />
+              </span>
+            </label>
+          )}
+
+          {error && <p className="text-base font-medium text-red-700">{error}</p>}
+          {notice && <p className="text-base font-medium text-amber-800">{notice}</p>}
+
+          <button
+            type="submit"
+            disabled={busy || (mode === "signup" && !agreed)}
+            className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-[color:var(--v2-primary)] p-3.5 text-base font-semibold text-white transition-[filter] duration-150 hover:brightness-105 active:translate-y-px disabled:cursor-wait disabled:opacity-60"
+          >
+            {/* Spinner sits beside a stable label so the button never resizes */}
+            {busy && <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.4} />}
+            {mode === "signin" ? (
+              <Tri bm="Log Masuk" zh="登录" en="Sign in" />
+            ) : mode === "signup" ? (
+              <Tri bm="Daftar" zh="注册" en="Sign up" />
+            ) : (
+              <Tri bm="Hantar pautan" zh="寄出连结" en="Send the link" />
+            )}
+          </button>
+        </form>
+
+        {mode === "signin" && (
+          <p className="-mt-1 text-center text-base">
+            <button
+              type="button"
+              onClick={() => {
+                setMode("forgot");
+                setError(null);
+                setNotice(null);
+              }}
+              className="text-[color:var(--v2-text-soft)] underline underline-offset-2 hover:text-[color:var(--v2-text)]"
+            >
+              <Tri
+                bm="Lupa kata laluan?"
+                zh="忘记密码？"
+                en="Forgot your password?"
+              />
+            </button>
+          </p>
+        )}
+
+        <p className="text-center text-base text-[color:var(--v2-text-soft)]">
+          <button
+            type="button"
+            onClick={() => {
+              setMode(mode === "signin" ? "signup" : "signin");
+              setError(null);
+              setNotice(null);
+              // Half-typed confirmation must not survive the switch, or the
+              // next sign-up starts with a mismatch nobody typed.
+              setConfirm("");
+              setAgreed(false);
+            }}
+            className="font-semibold text-[color:var(--v2-primary)] underline underline-offset-2"
+          >
+            {mode === "signin" ? (
+              <Tri
+                bm="Belum ada akaun? Daftar di sini"
+                zh="还没有账户？在此注册"
+                en="No account yet? Sign up here"
+              />
+            ) : mode === "signup" ? (
+              <Tri
+                bm="Sudah ada akaun? Log masuk"
+                zh="已有账户？登录"
+                en="Already have an account? Sign in"
+              />
+            ) : (
+              <Tri
+                bm="Kembali ke log masuk"
+                zh="回到登录"
+                en="Back to sign in"
+              />
+            )}
+          </button>
+        </p>
+      </div>
+
+      <p className="text-center text-sm text-[color:var(--v2-text-soft)]">
+        <Tri
+          bm="Sedia untuk Jabatan Pendaftaran Pertubuhan (ROS) · Malaysia"
+          zh="支持社团注册局（ROS）· 马来西亚"
+          en="Registry of Societies (ROS) ready · Malaysia"
+        />
+      </p>
+    </div>
   );
 }

@@ -10,6 +10,8 @@ import { AiUsageRows } from "./ai-usage-rows";
 import { AppearanceRows } from "./appearance-rows";
 import { ChangePasswordRows } from "./change-password-rows";
 import { DeleteOrgSection } from "./delete-org-section";
+import { DeleteRegisterSection } from "./delete-register-section";
+import { EinvoisRows } from "./einvois-rows";
 import { ReceiptSeriesRows } from "./receipt-series-rows";
 import { SettingsRow, SettingsSection } from "./ui";
 
@@ -197,6 +199,9 @@ export default async function SettingsPage() {
             </SettingsRow>
           )}
 
+          {/* R-6: whether the optional e-Invois pages show at all. */}
+          {active && <EinvoisRows />}
+
           {active && receiptSeries && (
             <ReceiptSeriesRows
               orgId={active.id}
@@ -259,6 +264,10 @@ export default async function SettingsPage() {
             </Link>
           </SettingsRow>
         </SettingsSection>
+
+        {/* R-5: "delete the register on this device" moved here from the
+            /money page header, behind a typed confirmation. */}
+        {active && <DeleteRegisterSection orgName={active.name} />}
 
         {active && active.role === "hq_admin" && (
           <DeleteOrgSection orgId={active.id} orgName={active.name} />

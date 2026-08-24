@@ -26,7 +26,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, ArrowUp, RotateCcw, Sparkles, X } from "lucide-react";
 import { Tri, useTriText } from "@/components/language-provider";
-import { GlassBadge } from "./glass";
+import { GlassBadge } from "./surfaces";
 import { AnswerSources, type AnswerSource } from "./answer-sources";
 import { tidyReply } from "@/lib/tidy-reply";
 

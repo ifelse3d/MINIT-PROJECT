@@ -157,104 +157,85 @@
 }
 
 /* =========================================================================
-   MINIT · v2 GLASS DESIGN SYSTEM
-   Everything below is scoped to .v2-root so the existing (live) app is
-   completely untouched. Apple-inspired soft glassmorphism: frosted glass
-   cards floating over blurred pastel gradient blobs.
+   MINIT · v3 DESIGN SYSTEM — "clean ledger" (Stage R, 2026-08-25)
+
+   THE ONE TOKEN FILE. Every colour, edge and shadow the shell uses is defined
+   here and nowhere else. J's brief (2026-08-24): kill the glassmorphism — it
+   caused the mobile login ghosting, the contrast failures and the "template"
+   look. Replaced with: near-white page (deep slate in dark mode), SOLID cards,
+   thin borders, light shadows, ONE brand colour (the existing deep purple,
+   kept only as an accent), and the green/amber/red semantic colours untouched
+   (Hard Rule 9).
+
+   The class/variable NAMES from the old system are kept (.v2-glass, --v2-*):
+   forty files reference them, and a name is plumbing, not design. Their
+   VALUES are all new. Everything is rem-based — the text-size setting scales
+   type and spacing together (appearance-provider).
    ========================================================================= */
 
 .v2-root {
-  /* Palette — "Minit Glass" (lilac → mint frosted glass) */
-  --v2-bg: linear-gradient(
-    135deg,
-    #d7d2f4 0%,
-    #e6e1f3 30%,
-    #dfeaef 62%,
-    #cbe9dc 100%
-  );
-  /* DECORATIVE ONLY — shadows, focus rings, blobs, icon fills. These two are
-     the brand purples, and white text on them measures 3.95:1 (#7c6cf5) and
-     2.16:1 (#b3a6f7) — both fail AA, and #b3a6f7 fails even the 3:1 large-text
-     floor. Never put white text on them. */
-  --v2-primary: #7c6cf5;
-  --v2-primary-soft: #b3a6f7;
-  --v2-purple: #b3a6f7;
-  --v2-mint: #67cea4;
-  /* THE white-on-purple gradient for primary actions ("Save", "Issue receipt",
-     "Confirm"). Same hue family, stepped deeper so the white label is actually
-     readable: 6.14:1 and 4.61:1. Use this token — a hardcoded
-     `from-[#…] to-[#…]` is how the old pair ended up in 42 places across 12
-     files without anyone measuring it. (docs/无障碍对比度审查.md §1) */
+  /* --- the one brand accent ------------------------------------------- */
+  /* White text on this measures 6.14:1 (kept from the audit). The "gradient"
+     pair now holds ONE colour twice: primary buttons are flat. */
+  --v2-primary: #5b4bd6;
+  --v2-primary-soft: #eceafc;
   --v2-grad-from: #5b4bd6;
-  --v2-grad-to: #6f5ef2;
-  --v2-text: #211f33;
-  /* Was #6f6c88 ⇒ 4.23:1 on glass (fails AA). Now ≈ 6.4:1. It carries nav
-     labels, the "choose an organisation" prompt and most secondary copy. */
-  --v2-text-soft: #4f4c66;
-  /* Glass raised from 0.5/0.62 to 0.78/0.86: the blurred, animated pastel blobs
-     behind the cards were showing through under small grey text. The frosted
-     look survives; the text now sits on a near-opaque surface. */
-  --v2-glass: rgba(255, 255, 255, 0.78);
-  --v2-glass-strong: rgba(255, 255, 255, 0.86);
-  --v2-border: rgba(255, 255, 255, 0.9);
-  /* A real, perceivable edge for outline buttons (see ui/button.tsx).
-     0.32 measured 1.68:1 against the glass — WCAG 1.4.11 wants 3:1 for a
-     non-text element that carries meaning, and the border IS the only signal
-     that an outline button is pressable. 0.7 measures 3.62:1.
-     (docs/无障碍对比度审查.md §3) */
-  --v2-outline-border: rgba(80, 74, 130, 0.7);
-  --v2-shadow: 0 14px 40px -8px rgba(92, 80, 160, 0.16);
-  --v2-shadow-soft: 0 12px 30px -10px rgba(124, 108, 245, 0.5);
+  --v2-grad-to: #5b4bd6;
+
+  /* --- surfaces --------------------------------------------------------- */
+  --v2-page: #f6f7f9;
+  --v2-card: #ffffff;
+  --v2-glass: var(--v2-card);         /* legacy name, solid value */
+  --v2-glass-strong: var(--v2-card);
+  --v2-border: #d8dbe2;               /* card edge: shadow + surface carry the
+                                         boundary; buttons use the darker one */
+  --v2-outline-border: rgba(71, 77, 96, 0.65); /* 3.6:1 on white — an outline
+                                         button's border IS its affordance */
+  --v2-shadow: 0 0.0625rem 0.1875rem rgba(16, 24, 40, 0.07),
+    0 0.0625rem 0.125rem rgba(16, 24, 40, 0.04);
+  --v2-shadow-soft: 0 0.25rem 0.75rem -0.25rem rgba(91, 75, 214, 0.35);
+
+  /* --- text ------------------------------------------------------------- */
+  --v2-text: #1b1e27;                 /* 15.9:1 on white */
+  --v2-text-soft: #4c5261;            /* 7.4:1 on white */
 
   position: relative;
   min-height: 100vh;
   color: var(--v2-text);
-  background: var(--v2-bg);
-  background-attachment: fixed;
-  font-family: var(--font-v2, "Inter"), ui-sans-serif, -apple-system,
-    BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+  background: var(--v2-page);
+  font-family: var(--font-v2, "Inter"), var(--font-sc, "Noto Sans SC"),
+    ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
   letter-spacing: -0.01em;
 }
 
 .dark .v2-root {
-  --v2-bg: linear-gradient(135deg, #1a1730 0%, #171526 45%, #14211f 100%);
-  --v2-text: #f1f5f9;
-  --v2-text-soft: #c5c1dd;
-  /* 2026-08-07 (user: "darkmode 也是不友善看不清楚" / "设计有点透明，有点难读")
-     Measured against the composited dark surface rgb(46,44,60): the BODY TEXT
-     was never the problem (--v2-text 12.38:1, --v2-text-soft 7.78:1, badges
-     5.7–7.0:1 — all pass). What failed was every EDGE, so cards, panels and
-     outline buttons dissolved into the background and the whole screen read as
-     one undifferentiated dark wash:
-         --v2-border          0.22 → 2.03:1  ✗ (needs 3:1, WCAG 1.4.11)
-         --v2-outline-border  0.30 → 2.61:1  ✗
-     Raised to 0.45 (4.03:1) and 0.55 (5.25:1). Glass alpha is also lifted so a
-     panel is distinguishable from the page behind it — 0.10 over a dark
-     gradient is barely a surface at all.
-     NOTE: the 2026-08-03 audit explicitly did NOT check dark mode (see its
-     "我没检查的" section), which is why this survived that pass. */
-  --v2-glass: rgba(255, 255, 255, 0.14);
-  --v2-glass-strong: rgba(255, 255, 255, 0.2);
-  --v2-border: rgba(255, 255, 255, 0.45);
+  --v2-primary: #8d80f0;
+  --v2-primary-soft: rgba(141, 128, 240, 0.16);
+  --v2-page: #12151c;
+  --v2-card: #1a1e28;
+  --v2-glass: var(--v2-card);
+  --v2-glass-strong: var(--v2-card);
+  /* Cards no longer dissolve in dark mode (the 2026-08-07 complaint): the
+     surface itself is a step lighter than the page, so the border can stay a
+     hairline. Outline buttons keep the audited 5.25:1 edge. */
+  --v2-border: rgba(255, 255, 255, 0.16);
   --v2-outline-border: rgba(255, 255, 255, 0.55);
-  --v2-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.7);
+  --v2-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.45);
+  --v2-shadow-soft: 0 0.25rem 0.75rem -0.25rem rgba(0, 0, 0, 0.5);
+  --v2-text: #eef0f5;
+  --v2-text-soft: #b0b6c4;
 
   /* ---------------------------------------------------------------------
-     DARK-MODE PALETTE FLIP
+     DARK-MODE PALETTE FLIP (kept from the audit — it is correct)
      Status colours across the app are written light-first: a pale tint for
      the panel (bg-amber-50) and a deep tone for the text (text-amber-900).
-     On a dark background that reads as pale-on-pale — invisible.
      Tailwind v4 compiles those utilities to var(--color-amber-50) etc., so
      redefining the variables HERE flips every one of them at once, scoped to
-     the v2 shell. Pale steps (50/100) become translucent tints that sit on
-     the dark background; deep text steps (700–950) become legible light tones.
-     Mid steps (200–600) are left alone — they are borders, dots and buttons
-     that already read fine on dark.
+     the shell. Pale steps (50/100) become translucent tints; deep text steps
+     (700-950) become legible light tones. Mid steps (200-600) are left alone.
      Add a colour family here rather than adding dark: variants per file.
      --------------------------------------------------------------------- */
-
-  /* Panels — translucent so the glass/gradient still shows through */
   --color-red-50: rgba(248, 113, 113, 0.13);
   --color-red-100: rgba(248, 113, 113, 0.2);
   --color-amber-50: rgba(251, 191, 36, 0.13);
@@ -278,7 +259,6 @@
   --color-slate-50: rgba(255, 255, 255, 0.06);
   --color-slate-100: rgba(255, 255, 255, 0.1);
 
-  /* Text on those panels */
   --color-red-700: #fca5a5;
   --color-red-800: #fecaca;
   --color-red-900: #fee2e2;
@@ -314,210 +294,54 @@
   --color-slate-900: #f1f5f9;
 }
 
-/* --- Glass surfaces ---------------------------------------------------- */
-.v2-glass {
-  background: var(--v2-glass);
-  border: 1px solid var(--v2-border);
-  border-radius: 24px;
-  box-shadow: var(--v2-shadow);
-  backdrop-filter: blur(24px) saturate(160%);
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
-}
+/* --- Cards (legacy class names, solid values) --------------------------- */
+/* No backdrop-filter anywhere: the blur was the source of the mobile login
+   ghosting and the old-Android fallback problem. A card is a card. */
+.v2-glass,
 .v2-glass-strong {
-  background: var(--v2-glass-strong);
+  background: var(--v2-card);
   border: 1px solid var(--v2-border);
-  border-radius: 24px;
+  border-radius: 1rem;
   box-shadow: var(--v2-shadow);
-  backdrop-filter: blur(30px) saturate(180%);
-  -webkit-backdrop-filter: blur(30px) saturate(180%);
 }
 
-/* Older Android WebViews (which is what Capacitor ships on — see
-   docs/MOBILE_APP_SETUP.md) do not support backdrop-filter. When it is absent
-   the surface does not fall back to opaque white, it falls back to TRANSPARENT:
-   the text lands directly on the moving pastel gradient and every contrast
-   figure above becomes meaningless. Pin an opaque surface in that case.
-   (docs/无障碍对比度审查.md §4) */
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .v2-glass,
-  .v2-glass-strong {
-    background: rgba(255, 255, 255, 0.96);
-  }
-  .dark .v2-glass,
-  .dark .v2-glass-strong {
-    background: rgba(32, 30, 46, 0.96);
-  }
+/* --- Page titles -------------------------------------------------------- */
+/* Was a purple→mint gradient clipped to the text. Titles are now simply ink —
+   the brand colour is an accent, not a paint bucket. */
+.v2-gradient-text {
+  color: var(--v2-text);
+  background: none;
 }
 
-/* --- Sign-in backdrop -------------------------------------------------- */
-/* A photographed backdrop for /login. Drop any image at public/login-bg.jpg
-   (a warm community / NGO photo works best) and it appears automatically; if
-   the file is absent the warm gradient beneath simply shows through, so the
-   page never breaks. The photo drifts very slowly (Ken Burns) so the screen
-   feels alive without pulling attention off the form. */
-.v2-login-photo {
-  background-image: url("/login-bg.jpg");
-  background-size: cover;
-  background-position: center;
-  /* Ken Burns drift removed: it ran forever directly behind the sign-in form's
-     white text, and /login is the first and hardest screen for our users.
-     (2026-07-28 audit.) */
-  transform-origin: 52% 48%;
-}
-/* Barely any zoom: the photo is upscaled from a small original, so magnifying
-   it just shows the softness. This is a slow drift, not a push-in. */
-@keyframes v2-kenburns {
-  from {
-    transform: scale(1) translate3d(0, 0, 0);
-  }
-  to {
-    transform: scale(1.04) translate3d(-1%, -0.8%, 0);
-  }
-}
-
-/* Entrance for the sign-in card and brand block.
-   Deliberately CSS, not framer-motion, and applied to the glass element ITSELF
-   rather than a wrapper: animating opacity on an ANCESTOR of an element with
-   backdrop-filter makes Chrome composite the blurred child separately, so the
-   child stays visible while everything else sits at opacity 0 — the card
-   vanished and only the two blurred inputs showed. animation-fill-mode: both
-   also means the end state is visible even if JS never runs. */
-.v2-rise {
-  animation: v2-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-.v2-rise-1 {
-  animation-delay: 0.08s;
-}
-.v2-rise-2 {
-  animation-delay: 0.18s;
-}
-@keyframes v2-rise {
-  from {
-    opacity: 0;
-    transform: translate3d(0, 14px, 0);
-  }
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
-}
-
-/* Respect the OS setting — motion sickness is not a design flourish. */
-@media (prefers-reduced-motion: reduce) {
-  .v2-login-photo {
-    animation: none;
-  }
-  /* Keep the entrance's END state, just skip the movement. */
-  .v2-rise {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
-}
-
-/* --- Pill buttons ------------------------------------------------------ */
+/* --- Pill buttons (legacy class names) ---------------------------------- */
 .v2-pill {
-  border-radius: 9999px;
+  border-radius: 0.75rem;
   font-weight: 600;
-  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.25s ease, background 0.25s ease;
-  will-change: transform;
-}
-.v2-pill:hover {
-  transform: scale(1.035);
-}
-.v2-pill:active {
-  transform: scale(0.98);
+  transition: background 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
 }
 .v2-pill-primary {
   color: #fff;
-  background: linear-gradient(120deg, var(--v2-grad-from), var(--v2-grad-to));
+  background: var(--v2-primary);
   box-shadow: var(--v2-shadow-soft);
 }
 .v2-pill-primary:hover {
-  box-shadow: 0 16px 44px -14px rgba(124, 108, 245, 0.6);
+  filter: brightness(1.06);
 }
 .v2-pill-ghost {
   color: var(--v2-text);
-  background: var(--v2-glass);
-  border: 1px solid var(--v2-border);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: var(--v2-card);
+  border: 1px solid var(--v2-outline-border);
 }
 
-/* --- Gradient accents -------------------------------------------------- */
-/* Every page <h1> uses this. The old ramp ended on --v2-mint (#67cea4), which
-   measured about 1.6:1 against the glass surface — the tail of every page title
-   faded out to nearly nothing. The ramp now stays inside the dark end of the
-   brand palette, so the whole word is solid and readable, and the gradient is
-   decoration rather than a legibility risk. (2026-07-28 audit.) */
-.v2-gradient-text {
-  background: linear-gradient(120deg, #4b3fc4, #6a5ae0 55%, #2f7f63);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+/* --- Legacy hooks kept inert -------------------------------------------- */
+/* Decorative blobs and the login photo are gone with the glass. The classes
+   stay defined so an unmigrated reference renders nothing instead of a bug. */
+.v2-blob,
+.v2-login-photo {
+  display: none;
 }
-.dark .v2-gradient-text {
-  background: linear-gradient(120deg, #c9c1ff, #d9d3ff 55%, #8fe3c1);
-  -webkit-background-clip: text;
-  background-clip: text;
-}
-/* Print / forced-colors safety: a transparent-coloured heading disappears
-   entirely if background-clip is unsupported. */
-@supports not ((-webkit-background-clip: text) or (background-clip: text)) {
-  .v2-gradient-text {
-    color: var(--v2-text);
-    background: none;
-  }
-}
-
-/* --- Animated background blobs ---------------------------------------- */
-.v2-blob {
-  position: absolute;
-  border-radius: 9999px;
-  filter: blur(60px);
-  /* Was 0.9. Constantly-moving saturated colour behind small text is hostile to
-     a presbyopic reader; the blobs are now a faint wash instead of the loudest
-     thing on screen. (2026-07-28 audit.) */
-  opacity: 0.45;
-  pointer-events: none;
-  will-change: transform;
-}
-.dark .v2-blob {
-  opacity: 0.28;
-}
-@keyframes v2-float {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(0, -28px, 0) scale(1.06);
-  }
-}
-/* Deliberately NOT animated any more. Our users read slowly and the background
-   drifted forever under every card. The class is kept so the markup in
-   blobs.tsx does not need to change, and so re-enabling it is one line. */
-.v2-blob-anim {
+.v2-rise {
   animation: none;
-}
-
-/* Respect reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  .v2-blob-anim,
-  .v2-pill {
-    animation: none !important;
-    transition: none !important;
-  }
-
-  /* Radix sheets (e.g. the calendar day panel): skip the slide
-     animation entirely — open/close become instant, and Radix unmounts
-     without waiting for an animationend that reduced motion suppresses. */
-  [data-slot="sheet-content"],
-  [data-slot="sheet-overlay"] {
-    animation: none !important;
-    transition: none !important;
-  }
 }
 
 /* Safe-area insets for native iOS/Android shells and notched phones */
@@ -528,11 +352,21 @@
   padding-right: env(safe-area-inset-right);
 }
 
-/* Thin custom scrollbar inside glass panels */
+/* Thin custom scrollbar inside panels */
 .v2-scroll::-webkit-scrollbar {
   width: 6px;
 }
 .v2-scroll::-webkit-scrollbar-thumb {
   background: rgba(100, 116, 139, 0.3);
   border-radius: 9999px;
+}
+
+/* Radix sheets under reduced motion: open/close become instant, and Radix
+   unmounts without waiting for an animationend that reduced motion suppresses. */
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="sheet-content"],
+  [data-slot="sheet-overlay"] {
+    animation: none !important;
+    transition: none !important;
+  }
 }

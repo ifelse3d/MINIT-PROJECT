@@ -1,24 +1,28 @@
 "use client";
 
 // ---------------------------------------------------------------------------
-// Core glass surfaces & controls for the v2 UI. Depth comes from frosted
-// layers + soft shadows, never hard borders. Pills, badges and headings all
-// share one accent gradient (blue -> purple -> mint).
+// v3 surfaces — the solid primitives of the "clean ledger" design (Stage R,
+// 2026-08-25). One brand accent, solid cards, thin borders, no blur, no
+// gradients, no hover theatrics. Tokens live in globals.css and only there.
+//
+// Export names deliberately match the old v2/glass.tsx so a caller migrates by
+// changing one import path.
 // ---------------------------------------------------------------------------
 
 import Link from "next/link";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
-import { motion } from "framer-motion";
 
 function cn(...parts: (string | false | undefined | null)[]) {
   return parts.filter(Boolean).join(" ");
 }
 
-/** Frosted floating card. `hover` adds a gentle lift + glow. */
+/** A solid card. (`strong` kept for call-site compatibility; both are solid.) */
 export function GlassCard({
   children,
   className,
-  strong = false,
+  // Kept for call-site compatibility; both strengths are the same solid card.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  strong: _strong = false,
   hover = false,
   as: As = "div",
 }: {
@@ -31,9 +35,8 @@ export function GlassCard({
   return (
     <As
       className={cn(
-        strong ? "v2-glass-strong" : "v2-glass",
-        hover &&
-          "transition-transform duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_28px_70px_-24px_rgba(124,108,245,0.45)]",
+        "v2-glass",
+        hover && "transition-shadow duration-150 hover:shadow-md",
         className
       )}
     >
@@ -56,7 +59,7 @@ const sizeMap = {
   lg: "px-7 py-3.5 text-base",
 };
 
-/** Rounded pill button with Apple-style hover scale. Renders a link if href. */
+/** Primary/ghost button. Renders a link if href. */
 export function PillButton({
   children,
   variant = "primary",
@@ -88,14 +91,8 @@ export function PillButton({
 type Tone = "confirmed" | "check" | "missing" | "info" | "neutral";
 
 // Aligns with CLAUDE.md rule 9: confirmed=green, check=amber, missing=red.
-//
-// The light-mode text step used to be `-600`, which measured 2.82–3.89:1 on the
-// tinted panel — all four coloured tones failed WCAG AA (4.5:1). `check` was the
-// worst at 2.82:1, and `check` is precisely the badge that has to be noticed:
-// it is the one saying "the AI is unsure, look at this". `-800` clears it with
-// room to spare (6.28–6.65:1) at the same hue. The `dark:` half already used
-// `-300`, which measures 5.7–7.0:1 on the dark surface and is left alone.
-// (docs/无障碍对比度审查.md §2)
+// The text steps are the audited ones (-800 light / -300 dark, all ≥ 4.5:1 on
+// their tinted panels — docs/无障碍对比度审查.md §2). Do not lighten them.
 const toneMap: Record<Tone, string> = {
   confirmed: "bg-emerald-400/15 text-emerald-800 dark:text-emerald-300 ring-emerald-400/30",
   check: "bg-amber-400/15 text-amber-800 dark:text-amber-300 ring-amber-400/30",
@@ -116,7 +113,7 @@ export function GlassBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold ring-1 ring-inset backdrop-blur",
+        "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold ring-1 ring-inset",
         toneMap[tone],
         className
       )}
@@ -139,10 +136,10 @@ export function IconChip({
   return (
     <span
       className={cn(
-        "inline-flex h-11 w-11 items-center justify-center rounded-2xl",
+        "inline-flex h-11 w-11 items-center justify-center rounded-xl",
         gradient
-          ? "bg-gradient-to-br from-[#5b4bd6] to-[#6f5ef2] text-white shadow-[0_10px_30px_-10px_rgba(124,108,245,0.7)]"
-          : "bg-white/50 text-slate-700 ring-1 ring-white/60 backdrop-blur dark:bg-white/10 dark:text-slate-200",
+          ? "bg-[color:var(--v2-primary)] text-white"
+          : "bg-[color:var(--v2-primary-soft)] text-[color:var(--v2-primary)]",
         className
       )}
     >
@@ -175,27 +172,6 @@ export function SectionTitle({
       </div>
       {action}
     </div>
-  );
-}
-
-/** Motion-enabled glass card for grids that need per-item interaction. */
-export function MotionGlassCard({
-  children,
-  className,
-  strong,
-}: {
-  children: ReactNode;
-  className?: string;
-  strong?: boolean;
-}) {
-  return (
-    <motion.div
-      whileHover={{ y: -6 }}
-      transition={{ type: "spring", stiffness: 260, damping: 22 }}
-      className={cn(strong ? "v2-glass-strong" : "v2-glass", className)}
-    >
-      {children}
-    </motion.div>
   );
 }
 

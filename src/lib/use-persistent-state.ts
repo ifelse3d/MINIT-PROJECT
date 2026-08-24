@@ -77,13 +77,15 @@ export function usePersistentState<T>(
   // new scope's key.
   const [hydratedKey, setHydratedKey] = useState<string | null>(null);
   const loaded = hydratedKey !== null;
-  const [corrupt, setCorrupt] = useState(false);
+  // WHICH key proved unreadable, so a key change (org switch) clears the flag
+  // by comparison instead of by an extra setState in the hydrate effect.
+  const [corruptKey, setCorruptKey] = useState<string | null>(null);
+  const corrupt = corruptKey === key;
   const [quotaFull, setQuotaFull] = useState(false);
 
   // Hydrate once on mount (and again if the key changes — S0-4: the key now
   // carries the user/org scope, so switching organisation re-hydrates).
   useEffect(() => {
-    setCorrupt(false);
     try {
       if (legacyKey && legacyKey !== key) {
         adoptLegacyKey(key, legacyKey);
@@ -104,12 +106,12 @@ export function usePersistentState<T>(
           // its own key (the write-back below is suppressed while `corrupt`),
           // so nothing is destroyed — and no second copy of personal data is
           // made (S0-4).
-          setCorrupt(true);
+          setCorruptKey(key);
         }
       }
     } catch {
       // Malformed JSON or storage disabled — fall back to the initial value.
-      setCorrupt(true);
+      setCorruptKey(key);
     }
     setHydratedKey(key);
     // `validate` is expected to be a stable module-level function; including it
@@ -144,7 +146,7 @@ export function usePersistentState<T>(
       // Nothing to do: the in-memory reset below is what the user asked for.
     }
     setValue(initial);
-    setCorrupt(false);
+    setCorruptKey(null);
     // `initial` is a literal/seed constant at every call site.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);

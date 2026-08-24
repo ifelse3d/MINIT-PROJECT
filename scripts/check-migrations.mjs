@@ -50,6 +50,7 @@ const probes = [
   ["20260826000000 member groups", "member_groups", "group_name"],
   ["20260827000000 donations collector_name", "donations", "collector_name"],
   ["20260828000000 minutes_docs client_id", "minutes_docs", "client_id"],
+  ["20260829000000 orgs needs_einvois", "orgs", "needs_einvois"],
 ];
 
 const headers = { apikey: key, Authorization: `Bearer ${key}` };

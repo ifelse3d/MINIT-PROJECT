@@ -13,10 +13,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut, Settings } from "lucide-react";
 import { Tri, useTriText } from "@/components/language-provider";
-import { ACCOUNT_NAV, isActivePath } from "@/components/nav-items";
+import { NAV_ITEMS, isActivePath, type NavItem } from "@/components/nav-items";
+
+// The two account rows this popover offers. They also live under More in the
+// primary nav; this popover is the shortcut version next to the org name.
+const ACCOUNT_ROWS: NavItem[] = ["/orgs", "/settings"].map((href) => {
+  const found = NAV_ITEMS.find((i) => i.href === href);
+  if (!found) throw new Error(`No NavItem for ${href}`);
+  return found;
+});
 import { getSupabaseBrowser } from "@/db/supabase-browser";
 import { clearMinitLocalData } from "@/lib/storage-scope-core";
-import { cn } from "./glass";
+import { cn } from "./surfaces";
 
 function readActiveOrgId(): number | null {
   const match = document.cookie.match(/(?:^|;\s*)minit_active_org=(\d+)/);
@@ -281,7 +289,7 @@ export function AccountControls({ className }: { className?: string }) {
             </p>
           )}
           {!soleOrg && <div className="pb-2" />}
-          {ACCOUNT_NAV.map((item) => {
+          {ACCOUNT_ROWS.map((item) => {
             const Icon = item.icon;
             const active = isActivePath(pathname, item.href, item.exact);
             return (

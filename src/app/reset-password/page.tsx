@@ -1,15 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Tri, useTriText } from "@/components/language-provider";
 import { getSupabaseBrowser } from "@/db/supabase-browser";
 import { PasswordInput } from "@/components/password-input";
 import {
-  GLASS_CARD,
-  LoginBackdrop,
+  AUTH_CARD,
   MIN_PASSWORD_LENGTH,
-  glassInputClass,
+  authInputClass,
   passwordRequirementProblem,
 } from "../login/glass";
 
@@ -134,33 +133,25 @@ export default function ResetPasswordPage() {
     }
   }
 
-  const inputCls = glassInputClass(Boolean(error));
+  const inputCls = authInputClass(Boolean(error));
 
   return (
     <>
-      <LoginBackdrop />
-
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[460px] flex-col items-center justify-center gap-[34px] px-[18px] py-10 sm:px-6 sm:py-16">
-        <div className="v2-rise v2-rise-1 flex flex-col items-center gap-4">
-          <div className="flex items-center gap-[18px]">
-            <span className="flex h-[62px] w-[62px] items-center justify-center rounded-[18px] bg-gradient-to-br from-[#9c8dff] to-[#6d5ae6] text-white shadow-[0_14px_34px_rgba(60,36,170,0.5)]">
-              <Sparkles className="h-[30px] w-[30px]" strokeWidth={1.7} />
-            </span>
-            <span className="text-4xl font-bold leading-none tracking-[-0.02em] text-white sm:text-[46px]">
-              Minit
-            </span>
-          </div>
+      <div className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center gap-7 px-4 py-10 sm:py-16">
+        <div className="flex items-center gap-3">
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[color:var(--v2-primary)] text-2xl font-bold text-white">
+            M
+          </span>
+          <span className="text-4xl font-bold leading-none tracking-tight">Minit</span>
         </div>
 
-        <div
-          className={`v2-rise v2-rise-2 flex w-full flex-col gap-5 rounded-[26px] px-5 pb-[22px] pt-[26px] sm:px-8 sm:pb-7 sm:pt-[34px] ${GLASS_CARD}`}
-        >
-          <h1 className="text-center text-[25px] font-bold leading-tight tracking-[-0.01em] text-white [text-shadow:0_1px_12px_rgba(10,6,40,0.35)]">
+        <div className={`flex w-full flex-col gap-5 ${AUTH_CARD}`}>
+          <h1 className="text-center text-2xl font-bold leading-tight tracking-tight">
             <Tri bm="Tetapkan Kata Laluan Baharu" zh="设定新密码" en="Set a new password" />
           </h1>
 
           {phase === "checking" && (
-            <p className="flex items-center justify-center gap-2 py-4 text-base text-white/[0.72]">
+            <p className="flex items-center justify-center gap-2 py-4 text-base text-[color:var(--v2-text-soft)]">
               <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.4} />
               <Tri bm="Sebentar…" zh="请稍候……" en="One moment…" />
             </p>
@@ -168,7 +159,7 @@ export default function ResetPasswordPage() {
 
           {phase === "noSession" && (
             <div className="flex flex-col gap-4">
-              <p className="text-base leading-relaxed text-[#ffe0a8]">
+              <p className="text-base font-medium leading-relaxed text-amber-800">
                 <Tri
                   bm="Pautan ini sudah tamat tempoh atau telah digunakan. Minta satu lagi dari skrin log masuk."
                   zh="这条连结已经过期或已经用过了。请回登录页再要一条。"
@@ -177,7 +168,7 @@ export default function ResetPasswordPage() {
               </p>
               <a
                 href="/login"
-                className="text-center font-semibold text-white underline decoration-white/60 underline-offset-[3px] hover:decoration-white"
+                className="text-center font-semibold text-[color:var(--v2-primary)] underline underline-offset-2"
               >
                 <Tri bm="Kembali ke log masuk" zh="回到登录页" en="Back to sign in" />
               </a>
@@ -186,7 +177,7 @@ export default function ResetPasswordPage() {
 
           {phase === "done" && (
             <div className="flex flex-col gap-4">
-              <p className="text-base leading-relaxed text-white/[0.88]">
+              <p className="text-base leading-relaxed">
                 <Tri
                   bm="Kata laluan sudah ditukar. Anda sudah log masuk."
                   zh="密码已经换好了，你已经登录。"
@@ -199,7 +190,7 @@ export default function ResetPasswordPage() {
               <button
                 type="button"
                 onClick={() => window.location.assign("/")}
-                className="flex w-full items-center justify-center rounded-[14px] bg-gradient-to-r from-[#6d5ae6] to-[#9a83ff] p-4 text-base font-semibold text-white shadow-[0_12px_28px_rgba(88,60,220,0.38)]"
+                className="flex w-full items-center justify-center rounded-xl bg-[color:var(--v2-primary)] p-3.5 text-base font-semibold text-white"
               >
                 <Tri bm="Teruskan" zh="继续" en="Continue" />
               </button>
@@ -209,11 +200,10 @@ export default function ResetPasswordPage() {
           {phase === "ready" && (
             <form onSubmit={submit} className="flex flex-col gap-5">
               <label className="flex flex-col gap-2">
-                <span className="text-sm font-semibold text-white/[0.88]">
+                <span className="text-sm font-semibold text-[color:var(--v2-text-soft)]">
                   <Tri bm="Kata laluan baharu" zh="新密码" en="New password" />
                 </span>
                 <PasswordInput
-                  tone="dark"
                   autoComplete="new-password"
                   placeholder="••••••••••••"
                   value={password}
@@ -222,7 +212,7 @@ export default function ResetPasswordPage() {
                   required
                   minLength={MIN_PASSWORD_LENGTH}
                 />
-                <span className="text-sm leading-relaxed text-white/[0.62]">
+                <span className="text-sm leading-relaxed text-[color:var(--v2-text-soft)]">
                   <Tri
                     bm={`${MIN_PASSWORD_LENGTH} aksara ke atas, dengan huruf besar, huruf kecil, nombor dan simbol (contoh: Bulan#2026)`}
                     zh={`${MIN_PASSWORD_LENGTH} 个字符以上，要有大写字母、小写字母、数字和符号（例如：Bulan#2026）`}
@@ -232,7 +222,7 @@ export default function ResetPasswordPage() {
               </label>
 
               <label className="flex flex-col gap-2">
-                <span className="text-sm font-semibold text-white/[0.88]">
+                <span className="text-sm font-semibold text-[color:var(--v2-text-soft)]">
                   <Tri
                     bm="Taip kata laluan sekali lagi"
                     zh="再输入一次密码"
@@ -240,7 +230,6 @@ export default function ResetPasswordPage() {
                   />
                 </span>
                 <PasswordInput
-                  tone="dark"
                   autoComplete="new-password"
                   placeholder="••••••••••••"
                   value={confirm}
@@ -251,12 +240,12 @@ export default function ResetPasswordPage() {
                 />
               </label>
 
-              {error && <p className="text-base text-[#ffb4b4]">{error}</p>}
+              {error && <p className="text-base font-medium text-red-700">{error}</p>}
 
               <button
                 type="submit"
                 disabled={busy}
-                className="mt-1 flex w-full items-center justify-center gap-2 rounded-[14px] bg-gradient-to-r from-[#6d5ae6] to-[#9a83ff] p-4 text-base font-semibold text-white shadow-[0_12px_28px_rgba(88,60,220,0.38)] transition-[filter,box-shadow,transform] duration-150 hover:shadow-[0_16px_34px_rgba(88,60,220,0.46)] hover:brightness-105 active:translate-y-px disabled:cursor-wait disabled:opacity-80"
+                className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-[color:var(--v2-primary)] p-3.5 text-base font-semibold text-white transition-[filter] duration-150 hover:brightness-105 active:translate-y-px disabled:cursor-wait disabled:opacity-60"
               >
                 {busy && <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.4} />}
                 <Tri bm="Simpan kata laluan" zh="保存密码" en="Save password" />

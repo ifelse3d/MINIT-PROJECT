@@ -47,14 +47,23 @@ export function NewOrgBanner() {
           en="If your constitution is in front of you now, photograph each page below. Minit reads it once, and after that every answer quotes your own clauses. If it is not — skip it, this can be done any time."
         />
       </p>
+      {/* R-3 (2026-08-25): the last wizard step — "what do you want to do
+          first?" — phrased as the person's own jobs, not as "skip". */}
+      <p className="text-base font-semibold text-green-900 dark:text-green-100">
+        <Tri
+          bm="Atau, apa yang anda mahu buat dahulu?"
+          zh="或者，您想先做哪件事？"
+          en="Or — what would you like to do first?"
+        />
+      </p>
       <div className="flex flex-wrap gap-3">
         <Button asChild size="lg" variant="outline">
           <Link href="/minutes">
             📝{" "}
             <Tri
-              bm="Langkau — gambar nota mesyuarat"
-              zh="跳过 —— 拍会议笔记"
-              en="Skip — photo of meeting notes"
+              bm="Hantar minit mesyuarat"
+              zh="上交会议记录"
+              en="Submit meeting minutes"
             />
           </Link>
         </Button>
@@ -62,10 +71,15 @@ export function NewOrgBanner() {
           <Link href="/money">
             🧾{" "}
             <Tri
-              bm="Langkau — gambar lejar derma"
-              zh="跳过 —— 拍捐款账页"
-              en="Skip — photo of a ledger page"
+              bm="Rekod derma & jana resit"
+              zh="记录捐款、开收据"
+              en="Record donations & issue receipts"
             />
+          </Link>
+        </Button>
+        <Button asChild size="lg" variant="outline">
+          <Link href="/">
+            🏠 <Tri bm="Ke halaman utama" zh="回到主页" en="Go to the home page" />
           </Link>
         </Button>
       </div>

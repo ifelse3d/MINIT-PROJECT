@@ -8,11 +8,11 @@ import {
   FileSignature,
   FileCheck,
   FileText,
-  FolderOpen,
   History,
   Home,
   Landmark,
   Languages,
+  MoreHorizontal,
   Receipt,
   ScrollText,
   ClipboardCheck,
@@ -24,29 +24,23 @@ import {
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
-// The ONE source of truth for navigation: the floating sidebar, the mobile menu
-// and the account (gear) menu all read from here, so a page can never appear in
-// one menu and be missing from another.
+// The ONE source of truth for navigation.
 //
-// Shape of the menus:
-//   SIDEBAR_NAV   — five rows: Home, Minutes, Money, Documents▾, Calendar.
-//                   "Documents" is a collapsible group (Filings / AGM /
-//                   Constitution), so the daily pages stay one click away while
-//                   the occasional ones stay out of sight.
-//   ACCOUNT_NAV   — History, Organisations, Settings: reached from the gear menu
-//                   in the top bar, NOT from the sidebar. These are lookup/config
-//                   surfaces, not places you work. (Settings used to sit in both
-//                   places.)
+// 2026-08-25 (Stage R redesign, J: "手机 19 格砍成 4"). The whole app now
+// navigates through FOUR entries, identical on desktop (left rail) and phone
+// (bottom tab bar):
 //
-// Uploads (/inbox) sits inside the Documents group. It used to be `hidden` on the
-// grounds that "History rows, the Home recent block and the ask router all resolve
-// to it" — but that Home recent block was imported by nothing (the file has since
-// been deleted), so the only place to see the ORIGINAL PHOTO of a document had no
-// menu entry at all. That photo is the evidence behind every extracted field, so
-// it gets a real entry. (2026-07-28 audit.)
+//   1. Home          — "what do I do today"
+//   2. Minutes       — the minutes flow, in the order it is done
+//   3. Money         — the money flow, in the order it is done
+//   4. More          — everything occasional: calendar, filings, constitution,
+//                      members, glossary, photos, history, tax file, account
 //
-// Icons are lucide (recolorable for the white-on-gradient active state,
-// identical on every platform); emoji stay in page CONTENT, where warmth helps.
+// Names follow the PERSON's job, not our pipeline ("New minutes", never
+// "Photo & check"). e-Invois lives under More and only shows when the
+// organisation says it needs it (default OFF — J 2026-08-24: optional;
+// eROSES is the legal requirement and stays first). /agm-pack keeps its
+// route but leaves every menu (hidden) — same decision.
 // ---------------------------------------------------------------------------
 
 export type NavItem = {
@@ -60,57 +54,45 @@ export type NavItem = {
    * the menusCoverAllItems() guard so it does not count as "silently dropped".
    */
   hidden?: true;
-  /**
-   * Highlight this row ONLY on its own URL, never on the routes underneath it.
-   *
-   * Needed since the 2026-08-23 split: /money is now the first STEP of the
-   * money flow as well as the folder containing /money/receipts and the rest.
-   * Without this, standing on /money/receipts lit up two rows at once — the
-   * step you are on and the step you are not.
-   */
+  /** Highlight only on its own URL, never on the routes underneath it. */
   exact?: true;
+  /**
+   * Only shown when the organisation has switched e-Invois on (J 2026-08-24:
+   * optional, default off). The shell filters on this flag; the ROUTE always
+   * exists, so a saved link still works.
+   */
+  einvoisOnly?: true;
 };
 
 /** Every page that has a menu entry anywhere. */
 export const NAV_ITEMS: NavItem[] = [
   { href: "/", icon: Home, bm: "Utama", zh: "主页", en: "Home" },
-  // 2026-07-28 AUDIT: this used to be `hidden: true`, justified by "reached from
-  // History / Home recent / the ask router". But the Home recent block was
-  // imported by NOTHING (dead code, since deleted), so in practice the only place
-  // to see the ORIGINAL PHOTO of a document had no menu entry and no working link
-  // path. It is the evidence behind every extracted field, so it gets a real entry.
-  { href: "/inbox", icon: Upload, bm: "Gambar asal", zh: "原始照片", en: "Original photos" },
-  // The /minutes flow, one row per step (2026-08-23 split). "Minutes" itself is
-  // the GROUP's name; these are the steps inside it. /minutes/history used to be
-  // reachable only from a link buried inside step 3.
-  { href: "/minutes", icon: FileText, bm: "Gambar & semak", zh: "拍照与核对", en: "Photo & check", exact: true },
+  // Minutes flow — named after the JOB, not the pipeline step.
+  { href: "/minutes", icon: FileText, bm: "Minit baru", zh: "新的会议记录", en: "New minutes", exact: true },
   { href: "/minutes/attendance", icon: ClipboardCheck, bm: "Kehadiran", zh: "出席者", en: "Attendance" },
-  { href: "/minutes/document", icon: FileSignature, bm: "Minit siap", zh: "做好的记录", en: "The document" },
-  { href: "/minutes/history", icon: History, bm: "Sejarah minit", zh: "记录历史", en: "Minutes history" },
-  // The /money flow, one row per step (2026-08-23 split). "Money" itself is the
-  // GROUP's name — see MONEY_GROUP below — and these are the steps inside it.
-  { href: "/money", icon: Wallet, bm: "Baca lejar", zh: "读账页", en: "Read the ledger", exact: true },
-  { href: "/money/receipts", icon: Receipt, bm: "Daftar & resit", zh: "登记与收据", en: "Register & receipts" },
-  { href: "/money/custody", icon: Coins, bm: "Serah wang", zh: "交现金", en: "Hand over cash" },
-  { href: "/money/einvois", icon: Banknote, bm: "Fail cukai", zh: "税务文件", en: "Tax file" },
+  { href: "/minutes/document", icon: FileSignature, bm: "Dokumen siap", zh: "做好的文件", en: "The document" },
+  { href: "/minutes/history", icon: History, bm: "Minit lama", zh: "以前的记录", en: "Past minutes" },
+  // Money flow.
+  { href: "/money", icon: Wallet, bm: "Rekod derma", zh: "记录捐款", en: "Record donations", exact: true },
+  { href: "/money/receipts", icon: Receipt, bm: "Jana resit", zh: "开收据", en: "Issue receipts" },
+  { href: "/money/custody", icon: Coins, bm: "Serah tunai", zh: "交现金", en: "Hand over cash" },
   { href: "/money/history", icon: ClipboardList, bm: "Sejarah resit", zh: "收据历史", en: "Receipt history" },
-  { href: "/filings", icon: FileCheck, bm: "Pemfailan", zh: "申报", en: "Filings" },
-  { href: "/agm-pack", icon: Landmark, bm: "Pek AGM", zh: "年度大会", en: "AGM" },
-  { href: "/constitution", icon: ScrollText, bm: "Perlembagaan", zh: "章程", en: "Constitution", exact: true },
-  // 2026-08-23, J's UX list N7: the clauses were in the database, verbatim,
-  // answering questions, with no screen that simply showed them.
-  { href: "/constitution/clauses", icon: BookOpen, bm: "Fasal penuh", zh: "条文全文", en: "All clauses" },
+  // More — occasional pages.
   { href: "/calendar", icon: CalendarClock, bm: "Kalendar", zh: "日历", en: "Calendar" },
-  { href: "/history", icon: History, bm: "Sejarah", zh: "历史", en: "History" },
-  // 2026-08-19, user: "我也想这个系统有一个地方可以看到成员名单". Top-level, not
-  // buried in Documents: "who is our treasurer" is a question asked while
-  // doing the work, which is the rule for earning a sidebar row.
+  { href: "/filings", icon: FileCheck, bm: "Pemfailan eROSES", zh: "eROSES 申报", en: "eROSES filings" },
+  { href: "/constitution", icon: ScrollText, bm: "Perlembagaan", zh: "章程", en: "Constitution", exact: true },
+  { href: "/constitution/clauses", icon: BookOpen, bm: "Fasal penuh", zh: "条文全文", en: "All clauses" },
   { href: "/members", icon: Users, bm: "Ahli", zh: "成员", en: "Members" },
-  // 2026-08-19, user: "沒看到有 /glossary". It was only linked from Settings,
-  // which is where things go to not be found.
-  { href: "/glossary", icon: Languages, bm: "Perkataan Kami", zh: "我们的词库", en: "Our Words" },
+  { href: "/glossary", icon: Languages, bm: "Perkataan kami", zh: "我们的词库", en: "Our words" },
+  { href: "/inbox", icon: Upload, bm: "Gambar asal", zh: "原始照片", en: "Original photos" },
+  { href: "/history", icon: History, bm: "Sejarah", zh: "历史", en: "History" },
+  // e-Invois: optional (org switch, default off). The >RM10,000 individual
+  // e-invois warning inside the money pages stays regardless of this flag.
+  { href: "/money/einvois", icon: Banknote, bm: "Fail cukai (e-Invois)", zh: "税务文件（e-Invois）", en: "Tax file (e-Invois)", einvoisOnly: true },
   { href: "/orgs", icon: Building2, bm: "Pertubuhan", zh: "组织", en: "Organisations" },
   { href: "/settings", icon: Settings, bm: "Tetapan", zh: "设置", en: "Settings" },
+  // Route kept, menu entry removed (J 2026-08-24: AGM out of the nav for now).
+  { href: "/agm-pack", icon: Landmark, bm: "Pek AGM", zh: "年度大会", en: "AGM", hidden: true },
 ];
 
 export function isActivePath(pathname: string, href: string, exact = false): boolean {
@@ -124,7 +106,7 @@ const byHref = (href: string): NavItem => {
   return found;
 };
 
-/** One sidebar row: a plain link, or a collapsible group of links. */
+/** One nav entry: a plain link, or a group of links. */
 export type NavEntry =
   | { kind: "item"; item: NavItem }
   | {
@@ -139,18 +121,10 @@ export type NavEntry =
     };
 
 /**
- * 2026-07-28, user feedback:
- *   "为什么 history 不在 sidebar 那边呢？"  → it is now a top-level row.
- *   "choose org 就不需要放在 sidebar"       → gone; the sidebar footer now SHOWS
- *                                            which organisation you are in, and
- *                                            switching lives in the gear menu
- *                                            with the other account actions.
- *
- * The rule for what earns a sidebar row: something you open while DOING the
- * work. History qualifies — you check what was already recorded constantly.
- * Choosing an organisation is a once-a-month account action, not work.
+ * THE four entries — the desktop rail and the phone tab bar both render
+ * exactly this. Four, not nineteen (J, 2026-08-24).
  */
-export const SIDEBAR_NAV: NavEntry[] = [
+export const PRIMARY_NAV: NavEntry[] = [
   { kind: "item", item: byHref("/") },
   {
     kind: "group",
@@ -166,57 +140,51 @@ export const SIDEBAR_NAV: NavEntry[] = [
       byHref("/minutes/history"),
     ],
   },
-  // 2026-08-23: /money used to be ONE row leading to ONE 1734-line page. It is
-  // now five steps, so it is a group — same shape as Documents, which is the
-  // pattern the sidebar already knew. The GROUP carries the section's name
-  // ("Wang / 财务 / Money"); the rows inside it are the steps.
   {
     kind: "group",
     id: "money",
     icon: Wallet,
     bm: "Wang",
-    zh: "财务",
+    zh: "钱",
     en: "Money",
     children: [
       byHref("/money"),
       byHref("/money/receipts"),
       byHref("/money/custody"),
-      byHref("/money/einvois"),
       byHref("/money/history"),
     ],
   },
-  { kind: "item", item: byHref("/calendar") },
-  { kind: "item", item: byHref("/history") },
-  { kind: "item", item: byHref("/members") },
   {
     kind: "group",
-    id: "documents",
-    icon: FolderOpen,
-    bm: "Dokumen",
-    zh: "文件",
-    en: "Documents",
+    id: "more",
+    icon: MoreHorizontal,
+    bm: "Lagi",
+    zh: "更多",
+    en: "More",
     children: [
+      byHref("/calendar"),
       byHref("/filings"),
-      byHref("/agm-pack"),
       byHref("/constitution"),
       byHref("/constitution/clauses"),
+      byHref("/members"),
       byHref("/glossary"),
       byHref("/inbox"),
+      byHref("/history"),
+      byHref("/money/einvois"),
+      byHref("/orgs"),
+      byHref("/settings"),
     ],
   },
 ];
 
-/** Reached from the gear menu in the top bar (and the mobile drawer). */
-export const ACCOUNT_NAV: NavItem[] = [byHref("/orgs"), byHref("/settings")];
-
-/** Every page the sidebar links to, groups flattened — used by the mobile menu. */
-export function sidebarPages(): NavItem[] {
-  return SIDEBAR_NAV.flatMap((entry) =>
+/** Every page the primary nav links to, groups flattened. */
+export function navPages(): NavItem[] {
+  return PRIMARY_NAV.flatMap((entry) =>
     entry.kind === "item" ? [entry.item] : entry.children,
   );
 }
 
-/** True when a group contains the current route (so it opens by itself). */
+/** True when a group contains the current route (so it lights up / opens). */
 export function groupHasActiveChild(
   entry: NavEntry,
   pathname: string,
@@ -228,17 +196,12 @@ export function groupHasActiveChild(
 /**
  * The three words the MENU uses for a section, wherever they live.
  *
- * Since the /money split a section can be a group whose own label is the
- * section name while its children are named after the steps inside it. The
- * activity feed still talks about "the money section" as one thing, so it needs
- * to ask for the section's words rather than reading them off an item that may
- * now be called "Read the ledger".
+ * A section can be a group whose own label is the section name while its
+ * children are named after the jobs inside it. The activity feed still talks
+ * about "the money section" as one thing, so it asks for the section's words.
  */
 export function sectionWords(href: string): { bm: string; zh: string; en: string } {
-  // Only a group that is a FLOW has a section name of its own, and the mark of
-  // one is an `exact` index route at its head (/money → /money/receipts → …).
-  // "Documents" is a folder of unrelated pages, so /filings keeps its own words.
-  const group = SIDEBAR_NAV.find(
+  const group = PRIMARY_NAV.find(
     (e) => e.kind === "group" && e.children[0].href === href && e.children[0].exact,
   );
   if (group && group.kind === "group") {
@@ -249,13 +212,12 @@ export function sectionWords(href: string): { bm: string; zh: string; en: string
 }
 
 /**
- * Sanity guard used in tests: every NAV_ITEM that is not `hidden` appears exactly
- * once across the sidebar and the account menu — no page silently drops out of
- * every menu, and none is listed twice (Settings used to be in the sidebar AND
- * the top bar). `hidden` items must NOT appear in either menu.
+ * Sanity guard used in tests: every NAV_ITEM that is not `hidden` appears
+ * exactly once across the four primary entries — no page silently drops out of
+ * every menu, and none is listed twice. `hidden` items must NOT appear.
  */
 export function menusCoverAllItems(): boolean {
-  const listed = [...sidebarPages(), ...ACCOUNT_NAV].map((i) => i.href);
+  const listed = navPages().map((i) => i.href);
   const unique = new Set(listed);
   const expected = NAV_ITEMS.filter((i) => !i.hidden);
   return (

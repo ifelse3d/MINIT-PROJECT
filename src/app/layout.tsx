@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Inter } from "next/font/google";
+import localFont from "next/font/local";
+import { cookies } from "next/headers";
 import "./globals.css";
 import { LanguageProvider } from "@/components/language-provider";
+import { LANG_COOKIE, htmlLangFor, isLangMode } from "@/lib/lang";
 import {
   APPEARANCE_BOOT_SCRIPT,
   AppearanceProvider,
@@ -10,13 +13,22 @@ import { getActiveOrg } from "@/lib/active-org";
 import { getSessionUser } from "@/db/supabase-server";
 import { getUsage } from "@/lib/ai/usage";
 import { StorageScopeProvider } from "@/lib/storage-scope";
-import { AppShell } from "@/components/v2/app-shell";
+import { AppShell } from "@/components/v3/shell";
 
-// Inter stands in for SF Pro Display (Apple's face isn't web-licensable).
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-v2",
   display: "swap",
+});
+
+// Chinese UI face (Stage R: the interface renders ONE language, and 中文 is
+// the default). Self-hosted from the repo's own TTF — the same file the PDF
+// generator embeds — so the build never depends on reaching Google Fonts.
+const notoSansSC = localFont({
+  src: "../assets/fonts/NotoSansSC-Regular.ttf",
+  variable: "--font-sc",
+  display: "swap",
+  preload: false,
 });
 
 const geistMono = Geist_Mono({
@@ -74,10 +86,14 @@ export default async function RootLayout({
   // member's register. Resolved here, on the server — a page cannot invent it.
   const user = await getSessionUser().catch(() => null);
   const storageScope = `${user?.id ?? "anon"}:${active?.id ?? "none"}`;
+  // Stage R: the UI shows ONE language. The choice lives in a cookie so the
+  // server can stamp <html lang> before first paint; default 中文 (J's brief).
+  const cookieLang = (await cookies()).get(LANG_COOKIE)?.value;
+  const langMode = isLangMode(cookieLang) ? cookieLang : "zh";
   return (
     <html
-      lang="ms"
-      className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
+      lang={htmlLangFor(langMode)}
+      className={`${inter.variable} ${notoSansSC.variable} ${geistMono.variable} h-full antialiased`}
       // The boot script below adds the `dark` class and a font-size to <html>
       // BEFORE React hydrates, so the server-rendered attributes legitimately
       // differ from the live DOM. Without this, every dark-mode user gets a
@@ -102,7 +118,9 @@ export default async function RootLayout({
       <body className="min-h-full" suppressHydrationWarning>
         <StorageScopeProvider scope={storageScope}>
           <AppearanceProvider>
-            <LanguageProvider>
+            {/* Only a REAL cookie counts as "already chosen" — passing the
+                zh fallback would silently suppress the first-run picker. */}
+            <LanguageProvider initialMode={isLangMode(cookieLang) ? cookieLang : undefined}>
               {/* AppShell picks the chrome for the route: full shell everywhere,
                   bare (language switcher only) on /login. */}
               <AppShell

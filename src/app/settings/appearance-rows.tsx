@@ -26,7 +26,7 @@ import {
   TEXT_SIZE_LABELS,
   useAppearance,
 } from "@/components/appearance-provider";
-import { LanguageSwitcher, Tri, useTriText } from "@/components/language-provider";
+import { LanguageSwitcher, Tri, useLangs, useTriText } from "@/components/language-provider";
 import { SettingsBlock, SettingsRow } from "./ui";
 
 /** Preview size per step, so each option looks like what it does. */
@@ -126,22 +126,46 @@ export function AppearanceRows() {
         </div>
       </SettingsRow>
 
-      {/* Language — the switcher is already in the top bar, but someone looking
-          for it in Settings should find it here too. */}
+      {/* Language — ONE language at a time (Stage R). The advanced option
+          below restores the old three-languages-side-by-side view, which is
+          genuinely useful for a mixed committee reading one screen together. */}
       <SettingsRow
         label={<Tri bm="Bahasa" zh="语言" en="Language" />}
         help={
           <Tri
-            bm="Anda boleh hidupkan lebih daripada satu — setiap label akan ditunjukkan dalam bahasa yang anda pilih. Hidupkan satu sahaja kalau skrin nampak terlalu penuh."
-            zh="可以同时开多种 —— 每个标签都会用您选的语言显示。如果觉得画面太挤，只开一种就好。"
-            en="You can turn on more than one — every label is then shown in the languages you picked. Turn on just one if the screen looks too full."
+            bm="Minit dipaparkan dalam SATU bahasa yang anda pilih. Dokumen rasmi yang dijana tetap dalam BM."
+            zh="Minit 会以您选的「一种」语言显示。生成的官方文件仍然是马来文。"
+            en="Minit shows ONE language of your choice. Generated official documents remain in BM."
           />
         }
       >
-        <div className="v2-glass w-fit rounded-full px-2 py-1.5">
-          <LanguageSwitcher />
+        <div className="flex flex-col gap-3">
+          <div className="w-fit">
+            <LanguageSwitcher />
+          </div>
+          <TriParallelToggle />
         </div>
       </SettingsRow>
     </>
+  );
+}
+
+/** Advanced: show all three languages side by side (the pre-redesign view). */
+function TriParallelToggle() {
+  const { mode, setMode } = useLangs();
+  return (
+    <label className="flex items-center gap-2 text-sm text-muted-foreground">
+      <input
+        type="checkbox"
+        checked={mode === "all"}
+        onChange={(e) => setMode(e.target.checked ? "all" : "zh")}
+        className="h-4 w-4 accent-[color:var(--v2-primary)]"
+      />
+      <Tri
+        bm="Lanjutan: tunjuk ketiga-tiga bahasa serentak"
+        zh="进阶：三种语言并排显示"
+        en="Advanced: show all three languages side by side"
+      />
+    </label>
   );
 }

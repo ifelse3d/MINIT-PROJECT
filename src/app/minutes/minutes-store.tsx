@@ -170,6 +170,18 @@ export type MinutesStore = {
   // --- how much is left to check ------------------------------------------
   outstanding: number;
   allReviewed: boolean;
+  /** Amber ("check") fields — value present, AI unsure. One tap can clear them. */
+  checkOutstanding: number;
+  /** Red ("missing") fields — no value; a human must fill or mark absent. */
+  missingOutstanding: number;
+  /**
+   * R-4 (2026-08-25): "全部沒問題" — confirm every remaining AMBER field in one
+   * tap. The person has read the document preview and vouches for what the AI
+   * read. Deliberately never touches a RED field: confirming an empty value
+   * would invent facts by omission (Hard Rule 1) — those need a human's typing
+   * or an explicit "not in the notes".
+   */
+  confirmAllChecks: () => void;
   groups: {
     meeting: GroupCount;
     attendees: GroupCount;
@@ -572,6 +584,38 @@ export function MinutesProvider({
     [extraction],
   );
 
+  /** Every reviewable leaf, for the one-tap confirm and the amber/red counts. */
+  const leafFields = useCallback((e: MeetingNotesExtraction) => {
+    return [
+      e.meeting_type,
+      e.meeting_date,
+      e.meeting_venue,
+      ...e.attendees.map((a) => a.name),
+      ...e.resolutions.map((r) => r.text),
+      ...e.figures.flatMap((f) => [f.description, f.amount_cents]),
+      ...e.office_bearers.flatMap((b) => [b.position, b.person_name]),
+    ] as { confidence: string }[];
+  }, []);
+
+  // R-4: one tap says "everything amber is fine". Red fields are untouched —
+  // see the note on the type above.
+  const confirmAllChecks = useCallback(() => {
+    updateField((e) => {
+      for (const f of leafFields(e)) {
+        if (f.confidence === "check") f.confidence = "confirmed";
+      }
+      return e;
+    });
+  }, [updateField, leafFields]);
+
+  const { checkOutstanding, missingOutstanding } = useMemo(() => {
+    const fields = leafFields(extraction);
+    return {
+      checkOutstanding: fields.filter((f) => f.confidence === "check").length,
+      missingOutstanding: fields.filter((f) => f.confidence === "missing").length,
+    };
+  }, [extraction, leafFields]);
+
   const outstanding = useMemo(() => {
     const fields: { confidence: string }[] = [
       extraction.meeting_type,
@@ -849,6 +893,9 @@ export function MinutesProvider({
         rowHasContent: rowHasContentHere,
         outstanding,
         allReviewed,
+        checkOutstanding,
+        missingOutstanding,
+        confirmAllChecks,
         groups,
         outstandingHereOutsideAttendance,
         firstUnfinished,

@@ -23,8 +23,8 @@ export const CATEGORY_STYLE: Record<
   //     Chinese string named two different things.
   // If you add a category, add it to nav-items.ts too, with the same words.
   minutes: { dot: "bg-violet-500", ring: "", bm: "Minit", zh: "会议记录", en: "Minutes", future: false },
-  money: { dot: "bg-green-600", ring: "", bm: "Wang", zh: "财务", en: "Money", future: false },
-  filings: { dot: "bg-blue-500", ring: "", bm: "Pemfailan", zh: "申报", en: "Filings", future: false },
+  money: { dot: "bg-green-600", ring: "", bm: "Wang", zh: "钱", en: "Money", future: false },
+  filings: { dot: "bg-blue-500", ring: "", bm: "Pemfailan eROSES", zh: "eROSES 申报", en: "eROSES filings", future: false },
   uploads: { dot: "bg-amber-500", ring: "", bm: "Gambar asal", zh: "原始照片", en: "Original photos", future: false },
   agm: { dot: "bg-indigo-500", ring: "", bm: "Pek AGM", zh: "年度大会", en: "AGM", future: false },
   constitution: { dot: "bg-teal-600", ring: "", bm: "Perlembagaan", zh: "章程", en: "Constitution", future: false },

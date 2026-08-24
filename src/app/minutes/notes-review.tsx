@@ -43,6 +43,13 @@ export function NotesReview() {
     aiBusy,
     aiError,
     nothingYet,
+    isReal,
+    minutesDraft,
+    allReviewed,
+    attendanceUnsettled,
+    checkOutstanding,
+    missingOutstanding,
+    confirmAllChecks,
     outstandingHereOutsideAttendance,
     groups,
     firstUnfinishedHere,
@@ -250,6 +257,85 @@ export function NotesReview() {
         )}
       </div>
       </PageSection>
+
+      {/* -------------------------------------------------------------------
+          R-4 (2026-08-25): THE HERO — the moment the AI finishes reading, the
+          person sees their DOCUMENT, not a wall of fields. Unconfirmed = a
+          visible DRAF watermark. Only the amber fields need a human; one tap
+          says "all of it is fine". Red fields (nothing readable) still need
+          typing or an explicit "not in the notes" below.
+          ------------------------------------------------------------------- */}
+      {isReal && !aiBusy && (
+        <PageSection
+          titleBm="Dokumen anda"
+          titleZh="您的文件"
+          titleEn="Your document"
+          summary={
+            allReviewed && !attendanceUnsettled ? (
+              <Tri
+                bm="Semua sudah disemak. Teruskan ke dokumen siap untuk simpan."
+                zh="全部核对好了。到「做好的文件」那一页去确认保存。"
+                en="Everything is checked. Go on to the finished document to save it."
+              />
+            ) : (
+              <Tri
+                bm="Ini pratonton. Hanya perkara BERTANDA KUNING perlu anda sentuh — yang hijau sudah pasti."
+                zh="这是预览。只有「黄色标记」的地方需要您看 —— 绿色的已经确定了。"
+                en="This is a preview. Only the AMBER items need you — the green ones are settled."
+              />
+            )
+          }
+        >
+          <div className="flex flex-col gap-4">
+            <div className="relative overflow-hidden rounded-xl border border-[color:var(--v2-border)]">
+              {!(allReviewed && !attendanceUnsettled) && (
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center"
+                >
+                  <span className="rotate-[-18deg] select-none rounded border-4 border-red-400/50 px-6 py-2 text-4xl font-black tracking-widest text-red-500/40">
+                    DRAF
+                  </span>
+                </span>
+              )}
+              <pre className="v2-scroll max-h-96 overflow-auto whitespace-pre-wrap bg-[color:var(--v2-card)] p-4 text-sm leading-relaxed">
+                {minutesDraft}
+              </pre>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              {checkOutstanding > 0 && (
+                <Button size="lg" className="text-base" onClick={confirmAllChecks}>
+                  ✓{" "}
+                  <Tri
+                    bm={`Semuanya betul — sahkan ${checkOutstanding} perkara kuning`}
+                    zh={`全部没问题 —— 一键确认 ${checkOutstanding} 个黄标`}
+                    en={`All fine — confirm ${checkOutstanding} amber item${checkOutstanding > 1 ? "s" : ""}`}
+                  />
+                </Button>
+              )}
+              {missingOutstanding > 0 && (
+                <span className="rounded-full bg-rose-100 px-3 py-1.5 text-sm font-semibold text-rose-900 dark:bg-rose-400/15 dark:text-rose-200">
+                  <Tri
+                    bm={`${missingOutstanding} perkara tidak terbaca — isi di bawah`}
+                    zh={`${missingOutstanding} 项没读到 —— 请在下面补上`}
+                    en={`${missingOutstanding} item${missingOutstanding > 1 ? "s" : ""} unreadable — fill in below`}
+                  />
+                </span>
+              )}
+            </div>
+
+            {allReviewed && !attendanceUnsettled && (
+              <NextStepLink
+                href="/minutes/document"
+                labelBm="Ke dokumen siap — sahkan & simpan"
+                labelZh="去做好的文件 —— 确认并保存"
+                labelEn="To the finished document — confirm & save"
+              />
+            )}
+          </div>
+        </PageSection>
+      )}
 
       <PageSection
         step={2}

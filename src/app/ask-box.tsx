@@ -34,7 +34,7 @@ import { tidyReply } from "@/lib/tidy-reply";
 import {
   AnswerSources,
   type AnswerSource,
-} from "@/components/v2/answer-sources";
+} from "@/components/v3/answer-sources";
 
 type Turn = {
   role: "user" | "assistant";

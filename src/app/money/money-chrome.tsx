@@ -4,9 +4,10 @@ import { usePathname } from "next/navigation";
 import { type ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tri, useTriText } from "@/components/language-provider";
+import { Tri } from "@/components/language-provider";
 import { SectionTabs, type SectionTab } from "@/components/section-tabs";
 import { SAMPLE_LEDGER_LABEL } from "@/lib/sample-ledger";
+import { useEinvoisVisible } from "@/lib/einvois-pref";
 import { useRegister } from "./register-store";
 
 // ---------------------------------------------------------------------------
@@ -24,12 +25,14 @@ const MONEY_TABS = [
   { href: "/money", labelBm: "Baca lejar", labelZh: "读账页", labelEn: "Read the ledger" },
   { href: "/money/receipts", labelBm: "Resit", labelZh: "开收据", labelEn: "Receipts" },
   { href: "/money/custody", labelBm: "Serah wang", labelZh: "交现金", labelEn: "Hand over cash" },
+  // R-6 (2026-08-25): e-Invois is OPTIONAL (J 2026-08-24) — its tab appears
+  // only when the organisation has switched it on (Settings). The route
+  // itself always works.
   { href: "/money/einvois", labelBm: "Fail cukai", labelZh: "税务文件", labelEn: "Tax file" },
   { href: "/money/history", labelBm: "Sejarah", labelZh: "历史", labelEn: "History" },
 ] as const;
 
 export function MoneyChrome({ children }: { children: ReactNode }) {
-  const t = useTriText();
   const pathname = usePathname();
   const {
     documentOrgName,
@@ -44,10 +47,10 @@ export function MoneyChrome({ children }: { children: ReactNode }) {
     unreceipted,
     cashInHandCents,
     availableMonths,
-    deleteEverything,
     error,
     setError,
   } = useRegister();
+  const [einvoisVisible] = useEinvoisVisible();
 
   const tabs: SectionTab[] = [
     {
@@ -70,13 +73,21 @@ export function MoneyChrome({ children }: { children: ReactNode }) {
       ...MONEY_TABS[2],
       status: !receiptsIssued ? "locked" : cashInHandCents > 0 ? "needs-you" : "done",
     },
-    {
-      // The tax file only becomes real once a month with receipts exists. It is
-      // a once-a-month errand, never "the next thing to do", so it never claims
-      // the amber "needs you" colour the way its StepCard used to.
-      ...MONEY_TABS[3],
-      status: availableMonths.length > 0 && receiptsIssued ? "neutral" : "locked",
-    },
+    // The tax file only becomes real once a month with receipts exists. It is
+    // a once-a-month errand, never "the next thing to do", so it never claims
+    // the amber "needs you" colour. Hidden entirely while the organisation
+    // says it does not need e-Invois (R-6) — unless someone is standing on the
+    // page itself, in which case hiding its own tab would be disorienting.
+    ...(einvoisVisible || pathname === "/money/einvois"
+      ? [
+          {
+            ...MONEY_TABS[3],
+            status: (availableMonths.length > 0 && receiptsIssued
+              ? "neutral"
+              : "locked") as SectionTab["status"],
+          },
+        ]
+      : []),
     { ...MONEY_TABS[4], status: "neutral" },
   ];
 
@@ -99,35 +110,10 @@ export function MoneyChrome({ children }: { children: ReactNode }) {
               <Tri bm="Contoh" zh="示范" en="Example" />
             </Badge>
           )}
-          <Button
-            size="sm"
-            variant="outline"
-            className="ml-auto"
-            onClick={() => {
-              if (
-                window.confirm(
-                  // AUDIT FIX: the old wording ("reset to sample data") made
-                  // this sound harmless, but it wipes the REAL register — every
-                  // donation on this device, including rows that already carry
-                  // an issued, gap-free receipt number.
-                  t(
-                    "PADAM semua rekod derma pada peranti ini dan mula semula?\n\nIni termasuk derma sebenar yang sudah ada nombor resit. Tidak boleh dibatalkan.",
-                    "要删除这台设备上所有捐款记录、重新开始吗？\n\n这会连已经开了收据号码的真实捐款一起删掉，无法复原。",
-                    "DELETE every donation record on this device and start again?\n\nThis includes real donations that already have issued receipt numbers. It cannot be undone.",
-                  ),
-                )
-              ) {
-                deleteEverything();
-              }
-            }}
-          >
-            ↺{" "}
-            <Tri
-              bm="Padam semua & mula semula"
-              zh="全部删除，重新开始"
-              en="Delete everything & start again"
-            />
-          </Button>
+          {/* R-5 (2026-08-25): "delete everything" no longer lives one tap
+              from the daily work. It moved to Settings, where it requires
+              typing the organisation's name — a destructive control does not
+              belong in a page header. */}
         </div>
         <p className="text-sm text-muted-foreground">
           {documentOrgName}

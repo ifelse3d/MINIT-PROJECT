@@ -1,6 +1,6 @@
 "use client";
 
-import { GlassBadge } from "@/components/v2/glass";
+import { GlassBadge } from "@/components/v3/surfaces";
 import { useTriText } from "@/components/language-provider";
 import type { Confidence } from "@/lib/extraction";
 

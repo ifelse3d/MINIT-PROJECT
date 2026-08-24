@@ -13,6 +13,7 @@ import {
   type Deadline,
 } from "@/lib/deadlines";
 import { loadEvents, type SimpleEvent } from "@/lib/local-events";
+import { useEinvoisVisible } from "@/lib/einvois-pref";
 import { mergeUpcoming } from "@/lib/standard-deadlines";
 
 // ---------------------------------------------------------------------------
@@ -29,11 +30,16 @@ export function HomeUpcoming({ deadlines, todayIso }: { deadlines: Deadline[]; t
   const t = useTriText();
   const [events, setEvents] = useState<SimpleEvent[]>([]);
   useEffect(() => setEvents(loadEvents()), []);
+  // R-6 (2026-08-25): e-Invois is optional and default OFF — its month-end
+  // deadlines are noise for a society that never files it.
+  const [einvoisVisible] = useEinvoisVisible();
 
-  const items = useMemo(
-    () => mergeUpcoming(deadlines, events, todayIso, UPCOMING_LIMIT),
-    [deadlines, events, todayIso],
-  );
+  const items = useMemo(() => {
+    const shown = einvoisVisible
+      ? deadlines
+      : deadlines.filter((d) => d.kind !== "einvois_monthend");
+    return mergeUpcoming(shown, events, todayIso, UPCOMING_LIMIT);
+  }, [deadlines, events, todayIso, einvoisVisible]);
 
   return (
     <section aria-label={t("Akan datang", "即将到来", "Upcoming")}>

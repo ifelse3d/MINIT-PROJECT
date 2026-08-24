@@ -14,7 +14,7 @@ import { getSupabaseServer } from "@/db/supabase-server";
 export async function orgHasAnyActivity(orgId: number): Promise<boolean> {
   const supabase = await getSupabaseServer();
 
-  const [uploads, minutes] = await Promise.all([
+  const [uploads, minutes, receipts] = await Promise.all([
     supabase
       .from("uploads")
       .select("id", { count: "exact", head: true })
@@ -23,10 +23,17 @@ export async function orgHasAnyActivity(orgId: number): Promise<boolean> {
       .from("minutes_docs")
       .select("id", { count: "exact", head: true })
       .eq("org_id", orgId),
+    // R-3 (2026-08-25): a treasurer whose FIRST act was issuing receipts has
+    // used the product — showing them "how it works" onboarding forever was
+    // wrong. Receipts count as activity too.
+    supabase
+      .from("receipts")
+      .select("id", { count: "exact", head: true })
+      .eq("org_id", orgId),
   ]);
 
   // A failed query must not hide the onboarding from someone who needs it, so
   // "unknown" counts as "no activity yet".
-  const n = (uploads.count ?? 0) + (minutes.count ?? 0);
+  const n = (uploads.count ?? 0) + (minutes.count ?? 0) + (receipts.count ?? 0);
   return n > 0;
 }

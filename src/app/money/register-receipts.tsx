@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import Link from "next/link";
 import { Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -58,6 +58,11 @@ export function RegisterAndReceipts() {
   // PDPA (Hard Rule 5): donor names are MASKED by default in list views.
   // The toggle reveals them only for the current visit — never persisted.
   const [showNames, setShowNames] = useState(false);
+  // R-5 (2026-08-25): a temple event is forty rows. At ≥8 the card grid turns
+  // into a compact LIST with search and batch selection — a register is a
+  // ledger, not a photo album.
+  const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   /** True while the irreversible "issue receipts" confirmation is showing. */
   const [confirmIssue, setConfirmIssue] = useState(false);
   /**
@@ -318,8 +323,27 @@ export function RegisterAndReceipts() {
             </p>
           </div>
         )}
-        {/* One card per donation — no sideways scroll */}
-        <div className="grid gap-3 sm:grid-cols-2">
+        {/* R-5: the compact list for a big register (≥8 rows). */}
+        {donations.length >= 8 && (
+          <ListRegister
+            donations={donations}
+            query={query}
+            setQuery={setQuery}
+            selected={selected}
+            setSelected={setSelected}
+            showNames={showNames}
+            editingId={editingId}
+            setEditingId={setEditingId}
+            saveDonation={saveDonation}
+            deleteDonation={deleteDonation}
+            downloadReceiptPdf={downloadReceiptPdf}
+            downloadBusy={downloadBusy}
+            t={t}
+          />
+        )}
+
+        {/* One card per donation — no sideways scroll (small registers only) */}
+        <div className={donations.length >= 8 ? "hidden" : "grid gap-3 sm:grid-cols-2"}>
           {donations.map((d) => {
             const waLink = d.receiptNo
               ? buildWaMeLink(
@@ -497,5 +521,226 @@ No receipt has been issued, so no number is lost. This cannot be undone.`,
         }
       />
     </PageSection>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// R-5 (2026-08-25): the LIST view for a big register. J: "登記簿 ≥8 筆改列表
+// ＋搜索＋批次". Search matches the donor name, receipt number, purpose and
+// date; batch selection covers UNRECEIPTED rows only — a row with an issued
+// number is part of a gap-free series and cannot be deleted anywhere.
+// ---------------------------------------------------------------------------
+function ListRegister({
+  donations,
+  query,
+  setQuery,
+  selected,
+  setSelected,
+  showNames,
+  editingId,
+  setEditingId,
+  saveDonation,
+  deleteDonation,
+  downloadReceiptPdf,
+  downloadBusy,
+  t,
+}: {
+  donations: RegisterDonation[];
+  query: string;
+  setQuery: (q: string) => void;
+  selected: Set<string>;
+  setSelected: React.Dispatch<React.SetStateAction<Set<string>>>;
+  showNames: boolean;
+  editingId: string | null;
+  setEditingId: (id: string | null) => void;
+  saveDonation: (d: RegisterDonation) => void;
+  deleteDonation: (id: string) => void;
+  downloadReceiptPdf: (d: RegisterDonation) => void;
+  downloadBusy: string | null;
+  t: (bm: string, zh: string, en: string, sep?: string) => string;
+}) {
+  const q = query.trim().toLowerCase();
+  const filtered =
+    q === ""
+      ? donations
+      : donations.filter((d) =>
+          [d.donorName, d.receiptNo ?? "", d.purpose, d.donatedAtIso]
+            .join(" ")
+            .toLowerCase()
+            .includes(q),
+        );
+  const selectable = filtered.filter((d) => d.receiptNo === null);
+  const allSelected =
+    selectable.length > 0 && selectable.every((d) => selected.has(d.id));
+
+  function toggle(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function deleteSelected() {
+    const doomed = donations.filter(
+      (d) => selected.has(d.id) && d.receiptNo === null,
+    );
+    if (doomed.length === 0) return;
+    const ok = window.confirm(
+      t(
+        `Buang ${doomed.length} baris daripada daftar? Resit belum dijana untuk baris ini, jadi tiada nombor yang hilang. Tidak boleh dibatalkan.`,
+        `要把选中的 ${doomed.length} 行从登记簿里删掉吗？这些行还没开收据，不会有号码断掉。删了无法复原。`,
+        `Remove ${doomed.length} row(s) from the register? No receipts have been issued for them, so no numbers are lost. This cannot be undone.`,
+      ),
+    );
+    if (!ok) return;
+    for (const d of doomed) deleteDonation(d.id);
+    setSelected(new Set());
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t(
+            "Cari nama, nombor resit, tarikh…",
+            "搜索姓名、收据号码、日期……",
+            "Search name, receipt number, date…",
+          )}
+          className="min-w-56 flex-1 rounded-xl border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-4 py-2.5 text-base outline-none focus:border-[color:var(--v2-primary)]"
+        />
+        <span className="text-sm text-muted-foreground">
+          {filtered.length} / {donations.length}
+        </span>
+        {selected.size > 0 && (
+          <Button
+            variant="outline"
+            className="text-red-700 hover:bg-red-50 hover:text-red-800 dark:hover:bg-red-400/10"
+            onClick={deleteSelected}
+          >
+            🗑{" "}
+            <Tri
+              bm={`Buang ${selected.size} baris dipilih`}
+              zh={`删除所选 ${selected.size} 行`}
+              en={`Remove ${selected.size} selected`}
+            />
+          </Button>
+        )}
+      </div>
+
+      <div className="overflow-x-auto rounded-xl border border-[color:var(--v2-border)]">
+        <table className="w-full text-base">
+          <thead>
+            <tr className="border-b border-[color:var(--v2-border)] text-left text-sm text-muted-foreground">
+              <th className="w-10 px-3 py-2">
+                {selectable.length > 0 && (
+                  <input
+                    type="checkbox"
+                    aria-label={t("Pilih semua", "全选", "Select all")}
+                    checked={allSelected}
+                    onChange={() =>
+                      setSelected(
+                        allSelected
+                          ? new Set()
+                          : new Set(selectable.map((d) => d.id)),
+                      )
+                    }
+                    className="h-4 w-4 accent-[color:var(--v2-primary)]"
+                  />
+                )}
+              </th>
+              <th className="px-3 py-2"><Tri bm="Penderma" zh="捐款人" en="Donor" /></th>
+              <th className="px-3 py-2"><Tri bm="Resit" zh="收据" en="Receipt" /></th>
+              <th className="px-3 py-2"><Tri bm="Tarikh" zh="日期" en="Date" /></th>
+              <th className="px-3 py-2 text-right"><Tri bm="Jumlah" zh="金额" en="Amount" /></th>
+              <th className="px-3 py-2"><Tri bm="Status" zh="状态" en="Status" /></th>
+              <th className="px-3 py-2" />
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((d) => (
+              <Fragment key={d.id}>
+                <tr className="border-b border-[color:var(--v2-border)] last:border-b-0">
+                  <td className="px-3 py-2">
+                    {d.receiptNo === null && (
+                      <input
+                        type="checkbox"
+                        checked={selected.has(d.id)}
+                        onChange={() => toggle(d.id)}
+                        className="h-4 w-4 accent-[color:var(--v2-primary)]"
+                      />
+                    )}
+                  </td>
+                  <td className="px-3 py-2 font-medium">
+                    {showNames ? d.donorName : maskName(d.donorName)}
+                  </td>
+                  <td className="px-3 py-2 font-mono text-sm text-muted-foreground">
+                    {d.receiptNo ?? "—"}
+                  </td>
+                  <td className="px-3 py-2 text-sm tabular-nums">{d.donatedAtIso}</td>
+                  <td className="px-3 py-2 text-right font-semibold tabular-nums">
+                    {formatRm(d.amountCents)}
+                  </td>
+                  <td className="px-3 py-2">
+                    <Badge variant="outline" className={CUSTODY_STYLE[d.custodyStatus]}>
+                      <Tri {...CUSTODY_LABEL[d.custodyStatus]} />
+                    </Badge>
+                  </td>
+                  <td className="px-3 py-2">
+                    <div className="flex justify-end gap-1.5">
+                      {d.receiptNo === null && editingId !== d.id && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setEditingId(d.id)}
+                        >
+                          ✏️
+                        </Button>
+                      )}
+                      {d.receiptNo && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => downloadReceiptPdf(d)}
+                          disabled={downloadBusy !== null}
+                          title={t("Muat turun resit", "下载收据", "Download receipt")}
+                        >
+                          <Download className="h-4 w-4" strokeWidth={2} />
+                        </Button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+                {editingId === d.id && (
+                  <tr>
+                    <td colSpan={7} className="px-3 pb-3">
+                      <DonationEditor
+                        donation={d}
+                        onSave={saveDonation}
+                        onCancel={() => setEditingId(null)}
+                      />
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
+            ))}
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={7} className="px-3 py-6 text-center text-muted-foreground">
+                  <Tri
+                    bm="Tiada baris sepadan dengan carian itu."
+                    zh="没有符合搜索的记录。"
+                    en="No rows match that search."
+                  />
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
