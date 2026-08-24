@@ -44,6 +44,10 @@ const probes = [
   ["20260821000000 ai_usage refunded_at", "ai_usage", "refunded_at"],
   ["20260822000000 minutes search (pgvector)", "minutes_embeddings", "model"],
   ["20260822000000 minutes search (pgvector)", "minutes_docs", "embedded_at"],
+  ["20260825000000 calendar+custody+deadline writable", "events_meetings", "client_id"],
+  ["20260825000000 calendar+custody+deadline writable", "remittance_batches", "collector_name"],
+  ["20260825000000 calendar+custody+deadline writable", "deadlines", "client_id"],
+  ["20260826000000 member groups", "member_groups", "group_name"],
 ];
 
 const headers = { apikey: key, Authorization: `Bearer ${key}` };
