@@ -236,6 +236,22 @@ export default async function SettingsPage() {
             title={<Tri bm="Bantuan AI" zh="AI 用量" en="AI usage" />}
           >
             <AiUsageRows usage={usage} />
+            {/* S-4: the tier page — structure tonight, prices when measured. */}
+            <SettingsRow
+              label={<Tri bm="Pelan langganan" zh="订阅方案" en="Subscription plan" />}
+            >
+              <Link
+                href="/settings/plan"
+                className="text-base underline underline-offset-4"
+              >
+                <Tri
+                  bm="Lihat pelan & naik taraf"
+                  zh="查看方案与升级"
+                  en="See plans & upgrade"
+                />{" "}
+                →
+              </Link>
+            </SettingsRow>
           </SettingsSection>
         )}
 

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { captureAppError } from "@/lib/app-errors";
 import { z } from "zod";
 import {
   joinUserError,
@@ -163,7 +164,9 @@ export async function POST(req: Request) {
       .join("\n");
 
     return NextResponse.json({ text, provider: provider.name });
-  } catch {
+  } catch (e) {
+    // S-7: count the failure for the ops console — never its contents (PDPA).
+    void captureAppError("/api/import-roster", e);
     // No contents in logs (PDPA).
     return NextResponse.json(
       { error: joinUserError(USER_ERRORS.serverError) },

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { captureAppError } from "@/lib/app-errors";
 import { demoteSuspectPhones } from "@/lib/verbatim";
 import {
   joinUserError,
@@ -154,7 +155,9 @@ ${issues}`;
     const { extraction: checked } = demoteSuspectPhones(parsed.data);
 
     return NextResponse.json({ extraction: checked, provider: provider.name });
-  } catch {
+  } catch (e) {
+    // S-7: count the failure for the ops console — never its contents (PDPA).
+    void captureAppError("/api/extract-ledger", e);
     // No contents in logs (PDPA).
     return NextResponse.json({ error: joinUserError(USER_ERRORS.serverError) }, { status: 500 });
   }

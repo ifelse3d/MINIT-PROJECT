@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { captureAppError } from "@/lib/app-errors";
 import { z } from "zod";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
 import { getVisionProvider } from "@/lib/ai/provider";
@@ -400,7 +401,9 @@ YOUR PREVIOUS ATTEMPT WAS NOT VALID JSON in the required shape. Respond with ONL
       turnsUsed: userTurns + 1,
       maxTurns: MAX_TURNS,
     });
-  } catch {
+  } catch (e) {
+    // S-7: count the failure for the ops console — never its contents (PDPA).
+    void captureAppError("/api/chat", e);
     // No contents in logs (PDPA).
     return NextResponse.json(
       { error: joinUserError(USER_ERRORS.serverError) },

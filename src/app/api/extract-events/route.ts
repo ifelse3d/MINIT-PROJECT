@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { captureAppError } from "@/lib/app-errors";
 import { demoteEventsNotInSource } from "@/lib/verbatim";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
 import { recordUpload } from "@/lib/record-upload";
@@ -162,7 +163,9 @@ ${issues}`;
         : parsed.data;
 
     return NextResponse.json({ events: checked.events, provider: provider.name });
-  } catch {
+  } catch (e) {
+    // S-7: count the failure for the ops console — never its contents (PDPA).
+    void captureAppError("/api/extract-events", e);
     return NextResponse.json({ error: joinUserError(USER_ERRORS.serverError) }, { status: 500 });
   }
 }

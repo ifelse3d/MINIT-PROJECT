@@ -68,6 +68,8 @@ echo    17.  20260826000000  kumpulan ahli / member groups
 echo    18.  20260827000000  nama pemungut pada derma / collector name on donations
 echo    19.  20260828000000  kunci anti-duplikasi minit / minutes anti-duplicate key
 echo    20.  20260829000000  suis e-Invois pilihan / optional e-Invois switch
+echo    21.  20260830000000  pelan langganan / subscription plan column
+echo    22.  20260831000000  jadual ralat / error log table
 echo.
 echo     0.  Keluar / Quit
 echo.
@@ -94,6 +96,8 @@ if "%pick%"=="17" set f=20260826000000_member_groups.sql& goto copy
 if "%pick%"=="18" set f=20260827000000_donations_collector_name.sql& goto copy
 if "%pick%"=="19" set f=20260828000000_minutes_docs_client_id.sql& goto copy
 if "%pick%"=="20" set f=20260829000000_orgs_needs_einvois.sql& goto copy
+if "%pick%"=="21" set f=20260830000000_orgs_plan.sql& goto copy
+if "%pick%"=="22" set f=20260831000000_app_errors.sql& goto copy
 
 echo.
 echo    Nombor tak sah / not a valid number.

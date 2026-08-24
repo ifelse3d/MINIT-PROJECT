@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { captureAppError } from "@/lib/app-errors";
 import {
   joinUserError,
   tooManyPagesError,
@@ -347,7 +348,9 @@ ${issues}`,
       extraction,
       provider: provider.name,
     });
-  } catch {
+  } catch (e) {
+    // S-7: count the failure for the ops console — never its contents (PDPA).
+    void captureAppError("/api/intake", e);
     // No contents in logs (PDPA).
     return NextResponse.json(
       { error: joinUserError(USER_ERRORS.serverError) },

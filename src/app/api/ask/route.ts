@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { captureAppError } from "@/lib/app-errors";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
 import type { ZodError } from "zod";
 import { getVisionProvider, type TokenUsage } from "@/lib/ai/provider";
@@ -346,7 +347,9 @@ YOUR PREVIOUS ATTEMPT FAILED VALIDATION with these errors — fix them and respo
 ${issues}`,
       onUsage,
     });
-  } catch {
+  } catch (e) {
+    // S-7: count the failure for the ops console — never its contents (PDPA).
+    void captureAppError("/api/ask", e);
     return null;
   }
   parsed = parse(raw);

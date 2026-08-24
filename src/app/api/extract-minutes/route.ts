@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { captureAppError } from "@/lib/app-errors";
 import { joinUserError, tooManyPagesError, USER_ERRORS } from "@/lib/user-errors";
 import { getVisionProvider } from "@/lib/ai/provider";
 import { createUsageRecorder, refundUsage, requireAiQuota } from "@/lib/ai/usage";
@@ -173,7 +174,9 @@ ${issues}`;
     await recordUpload(photo, "meeting_notes");
 
     return NextResponse.json({ extraction: parsed.data, provider: provider.name });
-  } catch {
+  } catch (e) {
+    // S-7: count the failure for the ops console — never its contents (PDPA).
+    void captureAppError("/api/extract-minutes", e);
     // No contents in logs (PDPA).
     return NextResponse.json({ error: joinUserError(USER_ERRORS.serverError) }, { status: 500 });
   }

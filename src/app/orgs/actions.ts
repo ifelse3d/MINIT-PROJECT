@@ -12,6 +12,7 @@ import { cookies } from "next/headers";
 import { getSupabase } from "@/db/supabase";
 import { getSupabaseServer, getSessionUser } from "@/db/supabase-server";
 import { ACTIVE_ORG_COOKIE } from "@/lib/active-org";
+import { planById } from "@/lib/plans";
 
 export type OrgActionState = { error: string | null; ok: boolean };
 
@@ -309,13 +310,34 @@ export async function createOrg(
       .eq("role", "hq_admin");
     const ownIds = (ownRows ?? []).map((r) => r.org_id as number);
     if (ownIds.length > 0) {
-      const { count: rootCount, error: countError } = await admin
+      // S-3 (2026-08-25): the PLAN decides how many root orgs an account may
+      // run (trial = 1, J's decision #6). Enforced HERE, on the server,
+      // fail-closed. Until migration 20260830000000 adds orgs.plan the select
+      // fails and the pre-plan anti-abuse cap (3) applies unchanged.
+      let planLimit = MAX_ROOT_ORGS_PER_USER;
+      let rootCount = 0;
+      const withPlan = await admin
         .from("orgs")
-        .select("id", { count: "exact", head: true })
+        .select("id, plan")
         .in("id", ownIds)
         .is("parent_org_id", null);
-      if (countError) return { error: ERR.failed, ok: false };
-      if ((rootCount ?? 0) >= MAX_ROOT_ORGS_PER_USER) {
+      if (!withPlan.error && withPlan.data) {
+        rootCount = withPlan.data.length;
+        planLimit = Math.max(
+          1,
+          ...withPlan.data.map((o) => planById(o.plan as string).maxRootOrgs),
+        );
+      } else {
+        const legacy = await admin
+          .from("orgs")
+          .select("id", { count: "exact", head: true })
+          .in("id", ownIds)
+          .is("parent_org_id", null);
+        if (legacy.error) return { error: ERR.failed, ok: false };
+        rootCount = legacy.count ?? 0;
+      }
+      const allowed = Math.min(planLimit, MAX_ROOT_ORGS_PER_USER);
+      if (rootCount >= allowed) {
         return { error: ERR.tooManyRoots, ok: false };
       }
     }

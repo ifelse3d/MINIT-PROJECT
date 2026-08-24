@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { captureAppError } from "@/lib/app-errors";
 import { inputProblemError, joinUserError, USER_ERRORS } from "@/lib/user-errors";
 import { getVisionProvider } from "@/lib/ai/provider";
 import { createUsageRecorder, refundUsage, requireAiQuota } from "@/lib/ai/usage";
@@ -166,7 +167,9 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ markdown, provider: provider.name });
-  } catch {
+  } catch (e) {
+    // S-7: count the failure for the ops console — never its contents (PDPA).
+    void captureAppError("/api/draft-minutes", e);
     // No contents in logs (PDPA).
     return NextResponse.json(
       { error: joinUserError(USER_ERRORS.serverError) },
