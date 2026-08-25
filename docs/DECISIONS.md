@@ -457,6 +457,21 @@ hq_admin 全部；secretary 会议记录＋文件区；treasurer 钱全区；col
 未知角色 fail-closed。逐角色 RLS 深化＝赛后。邀请码一码一人、可设过期、可撤销，
 兑换走 service key（新人本来就不在 RLS 里，与 createOrg 同款设计）。
 
+### D16 — 正式会议记录模板：模型只多标一个 kind，格式全由程式拼（2026-08-25 Stage D）
+
+正式模板（页首 PPM＋Bil./年、出席表、Perbincangan/Keputusan/Tindakan 成文段落、
+Penutup、签名栏）由 compose 层程式拼装；模型唯一多做的事是给每个 item 标
+`kind`（perbincangan/keputusan/tindakan）。三个定案，动它们之前先读这段：
+
+1. **坏 kind 只被丢弃（`.catch(undefined)`），永不让整份文件失败。** 覆盖率检查
+   仍是唯一能拒绝 plan 的东西——一个标签标错顶多放错小节，不能让秘书拿不到文件。
+2. **Bil.（本年第几次会议）留白 `____`，程式不数、模型不猜。** 谁都没告诉 Minit
+   这是第几次会议；从历史「数出来」的期数在多设备/补录场景必错，错的期数印在
+   呈报文件上比留白严重（Hard Rule 1：缺就是缺）。文件保存前可手改。
+3. **中文/EN 成品页首印「翻译本 —— 非呈报用 / Terjemahan」；BM 版没有这行**——
+   它就是呈报语言。UI 里公文词汇并印 BM（meetingTypeUiLabelTri）只进介面，
+   **合并标签永不进文件**（有测试钉着）。
+
 ---
 
-*Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C)*
+*Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C) · D16 appended 2026-08-25 (Stage D)*

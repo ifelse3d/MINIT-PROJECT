@@ -24,6 +24,7 @@
     "legal:sync": "node scripts/sync-legal.mjs",
     "e2e:money": "node scripts/e2e-money.mjs",
     "e2e:minutes": "node scripts/e2e-minutes.mjs",
+    "e2e:roles": "node scripts/e2e-roles.mjs",
     "shots": "node scripts/screenshots.mjs"
   },
   "dependencies": {
