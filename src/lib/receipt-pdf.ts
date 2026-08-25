@@ -42,7 +42,43 @@ export type ReceiptPdfParams = {
   confirmedBy: string;
   /** YYYY-MM-DD */
   confirmedOnIso: string;
+  /**
+   * D-1 (拍板③): 'in_kind' = a goods donation (Derma Barangan). The receipt
+   * carries the SAME serial series, is titled as an in-kind receipt, and the
+   * amount box prints the ITEMS — never money. The estimated value, if any,
+   * stays in the ledger; a number on this paper would read as cash received.
+   */
+  kind?: "cash" | "in_kind";
+  /** In-kind only: what was donated. */
+  itemDesc?: string;
 };
+
+/**
+ * What the big box on the receipt holds — the ONE decision D-1 must never get
+ * wrong: money receipts print ringgit (figure + words); in-kind receipts
+ * print the ITEMS and no ringgit anywhere, because an estimated value on the
+ * paper would read as cash received (拍板③). Pure and exported so the test
+ * pins it directly (the PDF content stream is compressed and ungreppable).
+ */
+export function receiptBoxContent(
+  params: Pick<ReceiptPdfParams, "kind" | "itemDesc" | "amountCents">,
+):
+  | { box: "money"; label: string; figure: string; words: string }
+  | { box: "items"; label: string; items: string } {
+  if (params.kind === "in_kind") {
+    return {
+      box: "items",
+      label: "Barangan diterima / Items received",
+      items: params.itemDesc?.trim() || "-",
+    };
+  }
+  return {
+    box: "money",
+    label: "Jumlah / Amount",
+    figure: formatRm(params.amountCents),
+    words: amountInWordsBm(params.amountCents),
+  };
+}
 
 /** Greedy word-wrap for a given font/size/width. */
 function wrap(
@@ -78,6 +114,8 @@ export async function buildReceiptPdf(params: ReceiptPdfParams): Promise<Uint8Ar
   doc.setTitle(`Resit ${params.receiptNo} — ${params.orgName}`);
   doc.setProducer("Minit");
 
+  const inKind = params.kind === "in_kind";
+
   // Collect every string that will appear on the page; if any needs CJK,
   // build a per-receipt subset font covering exactly those characters.
   const allText = [
@@ -91,6 +129,7 @@ export async function buildReceiptPdf(params: ReceiptPdfParams): Promise<Uint8Ar
     params.collector,
     params.confirmedBy,
     params.confirmedOnIso,
+    inKind ? `${params.itemDesc ?? ""} Derma Barangan 实物捐赠` : "",
   ].join(" ");
   let noto: PDFFont | null = null;
   if (winAnsiSafe(allText) !== allText) {
@@ -167,7 +206,16 @@ export async function buildReceiptPdf(params: ReceiptPdfParams): Promise<Uint8Ar
     bold: true,
     color: accent,
   });
-  y -= 48;
+  y -= 24;
+  if (inKind) {
+    // D-1: an in-kind receipt SAYS it is one, right under the title — the
+    // reader must never mistake goods for cash received.
+    drawAt("DERMA BARANGAN / 实物捐赠 / IN-KIND DONATION", margin, y, 12, {
+      bold: true,
+      color: accent,
+    });
+  }
+  y -= 24;
 
   // ---- Detail rows: big values, clear label column. ------------------------
   const labelX = margin;
@@ -184,6 +232,8 @@ export async function buildReceiptPdf(params: ReceiptPdfParams): Promise<Uint8Ar
   y -= 10;
 
   // ---- Amount box: the number nobody should have to squint at. -------------
+  // D-1: on an in-kind receipt this box holds the ITEMS, never money — an
+  // estimated value printed here would read as cash received (拍板③).
   const boxH = 84;
   page.drawRectangle({
     x: margin,
@@ -194,10 +244,20 @@ export async function buildReceiptPdf(params: ReceiptPdfParams): Promise<Uint8Ar
     borderWidth: 1,
     color: rgb(0.97, 0.97, 0.98),
   });
-  drawAt("Jumlah / Amount", margin + 18, y - 24, 11, { color: grey });
-  drawAt(formatRm(params.amountCents), margin + 18, y - 62, 30, { bold: true });
-  const words = amountInWordsBm(params.amountCents);
-  drawAt(words, pageW - margin - 18 - widthOf(words, 11), y - 62, 11, { color: grey });
+  const box = receiptBoxContent(params);
+  if (box.box === "items") {
+    drawAt(box.label, margin + 18, y - 24, 11, { color: grey });
+    const itemLines = wrap(box.items, (s) => widthOf(s, 18, true), width - 36).slice(0, 2);
+    let iy = y - 52;
+    for (const line of itemLines) {
+      drawAt(line, margin + 18, iy, 18, { bold: true });
+      iy -= 24;
+    }
+  } else {
+    drawAt(box.label, margin + 18, y - 24, 11, { color: grey });
+    drawAt(box.figure, margin + 18, y - 62, 30, { bold: true });
+    drawAt(box.words, pageW - margin - 18 - widthOf(box.words, 11), y - 62, 11, { color: grey });
+  }
   y -= boxH + 28;
 
   // ---- Tax-deductibility line (Hard Rule 3) — wrapped, never truncated. ----

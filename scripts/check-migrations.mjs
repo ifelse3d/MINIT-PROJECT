@@ -56,6 +56,13 @@ const probes = [
   ["20260902000000 invites + org type", "invites", "code"],
   ["20260902000000 invites + org type", "orgs", "org_type"],
   ["20260902000000 invites + org type", "orgs", "ppm_no"],
+  ["20260903000000 final sprint: in-kind donations", "donations", "kind"],
+  ["20260903000000 final sprint: in-kind donations", "donations", "item_desc"],
+  ["20260903000000 final sprint: claim flow", "expenses", "status"],
+  ["20260903000000 final sprint: claim flow", "expenses", "claimant_user_id"],
+  ["20260903000000 final sprint: feedback", "feedback", "message"],
+  ["20260903000000 final sprint: per-user usage", "ai_usage", "user_id"],
+  ["20260903000000 final sprint: platform admins", "credit_grants", "granted_by"],
 ];
 
 const headers = { apikey: key, Authorization: `Bearer ${key}` };

@@ -56,6 +56,8 @@ export function RegisterAndReceipts() {
     issueBusy,
     issueNotice,
     setError,
+    onLedgerPicked,
+    aiBusy,
   } = useRegister();
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -306,6 +308,15 @@ export function RegisterAndReceipts() {
             />
           </p>
         )}
+        {issueNotice === "db_behind" && (
+          <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+            <Tri
+              bm="Daftar ini ada derma barangan, tetapi pangkalan data belum dikemas kini untuknya (migration 25). Tiada resit dijana dan tiada apa-apa hilang — baris menunggu dengan selamat. Minta pentadbir sistem jalankan migration itu, kemudian cuba lagi."
+              zh="登记簿里有实物捐赠，但数据库还没更新到支持它（migration 25）。收据没有生成，东西也不会丢 —— 记录安全地等着。请系统管理员跑完那支 migration 再试一次。"
+              en="The register contains an in-kind donation, but the database has not been updated for it yet (migration 25). No receipts were issued and nothing is lost — the rows wait safely. Ask whoever runs the system to apply that migration, then try again."
+            />
+          </p>
+        )}
         {issueNotice === "error" && (
           <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">
             {/* issue_receipts() is one DB transaction (2026-08-25): a failure
@@ -388,12 +399,33 @@ export function RegisterAndReceipts() {
                           <Tri bm="manual" zh="手动" en="manual" />
                         </Badge>
                       )}
+                      {d.kind === "in_kind" && (
+                        <Badge
+                          variant="outline"
+                          className="ml-2 border-teal-300 bg-teal-50 text-teal-800 dark:bg-teal-400/10 dark:text-teal-200"
+                        >
+                          <Tri bm="Barangan" zh="实物" en="In-kind" />
+                        </Badge>
+                      )}
                     </p>
                     <p className="font-mono text-sm text-muted-foreground">
                       {d.receiptNo ?? t("belum ada resit", "还没有收据", "no receipt yet")}
                     </p>
                   </div>
-                  <span className="font-semibold tabular-nums">{formatRm(d.amountCents)}</span>
+                  {/* D-1: goods rows show the goods, never RM0.00. The
+                      estimate (if any) is labelled as an estimate. */}
+                  {d.kind === "in_kind" ? (
+                    <span className="text-right">
+                      <span className="font-semibold">📦 {d.itemDesc || "—"}</span>
+                      {d.estValueCents != null && (
+                        <span className="block text-sm text-muted-foreground">
+                          <Tri bm="anggaran" zh="估值" en="est." /> {formatRm(d.estValueCents)}
+                        </span>
+                      )}
+                    </span>
+                  ) : (
+                    <span className="font-semibold tabular-nums">{formatRm(d.amountCents)}</span>
+                  )}
                 </div>
                 <div className="mt-2">
                   <Badge variant="outline" className={CUSTODY_STYLE[d.custodyStatus]}>
@@ -512,7 +544,16 @@ No receipt has been issued, so no number is lost. This cannot be undone.`,
           defaultCollector={registerCollector}
           defaultOpen={arrivedToType}
         />
-        <ManualIncomeForm onAdd={addManualDonation} defaultCollector={registerCollector} />
+        <ManualIncomeForm
+          onAdd={addManualDonation}
+          defaultCollector={registerCollector}
+          // D-2: the slip-photo path reuses the ledger reader; the chosen
+          // income type pre-fills empty purposes at "check" for the review.
+          onSlipPhoto={(file, category) =>
+            onLedgerPicked(file, "auto", { fillPurpose: category })
+          }
+          slipBusy={aiBusy}
+        />
       </div>
 
       <NextStepLink
@@ -698,7 +739,12 @@ function ListRegister({
                   </td>
                   <td className="px-3 py-2 text-sm tabular-nums">{d.donatedAtIso}</td>
                   <td className="px-3 py-2 text-right font-semibold tabular-nums">
-                    {formatRm(d.amountCents)}
+                    {/* D-1: goods rows show the goods, never RM0.00. */}
+                    {d.kind === "in_kind" ? (
+                      <span className="font-medium">📦 {d.itemDesc || "—"}</span>
+                    ) : (
+                      formatRm(d.amountCents)
+                    )}
                   </td>
                   <td className="px-3 py-2">
                     <Badge variant="outline" className={CUSTODY_STYLE[d.custodyStatus]}>

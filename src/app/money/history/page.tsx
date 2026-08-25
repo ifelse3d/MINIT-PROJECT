@@ -46,8 +46,18 @@ type ReceiptRow = {
     purpose: string | null;
     donated_at: string | null;
     custody_status: string;
+    kind?: string | null;
+    item_desc?: string | null;
   } | null;
 };
+
+/** D-3: with the in-kind columns; the fallback covers a pre-migration-25 DB —
+ *  PostgREST fails the WHOLE query over one unknown column, and an empty
+ *  history reads as "this society never issued a receipt". */
+const HISTORY_SELECT =
+  "id, receipt_no, issued_at, donation:donations!receipts_donation_id_fkey (donor_masked, amount_cents, purpose, donated_at, custody_status, kind, item_desc)";
+const HISTORY_SELECT_LEGACY =
+  "id, receipt_no, issued_at, donation:donations!receipts_donation_id_fkey (donor_masked, amount_cents, purpose, donated_at, custody_status)";
 
 /** What the URL is allowed to say about which receipts to show. */
 type Query = { q?: string; from?: string; to?: string; page?: string };
@@ -102,25 +112,29 @@ export default async function MoneyHistoryPage({
   // 2026-08-22 made that sentence honest; 2026-08-23 makes the older receipts
   // REACHABLE, which is the half that was missing.
   const { from: rangeFrom, to: rangeTo } = pageRange(page);
-  let query = supabase
-    .from("receipts")
-    .select(
-      "id, receipt_no, issued_at, donation:donations!receipts_donation_id_fkey (donor_masked, amount_cents, purpose, donated_at, custody_status)",
-      { count: "exact" },
-    )
-    .eq("org_id", active.id);
-  // Receipt number only. The donor name is stored MASKED (Hard Rule 5), so
-  // searching it would match against "T** A* K**" and mostly find nothing — the
-  // form says so out loud rather than letting somebody conclude their receipt
-  // has gone missing.
-  if (q) query = query.ilike("receipt_no", "%" + q + "%");
-  // issued_at is a timestamptz, so `lte` against a bare date would exclude
-  // everything issued later that same day. The upper bound is the end of it.
-  if (from) query = query.gte("issued_at", from);
-  if (to) query = query.lte("issued_at", to + "T23:59:59.999Z");
-  const { data, count } = await query
-    .order("id", { ascending: false })
-    .range(rangeFrom, rangeTo);
+  const buildQuery = (select: string) => {
+    let query = supabase
+      .from("receipts")
+      .select(select, { count: "exact" })
+      .eq("org_id", active.id);
+    // Receipt number only. The donor name is stored MASKED (Hard Rule 5), so
+    // searching it would match against "T** A* K**" and mostly find nothing —
+    // the form says so out loud rather than letting somebody conclude their
+    // receipt has gone missing.
+    if (q) query = query.ilike("receipt_no", "%" + q + "%");
+    // issued_at is a timestamptz, so `lte` against a bare date would exclude
+    // everything issued later that same day. The upper bound is the end of it.
+    if (from) query = query.gte("issued_at", from);
+    if (to) query = query.lte("issued_at", to + "T23:59:59.999Z");
+    return query.order("id", { ascending: false }).range(rangeFrom, rangeTo);
+  };
+  let { data, count, error } = await buildQuery(HISTORY_SELECT);
+  if (error) {
+    const retry = await buildQuery(HISTORY_SELECT_LEGACY);
+    data = retry.data;
+    count = retry.count;
+    error = retry.error;
+  }
 
   const rows = (data as unknown as ReceiptRow[]) ?? [];
   const summary = pageSummary(count ?? 0, page, rows.length, PAGE_SIZE);
@@ -257,9 +271,26 @@ export default async function MoneyHistoryPage({
                     <TableCell className="font-mono">{r.receipt_no}</TableCell>
                     <TableCell>{r.donation?.donor_masked ?? "—"}</TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {formatRm(r.donation?.amount_cents ?? 0)}
+                      {/* D-3: goods receipts show the goods, never RM0.00. */}
+                      {r.donation?.kind === "in_kind" ? (
+                        <span className="font-medium">
+                          📦 {r.donation?.item_desc ?? "—"}
+                        </span>
+                      ) : (
+                        formatRm(r.donation?.amount_cents ?? 0)
+                      )}
                     </TableCell>
-                    <TableCell>{r.donation?.purpose ?? "—"}</TableCell>
+                    <TableCell>
+                      {r.donation?.purpose ?? "—"}
+                      {r.donation?.kind === "in_kind" && (
+                        <Badge
+                          variant="outline"
+                          className="ml-2 border-teal-300 bg-teal-50 text-teal-800"
+                        >
+                          <Tri bm="Barangan" zh="实物" en="In-kind" />
+                        </Badge>
+                      )}
+                    </TableCell>
                     <TableCell>{r.donation?.donated_at ?? "—"}</TableCell>
                     <TableCell>
                       <Badge

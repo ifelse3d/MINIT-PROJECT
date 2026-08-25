@@ -44,9 +44,18 @@ type Props = {
   onAdd: (donation: RegisterDonation) => void;
   /** Default collector name (usually the logged-in collector / treasurer). */
   defaultCollector: string;
+  /**
+   * D-2 (work order 27): photograph the fee slip / rental receipt instead of
+   * typing — runs the existing ledger-reading pipeline with the CHOSEN income
+   * type pre-filling any purpose the model reads nothing for. Resolves true
+   * when the read landed in the step-1 review. Absent = no photo entrance.
+   */
+  onSlipPhoto?: (file: File, category: string) => Promise<boolean>;
+  /** True while the AI is reading (shared with the ledger reader). */
+  slipBusy?: boolean;
 };
 
-export function ManualIncomeForm({ onAdd, defaultCollector }: Props) {
+export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBusy }: Props) {
   const t = useTriText();
   const today = dayIsoMalaysia(new Date().toISOString())!;
 
@@ -59,6 +68,8 @@ export function ManualIncomeForm({ onAdd, defaultCollector }: Props) {
   const [date, setDate] = useState(today);
   const [collector, setCollector] = useState(defaultCollector);
   const [error, setError] = useState<string | null>(null);
+  /** D-2: the slip photo was read and now waits in the step-1 review. */
+  const [slipDone, setSlipDone] = useState(false);
 
   function reset() {
     setCategory(INCOME_CATEGORIES[0].value);
@@ -140,6 +151,55 @@ export function ManualIncomeForm({ onAdd, defaultCollector }: Props) {
           </Button>
         ) : (
           <div className="flex flex-col gap-4">
+            {/* D-2: the photo path, FIRST — the eROSES law says the camera
+                beats the form whenever there IS paper. The chosen income type
+                rides along and pre-fills what the model reads no purpose for;
+                the rows land in the step-1 review like any ledger page. */}
+            {onSlipPhoto && (
+              <div className="flex flex-col gap-2 rounded-xl border-2 border-[color:var(--v2-outline-border)] bg-muted/20 p-3">
+                <p className="text-sm text-muted-foreground">
+                  <Tri
+                    bm="Ada resit / slip di tangan? Pilih jenis di bawah, kemudian ambil gambar — Minit membacanya dan barisnya menunggu di langkah 1 untuk disemak."
+                    zh="手上有单据？先在下面选好收入类型，再拍下来 —— Minit 读出来的行会等在第 1 步给您核对。"
+                    en="Holding a slip or receipt? Pick the income type below, then photograph it — Minit reads it and the rows wait in step 1 for your check."
+                  />
+                </p>
+                <label
+                  className={`inline-flex w-fit cursor-pointer items-center gap-2 rounded-md bg-primary px-4 py-2 text-base font-medium text-primary-foreground shadow hover:bg-primary/90 ${
+                    slipBusy ? "pointer-events-none opacity-70" : ""
+                  }`}
+                >
+                  {slipBusy ? (
+                    <>⏳ <Tri bm="AI sedang membaca…" zh="AI 读取中…" en="AI is reading…" /></>
+                  ) : (
+                    <>📷 <Tri bm="Ambil gambar slip (1 tindakan AI)" zh="拍单据（用 1 次 AI 额度）" en="Photograph the slip (1 AI action)" /></>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    className="hidden"
+                    disabled={slipBusy}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] ?? null;
+                      e.target.value = "";
+                      if (!file) return;
+                      setSlipDone(false);
+                      void onSlipPhoto(file, category).then(setSlipDone);
+                    }}
+                  />
+                </label>
+                {slipDone && (
+                  <p className="rounded-md bg-green-50 px-3 py-2 text-sm font-medium text-green-900 dark:bg-green-400/10 dark:text-green-100">
+                    ✓{" "}
+                    <Tri
+                      bm="Dibaca. Semak barisnya di langkah 1 (Baca lejar), kemudian tambah ke daftar."
+                      zh="读好了。请到第 1 步（读账页）核对那些行，确认后加进登记簿。"
+                      en="Read. Check the rows in step 1 (Read the ledger), then add them to the register."
+                    />
+                  </p>
+                )}
+              </div>
+            )}
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="flex flex-col gap-1">
                 <span className="text-base font-semibold">

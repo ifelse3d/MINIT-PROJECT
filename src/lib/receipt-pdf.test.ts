@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { PDFDocument } from "pdf-lib";
 import { amountInWordsBm, numberToWordsBm } from "@/lib/receipts";
-import { buildReceiptPdf, needsCjkFont, winAnsiSafe, type ReceiptPdfParams } from "@/lib/receipt-pdf";
+import {
+  buildReceiptPdf,
+  needsCjkFont,
+  receiptBoxContent,
+  winAnsiSafe,
+  type ReceiptPdfParams,
+} from "@/lib/receipt-pdf";
 
 describe("numberToWordsBm", () => {
   it("handles units, teens and tens", () => {
@@ -113,5 +119,41 @@ describe("buildReceiptPdf", () => {
       taxStatus: "s44_6",
     });
     expect(bytes.length).toBeGreaterThan(1000);
+  });
+
+  // D-1 (拍板③): an in-kind receipt prints the ITEMS and never money — an
+  // estimated value on the paper would read as cash received. The box
+  // decision is a pure exported function precisely so this test can pin it
+  // (the PDF content stream is compressed and cannot be grepped).
+  it("in-kind receipts render the items and no ringgit figure", async () => {
+    const params: ReceiptPdfParams = {
+      ...baseParams,
+      kind: "in_kind",
+      itemDesc: "20 kampit beras / 白米 20 包",
+      // amountCents deliberately non-zero: even a wrong caller value must not
+      // reach the page on the in-kind path.
+      amountCents: 123456,
+    };
+    const box = receiptBoxContent(params);
+    expect(box.box).toBe("items");
+    if (box.box === "items") {
+      expect(box.items).toBe("20 kampit beras / 白米 20 包");
+      expect(JSON.stringify(box)).not.toContain("RM");
+      expect(JSON.stringify(box)).not.toContain("Ringgit");
+    }
+    // And the full document still renders.
+    const bytes = await buildReceiptPdf(params);
+    expect(bytes.length).toBeGreaterThan(1000);
+    const doc = await PDFDocument.load(bytes);
+    expect(doc.getPageCount()).toBe(1);
+  });
+
+  it("cash receipts keep the money box (figure + words)", () => {
+    const box = receiptBoxContent(baseParams);
+    expect(box.box).toBe("money");
+    if (box.box === "money") {
+      expect(box.figure).toBe("RM50.00");
+      expect(box.words).toContain("Ringgit Malaysia");
+    }
   });
 });

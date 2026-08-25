@@ -74,6 +74,10 @@ echo    23.  20260901000000  kuota percubaan 15 / trial quota 15 per month
 echo         ^^^ Dalam fail itu ada bahagian PILIHAN (dikomen) untuk org lama.
 echo             The file has an OPTIONAL commented section for existing orgs.
 echo    24.  20260902000000  kod jemputan + jenis pertubuhan / invites + org type
+echo    25.  20260903000000  FINAL SPRINT - derma barangan + claim + feedback
+echo         + ai_usage.user_id + platform_admins (semua dalam SATU fail)
+echo         in-kind donations + claims + feedback + per-user usage
+echo         + platform admins (all in ONE file)
 echo.
 echo     0.  Keluar / Quit
 echo.
@@ -104,6 +108,7 @@ if "%pick%"=="21" set f=20260830000000_orgs_plan.sql& goto copy
 if "%pick%"=="22" set f=20260831000000_app_errors.sql& goto copy
 if "%pick%"=="23" set f=20260901000000_trial_quota_15.sql& goto copy
 if "%pick%"=="24" set f=20260902000000_invites_and_org_type.sql& goto copy
+if "%pick%"=="25" set f=20260903000000_final_sprint.sql& goto copy
 
 echo.
 echo    Nombor tak sah / not a valid number.

@@ -47,6 +47,31 @@ describe("remittance batches", () => {
     donation({ id: "d5", receiptNo: "MIN-2026-0004", amountCents: 999, custodyStatus: "settled" }),
   ];
 
+  // D-1 (拍板③): goods are not cash. An in-kind receipt number inside a
+  // remittance batch would be a paper trail claiming cash that never existed.
+  it("keeps in-kind donations out of the cash hand-over entirely", () => {
+    const withGoods = [
+      ...donations,
+      donation({
+        id: "g1",
+        receiptNo: "MIN-2026-0005",
+        amountCents: 0,
+        kind: "in_kind",
+        itemDesc: "20 kampit beras",
+        estValueCents: 60000,
+      }),
+    ];
+    const { batch, donations: updated } = createRemittanceBatch(withGoods, {
+      id: "batch-g",
+      collector: "Lim",
+      handedOverAtIso: "2026-06-30",
+    });
+    expect(batch.receiptNos).not.toContain("MIN-2026-0005");
+    expect(batch.totalCents).toBe(15000);
+    // The goods row is untouched — it never becomes pending cash.
+    expect(updated.find((d) => d.id === "g1")?.custodyStatus).toBe("collected");
+  });
+
   it("batches only the collector's receipted, un-remitted donations; code sums the total", () => {
     const { batch, donations: updated } = createRemittanceBatch(donations, {
       id: "batch-1",
@@ -111,5 +136,23 @@ describe("HQ dashboard sums (deterministic)", () => {
 
   it("totals everything not yet settled", () => {
     expect(totalUnremittedCents(donations)).toBe(15000);
+  });
+
+  // D-1: goods hold no cash — the dashboard must not show them as money in
+  // anyone's hands, even if a bug ever puts a value in amountCents.
+  it("keeps in-kind donations out of every cash sum", () => {
+    const withGoods = [
+      ...donations,
+      donation({
+        id: "g1",
+        collector: "Lim",
+        amountCents: 60000, // deliberately wrong: the filter must not rely on 0
+        kind: "in_kind",
+        itemDesc: "20 kampit beras",
+        custodyStatus: "collected",
+      }),
+    ];
+    expect(collectorBalances(withGoods)).toEqual(collectorBalances(donations));
+    expect(totalUnremittedCents(withGoods)).toBe(15000);
   });
 });

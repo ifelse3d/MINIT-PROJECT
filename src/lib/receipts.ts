@@ -81,6 +81,9 @@ export type RegisterDonation = {
   id: string;
   donorName: string;
   donorPhone: string | null;
+  /** 🔴 In-kind rows carry 0 here BY CONVENTION (D-1, 拍板③): goods are not
+   *  money, and any money path that forgets to exclude them then adds zero
+   *  instead of a fictional value. The estimate lives in estValueCents. */
   amountCents: number;
   purpose: string;
   /** YYYY-MM-DD */
@@ -90,7 +93,19 @@ export type RegisterDonation = {
   custodyStatus: "collected" | "pending_remittance" | "settled";
   /** How this row entered the register. Absent = read from a ledger photo. */
   source?: "ledger" | "manual";
+  /** D-1 (拍板③): 'in_kind' = goods (Derma Barangan). Absent = cash. */
+  kind?: "cash" | "in_kind";
+  /** In-kind only: what was donated. Printed on the receipt instead of money. */
+  itemDesc?: string | null;
+  /** In-kind only, OPTIONAL: the human's estimated value in cents — ledger
+   *  and statement ONLY. Never on the receipt, never e-Invois, never custody. */
+  estValueCents?: number | null;
 };
+
+/** True for a goods (Derma Barangan) row — the one question money code asks. */
+export function isInKind(d: Pick<RegisterDonation, "kind">): boolean {
+  return d.kind === "in_kind";
+}
 
 /**
  * Shape guard for a register read back out of localStorage.

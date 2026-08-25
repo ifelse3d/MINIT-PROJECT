@@ -20,6 +20,9 @@ const bodySchema = receiptPdfBodySchema;
 
 /** The columns the PDF needs, verbatim from the database. */
 const RECEIPT_SELECT =
+  "receipt_no, issued_at, donation:donations!receipts_donation_id_fkey (donor_name, amount_cents, purpose, donated_at, collector_name, kind, item_desc)" as const;
+/** Fallback while migration 25 (donations.kind) is not yet applied. */
+const RECEIPT_SELECT_NO_KIND =
   "receipt_no, issued_at, donation:donations!receipts_donation_id_fkey (donor_name, amount_cents, purpose, donated_at, collector_name)" as const;
 /** Fallback while migration 20260827000000 (collector_name) is not yet applied:
  *  PostgREST fails the WHOLE query over one unknown column. */
@@ -35,6 +38,8 @@ type ReceiptRow = {
     purpose: string | null;
     donated_at: string | null;
     collector_name?: string | null;
+    kind?: string | null;
+    item_desc?: string | null;
   } | null;
 };
 
@@ -51,21 +56,25 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const supabase = await getSupabaseServer();
-  let { data, error } = await supabase
-    .from("receipts")
-    .select(RECEIPT_SELECT)
-    .eq("org_id", identity.orgId)
-    .eq("receipt_no", parsed.data.receiptNo)
-    .maybeSingle<ReceiptRow>();
-  if (error) {
-    // 42703 = undefined column: the collector_name migration has not been run
-    // yet. The receipt is still printable without a collector line.
-    const retry = await supabase
+  const fetchWith = (select: string) =>
+    supabase
       .from("receipts")
-      .select(RECEIPT_SELECT_LEGACY)
+      .select(select)
       .eq("org_id", identity.orgId)
       .eq("receipt_no", parsed.data.receiptNo)
       .maybeSingle<ReceiptRow>();
+  // Newest columns first; each 42703 (undefined column = that migration not
+  // applied yet) steps down one honest rung. A cash receipt prints fine on
+  // every rung; an in-kind receipt only exists once migration 25 ran, so it
+  // can never be mis-printed as cash by the fallback.
+  let { data, error } = await fetchWith(RECEIPT_SELECT);
+  if (error) {
+    const retry = await fetchWith(RECEIPT_SELECT_NO_KIND);
+    data = retry.data;
+    error = retry.error;
+  }
+  if (error) {
+    const retry = await fetchWith(RECEIPT_SELECT_LEGACY);
     data = retry.data;
     error = retry.error;
   }
@@ -100,6 +109,9 @@ export async function POST(request: Request): Promise<Response> {
     orgRegistrationNo: identity.ppmNo ?? undefined,
     taxStatus: identity.taxStatus,
     confirmedBy: identity.confirmedBy,
+    // D-1: goods receipts print the items, never money.
+    kind: data.donation.kind === "in_kind" ? "in_kind" : "cash",
+    itemDesc: data.donation.item_desc ?? undefined,
   });
   return new Response(new Uint8Array(bytes), {
     headers: {

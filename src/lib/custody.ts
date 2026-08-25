@@ -1,4 +1,4 @@
-import type { RegisterDonation } from "@/lib/receipts";
+import { isInKind, type RegisterDonation } from "@/lib/receipts";
 
 // ---------------------------------------------------------------------------
 // CUSTODY — collector → HQ money tracking (Phase 3, CLAUDE.md Hard Rule 2).
@@ -58,7 +58,14 @@ export function createRemittanceBatch(
   params: { id: string; collector: string; handedOverAtIso: string }
 ): { batch: RemittanceBatch; donations: RegisterDonation[] } {
   const inBatch = donations.filter(
-    (d) => d.collector === params.collector && d.custodyStatus === "collected" && d.receiptNo !== null
+    (d) =>
+      d.collector === params.collector &&
+      d.custodyStatus === "collected" &&
+      d.receiptNo !== null &&
+      // D-1 (拍板③): goods are not cash. An in-kind receipt in the batch's
+      // receiptNos would be a paper trail claiming cash that never existed —
+      // its amount is 0 by convention, but the NUMBER must not appear either.
+      !isInKind(d)
   );
   if (inBatch.length === 0) {
     throw new CustodyError(`No receipted, un-remitted donations for collector "${params.collector}".`);
@@ -117,7 +124,8 @@ export type CollectorBalance = {
 
 export function collectorBalances(donations: RegisterDonation[]): CollectorBalance[] {
   const byCollector = new Map<string, CollectorBalance>();
-  for (const d of donations) {
+  // D-1: in-kind rows hold no cash — they are not in anyone's hands.
+  for (const d of donations.filter((d) => !isInKind(d))) {
     const b =
       byCollector.get(d.collector) ??
       { collector: d.collector, collectedCents: 0, pendingCents: 0, settledCents: 0 };
@@ -132,6 +140,6 @@ export function collectorBalances(donations: RegisterDonation[]): CollectorBalan
 /** Everything not yet settled — the number HQ chases. */
 export function totalUnremittedCents(donations: RegisterDonation[]): number {
   return donations
-    .filter((d) => d.custodyStatus !== "settled")
+    .filter((d) => d.custodyStatus !== "settled" && !isInKind(d))
     .reduce((sum, d) => sum + d.amountCents, 0);
 }

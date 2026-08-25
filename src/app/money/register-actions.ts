@@ -19,6 +19,10 @@ import { getActiveOrg } from "@/lib/active-org";
 import type { RegisterDonation } from "@/lib/receipts";
 
 const SELECT =
+  "id, client_id, donor_name, donor_phone, amount_cents, purpose, donated_at, custody_status, source, collector_name, kind, item_desc, est_value_cents, receipt:receipts!donations_receipt_id_fkey (receipt_no)" as const;
+/** While migration 25 (donations.kind) is not applied — retry without the
+ *  in-kind columns. */
+const SELECT_NO_KIND =
   "id, client_id, donor_name, donor_phone, amount_cents, purpose, donated_at, custody_status, source, collector_name, receipt:receipts!donations_receipt_id_fkey (receipt_no)" as const;
 /** While migration 20260827000000 (collector_name) is not applied, PostgREST
  *  fails the whole query over the unknown column — retry without it. */
@@ -36,6 +40,9 @@ type Row = {
   custody_status: "collected" | "pending_remittance" | "settled";
   source: string | null;
   collector_name?: string | null;
+  kind?: string | null;
+  item_desc?: string | null;
+  est_value_cents?: number | null;
   receipt: { receipt_no: string } | null;
 };
 
@@ -58,6 +65,11 @@ export async function loadRegisterDonations(): Promise<RegisterDonation[]> {
 
   let { data, error } = await query(SELECT).returns<Row[]>();
   if (error) {
+    const retry = await query(SELECT_NO_KIND).returns<Row[]>();
+    data = retry.data;
+    error = retry.error;
+  }
+  if (error) {
     const retry = await query(SELECT_LEGACY).returns<Row[]>();
     data = retry.data;
     error = retry.error;
@@ -78,5 +90,9 @@ export async function loadRegisterDonations(): Promise<RegisterDonation[]> {
     receiptNo: d.receipt?.receipt_no ?? null,
     custodyStatus: d.custody_status,
     source: d.source === "manual" ? "manual" : "ledger",
+    // D-1: goods rows come back as goods rows.
+    kind: d.kind === "in_kind" ? ("in_kind" as const) : ("cash" as const),
+    itemDesc: d.item_desc ?? null,
+    estValueCents: d.est_value_cents ?? null,
   }));
 }

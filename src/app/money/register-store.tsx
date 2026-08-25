@@ -73,7 +73,9 @@ export type IssueNotice =
   | "error"
   | "readonly"
   | "needs_prefix"
-  | "sample";
+  | "sample"
+  /** D-1: an in-kind row needs migration 25 in the database first. */
+  | "db_behind";
 
 export type RegisterStore = {
   // --- identity, resolved on the server (never client-chosen) --------------
@@ -104,7 +106,9 @@ export type RegisterStore = {
     file: File | null,
     /** 0-1: "fresh" = the person said this photo starts a NEW ledger page. */
     mode?: "auto" | "fresh",
-  ) => Promise<void>;
+    /** D-2: pre-fill EMPTY purposes with the income type the person chose. */
+    opts?: { fillPurpose?: string },
+  ) => Promise<boolean>;
   showLedgerSample: (extraction: LedgerExtraction) => void;
   ledgerBackToEmpty: () => void;
   mutateLedger: (fn: (l: LedgerExtraction) => void) => void;
@@ -315,8 +319,13 @@ export function RegisterProvider({
     // themselves live in the register and are untouched). "auto" keeps the
     // G-2 page-by-page merge for a review still in progress.
     mode: "auto" | "fresh" = "auto",
-  ) => {
-    if (!file) return;
+    // D-2: a slip photographed from the manual-income form carries the income
+    // type the person CHOSE (会员费/租金/…). Rows the model read no purpose
+    // for get that type at confidence "check" — the person picked it, the
+    // person still eyeballs it per row. The extract prompt is untouched.
+    opts?: { fillPurpose?: string },
+  ): Promise<boolean> => {
+    if (!file) return false;
     setAiError(null);
     setAiBusy(true);
     try {
@@ -325,7 +334,28 @@ export function RegisterProvider({
       const res = await fetch("/api/extract-ledger", { method: "POST", body: form });
       const body = await res.json().catch(() => null);
       if (!res.ok) throw new Error(body?.error ?? joinUserError(USER_ERRORS.aiUnavailable));
-      const read = body.extraction as LedgerExtraction;
+      const readRaw = body.extraction as LedgerExtraction;
+      const fill = opts?.fillPurpose?.trim();
+      const read = fill
+        ? {
+            ...readRaw,
+            rows: readRaw.rows.map((r) =>
+              r.purpose.value.trim() === ""
+                ? {
+                    ...r,
+                    purpose: {
+                      value: fill,
+                      confidence: "check" as const,
+                      source_ref: {
+                        location: t("dipilih oleh anda", "由您选择", "chosen by you"),
+                        snippet: fill,
+                      },
+                    },
+                  }
+                : r,
+            ),
+          }
+        : readRaw;
       const continuing =
         mode !== "fresh" && ledgerSourceLabel !== null && ledger.rows.length > 0;
       // 0-3 (26 号报告 2-3): the person can keep ticking rows during the
@@ -342,12 +372,14 @@ export function RegisterProvider({
         continuing ? mergedSourceLabel(prev, file.name) : file.name,
       );
       if (!continuing) setAddedRows(new Set());
+      return true;
     } catch (e) {
       setAiError(e instanceof Error ? e.message : String(e));
+      return false;
     } finally {
       setAiBusy(false);
     }
-  }, [ledger, ledgerSourceLabel]);
+  }, [ledger, ledgerSourceLabel, t]);
 
   // The organisation's hand-over history, merged in once on mount so a SECOND
   // device (HQ's computer, the branch's shared laptop) sees what the first one
@@ -494,6 +526,10 @@ export function RegisterProvider({
           custodyStatus: d.custodyStatus,
           source: d.source,
           collectorName: d.collector,
+          // D-1: goods rows travel as goods rows.
+          kind: d.kind,
+          itemDesc: d.itemDesc ?? null,
+          estValueCents: d.estValueCents ?? null,
         })),
         opts,
       );
@@ -539,6 +575,13 @@ export function RegisterProvider({
         // or hand-crafted) may not burn real receipt numbers. Nothing was
         // written; the person is told to remove the sample rows first.
         setIssueNotice("sample");
+        return;
+      }
+      if (result.reason === "db_behind") {
+        // D-1: the batch holds an in-kind donation and the database predates
+        // migration 25 — issuing would print a wrong (RM0 cash) receipt.
+        // Nothing was written; the rows wait safely in the register.
+        setIssueNotice("db_behind");
         return;
       }
       setIssueNotice("error");

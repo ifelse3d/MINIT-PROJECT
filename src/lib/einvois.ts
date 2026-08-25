@@ -1,4 +1,4 @@
-import { parseReceiptNo, type RegisterDonation } from "@/lib/receipts";
+import { isInKind, parseReceiptNo, type RegisterDonation } from "@/lib/receipts";
 import { formatRm } from "@/lib/minutes-draft";
 
 // ---------------------------------------------------------------------------
@@ -165,10 +165,15 @@ export function buildMonthEndPack(
 ): MonthEndPack {
   assertMonth(params.month);
 
-  const inMonth = donations.filter(
+  // D-1 (拍板③): in-kind donations (Derma Barangan) are goods, not sales of
+  // anything — they do not enter the e-Invois pack at all: not the
+  // consolidated document, not the individual ≥RM10k documents, and their
+  // missing receipt must not block a month-end either.
+  const monetary = donations.filter((d) => !isInKind(d));
+  const inMonth = monetary.filter(
     (d) => d.donatedAtIso.startsWith(params.month) && d.receiptNo !== null
   );
-  const unreceipted = donations.filter(
+  const unreceipted = monetary.filter(
     (d) => d.donatedAtIso.startsWith(params.month) && d.receiptNo === null
   );
   if (unreceipted.length > 0) {

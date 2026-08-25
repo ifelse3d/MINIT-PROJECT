@@ -53,6 +53,35 @@ describe("month-end e-Invois consolidation (Hard Rule 2: code sums, never AI)", 
     expect(CLASS_CODE_DONATION).toBe("007");
   });
 
+  // D-1 (拍板③): in-kind donations are goods — no money changed hands, so
+  // they never enter the tax pack: not the consolidated document, not the
+  // ≥RM10,000 individual path (even with a large ESTIMATE), and an
+  // un-receipted goods row must not block the month-end either.
+  it("keeps in-kind donations out of the e-Invois pack entirely", () => {
+    const pack = buildMonthEndPack(
+      [
+        donation({ receiptNo: "MIN-2026-0001", amountCents: 5000 }),
+        donation({
+          receiptNo: "MIN-2026-0002",
+          amountCents: 0,
+          kind: "in_kind",
+          itemDesc: "20 kampit beras",
+          // RM20,000 estimate — well over the individual threshold, and it
+          // still must not create an individual e-invoice.
+          estValueCents: 2_000_000,
+        }),
+        donation({ receiptNo: null, amountCents: 0, kind: "in_kind", itemDesc: "kerusi" }),
+      ],
+      { month: "2026-06", orgName: "Persatuan Contoh" }
+    );
+    expect(pack.consolidated).toHaveLength(1);
+    expect(pack.individual).toHaveLength(0);
+    expect(pack.consolidatedTotalCents).toBe(5000);
+    expect(pack.grandTotalCents).toBe(5000);
+    const description = pack.files[0][0].description;
+    expect(description).not.toContain("MIN-2026-0002");
+  });
+
   it("computes the consolidated submission deadline as 7 days after month-end", () => {
     expect(consolidatedDeadlineIso("2026-06")).toBe("2026-07-07");
     expect(consolidatedDeadlineIso("2026-12")).toBe("2027-01-07");

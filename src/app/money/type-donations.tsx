@@ -46,14 +46,35 @@ type Draft = {
   amount: string;
   purpose: string;
   date: string;
+  /** D-1 (拍板③): this row is goods (Derma Barangan), not money. */
+  inKind: boolean;
+  /** In-kind only: what was donated — REQUIRED (it goes on the receipt). */
+  item: string;
+  /** In-kind only, OPTIONAL: estimated value (RM string; ledger only). */
+  estValue: string;
 };
 
 /** What a row is missing, or null when it is ready. Never blocks typing — a
  *  half-typed row is normal; it only decides what "add them all" takes. */
-function problemWith(row: Draft): "empty" | "name" | "amount" | null {
-  const blank = !row.name.trim() && !row.amount.trim() && !row.phone.trim();
+function problemWith(row: Draft): "empty" | "name" | "amount" | "item" | "estValue" | null {
+  const blank =
+    !row.name.trim() &&
+    !row.amount.trim() &&
+    !row.phone.trim() &&
+    !(row.inKind && row.item.trim());
   if (blank) return "empty";
   if (!row.name.trim()) return "name";
+  if (row.inKind) {
+    // Goods: the item is what the receipt prints, so it is the required half;
+    // the estimate is optional but must parse when present (Hard Rule 2 —
+    // deterministic parsing, no guessing).
+    if (!row.item.trim()) return "item";
+    if (row.estValue.trim() !== "") {
+      const est = parseRmToCents(row.estValue);
+      if (est === null || est < 0) return "estValue";
+    }
+    return null;
+  }
   const cents = parseRmToCents(row.amount);
   if (cents === null || cents <= 0) return "amount";
   return null;
@@ -70,7 +91,17 @@ function problemWith(row: Draft): "empty" | "name" | "amount" | null {
 let keySeq = 0;
 
 function blankRow(purpose: string, date: string): Draft {
-  return { key: ++keySeq, name: "", phone: "", amount: "", purpose, date };
+  return {
+    key: ++keySeq,
+    name: "",
+    phone: "",
+    amount: "",
+    purpose,
+    date,
+    inKind: false,
+    item: "",
+    estValue: "",
+  };
 }
 
 const inputClass =
@@ -138,21 +169,34 @@ export function TypeDonations({
     setError(null);
     const broken = rows.find((r) => {
       const p = problemWith(r);
-      return p === "name" || p === "amount";
+      return p !== null && p !== "empty";
     });
     if (broken) {
+      const p = problemWith(broken);
       setError(
-        problemWith(broken) === "name"
+        p === "name"
           ? t(
               "Ada baris tanpa nama. Isi nama, atau kosongkan baris itu sepenuhnya.",
               "有一行没有名字。请填上名字，或者把那一行整行清空。",
               "A row has no name. Fill in the name, or clear that row completely.",
             )
-          : t(
-              "Ada jumlah yang tidak sah. Contoh yang betul: 10, 10.50, RM 10.50",
-              "有一行的金额无效。正确的写法：10、10.50、RM 10.50",
-              "A row has an amount that is not valid. Correct examples: 10, 10.50, RM 10.50",
-            ),
+          : p === "item"
+            ? t(
+                "Baris derma barangan perlu menyatakan barangan itu (ia dicetak pada resit).",
+                "实物捐赠那一行要写清楚是什么物品（会印在收据上）。",
+                "An in-kind row must say what the items are (it is printed on the receipt).",
+              )
+            : p === "estValue"
+              ? t(
+                  "Nilai anggaran tidak sah. Contoh yang betul: 100, 100.50 — atau kosongkan.",
+                  "估值无效。正确的写法：100、100.50 —— 也可以留空。",
+                  "The estimated value is not valid. Correct examples: 100, 100.50 — or leave it empty.",
+                )
+              : t(
+                  "Ada jumlah yang tidak sah. Contoh yang betul: 10, 10.50, RM 10.50",
+                  "有一行的金额无效。正确的写法：10、10.50、RM 10.50",
+                  "A row has an amount that is not valid. Correct examples: 10, 10.50, RM 10.50",
+                ),
       );
       return;
     }
@@ -170,13 +214,21 @@ export function TypeDonations({
         id: `man-${stamp}-${i}`,
         donorName: r.name.trim(),
         donorPhone: r.phone.trim() || null,
-        amountCents: parseRmToCents(r.amount)!,
+        // D-1: goods rows carry 0 money BY CONVENTION — the estimate lives in
+        // estValueCents and enters the ledger only, never any money path.
+        amountCents: r.inKind ? 0 : parseRmToCents(r.amount)!,
         purpose: r.purpose.trim() || defaultPurpose,
         donatedAtIso: r.date || today,
         collector: collector.trim() || defaultCollector,
         receiptNo: null,
         custodyStatus: "collected" as const,
         source: "manual" as const,
+        kind: r.inKind ? ("in_kind" as const) : ("cash" as const),
+        itemDesc: r.inKind ? r.item.trim() : null,
+        estValueCents:
+          r.inKind && r.estValue.trim() !== ""
+            ? parseRmToCents(r.estValue)
+            : null,
       })),
     );
     setAdded(ready.length);
@@ -307,32 +359,75 @@ export function TypeDonations({
                     />
                   </td>
                   <td className="p-1">
-                    <input
-                      className={`${inputClass} text-right font-mono ${
-                        problem === "amount" ? "border-red-400" : ""
-                      }`}
-                      inputMode="decimal"
-                      value={row.amount}
-                      onChange={(e) => update(row.key, { amount: e.target.value })}
-                      onKeyDown={(e) => {
-                        // Enter = "done with this person, next one". The blank
-                        // row already exists, so this only moves the cursor.
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          const inputs = Array.from(
-                            e.currentTarget
-                              .closest("table")!
-                              .querySelectorAll<HTMLInputElement>("tbody tr td:first-child input"),
-                          );
-                          inputs[index + 1]?.focus();
-                        }
-                      }}
-                      aria-label={t(
-                        `Jumlah RM, baris ${index + 1}`,
-                        `金额 RM，第 ${index + 1} 行`,
-                        `Amount RM, row ${index + 1}`,
-                      )}
-                    />
+                    {row.inKind ? (
+                      // D-1: a goods row records the ITEMS (required — they go
+                      // on the receipt) and an OPTIONAL estimate (ledger only).
+                      <span className="flex flex-col gap-1">
+                        <input
+                          className={`${inputClass} ${
+                            problem === "item" ? "border-red-400" : ""
+                          }`}
+                          value={row.item}
+                          placeholder={t("cth: 20 kampit beras", "例：白米 20 包", "e.g. 20 bags of rice")}
+                          onChange={(e) => update(row.key, { item: e.target.value })}
+                          aria-label={t(
+                            `Barangan, baris ${index + 1}`,
+                            `物品，第 ${index + 1} 行`,
+                            `Items, row ${index + 1}`,
+                          )}
+                        />
+                        <input
+                          className={`${inputClass} text-right font-mono ${
+                            problem === "estValue" ? "border-red-400" : ""
+                          }`}
+                          inputMode="decimal"
+                          value={row.estValue}
+                          placeholder={t("anggaran RM (pilihan)", "估值 RM（可不填）", "est. RM (optional)")}
+                          onChange={(e) => update(row.key, { estValue: e.target.value })}
+                          aria-label={t(
+                            `Nilai anggaran RM, baris ${index + 1}`,
+                            `估值 RM，第 ${index + 1} 行`,
+                            `Estimated value RM, row ${index + 1}`,
+                          )}
+                        />
+                      </span>
+                    ) : (
+                      <input
+                        className={`${inputClass} text-right font-mono ${
+                          problem === "amount" ? "border-red-400" : ""
+                        }`}
+                        inputMode="decimal"
+                        value={row.amount}
+                        onChange={(e) => update(row.key, { amount: e.target.value })}
+                        onKeyDown={(e) => {
+                          // Enter = "done with this person, next one". The blank
+                          // row already exists, so this only moves the cursor.
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            const inputs = Array.from(
+                              e.currentTarget
+                                .closest("table")!
+                                .querySelectorAll<HTMLInputElement>("tbody tr td:first-child input"),
+                            );
+                            inputs[index + 1]?.focus();
+                          }
+                        }}
+                        aria-label={t(
+                          `Jumlah RM, baris ${index + 1}`,
+                          `金额 RM，第 ${index + 1} 行`,
+                          `Amount RM, row ${index + 1}`,
+                        )}
+                      />
+                    )}
+                    <label className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        checked={row.inKind}
+                        onChange={(e) => update(row.key, { inKind: e.target.checked })}
+                        className="h-3.5 w-3.5 accent-[color:var(--v2-primary)]"
+                      />
+                      <Tri bm="Derma barangan" zh="实物捐赠" en="In-kind (goods)" />
+                    </label>
                   </td>
                   <td className="p-1">
                     <input

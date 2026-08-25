@@ -44,6 +44,12 @@ export type RowToIssue = {
   /** Free-text collector (stored once migration 20260827000000 adds the
    *  column; the RPC simply ignores unknown keys before that). */
   collectorName?: string;
+  /** D-1 (拍板③): in-kind (goods) donation. Absent = cash. */
+  kind?: "cash" | "in_kind";
+  /** In-kind only: what was donated — printed on the receipt. */
+  itemDesc?: string | null;
+  /** In-kind only, optional: estimated value in cents (ledger only). */
+  estValueCents?: number | null;
 };
 
 export type IssueResult =
@@ -64,7 +70,11 @@ export type IssueResult =
        * failed        — nothing was written (the RPC is one transaction);
        *                 safe to try again.
        */
-      reason: "no_org" | "readonly" | "failed" | "needs_prefix" | "sample";
+      /** db_behind — the rows include an in-kind donation but migration 25
+       *  (donations.kind) has not been applied yet. Issuing would store the
+       *  goods as a RM0.00 CASH receipt with no item line — a wrong legal
+       *  document — so nothing was attempted. Cash-only batches still work. */
+      reason: "no_org" | "readonly" | "failed" | "needs_prefix" | "sample" | "db_behind";
     }
   | { saved: true; receiptNos: Record<string, string> };
 
@@ -94,6 +104,15 @@ export async function issueAndSaveReceipts(
   if (containsSampleDonation(rows)) return { saved: false, reason: "sample" };
 
   const supabase = await getSupabaseServer();
+
+  // D-1: an in-kind row needs donations.kind (migration 25). On an older
+  // database the RPC would silently store it as a RM0.00 CASH donation and
+  // print a wrong receipt — refuse honestly instead. One cheap probe, only
+  // when the batch actually contains goods.
+  if (rows.some((r) => r.kind === "in_kind")) {
+    const probe = await supabase.from("donations").select("kind").limit(1);
+    if (probe.error) return { saved: false, reason: "db_behind" };
+  }
 
   // The prefix is chosen in Settings and FROZEN once the first receipt exists
   // (DB trigger). While it is still the shared default AND nothing has been
@@ -127,6 +146,15 @@ export async function issueAndSaveReceipts(
       // donations_source_check allows 'photo' | 'manual' | null.
       source: r.source === "manual" ? "manual" : "photo",
       collectorName: r.collectorName ?? null,
+      // D-1: pre-migration-25 RPC versions ignore these keys; the in-kind
+      // probe above already refused in that case, so goods can never land as
+      // cash. estValueCents rides as a string — the RPC casts it.
+      kind: r.kind === "in_kind" ? "in_kind" : "cash",
+      itemDesc: r.itemDesc ?? null,
+      estValueCents:
+        r.estValueCents === null || r.estValueCents === undefined
+          ? null
+          : String(r.estValueCents),
     })),
   });
 
