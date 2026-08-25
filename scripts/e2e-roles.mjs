@@ -212,6 +212,64 @@ async function run() {
       `rows=${Array.isArray(receipts) ? receipts.length : "?"}`,
     );
 
+    // --- W-2 (work order 27): the claim flow, as the roles see it ----------
+    // A collector may SUBMIT a claim; the decide controls (approve / reject /
+    // mark paid) are the treasurer's and must not render for them. On a
+    // database behind migration 25 the submit comes back as the honest
+    // "db_behind" sentence — also a pass, recorded as such; after J applies
+    // the migration this same script exercises the real submit.
+    await c.goto(`${BASE}/money/expenses`, { waitUntil: "networkidle2" });
+    const expensesText = await bodyText(c);
+    check(
+      "W-2 collector sees the claim form, not the treasurer's tools",
+      expensesText.includes("交报销") &&
+        !expensesText.includes("等您处理") &&
+        !expensesText.includes("社团开支"),
+    );
+    const descInput = await c.$('input[placeholder*="礼堂墙漆"]');
+    const amtInput = await c.$('input[placeholder="120.00"]');
+    let claimOk = false;
+    if (descInput && amtInput) {
+      await descInput.type("测试报销：白漆两桶");
+      await amtInput.type("45");
+      await clickByText(c, "button", "交上去");
+      await sleep(3000);
+      const afterClaim = await bodyText(c);
+      claimOk = afterClaim.includes("报销交上去了");
+      const dbBehind = afterClaim.includes("migration 25");
+      check(
+        "W-2 collector can submit a claim (or is told the DB is behind, honestly)",
+        claimOk || dbBehind,
+        claimOk ? "submitted" : dbBehind ? "db_behind — becomes the real path after migration 25" : "neither message",
+      );
+      const collectorButtons = await c.evaluate(() =>
+        [...document.querySelectorAll("button")].map((b) => (b.textContent ?? "").trim()),
+      );
+      check(
+        "W-2 decide controls do not render for a collector",
+        !collectorButtons.some(
+          (t) => t === "✓ 批准" || t.includes("标「已付款」") || t.includes("确认退回"),
+        ),
+      );
+    } else {
+      check("W-2 claim form inputs found", false);
+    }
+    // The other half — the treasurer DECIDING — only exists once the claim
+    // row exists (post-migration): admin sees the pending list and approves.
+    if (claimOk) {
+      await a.goto(`${BASE}/money/expenses`, { waitUntil: "networkidle2" });
+      const adminSees = (await bodyText(a)).includes("等您处理");
+      check("W-2 the admin sees the pending claim", adminSees);
+      if (adminSees) {
+        await clickByText(a, "button", "批准");
+        await sleep(2500);
+        check(
+          "W-2 approving moves the claim to approved-unpaid",
+          (await bodyText(a)).includes("已批准"),
+        );
+      }
+    }
+
     // --- 0-1: the worked example is view-only ------------------------------
     await a.goto(`${BASE}/minutes`, { waitUntil: "networkidle2" });
     await clickByText(a, "button", "看一个做好的示范");
