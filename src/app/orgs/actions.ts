@@ -8,10 +8,9 @@
 // verifies the session first, then does the insert with the service key.
 // PDPA: nothing here is ever logged.
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
 import { getSupabase } from "@/db/supabase";
 import { getSupabaseServer, getSessionUser } from "@/db/supabase-server";
-import { ACTIVE_ORG_COOKIE } from "@/lib/active-org";
+import { setActiveOrgCookie } from "@/lib/active-org";
 import { planById } from "@/lib/plans";
 
 export type OrgActionState = { error: string | null; ok: boolean };
@@ -95,15 +94,8 @@ async function adminOrgIdsForCaller(): Promise<Set<number> | null> {
   }
 }
 
-async function setActiveOrgCookie(orgId: number) {
-  const cookieStore = await cookies();
-  cookieStore.set(ACTIVE_ORG_COOKIE, String(orgId), {
-    path: "/",
-    sameSite: "lax",
-    httpOnly: false, // holds only an org id; header reads it client-side
-    maxAge: 60 * 60 * 24 * 365,
-  });
-}
+// setActiveOrgCookie moved to lib/active-org.ts (K-4) — one copy, shared
+// with the invite-code join path.
 
 /**
  * Rename an organisation to the name printed in its own constitution.

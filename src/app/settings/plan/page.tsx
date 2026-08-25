@@ -4,6 +4,7 @@ import { getSupabase } from "@/db/supabase";
 import { getActiveOrg } from "@/lib/active-org";
 import { getUsage } from "@/lib/ai/usage";
 import { PLANS, PLAN_ORDER, planById, type Plan } from "@/lib/plans";
+import { UsageBar } from "@/components/usage-bar";
 
 // ---------------------------------------------------------------------------
 // /settings/plan — which tier this organisation is on (S-4, 2026-08-25).
@@ -107,24 +108,15 @@ export default async function PlanPage() {
           )}
         </div>
         {usage && (
-          <div
-            className="h-2.5 w-full overflow-hidden rounded-full bg-muted"
-            role="progressbar"
-            aria-valuenow={usage.usedThisMonth}
-            aria-valuemin={0}
-            aria-valuemax={usage.monthlyFreeQuota}
-          >
-            <div
-              className={`h-full rounded-full ${
-                usage.blocked
-                  ? "bg-red-600"
-                  : usage.totalRemaining <= 10
-                    ? "bg-amber-500"
-                    : "bg-green-600"
-              }`}
-              style={{ width: `${usage.usedPct}%` }}
-            />
-          </div>
+          // K-4: the ONE usage bar (components/usage-bar) — this page and the
+          // settings card can no longer disagree about "running low".
+          <UsageBar
+            usedThisMonth={usage.usedThisMonth}
+            monthlyFreeQuota={usage.monthlyFreeQuota}
+            usedPct={usage.usedPct}
+            blocked={usage.blocked}
+            totalRemaining={usage.totalRemaining}
+          />
         )}
         {/* C-1 (拍板⑤): a chosen-but-not-activated plan is said out loud.
             The tell is honest arithmetic: the plan says standard/hq but the

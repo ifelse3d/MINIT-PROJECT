@@ -82,16 +82,17 @@ export default async function RootLayout({
   // status is fetched here. No active org → no launcher (same rule as the old
   // home-page mount).
   const active = await getActiveOrg().catch(() => null);
-  const usage = active ? await getUsage(active.id).catch(() => null) : null;
-  // 0-4: the e-Invois switch follows the ORGANISATION. null = unknown (no
-  // org, or the column/fetch failed) → the client falls back to the old
-  // device preference instead of breaking. Deliberately a separate query —
-  // see src/lib/einvois-server.ts.
-  const needsEinvois = active ? await readNeedsEinvois(active.id) : null;
-  // S0-4: localStorage records are namespaced by person AND organisation, so a
-  // second member on a shared laptop can never read or overwrite the first
-  // member's register. Resolved here, on the server — a page cannot invent it.
-  const user = await getSessionUser().catch(() => null);
+  // K-4 (work order 27): these three reads were SERIAL awaits, and this
+  // layout runs on EVERY request — one extra round-trip per page, sitewide.
+  // They only depend on `active`, not on each other; run them together.
+  // (needsEinvois: 0-4 — null = unknown → the client falls back to the
+  // device preference; see src/lib/einvois-server.ts. user: S0-4 — the
+  // localStorage scope, resolved server-side so a page cannot invent it.)
+  const [usage, needsEinvois, user] = await Promise.all([
+    active ? getUsage(active.id).catch(() => null) : Promise.resolve(null),
+    active ? readNeedsEinvois(active.id) : Promise.resolve(null),
+    getSessionUser().catch(() => null),
+  ]);
   const storageScope = `${user?.id ?? "anon"}:${active?.id ?? "none"}`;
   // Stage R: the UI shows ONE language. The choice lives in a cookie so the
   // server can stamp <html lang> before first paint; default 中文 (J's brief).

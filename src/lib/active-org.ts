@@ -13,6 +13,21 @@ import { getSupabaseServer, getSessionUser } from "@/db/supabase-server";
  *  components (e.g. the header) read it to show the current org. */
 export const ACTIVE_ORG_COOKIE = "minit_active_org";
 
+/**
+ * K-4 (work order 27): setting the cookie, ONE copy. It was written verbatim
+ * in orgs/actions.ts and orgs/join/actions.ts — change the options in one and
+ * the two entrances hand out cookies with different lifetimes.
+ */
+export async function setActiveOrgCookie(orgId: number): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.set(ACTIVE_ORG_COOKIE, String(orgId), {
+    path: "/",
+    sameSite: "lax",
+    httpOnly: false, // holds only an org id; the header reads it client-side
+    maxAge: 60 * 60 * 24 * 365,
+  });
+}
+
 export type Membership = {
   role: string;
   org: { id: number; name: string; parent_org_id: number | null; is_demo: boolean };

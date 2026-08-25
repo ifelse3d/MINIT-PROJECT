@@ -194,7 +194,10 @@ export function LedgerReview() {
           {!aiBusy && (
             <Link
               href="/money/receipts?taip=1"
-              className="inline-flex min-h-11 items-center gap-2 rounded-md border-2 border-[color:var(--v2-border)] px-4 text-base font-medium hover:bg-accent"
+              // K-4: whitespace-nowrap — at 360px the label used to break
+              // inside 「自己打字」. The button row is flex-wrap, so the
+              // whole button wraps as a unit instead.
+              className="inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-md border-2 border-[color:var(--v2-border)] px-4 text-base font-medium hover:bg-accent"
             >
               ⌨️{" "}
               <Tri

@@ -13,6 +13,7 @@ import {
   type MinutesPlan,
 } from "@/lib/minutes-compose";
 import { getDocumentIdentity } from "@/lib/doc-identity";
+import { countUnreviewed } from "@/lib/extraction-rows";
 import { dayIsoMalaysia } from "@/lib/history";
 import { glossaryAllowedRuns, glossaryPromptBlockForWriting } from "@/lib/glossary";
 import { loadGlossary } from "@/lib/glossary-server";
@@ -182,30 +183,5 @@ export async function POST(req: Request) {
   }
 }
 
-/** Mirrors countUnreviewed in src/app/minutes/actions.ts. */
-function countUnreviewed(e: {
-  meeting_type: { confidence: string };
-  meeting_date: { confidence: string };
-  meeting_venue: { confidence: string };
-  attendees: { name: { confidence: string } }[];
-  resolutions: { text: { confidence: string } }[];
-  figures: {
-    description: { confidence: string };
-    amount_cents: { confidence: string };
-  }[];
-  office_bearers: {
-    position: { confidence: string };
-    person_name: { confidence: string };
-  }[];
-}): number {
-  const levels: string[] = [
-    e.meeting_type.confidence,
-    e.meeting_date.confidence,
-    e.meeting_venue.confidence,
-    ...e.attendees.map((a) => a.name.confidence),
-    ...e.resolutions.map((r) => r.text.confidence),
-    ...e.figures.flatMap((f) => [f.description.confidence, f.amount_cents.confidence]),
-    ...e.office_bearers.flatMap((b) => [b.position.confidence, b.person_name.confidence]),
-  ];
-  return levels.filter((c) => c !== "confirmed").length;
-}
+// countUnreviewed moved to src/lib/extraction-rows.ts (K-4) — one copy shared
+// with the save action, instead of two "keep in sync" twins.

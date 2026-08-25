@@ -101,3 +101,51 @@ export function rowHasContent(e: MeetingNotesExtraction, list: RowList, index: n
     return typeof v === "string" ? v.trim() !== "" : v !== null && v !== undefined;
   });
 }
+
+// ---------------------------------------------------------------------------
+// K-4 (work order 27): countUnreviewed, ONE copy. It lived twice — in the
+// save action and in /api/draft-minutes — with a comment on the second
+// admitting "mirrors the first, keep in sync". Two copies of the gate that
+// decides whether a document may carry the Hard Rule 8 audit line is one
+// copy too many.
+// ---------------------------------------------------------------------------
+
+/**
+ * Every reviewable leaf in the extraction that is not yet `confirmed`.
+ *
+ * `amount_cents` IS included: an earlier client-side check listed only the
+ * figure DESCRIPTIONS, so a ringgit amount the AI could not read did not
+ * block saving and was printed into an audited document.
+ */
+export function countUnreviewed(e: {
+  meeting_type: { confidence: string };
+  meeting_date: { confidence: string };
+  meeting_venue: { confidence: string };
+  attendees: { name: { confidence: string } }[];
+  resolutions: { text: { confidence: string } }[];
+  figures: {
+    description: { confidence: string };
+    amount_cents: { confidence: string };
+  }[];
+  office_bearers: {
+    position: { confidence: string };
+    person_name: { confidence: string };
+  }[];
+}): number {
+  const levels: string[] = [
+    e.meeting_type.confidence,
+    e.meeting_date.confidence,
+    e.meeting_venue.confidence,
+    ...e.attendees.map((a) => a.name.confidence),
+    ...e.resolutions.map((r) => r.text.confidence),
+    ...e.figures.flatMap((f) => [
+      f.description.confidence,
+      f.amount_cents.confidence,
+    ]),
+    ...e.office_bearers.flatMap((b) => [
+      b.position.confidence,
+      b.person_name.confidence,
+    ]),
+  ];
+  return levels.filter((c) => c !== "confirmed").length;
+}

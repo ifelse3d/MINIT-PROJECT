@@ -13,10 +13,9 @@
 // claims it, guarded by `is null` conditions, so two people racing the same
 // code cannot both join.
 // ---------------------------------------------------------------------------
-import { cookies } from "next/headers";
 import { getSupabase } from "@/db/supabase";
 import { getSessionUser } from "@/db/supabase-server";
-import { ACTIVE_ORG_COOKIE } from "@/lib/active-org";
+import { setActiveOrgCookie } from "@/lib/active-org";
 import { isRole } from "@/lib/roles";
 
 export type JoinState = { error: string | null; ok: boolean; orgName?: string };
@@ -122,13 +121,9 @@ export async function joinWithInvite(
     .eq("id", invite.org_id as number)
     .maybeSingle();
 
-  const cookieStore = await cookies();
-  cookieStore.set(ACTIVE_ORG_COOKIE, String(invite.org_id), {
-    path: "/",
-    sameSite: "lax",
-    httpOnly: false, // holds only an org id; header reads it client-side
-    maxAge: 60 * 60 * 24 * 365,
-  });
+  // K-4: one shared cookie-setter (lib/active-org.ts), same options as the
+  // switch-org path by construction.
+  await setActiveOrgCookie(invite.org_id as number);
 
   return { error: null, ok: true, orgName: (org?.name as string) ?? undefined };
 }

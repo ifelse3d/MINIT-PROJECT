@@ -40,9 +40,12 @@ export function Pager({
     <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
       <p className="text-base text-muted-foreground">
         {total === 0 ? (
+          // K-4: nounZh carries its measure word ("张收据"), so `没有张收据`
+          // was broken Chinese. "一张收据也没有" reuses the same string and
+          // reads right.
           <Tri
             bm={`Tiada ${nounBm}`}
-            zh={`没有${nounZh}`}
+            zh={`一${nounZh}也没有`}
             en={`No ${nounEn}`}
           />
         ) : (

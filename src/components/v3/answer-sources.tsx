@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FileText, Search } from "lucide-react";
 import { Tri, useTriText } from "@/components/language-provider";
-import { meetingTypeLabelTri } from "@/lib/meeting-types";
+import { meetingTypeUiLabelTri } from "@/lib/meeting-types";
 
 // ---------------------------------------------------------------------------
 // WHERE THE ASSISTANT GOT IT FROM.
@@ -123,8 +123,10 @@ export function AnswerSources({
                 )}
               </span>
               {s.meetingType && (
+                // K-4: the UI variant rides the official BM term along
+                // (G-4 did this for the history page; this card lagged).
                 <span className="text-[color:var(--v2-text-soft)]">
-                  · <Tri {...meetingTypeLabelTri(s.meetingType)} />
+                  · <Tri {...meetingTypeUiLabelTri(s.meetingType)} />
                 </span>
               )}
             </Link>

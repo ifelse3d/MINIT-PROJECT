@@ -35,6 +35,7 @@ import {
   type MinutesLang,
 } from "@/lib/minutes-lang";
 import { ppmLine, PPM_LINE_PATTERN } from "@/lib/minutes-compose";
+import { countUnreviewed } from "@/lib/extraction-rows";
 
 export type SaveMinutesState = {
   error: string | null;
@@ -277,46 +278,8 @@ export async function saveConfirmedMinutes(input: {
   return { error: null, ok: true };
 }
 
-/**
- * Every reviewable leaf in the extraction that is not yet `confirmed`.
- *
- * Kept in step with the client's own count in minutes-review.tsx. Note that
- * `amount_cents` IS included: the previous client-side check listed only the
- * figure DESCRIPTIONS, so a ringgit amount the AI could not read did not block
- * saving and was printed into a document carrying the Hard Rule 8 audit line.
- */
-function countUnreviewed(e: {
-  meeting_type: { confidence: string };
-  meeting_date: { confidence: string };
-  meeting_venue: { confidence: string };
-  attendees: { name: { confidence: string } }[];
-  resolutions: { text: { confidence: string } }[];
-  figures: {
-    description: { confidence: string };
-    amount_cents: { confidence: string };
-  }[];
-  office_bearers: {
-    position: { confidence: string };
-    person_name: { confidence: string };
-  }[];
-}): number {
-  const levels: string[] = [
-    e.meeting_type.confidence,
-    e.meeting_date.confidence,
-    e.meeting_venue.confidence,
-    ...e.attendees.map((a) => a.name.confidence),
-    ...e.resolutions.map((r) => r.text.confidence),
-    ...e.figures.flatMap((f) => [
-      f.description.confidence,
-      f.amount_cents.confidence,
-    ]),
-    ...e.office_bearers.flatMap((b) => [
-      b.position.confidence,
-      b.person_name.confidence,
-    ]),
-  ];
-  return levels.filter((c) => c !== "confirmed").length;
-}
+// countUnreviewed moved to src/lib/extraction-rows.ts (K-4) — one copy for
+// this save gate AND /api/draft-minutes, instead of two "keep in sync" twins.
 
 /** A saved minutes document is a page or two of text; anything far past that
  *  is not a document someone typed, so it is not stored. */

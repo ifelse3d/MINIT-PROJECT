@@ -15,7 +15,7 @@
 import "server-only";
 
 import { getSupabase } from "@/db/supabase";
-import { getSupabaseServer } from "@/db/supabase-server";
+import { getSupabaseServer, getSessionUser } from "@/db/supabase-server";
 import { getActiveOrg, type ActiveOrg } from "@/lib/active-org";
 import { can, permissionError, type Capability } from "@/lib/roles";
 import type { TokenUsage } from "./provider";
@@ -170,11 +170,29 @@ export async function checkAndRecordUsage(
     }
   }
 
-  const { data: row, error } = await admin
+  // K-2 (work order 27): which MEMBER triggered the action — best-effort.
+  // Metering must never depend on knowing the person; a failed lookup, or a
+  // database behind migration 25 (no user_id column), still meters the org.
+  let userId: string | null = null;
+  try {
+    userId = (await getSessionUser())?.id ?? null;
+  } catch {
+    userId = null;
+  }
+  let { data: row, error } = await admin
     .from("ai_usage")
-    .insert({ org_id: orgId, action })
+    .insert(userId ? { org_id: orgId, action, user_id: userId } : { org_id: orgId, action })
     .select("id")
     .single();
+  if (error && userId && /user_id|schema cache/i.test(error.message ?? "")) {
+    const retry = await admin
+      .from("ai_usage")
+      .insert({ org_id: orgId, action })
+      .select("id")
+      .single();
+    row = retry.data;
+    error = retry.error;
+  }
   if (error || !row) {
     // Metering must fail CLOSED for billing honesty, but a failed insert
     // after a successful credit spend should not strand the user — surface

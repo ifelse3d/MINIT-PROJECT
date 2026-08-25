@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Tri } from "@/components/language-provider";
 import { QUOTA_BLOCKED_MESSAGE, type UsageState } from "@/lib/ai/usage-core";
+import { UsageBar, usageIsLow } from "@/components/usage-bar";
 import { SettingsBlock } from "./ui";
 
 // ---------------------------------------------------------------------------
@@ -14,12 +15,20 @@ import { SettingsBlock } from "./ui";
 // of the numbers that used to sit in the card description above the bar.
 // ---------------------------------------------------------------------------
 
-export function AiUsageRows({ usage }: { usage: UsageState }) {
+export function AiUsageRows({
+  usage,
+  /** K-2: this month's actions split by member (may be empty). */
+  byPerson = [],
+}: {
+  usage: UsageState;
+  byPerson?: { name: string; count: number }[];
+}) {
   // 2026-08-22: this used to recompute the percentage inline. It now reads the
   // one computeUsageState() produces, so the bar here and the badge anywhere
   // else can never disagree about how full the month is.
   const pct = usage.usedPct;
-  const low = !usage.blocked && usage.totalRemaining <= 10;
+  // K-4: the "running low" line lives in ONE place (components/usage-bar).
+  const low = usageIsLow(usage.blocked, usage.totalRemaining);
 
   return (
     <SettingsBlock>
@@ -42,20 +51,13 @@ export function AiUsageRows({ usage }: { usage: UsageState }) {
         )}
       </div>
 
-      <div
-        className="h-2.5 w-full overflow-hidden rounded-full bg-muted"
-        role="progressbar"
-        aria-valuenow={usage.usedThisMonth}
-        aria-valuemin={0}
-        aria-valuemax={usage.monthlyFreeQuota}
-      >
-        <div
-          className={`h-full rounded-full transition-all ${
-            usage.blocked ? "bg-red-600" : low ? "bg-amber-500" : "bg-green-600"
-          }`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
+      <UsageBar
+        usedThisMonth={usage.usedThisMonth}
+        monthlyFreeQuota={usage.monthlyFreeQuota}
+        usedPct={pct}
+        blocked={usage.blocked}
+        totalRemaining={usage.totalRemaining}
+      />
 
       {/* 2026-07-29 — the figures used to sit inside each language string, so
           with two languages on you read the same "3 / 100" twice. Translate the
@@ -77,6 +79,16 @@ export function AiUsageRows({ usage }: { usage: UsageState }) {
           </>
         )}
       </p>
+
+      {/* K-2: who used what this month. Display names only, never contents.
+          "?" = actions from before per-person metering existed. */}
+      {byPerson.length > 0 && (
+        <p className="text-sm text-muted-foreground">
+          <Tri bm="Mengikut ahli" zh="按成员" en="By member" />
+          {": "}
+          {byPerson.map((p) => `${p.name} ×${p.count}`).join(" · ")}
+        </p>
+      )}
 
       {usage.blocked ? (
         <p className="text-sm font-medium text-red-700 dark:text-red-300">
