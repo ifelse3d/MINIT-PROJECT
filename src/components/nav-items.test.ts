@@ -52,11 +52,11 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
       if (!g || g.kind !== "group") throw new Error(`expected group ${id}`);
       return g;
     };
-    // 錢: 记收入 · 开收据 · 交现金 · 税务 e-Invois(开关) · 收据历史.
-    // (/money/expenses and /money/report join when their real pages land —
-    // Stages E and F.)
+    // 錢: 记收入 · 记开支与报销 · 开收据 · 交现金 · 税务 e-Invois(开关) ·
+    // 收据历史. (/money/report joins with Stage F's real page.)
     expect(byId("money").children.map((c) => c.href)).toEqual([
       "/money",
+      "/money/expenses",
       "/money/receipts",
       "/money/custody",
       "/money/einvois",
@@ -110,6 +110,7 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
     if (!group || group.kind !== "group") throw new Error("expected a money group");
     expect(group.children.map((c) => c.href)).toEqual([
       "/money",
+      "/money/expenses",
       "/money/receipts",
       "/money/custody",
       "/money/history",
@@ -177,6 +178,7 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
     ]);
     expect(visibleGroupChildren(money, true).map((c) => c.href)).toEqual([
       "/money",
+      "/money/expenses",
       "/money/receipts",
       "/money/custody",
       "/money/history",

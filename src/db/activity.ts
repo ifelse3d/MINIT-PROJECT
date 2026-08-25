@@ -198,7 +198,8 @@ export async function fetchMonthActivity(
       category: "money",
       kind: "expense",
       dayIso: e.spent_at,
-      href: "/money",
+      // Stage E: expenses have a real page of their own now.
+      href: "/money/expenses",
       amountCents: e.amount_cents,
       detail: e.category ?? undefined,
     });

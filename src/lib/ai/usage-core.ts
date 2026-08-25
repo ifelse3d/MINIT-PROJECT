@@ -39,6 +39,9 @@ export const AI_ACTIONS = [
   // for the page on the noticeboard, which is the case a model is actually
   // needed for.
   "import_roster",
+  // Stage E (work order 27): reading a photographed shop receipt / invoice
+  // for the expense book or a member's claim. One receipt, one action.
+  "extract_expense",
 ] as const;
 
 export type AiAction = (typeof AI_ACTIONS)[number];

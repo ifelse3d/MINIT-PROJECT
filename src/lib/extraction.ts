@@ -258,6 +258,30 @@ export function parseLedgerExtraction(raw: unknown) {
 }
 
 // ---------------------------------------------------------------------------
+// Pipeline step 2 — EXPENSE receipt/invoice extraction (Stage E, work order
+// 27). One shop receipt or invoice → what was bought, from whom, how much,
+// when. Same Hard Rule 1 contract as everything else; the human confirms
+// every field before anything enters the books.
+// ---------------------------------------------------------------------------
+
+export const expenseExtractionSchema = z.object({
+  /** Who was paid — the shop/supplier name as printed. */
+  vendor: textFieldSchema,
+  /** What was bought, verbatim ("Cat dinding 5L x 2"). */
+  description: textFieldSchema,
+  /** The TOTAL paid, integer sen. The model reads the printed total only —
+   *  it never sums line items (Hard Rule 2). */
+  amount_cents: amountCentsFieldSchema,
+  /** Receipt/invoice date, YYYY-MM-DD. */
+  spent_at: dateFieldSchema,
+});
+export type ExpenseExtraction = z.infer<typeof expenseExtractionSchema>;
+
+export function parseExpenseExtraction(raw: unknown) {
+  return expenseExtractionSchema.safeParse(raw);
+}
+
+// ---------------------------------------------------------------------------
 // Pipeline step 2 — CONSTITUTION extraction (Phase 5, vision model)
 // One entry per clause the model can SEE in the document. Clause text is
 // copied VERBATIM (any language) — summarising a legal clause is inventing.

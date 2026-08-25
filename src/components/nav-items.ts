@@ -5,6 +5,7 @@ import {
   CalendarClock,
   ClipboardList,
   Coins,
+  CreditCard,
   FileSignature,
   FileCheck,
   FileText,
@@ -89,6 +90,8 @@ export const NAV_ITEMS: NavItem[] = [
   // "record income", and the once rail-only steps are sidebar rows J listed
   // by name (记收入·开收据·交现金·收据历史).
   { href: "/money", icon: Wallet, bm: "Rekod wang masuk", zh: "记收入", en: "Record income", exact: true },
+  // Stage E: spending + the claim flow — the row J's 錢-group list reserved.
+  { href: "/money/expenses", icon: CreditCard, bm: "Rekod perbelanjaan & tuntutan", zh: "记开支与报销", en: "Spending & claims" },
   { href: "/money/receipts", icon: Receipt, bm: "Jana resit", zh: "开收据", en: "Issue receipts" },
   { href: "/money/custody", icon: Coins, bm: "Serah tunai", zh: "交现金", en: "Hand over cash" },
   { href: "/money/history", icon: ClipboardList, bm: "Sejarah resit", zh: "收据历史", en: "Receipt history" },
@@ -170,6 +173,7 @@ export const PRIMARY_NAV: NavEntry[] = [
     en: "Money",
     children: [
       byHref("/money"),
+      byHref("/money/expenses"),
       byHref("/money/receipts"),
       byHref("/money/custody"),
       byHref("/money/history"),
@@ -202,9 +206,9 @@ export const PRIMARY_NAV: NavEntry[] = [
 /**
  * THE DESKTOP's seven groups (B-1, J 8/26 #3, 拍板④) — and the layout the
  * /more page shows. Group names are HEADINGS: not clickable, always expanded.
- * The 錢 rows are the ones J listed by name; /money/expenses and
- * /money/report join the group when their real pages land (Stages E and F) —
- * a menu row pointing at a stub would be a dressed-up dead link.
+ * The 錢 rows are the ones J listed by name; /money/expenses joined when its
+ * real page landed (Stage E) and /money/report joins with Stage F — a menu
+ * row pointing at a stub would be a dressed-up dead link.
  */
 export const SIDEBAR_NAV: NavEntry[] = [
   { kind: "item", item: byHref("/") },
@@ -231,6 +235,7 @@ export const SIDEBAR_NAV: NavEntry[] = [
     en: "Money",
     children: [
       byHref("/money"),
+      byHref("/money/expenses"),
       byHref("/money/receipts"),
       byHref("/money/custody"),
       byHref("/money/einvois"),

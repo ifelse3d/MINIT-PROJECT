@@ -1,49 +1,34 @@
+import { getActiveOrg } from "@/lib/active-org";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { Tri } from "@/components/language-provider";
-import { PageSection } from "@/components/page-section";
+import { ExpensesView } from "./expenses-view";
 
 // ---------------------------------------------------------------------------
-// /money/expenses — record spending, and the claim/reimbursement flow.
-//
-// HONEST STUB until Stage E of work order 27 builds it (CLAUDE.md #13: a step
-// that cannot be done yet is still a real page that says what unlocks it).
-// The /money/report stub links here, so this address must not be a dead end.
+// /money/expenses — the society's spending, and the claim flow (Stage E,
+// work order 27; J 8/26 拍板②: expenses + submit→approve→pay, "做最好的").
+// The role is resolved on the SERVER and drives which controls exist at all;
+// the server actions enforce it again (B-4: the check lives in the action).
 // ---------------------------------------------------------------------------
 
-export default function MoneyExpensesPage() {
-  return (
-    <PageSection
-      titleBm="Rekod perbelanjaan"
-      titleZh="记开支与报销"
-      titleEn="Record spending & claims"
-      summary={
-        <Tri
-          bm="Perbelanjaan pertubuhan dan tuntutan ahli (claim), dengan kelulusan bendahari."
-          zh="社团的开支，以及成员报销（交 → 批 → 付）。"
-          en="The society's spending, and member claims (submit → approve → pay)."
-        />
-      }
-    >
-      <div className="flex flex-col gap-4">
-        <p className="rounded-xl border-2 border-dashed p-4 text-base text-muted-foreground">
-          <Tri
-            bm="Bahagian ini sedang disiapkan. Buat masa ini, wang MASUK sudah boleh direkodkan sepenuhnya — lejar, resit bernombor dan serahan wang semuanya berfungsi."
-            zh="这一区还在建。目前收入那边已经全部可用 —— 账页、连号收据、交现金都能用。"
-            en="This part is being built. For now, INCOME is fully working — the ledger, numbered receipts and cash hand-over are all live."
-          />
-        </p>
-        <Button asChild size="lg">
-          <Link href="/money">
-            🧾{" "}
+export const dynamic = "force-dynamic";
+
+export default async function MoneyExpensesPage() {
+  const active = await getActiveOrg();
+  if (!active) {
+    return (
+      <div className="mx-auto w-full max-w-3xl pb-10">
+        <p className="v2-glass p-5 text-base">
+          <Link href="/orgs" className="underline underline-offset-4">
             <Tri
-              bm="Pergi ke rekod wang masuk"
-              zh="去记收入"
-              en="Go to income records"
-            />
+              bm="Pilih atau cipta pertubuhan dahulu"
+              zh="请先选择或创建机构"
+              en="Choose or create an organisation first"
+            />{" "}
+            →
           </Link>
-        </Button>
+        </p>
       </div>
-    </PageSection>
-  );
+    );
+  }
+  return <ExpensesView role={active.role} />;
 }
