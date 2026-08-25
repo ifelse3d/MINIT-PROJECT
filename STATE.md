@@ -1,77 +1,89 @@
-# STATE.md — Minit 的当前状态
+﻿# STATE.md — Minit 的当前状态
 
 > **这是唯一的「现在在哪里」。**
 > 每个 session 结束前**覆盖更新这一份**，不要新增带日期的交接档案。
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-25 白天（MYT）· Fable 5**
-**下一步的唯一依据：`C:\dev\_J-要做的事\24-大改造施工單-20260825.md`**（J 22 条实测反馈
-讨论定稿：全面重做、角色/邀请码、防冒充、额度 30、正式会议文件模板；允许跨 session，
-每次收工在那份单上勾进度）。通宵内容（施工单 21 v2 全做完）见下。
+**最后更新：2026-08-25 傍晚（MYT）· Fable 5（大改造 session 1：Stage 0/A/B/C 做完）**
+**下一步的唯一依据：`C:\dev\_J-要做的事\24-大改造施工單-20260825.md`**（进度就地勾在单上）。
+**给 J 看的这一轮报告：`C:\dev\_J-要做的事\25-大改造進度報告.md`（固定档名，每轮覆写）。**
 
 ---
 
-## 🌅 现在在哪里（2026-08-25 清晨）
+## 🌆 现在在哪里（2026-08-25 傍晚）
 
-> **通宵报告（每一条 ✅/❌）：`C:\dev\_J-要做的事\22-報告-這一晚做了什麼-20260825.md`。**
-> **J 明早要跑的 migration：18～22 号（20260827～20260831），双击 `salin-migration.bat` 选号码。**
+> 24 号施工单 Stage **0 → A → B → C 全部做完并各自 commit**（4 支：58c439f / b9f662a /
+> 0de4515 / 9fcf290，**未 push** — push 是 J 的事）。下一个 session 从 **Stage D**
+>（会议记录正式文件）开始，然后 E → F → G → W。
+> 🔴 **J 要跑两支新 migration：23（试用额度 15）、24（邀请码＋组织型态）**，双击
+> `salin-migration.bat` 选 23、24。没跑之前 app 照常能用（全部写了降级路），只是
+> 新 org 额度还是 100、邀请码/组织型态功能会说「资料库还没跟上」。
 
 ### 现场量到的（不是听说的）
 
-- 四道关：`tsc` **0** · `eslint` **21（20 errors/1 warning，与基准逐字相同）** ·
-  `vitest` **670 全过（50 档）** · `build` ✓
-- 本机 `main` 新增 **10 支 commit**（Stage 0/R/F/S/W ＋深色 QA、端到端测试、连按保存修正），**未 push**（push 是 J 的事）
-- 端到端实测：`npm run e2e:money`（16 项）＋ `npm run e2e:minutes`（11 项）**全部 PASS**，
-  在真 dev server＋真资料库上验过 RPC 开收据、PDF/xlsx server 回查、DB 读回、双按保存防重复、
-  /filings server 贴上包、删机构。测试自建自删，跑完资料库 0 org / 0 记录、只剩 J 的帐号（实查）。
-  🔴 顺带抓到并修掉：migration 19 未跑时「保存到历史」连按会存两份 → 保存钮成功后锁定（8c43fef）
-- 截图：`competition/screenshots/` **60 张**（360/768/1280 三档 × 9 页 × 浅色＋深色；语言选择器/无机构态/onboarding 也有）。自动走页 console 零错误。
-  工具：`scripts/screenshots.mjs`（headless Chrome，自建自删测试帐号，跑完清干净）
+- 四道关（每个 Stage 收尾各跑一次，最后一次在 Stage C 后）：`tsc` **0** ·
+  `eslint` **21（20 errors/1 warning，与基准逐字相同）** · `vitest` **697 全过（55 档）** ·
+  `build` ✓
+- 端到端：`npm run e2e:money`（14 项）＋ `npm run e2e:minutes`（11 项）**全部 PASS**
+  （Stage 0、A、B 之后各跑过一轮；A-4 改落点后两支脚本的断言已同步改）。
+  其中实测到 **clientIdColumn=true**（0-4 要求的验证）。
+- A-1 进场三步在浏览器里手动走过全流程：选语言 → 点「特大」根字号立刻变 140% →
+  第三步（未登入版）→ 关闭后重载不再出现、设定已存机（localStorage 实查）。
 
-### 今晚做了什么（一句话版；细节看 22-報告 与 5 支 commit message）
+### 这一轮做了什么（细节看 4 支 commit message 与 25-報告）
 
-- **Stage 0 安全闸**：`/api/receipt-pdf`、`/api/einvois-xlsx` 全部内容 server 回查（恶意 body 有测试）；
-  开收据改走 `issue_receipts()` RPC（幂等＋advisory lock＋读 org 前缀，不再写死 MIN）；
-  `saveConfirmedMinutes` 幂等（client_id）；localStorage 全部带 `userId:orgId` scope、
-  登出/删机构清空、`preserveUnreadable` 不再复制个资；/filings 只读已确认会议（server）；
-  诚实文案三件（wa.me 不再谎称附件、e-Invois 改「抄进官方模板」、对外数字 95.2%→**92.9%/invented=1**）；
-  逐字完整性校验（`src/lib/verbatim.ts`：马来西亚电话位数、文字来源子串）
-- **Stage R 全面重设计**：玻璃拟态全拆，「clean ledger」实色设计（token 全在 `globals.css`）；
-  v3 shell（桌面左栏＋手机底部 4 tab：主页/会议记录/钱/更多，19 格→4）；登录页重写（单卡、无背景照）；
-  首页=「今天要做什么」三张任务卡；/minutes 英雄流程（读完即出文件预览＋DRAF 水印＋一键确认黄标）；
-  /money ≥8 笔变列表＋搜索＋批次；「全部删掉」移设置并要打机构名；e-Invois 降选配（预设隐藏）；
-  AGM 藏出导航（路由保留）；**单一语言**（预设中文、首访选择器、`<html lang>` 走 cookie、
-  Noto Sans SC 本地字体、三语并排变设置进阶选项）
-- **Stage F 清偿**：F-1 百分比全站（`pctOfQuota()` 单一来源）；F-2 拍照后补充框（进 prompt、
-  untrustedBlock 包裹、空时 prompt 逐字不变有测试守）＋首页 intake 对齐 /minutes（glossary＋退款＋电话校验）；
-  F-3 语音 A（Web Speech API 麦克风键，免费不走额度，不支援就不显示，标「试验中」）；
-  F-4 登记簿从 DB 读回（union merge，localStorage 降为离线草稿）
-- **Stage S 订阅层脚手架**：`src/lib/plans.ts`（TBD_PRICING 标记）；`orgs.plan` migration＋
-  privileged-columns 锁；entitlement server-side（试用 1 org 进 createOrg）；`/settings/plan`
-  （无价格、无假金流）；`/admin` 总控台（ADMIN_EMAILS 白名单、其他人 404、只有聚合数字）；
-  `app_errors` migration＋`captureAppError()` 接进 9 条 API route＋Sentry 藏在 `SENTRY_DSN` 后
-- **Stage W**：DECISIONS 加 **D9～D13**；competition-facts 加「Registration: COMPLETED July 2026」；
-  `docs/supabase-email-templates.md`（J 明天 5 分钟贴）；r1-draft/r1c-draft 移 `competition/archive/`
+- **Stage 0 安全与诚实**：示范资料全面唯读化（UI 唯读＋server 双挡＋`src/lib/sample-guard.ts`
+  指纹 10 测试；开收据对示范列回 reason "sample"、saveConfirmedMinutes 拒存示范会议）；
+  「约占 1%/2%」事前承诺全站拿掉（总表 % 留、免费/AI 路径标示留、`pctOfQuota()` 死码删）；
+  **migration 23**（`monthly_free_quota` 预设 15，两段 SQL：只改预设/连旧 org）＋plans.ts 试用=15；
+  e-Invois 开关接 `orgs.needs_einvois`（org 值权威、读不到退设备偏好并明说、hq_admin 才能改）；
+  付费层 PDPA 文案（共用 `PdpaNote` 放四个 AI 上传门旁；legal/ 隐私告知免费层段落改为付费层声明）。
+- **Stage A 进场与首页**：进场三步（`first-run-flow.tsx`，语言→字号现场调→第三步按登入状态给路，
+  全可跳过）；首页聊天化（AskBox 主角：选档先暂存可移除、先打字再送出、分类 unclear 反问三键，
+  答了走 `kind=` 只扣读取 1 次；`context=` 打的字进三个 extractor，untrustedBlock 包裹＋
+  位元组不变测试）；任务卡变 chips；「看它怎么运作」四格走马灯（现成截图，首页＋两个空状态入口）；
+  开完组织落首页 `/?welcome=1`＋「接下来做什么」卡（附章程档时仍去 /constitution 核对）。
+- **Stage B 角色/邀请/筹委会**：**migration 24**（`invites` 表＋`orgs.org_type`＋`orgs.ppm_no`，
+  RLS=hq_admin）；`src/lib/roles.ts` 单一能力表（建議①，fail-closed，11 测试）接进所有写入
+  server action（开收据=money_write 所以 **collector 开不了收据**；交款=money_collect；
+  文件区=minutes_write；行事历=除审计全员；七条收费 AI 路挂 "upload"——审计烧不了额度）；
+  注册两条路（注册表单选填邀请码→存机→登入后 /orgs/join 自动带入；`/orgs/join` 新页，
+  原子抢码一码一人）；设置→成员卡（hq_admin：改角色/移除/产码/撤码，最后一个管理员不能被降）；
+  组织型态两张卡＋PPM 号选填，committee 型不出年报死线（日历照常，J 指定）。
+- **Stage C 防冒充 v1**：PPM 号印上正式文件页首（收据 PDF、会议记录存档 server 重盖、
+  AGM 包与银行摘录 DB 值盖过 body）；设置「检举冒用」入口（挂 `NEXT_PUBLIC_CONTACT_EMAIL`）；
+  服务条款第 8 条补冒用条款＋**顺手改正第 9 条**（「拒绝不扣额度」是 8/21 已被 J 推翻的旧规，
+  法律文本一直没跟上——现在写的是真的：到达 AI 服务商即计费）；DECISIONS 加 **D14、D15**。
 
-### 🔴 J 的事（8/25 白天实测更新）
+### 🔴 J 的事（这一轮结束时）
 
-1. ~~跑 migration 18～22~~ → **已完成**（8/25 `check:migrations` 实测 22 支全 APPLIED）
-2. ~~git push~~ → **已完成**（8/25 实测 `origin/main..HEAD` 为 0）
-3. ~~贴 Supabase 邮件模板~~ → **已顺延**：免费方案要先接自订 SMTP（或升 Pro）才能改模板。
-   模板文字备好在 `docs/supabase-email-templates.md`，等网域+SMTP。
-4. **看 24 号施工单第 1 节的三个建议**，回 OK 或改哪条（角色/邀请码、防冒充范围、试用额度 30）
-5. （可选）Vercel 环境变数加 `ADMIN_EMAILS=你的email` 开 /admin；`NEXT_PUBLIC_CONTACT_EMAIL` 开联络按钮
+1. **跑 migration 23、24**（`salin-migration.bat` 选 23、24 → Supabase SQL Editor 贴 → Run；
+   跑完 `npm run check:migrations` 看两支变 APPLIED。23 号里有一段被注解的可选 SQL：
+   要不要把旧 org 也降到 15 由你决定，要就取消注解再 Run 一次）
+2. **push**（`push-cabang.bat`）——本机 main 领先 5 支 commit（4 个 Stage＋这份 STATE）
+3. （可选）`NEXT_PUBLIC_CONTACT_EMAIL` 配了之后，「检举冒用」入口才会出现（C-2）
+4. 老三样不变：真手写 3～4 张＋答案（eval 用）；Vercel 上线那天要在场；eROSES 逐栏抄录
 
-**新对话开场 PROMPT**：`C:\dev\_J-要做的事-下一個session開場PROMPT-20260825.md`（整段贴）。
+### ❓ 未决问题（无新增；旧的照旧）
 
-### ❓ 未决问题（比上一版少了的已并入 docs/DECISIONS.md D9–D13）
-
-1. 🔴 新 Supabase region 已定（库已建好在跑）—— 若隐私告知要写 region，J 在 Dashboard 看一眼填进 legal
+1. 🔴 新 Supabase region —— 若隐私告知要写 region，J 在 Dashboard 看一眼填进 legal
 2. 助手本身用哪个模型 —— 建议 `openai:gpt-5.6-luna`，等 bench（真实手写样本之后）
-3. 语音 B（整场录音）＝比赛后（D10），不再是未决
-4. 法律实体（第 4 题）＝金流前置（D12），试点前要答
-5. 真实手写 eval：**92.9% 量的仍是印刷体**。J 拍 3～4 张真手写＋答案后重跑 `npm run eval`
+3. 法律实体（金流前置，D12），试点前要答
+4. 真实手写 eval：**92.9% 量的仍是印刷体**。J 拍 3～4 张真手写＋答案后重跑 `npm run eval`
+5. Supabase 邮件模板（顺延中：等网域＋SMTP，文字备好在 `docs/supabase-email-templates.md`）
+
+### ⏭ 下一个 session 从哪开始
+
+**24 号单 Stage D（会议记录正式文件，J #5 #6）**，然后 E → F → G → W（E/F/G 可顺手对调）。
+Stage D 的现场这轮结束前已勘过（读完 `minutes-draft.ts`、`minutes-compose.ts`、
+`minutes-lang.ts`、`prompts/draft-minutes.ts`、`api/draft-minutes`），方向定了：
+正式模板（页首含 PPM＋Bil./年、出席表、Perbincangan/Keputusan/Tindakan 成文段落、
+Penutup、签名栏）由 **compose 层扩展**——模型只多做一件事（给每个 item 标 kind），
+编号覆盖检查、checkNames、自由散文一律程式拼装**一条都不松**（D-3 明令）；
+翻译本要在文件里明标「非呈报用」（D-2）；打字模式先出填写格、预览有内容才出现、
+「N 项没读到」改「请填 N 项」（D-4）；eROSES mapping 不动（D-5）。
+W-2（截图全部重拍）等 D～G 做完再拍。
 
 ---
 
@@ -207,6 +219,7 @@
 - **卡住的 `git push` 会留下两种残骸，第二种会挡住之后所有 commit。** 一是**僵尸行程**（`git push` + `remote-https` + `credential-manager get` 停在那里等输入，永远不结束）；二是 **stale `.git/index.lock`**（`git commit` 直接 `fatal: Unable to create index.lock`）。处理：`Get-Process git` → `Stop-Process -Force` → 确认 lock 不存在 → 才 commit。**在 credential 提示卡住时杀掉是安全的**，那时候一个 byte 都还没送出去。
 - 🆕 **沙盒的挂载点删不掉档案。** Cowork 沙盒能写 `C:\dev`，但 `rm` 会 `Operation not permitted`，所以**从沙盒跑 `git commit` 会留下 `index.lock`、`HEAD.lock` 和一批 `objects/*/tmp_obj_*`** —— 正是上一条那个会挡住之后所有 commit 的残骸。**从沙盒 commit 完，一定要从 Windows 那边（desktop-commander／终端机）清一次**，然后确认 `dir /b /s .git\*.lock` 是空的。
 - **Windows 上不要用 `| head` / `| tail`，也不要在 PowerShell 里塞长引号的 git 讯息。** `head` 不存在；`git commit -m "…"` 里的括号和 `%` 会被 PowerShell 解析到爆。**长 commit 讯息一律写成档案再 `git commit -F <path>`**，路径**不要用引号包**（`\"` 会把结尾反斜线一起吃进去，git 会说 outside repository）。
+- 🆕 **PowerShell 的 `Get-Content -Raw` + `-replace` + `Set-Content` 会把 UTF-8 源码档读成 ANSI 再写坏**：em-dash 变 `â€”`、中文注解全成乱码、再送一个 BOM 进档案头。8/25 对六支 route 档批量替换时踩到，diff 行数异常膨胀才发现，`git checkout` 回滚后改用逐档 Edit。**批量文字替换不要用 PowerShell 管源码档；真要用就 `-Encoding utf8` 进出都指定，改完先看一眼 diff 再 commit。**
 - **沙盒连不到 Supabase，也下载不了二进位档**（白名单）。所以 migration 套到第几支、eval 实际跑出什么，Claude **只能读你的报告**。
 - **沙盒不要 `npm install` 进你的 `node_modules`** —— 会塞进 Linux 二进位档。只能改 lock 档（`--package-lock-only`）。
 
