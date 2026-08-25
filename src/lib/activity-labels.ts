@@ -26,7 +26,8 @@ export const CATEGORY_STYLE: Record<
   money: { dot: "bg-green-600", ring: "", bm: "Wang", zh: "钱", en: "Money", future: false },
   filings: { dot: "bg-blue-500", ring: "", bm: "Pemfailan eROSES", zh: "eROSES 申报", en: "eROSES filings", future: false },
   uploads: { dot: "bg-amber-500", ring: "", bm: "Gambar asal", zh: "原始照片", en: "Original photos", future: false },
-  agm: { dot: "bg-indigo-500", ring: "", bm: "Pek AGM", zh: "年度大会", en: "AGM", future: false },
+  // G-4 (8/26): spelled out, matching the nav row — no bare abbreviation.
+  agm: { dot: "bg-indigo-500", ring: "", bm: "Pek Mesyuarat Agung (AGM)", zh: "常年大会文件包", en: "AGM pack", future: false },
   constitution: { dot: "bg-teal-600", ring: "", bm: "Perlembagaan", zh: "章程", en: "Constitution", future: false },
   // B-1 (8/26): the sidebar row is named "Calendar & deadlines" — the feed
   // chip carries the same three words so the section never changes name

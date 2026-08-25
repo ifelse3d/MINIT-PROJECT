@@ -1,10 +1,10 @@
 "use client";
 
-import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Tri } from "@/components/language-provider";
+import { Tri, useTriText } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -22,63 +22,86 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  buildAgmNoticeBm,
   defaultAgmAgendaBm,
   findSignatoryResolutions,
   formatDateBm,
   latestNoticeDateIso,
 } from "@/lib/agm-pack";
 import { sampleAgmPackParams, sampleConfirmedMinutes } from "@/lib/sample-roster";
+import { dayIsoMalaysia } from "@/lib/history";
+import { downloadFromApi } from "@/lib/download-file";
 
 // ---------------------------------------------------------------------------
-// The AGM PACK screen (Phase 4 foundation). Driven by sample data until the
-// API key + Supabase are connected; the date math and document builders are
-// the real, unit-tested functions. The eROSES test: the human reviews and
-// taps — no data-entry forms.
+// The AGM PACK screen, rebuilt for real data (G-2, work order 27).
+//
+//   * REAL mode (default): the roster comes from the database; the person
+//     announces the meeting facts (a FUTURE meeting only they know — the
+//     legitimate exception to "no data-entry", like the claim form); the
+//     downloads carry NO CONTOH mark. Empty roster = an honest empty state
+//     pointing at /members — never a sample dressed as your document.
+//   * SAMPLE mode (?contoh=1): the fictional society, clearly labelled,
+//     CONTOH on every page, the real letterhead nowhere near it.
+//
+// G-4: "AGM" is spelled out everywhere — Mesyuarat Agung Tahunan / 常年大会.
 // ---------------------------------------------------------------------------
 
-async function downloadFromApi(url: string, body: unknown, fallbackName: string): Promise<void> {
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const detail = await res.json().catch(() => null);
-    throw new Error(detail?.error ?? joinUserError(USER_ERRORS.downloadFailed));
-  }
-  const blob = await res.blob();
-  const name =
-    /filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") ?? "")?.[1] ?? fallbackName;
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = name;
-  a.click();
-  // Revoking immediately after click() races the download in Firefox/Safari.
-  // Give the browser a moment to take ownership of the blob. (2026-07-28 audit.)
-  const href = a.href;
-  setTimeout(() => URL.revokeObjectURL(href), 30_000);
-}
+const NOTICE_DAYS_DEFAULT = 14;
 
-export function AgmPackReview() {
-  const p = sampleAgmPackParams;
+export function AgmPackReview({
+  mode,
+  roster,
+  confirmedResolutions,
+}: {
+  mode: "real" | "sample";
+  /** The DATABASE roster (display names) — [] = none recorded yet. */
+  roster: { position: string; personName: string }[];
+  /** Resolutions of the latest CONFIRMED minutes, or null when none exist. */
+  confirmedResolutions: string[] | null;
+}) {
+  const t = useTriText();
+  const todayIso = dayIsoMalaysia(new Date().toISOString())!;
   const [error, setError] = useState<{ where: "pack" | "bank"; msg: string } | null>(null);
-  // Every download here is a server round-trip that builds a PDF. Without a
-  // busy state the button looked dead for several seconds and our users tapped
-  // it repeatedly, starting overlapping downloads. (2026-07-28 audit.)
   const [busy, setBusy] = useState<"pack" | "bank" | null>(null);
 
-  const noticePreview = useMemo(() => buildAgmNoticeBm(p), [p]);
+  // The meeting facts the person announces (real mode).
+  const [dateIso, setDateIso] = useState("");
+  const [timeText, setTimeText] = useState("");
+  const [venue, setVenue] = useState("");
+
+  const factsReady = /^\d{4}-\d{2}-\d{2}$/.test(dateIso) && timeText.trim() !== "" && venue.trim() !== "";
+  const year = factsReady ? Number(dateIso.slice(0, 4)) : new Date().getFullYear();
+
   const signatoryHits = useMemo(
-    () => new Set(findSignatoryResolutions(sampleConfirmedMinutes.resolutions)),
-    []
+    () =>
+      new Set(
+        findSignatoryResolutions(
+          mode === "sample"
+            ? sampleConfirmedMinutes.resolutions
+            : confirmedResolutions ?? [],
+        ),
+      ),
+    [mode, confirmedResolutions],
   );
 
   async function downloadPack() {
     setError(null);
     setBusy("pack");
     try {
-      await downloadFromApi("/api/agm-pdf", p, `contoh-pek-agm-${p.year}.pdf`);
+      if (mode === "sample") {
+        await downloadFromApi("/api/agm-pdf", { sample: true }, "contoh-pek-agm.pdf");
+      } else {
+        await downloadFromApi(
+          "/api/agm-pdf",
+          {
+            year,
+            meetingDateIso: dateIso,
+            meetingTimeText: timeText.trim(),
+            venue: venue.trim(),
+            noticePeriodDays: NOTICE_DAYS_DEFAULT,
+          },
+          `pek-agm-${year}.pdf`,
+        );
+      }
     } catch (e) {
       setError({ where: "pack", msg: e instanceof Error ? e.message : String(e) });
     } finally {
@@ -92,8 +115,8 @@ export function AgmPackReview() {
     try {
       await downloadFromApi(
         "/api/bank-extract-pdf",
-        sampleConfirmedMinutes,
-        "contoh-petikan-bank.pdf"
+        mode === "sample" ? { sample: true } : {},
+        "petikan-bank.pdf",
       );
     } catch (e) {
       setError({ where: "bank", msg: e instanceof Error ? e.message : String(e) });
@@ -104,78 +127,205 @@ export function AgmPackReview() {
 
   const errorBanner = (where: "pack" | "bank") =>
     error && error.where === where ? (
-      <div className="rounded-md border border-red-300 bg-red-50 p-4 text-base text-red-900">
+      <div className="rounded-md border border-red-300 bg-red-50 p-4 text-base whitespace-pre-line text-red-900">
         {error.msg}
       </div>
     ) : null;
 
-  return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 pb-10 text-base">
-      <div className="flex flex-col gap-2">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-100/80 text-3xl ring-1 ring-white/60 backdrop-blur dark:bg-blue-400/15 dark:ring-white/10">
-            🏛️
-          </div>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            <span className="v2-gradient-text">
-              <Tri bm="Pek AGM" zh="年度大会文件包" en="AGM Pack" />
-            </span>
-          </h1>
-          {/* The "Sample data" badge is gone: the paragraph below says the same
-              thing properly, and two labels for one fact is just noise. This
-              page really is entirely an example, so the paragraph STAYS —
-              deleting it would leave a lie on screen. */}
+  const heading = (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-100/80 text-3xl ring-1 ring-white/60 backdrop-blur dark:bg-blue-400/15 dark:ring-white/10">
+          🏛️
         </div>
-        <p className="text-base text-muted-foreground">
-          {p.orgName} · AGM {p.year}
-        </p>
-        {/* A badge on a page that can NEVER show real data is mislabelling: it
-            implies "sample for now". Say what is actually true. (2026-07-28.) */}
+        <h1 className="text-3xl font-semibold tracking-tight">
+          <span className="v2-gradient-text">
+            {/* G-4: the abbreviation is spelled out, all three languages. */}
+            <Tri
+              bm="Pek Mesyuarat Agung Tahunan (AGM)"
+              zh="常年大会文件包（Mesyuarat Agung Tahunan · AGM）"
+              en="Annual General Meeting (AGM) pack"
+            />
+          </span>
+        </h1>
+      </div>
+    </div>
+  );
+
+  // ---- SAMPLE MODE: the fictional society, loudly labelled. ---------------
+  if (mode === "sample") {
+    const p = sampleAgmPackParams;
+    return (
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 pb-10 text-base">
+        {heading}
         <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
           <Tri
-            bm="Halaman ini masih contoh sepenuhnya. Nama pertubuhan, tarikh AGM, tempat dan senarai AJK di bawah adalah rekaan — bukan milik anda. PDF yang dimuat turun dicap “CONTOH — JANGAN GUNA” pada setiap halaman dan tidak boleh diserahkan kepada ROS atau bank."
-            zh="这一页目前完全是示范内容。下面的机构名称、大会日期、地点和理事名单都是虚构的，不是您的资料。下载的 PDF 每一页都会盖上「示范 — 请勿使用」，不能拿去交给社团注册局或银行。"
-            en="This page is still entirely an example. The organisation, AGM date, venue and committee list below are invented — they are not yours. Any PDF you download is stamped “SAMPLE — DO NOT USE” on every page and cannot be given to the Registry of Societies or a bank."
-          />
+            bm={`Anda sedang melihat CONTOH. Semuanya di bawah — pertubuhan "${p.orgName}", tarikh, AJK — adalah rekaan. PDF dicap “CONTOH — JANGAN GUNA” pada setiap halaman.`}
+            zh={`您现在看的是【示范】。下面的一切 ——「${p.orgName}」、日期、理事 —— 都是虚构的。PDF 每页盖「示范 — 请勿使用」。`}
+            en={`You are looking at the WORKED EXAMPLE. Everything below — the society "${p.orgName}", dates, committee — is fictional. The PDFs are stamped "SAMPLE — DO NOT USE" on every page.`}
+          />{" "}
+          <Link href="/agm-pack" className="font-semibold underline underline-offset-4">
+            <Tri bm="Kembali ke data anda" zh="回到您自己的资料" en="Back to your own data" /> →
+          </Link>
         </p>
-      </div>
 
-      {/* 1 — Meeting facts + roster review */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl">
+              <Tri bm="Contoh pek AGM" zh="示范：大会文件包" en="Sample AGM pack" />
+            </CardTitle>
+            <CardDescription>
+              <Tri
+                bm={`Notis, agenda (${defaultAgmAgendaBm(p.year).length}), senarai kehadiran, borang proksi — semuanya rekaan.`}
+                zh={`通知、议程（${defaultAgmAgendaBm(p.year).length} 项）、出席名单、委托书 —— 全部虚构。`}
+                en={`Notice, agenda (${defaultAgmAgendaBm(p.year).length}), attendance list, proxy forms — all fictional.`}
+              />
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            {errorBanner("pack")}
+            <Button onClick={downloadPack} size="lg" disabled={busy !== null} className="self-start">
+              {busy === "pack" ? (
+                <Tri bm="Sedang menyiapkan…" zh="正在准备…" en="Preparing…" />
+              ) : (
+                <>
+                  <Download className="h-5 w-5" strokeWidth={2} />
+                  <Tri bm="Muat turun contoh pek AGM" zh="下载示范文件包" en="Download the sample pack" /> (PDF)
+                </>
+              )}
+            </Button>
+            {errorBanner("bank")}
+            <Button onClick={downloadBankExtract} size="lg" variant="outline" disabled={busy !== null} className="self-start">
+              {busy === "bank" ? (
+                <Tri bm="Sedang menyiapkan…" zh="正在准备…" en="Preparing…" />
+              ) : (
+                <>
+                  <Download className="h-5 w-5" strokeWidth={2} />
+                  <Tri bm="Muat turun contoh petikan bank" zh="下载示范银行摘录" en="Download the sample bank extract" /> (PDF)
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // ---- REAL MODE, EMPTY ROSTER: honest, and it says what unlocks it. ------
+  if (roster.length === 0) {
+    return (
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 pb-10 text-base">
+        {heading}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl">
+              <Tri
+                bm="Senarai AJK anda belum ada dalam sistem"
+                zh="您的理事名单还没进系统"
+                en="Your committee roster is not in the system yet"
+              />
+            </CardTitle>
+            <CardDescription>
+              <Tri
+                bm="Pek AGM dibina daripada AJK pertubuhan anda sendiri — notis, senarai kehadiran dan borang proksi semuanya menyebut nama sebenar. Tambah ahli dahulu (taip, atau import Excel), dan halaman ini terus berfungsi."
+                zh="大会文件包是用您社团自己的理事做的 —— 通知、出席名单、委托书上印的都是真名。先把成员加进来（打字或导入 Excel），这一页就能用了。"
+                en="The AGM pack is built from your own committee — the notice, attendance sheet and proxy forms all carry real names. Add your members first (typed or Excel import) and this page comes alive."
+              />
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap items-center gap-3">
+            <Button asChild size="lg">
+              <Link href="/members">
+                👥 <Tri bm="Pergi ke halaman Ahli" zh="去「成员」页" en="Go to Members" /> →
+              </Link>
+            </Button>
+            {/* The sample is a SEPARATE thing, and says so (拍板⑥). */}
+            <Link
+              href="/agm-pack?contoh=1"
+              className="text-base text-muted-foreground underline underline-offset-4"
+            >
+              <Tri
+                bm="Lihat contoh siap (data rekaan)"
+                zh="看一个做好的示范（虚构资料）"
+                en="See a worked example (fictional data)"
+              />
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // ---- REAL MODE, ROSTER PRESENT: the real thing, no CONTOH. --------------
+  return (
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 pb-10 text-base">
+      {heading}
+
+      {/* 1 — the meeting facts (the person is ANNOUNCING a future meeting —
+          these three answers exist nowhere else) + the real roster. */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">1 · <Tri bm="Semakan maklumat" zh="核对资料" en="Review the facts" /></CardTitle>
+          <CardTitle className="text-xl">
+            1 · <Tri bm="Maklumat mesyuarat & AJK" zh="会议资料与理事名单" en="Meeting facts & committee" />
+          </CardTitle>
+          <CardDescription>
+            <Tri
+              bm="Isi tarikh, masa dan tempat mesyuarat agung anda; senarai AJK diambil terus daripada rekod pertubuhan."
+              zh="填上大会的日期、时间、地点；理事名单直接取自机构的记录。"
+              en="Fill in your general meeting's date, time and venue; the committee list comes straight from the organisation's records."
+            />
+          </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-            ⚠{" "}
-            {/* Was "notice period from settings" — /settings has no such
-                control, so the user was pointed at a lever that does not exist.
-                (2026-07-28 audit.) */}
-            <Tri
-              bm={`Tempoh notis ${p.noticePeriodDays} hari ialah nilai lalai Minit, BUKAN daripada perlembagaan anda. Semak fasal notis dalam perlembagaan pertubuhan anda. Notis terakhir yang dibenarkan:`}
-              zh={`${p.noticePeriodDays} 天的通知期是 Minit 的预设值，不是从您的章程读出来的。请自行核对章程里关于通知期的条文。最迟发出通知的日期：`}
-              en={`The ${p.noticePeriodDays}-day notice period is Minit's default, NOT read from your constitution. Check the notice clause in your own constitution. Latest permitted notice date:`}
-            />{" "}
-            <span className="font-semibold">
-              {formatDateBm(latestNoticeDateIso(p.meetingDateIso, p.noticePeriodDays))}
-            </span>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <div className="rounded-md border p-4">
-              <div className="text-sm text-muted-foreground">
-                <Tri bm="Tarikh & masa" zh="日期与时间" en="Date & time" />
-              </div>
-              <div className="font-semibold">
-                {formatDateBm(p.meetingDateIso)} · {p.meetingTimeText}
-              </div>
-            </div>
-            <div className="rounded-md border p-4">
-              <div className="text-sm text-muted-foreground">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <label className="flex flex-col gap-1">
+              <span className="text-base font-semibold">
+                <Tri bm="Tarikh" zh="日期" en="Date" />
+              </span>
+              <input
+                type="date"
+                className="rounded-md border border-input bg-background px-3 py-2 text-base"
+                value={dateIso}
+                min={todayIso}
+                onChange={(e) => setDateIso(e.target.value)}
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-base font-semibold">
+                <Tri bm="Masa" zh="时间" en="Time" />
+              </span>
+              <input
+                className="rounded-md border border-input bg-background px-3 py-2 text-base"
+                placeholder={t("cth: 10:00 pagi", "例：早上 10 点", "e.g. 10:00 am")}
+                value={timeText}
+                onChange={(e) => setTimeText(e.target.value)}
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-base font-semibold">
                 <Tri bm="Tempat" zh="地点" en="Venue" />
-              </div>
-              <div className="font-semibold">{p.venue}</div>
-            </div>
+              </span>
+              <input
+                className="rounded-md border border-input bg-background px-3 py-2 text-base"
+                placeholder={t("cth: Dewan utama", "例：大礼堂", "e.g. Main hall")}
+                value={venue}
+                onChange={(e) => setVenue(e.target.value)}
+              />
+            </label>
           </div>
+          {factsReady && (
+            <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+              ⚠{" "}
+              <Tri
+                bm={`Tempoh notis ${NOTICE_DAYS_DEFAULT} hari ialah nilai lalai Minit, BUKAN daripada perlembagaan anda — semak fasal notis perlembagaan sendiri. Notis terakhir yang dibenarkan:`}
+                zh={`${NOTICE_DAYS_DEFAULT} 天通知期是 Minit 的预设值，不是从您的章程读的 —— 请自行核对章程的通知条文。最迟发通知日期：`}
+                en={`The ${NOTICE_DAYS_DEFAULT}-day notice period is Minit's default, NOT read from your constitution — check your own notice clause. Latest permitted notice date:`}
+              />{" "}
+              <span className="font-semibold">
+                {formatDateBm(latestNoticeDateIso(dateIso, NOTICE_DAYS_DEFAULT))}
+              </span>
+            </div>
+          )}
           <Table className="text-base">
             <TableHeader>
               <TableRow>
@@ -184,7 +334,7 @@ export function AgmPackReview() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {p.roster.map((m, i) => (
+              {roster.map((m, i) => (
                 <TableRow key={i}>
                   <TableCell>{m.position}</TableCell>
                   <TableCell className="whitespace-normal font-medium">{m.personName}</TableCell>
@@ -195,27 +345,35 @@ export function AgmPackReview() {
         </CardContent>
       </Card>
 
-      {/* 2 — Pack preview + download */}
+      {/* 2 — the pack itself. DRAF watermark until confirmed; never CONTOH. */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">2 · <Tri bm="Jana pek AGM" zh="生成大会文件包" en="Generate the AGM pack" /></CardTitle>
+          <CardTitle className="text-xl">
+            2 · <Tri bm="Jana pek AGM anda" zh="生成您的大会文件包" en="Generate your AGM pack" />
+          </CardTitle>
           <CardDescription>
             <Tri
-              bm={`Notis, agenda (${defaultAgmAgendaBm(p.year).length}), senarai kehadiran, borang proksi. Bertanda air DRAF.`}
-              zh={`通知、议程（${defaultAgmAgendaBm(p.year).length} 项）、出席名单、委托书。带草稿水印。`}
-              en={`Notice, agenda (${defaultAgmAgendaBm(p.year).length}), attendance list, proxy forms. DRAFT watermark.`}
+              bm={`Notis, agenda (${defaultAgmAgendaBm(year).length}), senarai kehadiran, borang proksi — atas nama pertubuhan anda sendiri, bertanda air DRAF sehingga disahkan.`}
+              zh={`通知、议程（${defaultAgmAgendaBm(year).length} 项）、出席名单、委托书 —— 用您自己机构的名义，确认前带草稿水印。`}
+              en={`Notice, agenda (${defaultAgmAgendaBm(year).length}), attendance sheet, proxy forms — on your own organisation's name, DRAFT-watermarked until confirmed.`}
             />
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <pre className="max-h-72 overflow-y-auto rounded-md border bg-muted/40 p-4 text-base whitespace-pre-wrap">
-            {noticePreview}
-          </pre>
+          {!factsReady && (
+            <p className="rounded-xl border-2 border-dashed p-3 text-base text-muted-foreground">
+              <Tri
+                bm="Isi tarikh, masa dan tempat di atas dahulu."
+                zh="请先在上面填好日期、时间、地点。"
+                en="Fill in the date, time and venue above first."
+              />
+            </p>
+          )}
           {errorBanner("pack")}
           <Button
             onClick={downloadPack}
             size="lg"
-            disabled={busy !== null}
+            disabled={busy !== null || !factsReady}
             className="self-start"
           >
             {busy === "pack" ? (
@@ -223,19 +381,14 @@ export function AgmPackReview() {
             ) : (
               <>
                 <Download className="h-5 w-5" strokeWidth={2} />
-                <Tri
-                  bm="Muat turun contoh pek AGM"
-                  zh="下载示范用的大会文件包"
-                  en="Download the sample AGM pack"
-                />{" "}
-                (PDF)
+                <Tri bm="Muat turun pek AGM" zh="下载大会文件包" en="Download the AGM pack" /> (PDF)
               </>
             )}
           </Button>
         </CardContent>
       </Card>
 
-      {/* 3 — Bank-resolution extract */}
+      {/* 3 — bank-resolution extract, from CONFIRMED minutes in the DB only. */}
       <Card>
         <CardHeader>
           <CardTitle className="text-xl">
@@ -243,67 +396,75 @@ export function AgmPackReview() {
           </CardTitle>
           <CardDescription>
             <Tri
-              bm="Daripada minit disahkan sahaja, kata demi kata."
-              zh="仅取自已确认的会议记录，逐字引用。"
-              en="From confirmed minutes only, verbatim."
+              bm="Daripada minit DISAHKAN pertubuhan anda sahaja, kata demi kata — bank bertindak atas dokumen ini."
+              zh="只取自您机构「已确认」的会议记录，逐字引用 —— 银行会依据这份文件办事。"
+              en="From your organisation's CONFIRMED minutes only, verbatim — a bank acts on this document."
             />
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            {sampleConfirmedMinutes.resolutions.map((r, i) => (
-              <div
-                key={i}
-                className={
-                  signatoryHits.has(r)
-                    ? "rounded-md border border-green-300 bg-green-50 p-4"
-                    : "rounded-md border p-4 text-muted-foreground"
-                }
-              >
-                {signatoryHits.has(r) && (
-                  <Badge variant="outline" className="mb-1 border-green-300 bg-green-100 text-green-800">
-                    <Tri bm="Akan disertakan" zh="会收录" en="Will be included" />
-                  </Badge>
-                )}
-                <div>{r}</div>
+          {confirmedResolutions === null || confirmedResolutions.length === 0 ? (
+            <p className="rounded-xl border-2 border-dashed p-4 text-base text-muted-foreground">
+              <Tri
+                bm="Belum ada minit disahkan dengan keputusan untuk dipetik. Sahkan minit mesyuarat itu dahulu."
+                zh="还没有已确认、带决议的会议记录可以摘录。请先去确认那场会议的记录。"
+                en="No confirmed minutes with resolutions to extract yet. Confirm that meeting's minutes first."
+              />{" "}
+              <Link href="/minutes" className="underline underline-offset-4">
+                <Tri bm="Pergi ke Minit" zh="去会议记录" en="Go to Minutes" /> →
+              </Link>
+            </p>
+          ) : (
+            <>
+              <div className="flex flex-col gap-2">
+                {confirmedResolutions.map((r, i) => (
+                  <div
+                    key={i}
+                    className={
+                      signatoryHits.has(r)
+                        ? "rounded-md border border-green-300 bg-green-50 p-4"
+                        : "rounded-md border p-4 text-muted-foreground"
+                    }
+                  >
+                    {signatoryHits.has(r) && (
+                      <Badge variant="outline" className="mb-1 border-green-300 bg-green-100 text-green-800">
+                        <Tri bm="Akan disertakan" zh="会收录" en="Will be included" />
+                      </Badge>
+                    )}
+                    <div>{r}</div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          {errorBanner("bank")}
-          {/* The second button here used to be labelled "try it, it will be
-              rejected" — a developer demo control sitting beside the real
-              download, same size, same row. An elderly user taps it and gets
-              "Extract refused" in English. Nothing offered to this user should
-              be designed to fail, so it is gone. (2026-07-28 audit.) */}
-          <Button
-            onClick={downloadBankExtract}
-            size="lg"
-            disabled={busy !== null}
-            className="self-start"
-          >
-            {busy === "bank" ? (
-              <Tri bm="Sedang menyiapkan…" zh="正在准备…" en="Preparing…" />
-            ) : (
-              <>
-                <Download className="h-5 w-5" strokeWidth={2} />
-                <Tri
-                  bm="Muat turun contoh petikan bank"
-                  zh="下载示范用的银行摘录"
-                  en="Download the sample bank extract"
-                />{" "}
-                (PDF)
-              </>
-            )}
-          </Button>
-          <p className="text-base text-muted-foreground">
-            <Tri
-              bm="Minit yang belum disahkan tidak akan pernah menghasilkan petikan ini — Minit menolaknya, kerana bank bertindak atas dokumen ini."
-              zh="还没确认的会议记录永远不会生成这份摘录 —— Minit 会直接拒绝，因为银行会依据这份文件办事。"
-              en="Unconfirmed minutes will never produce this extract — Minit refuses, because a bank acts on this document."
-            />
-          </p>
+              {errorBanner("bank")}
+              <Button
+                onClick={downloadBankExtract}
+                size="lg"
+                disabled={busy !== null}
+                className="self-start"
+              >
+                {busy === "bank" ? (
+                  <Tri bm="Sedang menyiapkan…" zh="正在准备…" en="Preparing…" />
+                ) : (
+                  <>
+                    <Download className="h-5 w-5" strokeWidth={2} />
+                    <Tri bm="Muat turun petikan bank" zh="下载银行摘录" en="Download the bank extract" /> (PDF)
+                  </>
+                )}
+              </Button>
+            </>
+          )}
         </CardContent>
       </Card>
+
+      <p className="text-sm text-muted-foreground">
+        <Link href="/agm-pack?contoh=1" className="underline underline-offset-4">
+          <Tri
+            bm="Lihat contoh siap (data rekaan, dicap CONTOH)"
+            zh="看一个做好的示范（虚构资料，盖 CONTOH 章）"
+            en="See a worked example (fictional data, stamped CONTOH)"
+          />
+        </Link>
+      </p>
     </div>
   );
 }

@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { ConfidenceBadge } from "@/components/confidence-badge";
 import { Tri, useTriText } from "@/components/language-provider";
-import { buildPastePack } from "@/lib/paste-pack";
+import { buildPastePack, type FilingRosterEntry } from "@/lib/paste-pack";
 import type { MeetingNotesExtraction } from "@/lib/extraction";
 import {
   DEADLINE_LABELS,
@@ -67,6 +67,7 @@ export function FilingsView({
   confirmed,
   orgType = null,
   finance = null,
+  filingRoster = [],
 }: {
   agm: ConfirmedAgm | null;
   /** The latest CONFIRMED minutes' extraction, from the server (S0-5). */
@@ -75,6 +76,8 @@ export function FilingsView({
   orgType?: "registered" | "committee" | null;
   /** F-3: computed financial figures for the annual return, or null. */
   finance?: FilingsFinance | null;
+  /** G-1: the committee roster (with IC names) the paste-pack files from. */
+  filingRoster?: FilingRosterEntry[];
 }) {
   const t = useTriText();
   const extraction = confirmed?.extraction ?? null;
@@ -86,8 +89,8 @@ export function FilingsView({
   }, []);
 
   const pastePack = useMemo(
-    () => (extraction ? buildPastePack(extraction) : null),
-    [extraction],
+    () => (extraction ? buildPastePack(extraction, filingRoster) : null),
+    [extraction, filingRoster],
   );
   const deadlines = useMemo(
     () => (todayIso ? computeStandardDeadlines(todayIso, { agm, orgType }) : []),

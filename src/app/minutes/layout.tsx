@@ -1,5 +1,6 @@
 import { type ReactNode } from "react";
 import { getDocumentIdentity } from "@/lib/doc-identity";
+import { loadFilingRoster } from "./roster-actions";
 import { MinutesProvider } from "./minutes-store";
 import { MinutesChrome } from "./minutes-chrome";
 
@@ -20,11 +21,16 @@ import { MinutesChrome } from "./minutes-chrome";
 // saveConfirmedMinutes() will store.
 // ---------------------------------------------------------------------------
 export default async function MinutesLayout({ children }: { children: ReactNode }) {
-  const identity = await getDocumentIdentity();
+  // G-1: the eROSES paste-pack's committee field reads the REAL roster.
+  const [identity, filingRoster] = await Promise.all([
+    getDocumentIdentity(),
+    loadFilingRoster(),
+  ]);
   return (
     <MinutesProvider
       orgName={identity?.orgName ?? null}
       signerName={identity?.confirmedBy ?? null}
+      filingRoster={filingRoster}
     >
       <MinutesChrome>{children}</MinutesChrome>
     </MinutesProvider>

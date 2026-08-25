@@ -63,10 +63,11 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
       "/money/einvois",
       "/money/history",
     ]);
-    // 申报: eROSES · 日历与死线. (/agm-pack joins at Stage G-4.)
+    // 申报: eROSES · 日历与死线 · 常年大会文件包 (G-4 撿回).
     expect(byId("filings").children.map((c) => c.href)).toEqual([
       "/filings",
       "/calendar",
+      "/agm-pack",
     ]);
     // 组织: 成员 · 章程 · 条文全文 · 词库 · 组织与分会.
     expect(byId("organisation").children.map((c) => c.href)).toEqual([
@@ -137,13 +138,14 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
     expect(einvois?.einvoisOnly).toBe(true);
   });
 
-  // AGM keeps its route (a saved link still works) but leaves every menu
-  // (J 2026-08-24).
-  it("hides AGM from every menu while keeping its route registered", () => {
+  // G-4 (8/26): AGM is BACK in the menus — the pack builds from the real
+  // roster now, so hiding it stopped being a mercy and became a hole.
+  it("lists the AGM pack again, on both surfaces", () => {
     const agm = NAV_ITEMS.find((i) => i.href === "/agm-pack");
     expect(agm).toBeDefined();
-    expect(agm?.hidden).toBe(true);
-    expect(navPages().map((i) => i.href)).not.toContain("/agm-pack");
+    expect(agm?.hidden).toBeUndefined();
+    expect(navPages().map((i) => i.href)).toContain("/agm-pack");
+    expect(sidebarPages().map((i) => i.href)).toContain("/agm-pack");
   });
 
   it("keeps the occasional pages under More", () => {

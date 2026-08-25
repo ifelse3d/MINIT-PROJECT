@@ -4,6 +4,7 @@ import { readOrgTypeFlags } from "@/lib/org-flags";
 import { buildFinancialStatement } from "@/lib/financial-statement";
 import { dayIsoMalaysia } from "@/lib/history";
 import { loadStatementRows } from "@/app/money/report/data";
+import { loadFilingRoster } from "@/app/minutes/roster-actions";
 import { FilingsView, type FilingsFinance } from "./filings-view";
 
 // ---------------------------------------------------------------------------
@@ -23,10 +24,12 @@ export default async function FilingsPage() {
   // S0-5 (2026-08-25): the paste-pack is built from the latest CONFIRMED
   // minutes in the database — a signed document — never from this browser's
   // half-checked draft. Different devices now see the same pack.
-  const [agm, confirmed, active] = await Promise.all([
+  const [agm, confirmed, active, filingRoster] = await Promise.all([
     getLatestConfirmedAgm(),
     getLatestConfirmedExtraction(),
     getActiveOrg().catch(() => null),
+    // G-1: the paste-pack's committee field files from the REAL roster.
+    loadFilingRoster(),
   ]);
   // B-5: an internal committee gets no eROSES/annual-return nagging.
   const { orgType } = active
@@ -55,6 +58,12 @@ export default async function FilingsPage() {
   }
 
   return (
-    <FilingsView agm={agm} confirmed={confirmed} orgType={orgType} finance={finance} />
+    <FilingsView
+      agm={agm}
+      confirmed={confirmed}
+      orgType={orgType}
+      finance={finance}
+      filingRoster={filingRoster}
+    />
   );
 }

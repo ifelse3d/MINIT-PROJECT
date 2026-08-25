@@ -37,6 +37,45 @@ export type RosterName = {
  * to offer — and the attendance page then simply does not show the picker,
  * rather than showing an empty one that looks broken.
  */
+/**
+ * G-1 (work order 27): the roster AS THE FILING NEEDS IT — position, recorded
+ * name, and the official (IC) name. Read-only like everything else here.
+ * Returns [] for "no org / no roster / query failed" alike; the paste-pack
+ * then shows its honest "no roster in the system yet" note.
+ */
+export async function loadFilingRoster(): Promise<
+  { name: string; position: string; nameOfficial: string | null }[]
+> {
+  const user = await getSessionUser();
+  if (!user) return [];
+  const active = await getActiveOrg();
+  if (!active) return [];
+
+  const supabase = await getSupabaseServer();
+  const { data, error } = await supabase
+    .from("committee_roster")
+    .select("person_name, position, name_official")
+    .eq("org_id", active.id)
+    .order("id", { ascending: true })
+    .limit(500);
+  if (error || !data) return [];
+
+  return data.flatMap((row) => {
+    const name = typeof row.person_name === "string" ? row.person_name.trim() : "";
+    if (name === "") return [];
+    return [
+      {
+        name,
+        position: typeof row.position === "string" ? row.position : "",
+        nameOfficial:
+          typeof row.name_official === "string" && row.name_official.trim() !== ""
+            ? row.name_official.trim()
+            : null,
+      },
+    ];
+  });
+}
+
 export async function loadRosterNames(): Promise<RosterName[]> {
   const user = await getSessionUser();
   if (!user) return [];

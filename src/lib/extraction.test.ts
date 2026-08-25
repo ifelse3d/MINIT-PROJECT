@@ -114,10 +114,13 @@ describe("eROSES paste-pack (deterministic, Hard Rule 2)", () => {
     const rows = buildPastePack(asAgm());
     // One attendee is smudged ("check") => the count row must demand review.
     expect(rows.find((r) => r.erosesField === "Bilangan Ahli Hadir")?.confidence).toBe("check");
-    // The treasurer gap must surface as incomplete, never silently dropped.
+    // G-1 (work order 27): the committee row no longer reads the page at all —
+    // it files from committee_roster. With no roster passed, it is BLOCKED,
+    // not filled from what the AI read (lib/paste-pack.test.ts pins the
+    // roster-driven shapes).
     const bearers = rows.find((r) => r.erosesField === "Senarai Ahli Jawatankuasa");
-    expect(bearers?.confidence).toBe("check");
-    expect(bearers?.value).toContain("belum lengkap");
+    expect(bearers?.confidence).toBe("missing");
+    expect(bearers?.value).toBe("—");
   });
 
   it("emits an em-dash, not an invented value, when data is missing", () => {

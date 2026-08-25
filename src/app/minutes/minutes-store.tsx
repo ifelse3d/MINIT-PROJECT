@@ -22,7 +22,7 @@ import {
 import { loadEvents, saveEvents, sortedByDate, type SimpleEvent } from "@/lib/local-events";
 import { saveEvent } from "@/app/calendar/actions";
 import { renderMinutesDraftBm } from "@/lib/minutes-draft";
-import { buildPastePack } from "@/lib/paste-pack";
+import { buildPastePack, type FilingRosterEntry } from "@/lib/paste-pack";
 import { dayIsoMalaysia } from "@/lib/history";
 import { type MinutesLang } from "@/lib/minutes-lang";
 import { consumeIntake } from "@/lib/intake-handoff";
@@ -264,12 +264,15 @@ export function useMinutes(): MinutesStore {
 export function MinutesProvider({
   orgName,
   signerName,
+  filingRoster = [],
   children,
 }: {
   /** The REAL active organisation, resolved on the server. null = no org yet. */
   orgName: string | null;
   /** The REAL signed-in human, for the Hard Rule 8 audit line preview. */
   signerName: string | null;
+  /** G-1: the committee roster (with IC names) the paste-pack files from. */
+  filingRoster?: FilingRosterEntry[];
   children: ReactNode;
 }) {
   const t = useTriText();
@@ -837,7 +840,10 @@ export function MinutesProvider({
     [extraction, allReviewed, todayIso, documentOrgName, documentSigner, isReal]
   );
 
-  const pastePack = useMemo(() => buildPastePack(extraction), [extraction]);
+  const pastePack = useMemo(
+    () => buildPastePack(extraction, filingRoster),
+    [extraction, filingRoster],
+  );
 
   // --- Letting the model actually WRITE the document ------------------------
   // 2026-08-19 (user: "感觉像是 AI 做工，又没完全做好 … 只放 pointform 丢给我",

@@ -116,8 +116,9 @@ export const NAV_ITEMS: NavItem[] = [
   // /settings is `exact` so standing on /settings/plan lights ONE row.
   { href: "/settings/plan", icon: Gauge, bm: "Pelan & penggunaan", zh: "方案与用量", en: "Plan & usage" },
   { href: "/settings", icon: Settings, bm: "Tetapan", zh: "设置", en: "Settings", exact: true },
-  // Route kept, menu entry removed (J 2026-08-24: AGM out of the nav for now).
-  { href: "/agm-pack", icon: Landmark, bm: "Pek AGM", zh: "年度大会", en: "AGM", hidden: true },
+  // G-4 (8/26): back in the menus — the pack builds from the REAL roster now.
+  // Spelled out, no bare abbreviation (G-4).
+  { href: "/agm-pack", icon: Landmark, bm: "Pek Mesyuarat Agung (AGM)", zh: "常年大会文件包", en: "AGM pack" },
 ];
 
 export function isActivePath(pathname: string, href: string, exact = false): boolean {
@@ -193,6 +194,7 @@ export const PRIMARY_NAV: NavEntry[] = [
     children: [
       byHref("/calendar"),
       byHref("/filings"),
+      byHref("/agm-pack"),
       byHref("/constitution"),
       byHref("/constitution/clauses"),
       byHref("/members"),
@@ -254,7 +256,7 @@ export const SIDEBAR_NAV: NavEntry[] = [
     bm: "Pemfailan",
     zh: "申报",
     en: "Filings",
-    children: [byHref("/filings"), byHref("/calendar")],
+    children: [byHref("/filings"), byHref("/calendar"), byHref("/agm-pack")],
   },
   {
     kind: "group",
