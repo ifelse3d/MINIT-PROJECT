@@ -70,6 +70,113 @@ export function NotesReview() {
     backToEmpty,
   } = useMinutes();
 
+  // D-4: has the typist actually entered anything yet? Decides when the
+  // document preview earns its place in typing mode — a preview of an empty
+  // page helps nobody and buries the form it is telling the person to fill.
+  const anythingTyped =
+    extraction.meeting_type.value !== "" ||
+    extraction.meeting_date.value !== "" ||
+    extraction.meeting_venue.value !== "" ||
+    extraction.attendees.some((a) => a.name.value !== "") ||
+    extraction.resolutions.some((r) => r.text.value !== "") ||
+    extraction.figures.some(
+      (f) => f.description.value !== "" || f.amount_cents.value !== null,
+    ) ||
+    extraction.office_bearers.some(
+      (b) => b.position.value !== "" || b.person_name.value !== "",
+    );
+
+  // The "Your document" hero. One definition, two positions: the photo flow
+  // shows it FIRST (the person's document is the point, R-4), the typing flow
+  // shows it AFTER the form and only once there is content (D-4).
+  const documentPreview = isReal && !aiBusy && (!typedByHand || anythingTyped) && (
+    <PageSection
+      titleBm="Dokumen anda"
+      titleZh="您的文件"
+      titleEn="Your document"
+      summary={
+        allReviewed && !attendanceUnsettled ? (
+          <Tri
+            bm="Semua sudah disemak. Teruskan ke dokumen siap untuk simpan."
+            zh="全部核对好了。到「做好的文件」那一页去确认保存。"
+            en="Everything is checked. Go on to the finished document to save it."
+          />
+        ) : typedByHand ? (
+          <Tri
+            bm="Ini pratonton. Setiap perkara yang anda isi akan muncul di sini."
+            zh="这是预览。您每填好一项，都会出现在这份文件里。"
+            en="This is a preview. Everything you fill in appears here."
+          />
+        ) : (
+          <Tri
+            bm="Ini pratonton. Hanya perkara BERTANDA KUNING perlu anda sentuh — yang hijau sudah pasti."
+            zh="这是预览。只有「黄色标记」的地方需要您看 —— 绿色的已经确定了。"
+            en="This is a preview. Only the AMBER items need you — the green ones are settled."
+          />
+        )
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <div className="relative overflow-hidden rounded-xl border border-[color:var(--v2-border)]">
+          {!(allReviewed && !attendanceUnsettled) && (
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center"
+            >
+              <span className="rotate-[-18deg] select-none rounded border-4 border-red-400/50 px-6 py-2 text-4xl font-black tracking-widest text-red-500/40">
+                DRAF
+              </span>
+            </span>
+          )}
+          <pre className="v2-scroll max-h-96 overflow-auto whitespace-pre-wrap bg-[color:var(--v2-card)] p-4 text-sm leading-relaxed">
+            {minutesDraft}
+          </pre>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          {checkOutstanding > 0 && (
+            <Button size="lg" className="text-base" onClick={confirmAllChecks}>
+              ✓{" "}
+              <Tri
+                bm={`Semuanya betul — sahkan ${checkOutstanding} perkara kuning`}
+                zh={`全部没问题 —— 一键确认 ${checkOutstanding} 个黄标`}
+                en={`All fine — confirm ${checkOutstanding} amber item${checkOutstanding > 1 ? "s" : ""}`}
+              />
+            </Button>
+          )}
+          {missingOutstanding > 0 && (
+            <span className="rounded-full bg-rose-100 px-3 py-1.5 text-sm font-semibold text-rose-900 dark:bg-rose-400/15 dark:text-rose-200">
+              {/* D-4: "N items unreadable" is the truth about a photo and a
+                  lie about typing — nothing was read at all. */}
+              {typedByHand ? (
+                <Tri
+                  bm={`Sila isi ${missingOutstanding} perkara lagi — di bawah`}
+                  zh={`请再填 ${missingOutstanding} 项 —— 在下面`}
+                  en={`Please fill in ${missingOutstanding} more item${missingOutstanding > 1 ? "s" : ""} — below`}
+                />
+              ) : (
+                <Tri
+                  bm={`${missingOutstanding} perkara tidak terbaca — isi di bawah`}
+                  zh={`${missingOutstanding} 项没读到 —— 请在下面补上`}
+                  en={`${missingOutstanding} item${missingOutstanding > 1 ? "s" : ""} unreadable — fill in below`}
+                />
+              )}
+            </span>
+          )}
+        </div>
+
+        {allReviewed && !attendanceUnsettled && (
+          <NextStepLink
+            href="/minutes/document"
+            labelBm="Ke dokumen siap — sahkan & simpan"
+            labelZh="去做好的文件 —— 确认并保存"
+            labelEn="To the finished document — confirm & save"
+          />
+        )}
+      </div>
+    </PageSection>
+  );
+
   return (
     <>
       <PageSection
@@ -267,78 +374,15 @@ export function NotesReview() {
           visible DRAF watermark. Only the amber fields need a human; one tap
           says "all of it is fine". Red fields (nothing readable) still need
           typing or an explicit "not in the notes" below.
+
+          D-4 (2026-08-25, J #6): NOT for typing mode. Somebody who chose
+          "type it in" was greeted by an empty DRAF document and a red badge
+          counting things "Minit could not read" — Minit had read nothing,
+          there was nothing to preview, and the form was below the fold. In
+          typing mode this section renders AFTER the fill-in form, and only
+          once something has actually been typed. The photo flow is unchanged.
           ------------------------------------------------------------------- */}
-      {isReal && !aiBusy && (
-        <PageSection
-          titleBm="Dokumen anda"
-          titleZh="您的文件"
-          titleEn="Your document"
-          summary={
-            allReviewed && !attendanceUnsettled ? (
-              <Tri
-                bm="Semua sudah disemak. Teruskan ke dokumen siap untuk simpan."
-                zh="全部核对好了。到「做好的文件」那一页去确认保存。"
-                en="Everything is checked. Go on to the finished document to save it."
-              />
-            ) : (
-              <Tri
-                bm="Ini pratonton. Hanya perkara BERTANDA KUNING perlu anda sentuh — yang hijau sudah pasti."
-                zh="这是预览。只有「黄色标记」的地方需要您看 —— 绿色的已经确定了。"
-                en="This is a preview. Only the AMBER items need you — the green ones are settled."
-              />
-            )
-          }
-        >
-          <div className="flex flex-col gap-4">
-            <div className="relative overflow-hidden rounded-xl border border-[color:var(--v2-border)]">
-              {!(allReviewed && !attendanceUnsettled) && (
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center"
-                >
-                  <span className="rotate-[-18deg] select-none rounded border-4 border-red-400/50 px-6 py-2 text-4xl font-black tracking-widest text-red-500/40">
-                    DRAF
-                  </span>
-                </span>
-              )}
-              <pre className="v2-scroll max-h-96 overflow-auto whitespace-pre-wrap bg-[color:var(--v2-card)] p-4 text-sm leading-relaxed">
-                {minutesDraft}
-              </pre>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              {checkOutstanding > 0 && (
-                <Button size="lg" className="text-base" onClick={confirmAllChecks}>
-                  ✓{" "}
-                  <Tri
-                    bm={`Semuanya betul — sahkan ${checkOutstanding} perkara kuning`}
-                    zh={`全部没问题 —— 一键确认 ${checkOutstanding} 个黄标`}
-                    en={`All fine — confirm ${checkOutstanding} amber item${checkOutstanding > 1 ? "s" : ""}`}
-                  />
-                </Button>
-              )}
-              {missingOutstanding > 0 && (
-                <span className="rounded-full bg-rose-100 px-3 py-1.5 text-sm font-semibold text-rose-900 dark:bg-rose-400/15 dark:text-rose-200">
-                  <Tri
-                    bm={`${missingOutstanding} perkara tidak terbaca — isi di bawah`}
-                    zh={`${missingOutstanding} 项没读到 —— 请在下面补上`}
-                    en={`${missingOutstanding} item${missingOutstanding > 1 ? "s" : ""} unreadable — fill in below`}
-                  />
-                </span>
-              )}
-            </div>
-
-            {allReviewed && !attendanceUnsettled && (
-              <NextStepLink
-                href="/minutes/document"
-                labelBm="Ke dokumen siap — sahkan & simpan"
-                labelZh="去做好的文件 —— 确认并保存"
-                labelEn="To the finished document — confirm & save"
-              />
-            )}
-          </div>
-        </PageSection>
-      )}
+      {!typedByHand && documentPreview}
 
       <PageSection
         step={2}
@@ -821,6 +865,10 @@ export function NotesReview() {
           </p>
         )}
       </PageSection>
+
+      {/* D-4: in typing mode the form comes first; the preview appears here,
+          after it, once something has been typed. */}
+      {typedByHand && documentPreview}
     </>
   );
 }

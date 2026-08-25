@@ -69,11 +69,20 @@ JSON, and nothing else:
   "sections": [
     {
       "heading": "Section heading, in ${language}",
-      "items": [ { "source": 0, "text": "the item, phrased for a minutes document, in ${language}" } ]
+      "items": [ { "source": 0, "kind": "perbincangan" | "keputusan" | "tindakan", "text": "the item, phrased for a minutes document, in ${language}" } ]
     }
   ],
   "unresolved": [ { "source": 0, "text": "..." } ]
 }
+
+"kind" says what the line RECORDS, and the document prints the matching formal
+label (Perbincangan / Keputusan / Tindakan) in front of it:
+- "keputusan"    — the meeting decided or agreed something.
+- "tindakan"     — a task or duty was assigned to a named person or group.
+- "perbincangan" — something was discussed, reported or noted, with no decision
+                   and no assignment. When unsure, use "perbincangan".
+"kind" changes only the label; it must not change the text. Items in
+"unresolved" take no "kind".
 
 === THE RULE THAT IS CHECKED BY CODE ===
 Every index from 0 to ${resolutionTexts.length - 1} must appear EXACTLY ONCE,
@@ -113,8 +122,9 @@ task for one day has not been elected to anything. Name such sections after the
 work ("Pembahagian Tugas", "Tugasan Perarakan").
 
 === HOW TO PHRASE text ===
-Write it as a line of minutes, not as a note fragment: state the duty or
-decision, then the person or detail, in formal ${language}.
+Write it as a COMPLETE SENTENCE of formal minutes prose, not as a note
+fragment or point-form entry: state the duty or decision, then the person or
+detail, in formal ${language}, ending with a full stop.
 
 The notes mix Bahasa Malaysia, Chinese and English on one page. THE ORDINARY
 WORDS COME OUT IN ${language.toUpperCase()}; ONLY THE NAMES KEEP THEIR OWN

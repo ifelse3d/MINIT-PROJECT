@@ -31,6 +31,12 @@ export const LANGUAGE_NAME: Record<MinutesLang, string> = {
   en: "English",
 };
 
+/** D-1: how each item is classified inside an agenda section. The model TAGS;
+ *  the code prints the label — so a wrong tag can misfile a line under
+ *  "Keputusan", but it can never change what the line says. */
+export const ITEM_KINDS = ["perbincangan", "keputusan", "tindakan"] as const;
+export type ItemKind = (typeof ITEM_KINDS)[number];
+
 type Labels = {
   title: string;
   meetingType: string;
@@ -45,6 +51,23 @@ type Labels = {
   discussed: (headings: string) => string;
   /** "N items are still undecided — see <section> at the end." */
   stillOpen: (n: number, section: string) => string;
+  /** D-1: "Bil. ____ / 2026" — the meeting's serial number in the year. The
+   *  number itself is NOT invented: nobody told Minit which meeting of the
+   *  year this was, so the slot is a blank the society fills in (the document
+   *  is editable before saving). */
+  bil: (year: string) => string;
+  /** D-1: the Perbincangan / Keputusan / Tindakan prefixes. */
+  kind: Record<ItemKind, string>;
+  /** D-1: the closing section. */
+  penutup: string;
+  closing: string;
+  /** D-1: the signature block. */
+  preparedBy: string;
+  endorsedBy: string;
+  chairSlot: string;
+  /** D-2: printed under the letterhead of every NON-BM document. BM is the
+   *  filing language; the others are reading copies and must say so. */
+  translationNote?: string;
 };
 
 // The names of the meeting types themselves are NOT here. They live in
@@ -67,6 +90,17 @@ export const LABELS: Record<MinutesLang, Labels> = {
     discussed: (h) => `Mesyuarat ini membincangkan: ${h}.`,
     stillOpen: (n, s) =>
       `${n} perkara masih belum dimuktamadkan — lihat "${s}" di bahagian akhir.`,
+    bil: (y) => `Bil.: ____ / ${y}`,
+    kind: {
+      perbincangan: "Perbincangan",
+      keputusan: "Keputusan",
+      tindakan: "Tindakan",
+    },
+    penutup: "PENUTUP",
+    closing: "Mesyuarat ditangguhkan.",
+    preparedBy: "Disediakan oleh,",
+    endorsedBy: "Disahkan oleh,",
+    chairSlot: "( Pengerusi )",
   },
   zh: {
     title: "会议记录",
@@ -80,6 +114,19 @@ export const LABELS: Record<MinutesLang, Labels> = {
     unresolved: "还没定下来的事",
     discussed: (h) => `这次会议谈了：${h}。`,
     stillOpen: (n, s) => `还有 ${n} 项没有定下来 —— 见文末「${s}」。`,
+    bil: (y) => `编号（Bil.）: ____ / ${y}`,
+    kind: {
+      perbincangan: "讨论",
+      keputusan: "议决",
+      tindakan: "行动",
+    },
+    penutup: "散会",
+    closing: "会议到此结束。",
+    preparedBy: "记录人：",
+    endorsedBy: "核准人：",
+    chairSlot: "（主席）",
+    translationNote:
+      "翻译本 —— 非呈报用 / Terjemahan — bukan untuk difailkan",
   },
   en: {
     title: "MINUTES OF MEETING",
@@ -94,6 +141,19 @@ export const LABELS: Record<MinutesLang, Labels> = {
     discussed: (h) => `This meeting discussed: ${h}.`,
     stillOpen: (n, s) =>
       `${n} item(s) are still undecided — see "${s}" at the end.`,
+    bil: (y) => `No. (Bil.): ____ / ${y}`,
+    kind: {
+      perbincangan: "Discussion",
+      keputusan: "Decision",
+      tindakan: "Action",
+    },
+    penutup: "CLOSING",
+    closing: "The meeting was adjourned.",
+    preparedBy: "Prepared by,",
+    endorsedBy: "Endorsed by,",
+    chairSlot: "( Chairperson )",
+    translationNote:
+      "Translation — not for filing / Terjemahan — bukan untuk difailkan",
   },
 };
 

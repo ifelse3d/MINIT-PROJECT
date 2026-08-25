@@ -312,6 +312,125 @@ describe("composeMinutesMd in other languages", () => {
   });
 });
 
+describe("composeMinutesMd — the formal template (Stage D)", () => {
+  const extraction = {
+    ...emptyMeetingNotesExtraction,
+    meeting_type: {
+      value: "committee" as const,
+      confidence: "confirmed" as const,
+      source_ref: null,
+    },
+    meeting_date: { ...confirmed("2026-08-16") },
+  };
+  const opts = {
+    orgName: "If Else",
+    confirmedBy: "shi hui",
+    dateIso: "2026-08-19",
+  };
+  const onePlan = () =>
+    plan({
+      sections: [
+        {
+          heading: "Tugasan",
+          items: [
+            { source: 0, kind: "perbincangan", text: "Perkara A dibincangkan." },
+            { source: 1, kind: "keputusan", text: "Perkara B diluluskan." },
+            { source: 2, kind: "tindakan", text: "Perkara C diuruskan oleh 嘉益." },
+            { source: 3, text: "Perkara D." },
+          ],
+        },
+      ],
+    });
+
+  it("prints the Perbincangan / Keputusan / Tindakan label the model TAGGED, from a fixed table", () => {
+    const md = composeMinutesMd(onePlan(), extraction, opts);
+    expect(md).toContain("1.1 Perbincangan: Perkara A dibincangkan.");
+    expect(md).toContain("1.2 Keputusan: Perkara B diluluskan.");
+    expect(md).toContain("1.3 Tindakan: Perkara C diuruskan oleh 嘉益.");
+    // An untagged item prints exactly as before — no prefix, no loss.
+    expect(md).toContain("1.4 Perkara D.");
+  });
+
+  it("drops a kind the model invented instead of failing the whole plan", () => {
+    const p = minutesPlanSchema.parse({
+      sections: [
+        { heading: "A", items: [{ source: 0, text: "x", kind: "nonsense" }] },
+      ],
+      unresolved: [],
+    });
+    expect(p.sections[0].items[0].kind).toBeUndefined();
+    // Coverage is untouched by the bad tag — the item is still counted.
+    expect(checkCoverage(p, 1).ok).toBe(true);
+  });
+
+  it("prints Bil. ____/<year> from the confirmed date, leaving the number blank rather than inventing one", () => {
+    const md = composeMinutesMd(onePlan(), extraction, opts);
+    expect(md).toContain("Bil.: ____ / 2026");
+  });
+
+  it("omits the Bil. line when there is no meeting date to take a year from", () => {
+    const md = composeMinutesMd(onePlan(), emptyMeetingNotesExtraction, opts);
+    expect(md).not.toContain("Bil.");
+  });
+
+  it("prints the PPM/ROS line under the letterhead — in stampIdentity's exact format", () => {
+    const md = composeMinutesMd(onePlan(), extraction, {
+      ...opts,
+      ppmNo: "PPM-012-34-56789012",
+    });
+    expect(md).toContain(
+      "No. Pendaftaran (PPM/ROS): PPM-012-34-56789012",
+    );
+    // Directly under the title, before anything else.
+    expect(md.split("\n")[1]).toContain("No. Pendaftaran");
+  });
+
+  it("prints no registration line when the org has not entered one", () => {
+    const md = composeMinutesMd(onePlan(), extraction, opts);
+    expect(md).not.toContain("No. Pendaftaran");
+  });
+
+  it("closes with PENUTUP and the signature block, audit line last", () => {
+    const md = composeMinutesMd(onePlan(), extraction, opts);
+    expect(md).toContain("## PENUTUP");
+    expect(md).toContain("Mesyuarat ditangguhkan.");
+    expect(md).toContain("Disediakan oleh,");
+    expect(md).toContain("( shi hui )");
+    expect(md).toContain("Disahkan oleh,");
+    // The endorsement slot is a labelled BLANK — Minit does not know who the
+    // chairperson is and must not guess.
+    expect(md).toContain("( Pengerusi )");
+    expect(md).not.toContain("( Pengerusi ) shi hui");
+    expect(md.trimEnd()).toMatch(/Drafted by Minit, confirmed by shi hui on 2026-08-19$/);
+  });
+
+  it("annotates an attendee with their position only on an exact confirmed name match", () => {
+    const withPeople = {
+      ...extraction,
+      attendees: [
+        { name: { ...confirmed("嘉益") } },
+        { name: { ...confirmed("雯倩") } },
+      ],
+      office_bearers: [
+        { position: { ...confirmed("Setiausaha") }, person_name: { ...confirmed("嘉益") } },
+      ],
+    };
+    const md = composeMinutesMd(onePlan(), withPeople, opts);
+    expect(md).toContain("1. 嘉益 — Setiausaha");
+    expect(md).toContain("2. 雯倩");
+    expect(md).not.toContain("雯倩 — ");
+  });
+
+  it("D-2: a reading copy names itself a translation; the BM filing copy does not", () => {
+    const zh = composeMinutesMd(onePlan(), extraction, { ...opts, lang: "zh" });
+    expect(zh).toContain("翻译本 —— 非呈报用 / Terjemahan");
+    const en = composeMinutesMd(onePlan(), extraction, { ...opts, lang: "en" });
+    expect(en).toContain("Translation — not for filing / Terjemahan");
+    const bm = composeMinutesMd(onePlan(), extraction, opts);
+    expect(bm).not.toContain("Terjemahan");
+  });
+});
+
 describe("checkNames and a Chinese document", () => {
   // Documented limitation, asserted so nobody "fixes" it by turning the check
   // back on for Chinese and gets a flood of false rejections.

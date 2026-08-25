@@ -146,10 +146,23 @@ export async function saveConfirmedMinutes(input: {
           // entered one — a reader can check it against the public register.
           ppmNo: identity.ppmNo,
         })
-      : renderMinutesDraftBm(extraction, {
-          orgName: identity.orgName,
-          confirmedBy: { name: identity.confirmedBy, dateIso: todayIso },
-        });
+      : // D-1 (2026-08-25): the plain fallback goes through the SAME stamp.
+        // Before this it skipped stampIdentity, so a document saved without
+        // ever pressing the AI button carried no PPM/ROS line — the Stage C
+        // anti-impersonation mark existed on one path and not the other.
+        stampIdentity(
+          renderMinutesDraftBm(extraction, {
+            orgName: identity.orgName,
+            confirmedBy: { name: identity.confirmedBy, dateIso: todayIso },
+          }),
+          {
+            orgName: identity.orgName,
+            confirmedBy: identity.confirmedBy,
+            dateIso: todayIso,
+            lang: "bm",
+            ppmNo: identity.ppmNo,
+          },
+        );
 
   if (!finalMd.trim()) {
     return {

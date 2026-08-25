@@ -33,6 +33,7 @@ export function MinutesDocument() {
     isReal,
     isSample,
     nothingYet,
+    typedByHand,
     allReviewed,
     outstanding,
     shownDocument,
@@ -82,11 +83,21 @@ export function MinutesDocument() {
       en="Take a photo of the notes first. Minit does not write an official document from an empty page."
     />
   ) : !allReviewed ? (
-    <Tri
-      bm={`Masih ada ${outstanding} perkara untuk disemak. Minit tidak akan menulis dokumen rasmi daripada maklumat yang belum anda sahkan.`}
-      zh={`还有 ${outstanding} 项要核对。您还没确认的内容，Minit 不会拿去写正式文件。`}
-      en={`${outstanding} item(s) still need checking. Minit will not write an official document from anything you have not confirmed.`}
-    />
+    // D-4: "still to be CHECKED" is review language. Somebody typing has
+    // nothing to check — they have blanks to fill.
+    typedByHand ? (
+      <Tri
+        bm={`Masih ada ${outstanding} perkara belum diisi. Minit tidak akan menulis dokumen rasmi daripada borang yang belum lengkap.`}
+        zh={`还有 ${outstanding} 项没填。还没填完的内容，Minit 不会拿去写正式文件。`}
+        en={`${outstanding} item(s) still to fill in. Minit will not write an official document from an unfinished form.`}
+      />
+    ) : (
+      <Tri
+        bm={`Masih ada ${outstanding} perkara untuk disemak. Minit tidak akan menulis dokumen rasmi daripada maklumat yang belum anda sahkan.`}
+        zh={`还有 ${outstanding} 项要核对。您还没确认的内容，Minit 不会拿去写正式文件。`}
+        en={`${outstanding} item(s) still need checking. Minit will not write an official document from anything you have not confirmed.`}
+      />
+    )
   ) : null;
 
   return (

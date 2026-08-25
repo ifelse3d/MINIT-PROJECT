@@ -164,6 +164,10 @@ export async function POST(req: Request) {
       confirmedBy: identity.confirmedBy,
       dateIso: todayIso,
       lang,
+      // C-1 / D-1: the registration number on the letterhead. The save action
+      // re-stamps it from the org record either way; passing it here means the
+      // person READS the same document they will sign.
+      ppmNo: identity.ppmNo,
     });
 
     return NextResponse.json({ markdown, provider: provider.name });

@@ -3,6 +3,7 @@ import type { MeetingNotesExtraction } from "@/lib/extraction";
 import { formatRm } from "@/lib/minutes-draft";
 import { meetingTypeLabel } from "@/lib/meeting-types";
 import {
+  ITEM_KINDS,
   LABELS,
   minutesAuditLine,
   minutesTitle,
@@ -29,7 +30,16 @@ export const minutesPlanSchema = z.object({
     z.object({
       heading: z.string().min(1),
       items: z.array(
-        z.object({ source: z.number().int(), text: z.string().min(1) }),
+        z.object({
+          source: z.number().int(),
+          text: z.string().min(1),
+          // D-1 (2026-08-25): the ONE extra thing the model does for the formal
+          // template — say whether a line records a discussion, a decision, or
+          // an assigned action. `.catch(undefined)`: a made-up kind is dropped,
+          // never fatal. Coverage stays the only check that can reject a plan;
+          // a misfiled label cannot cost anyone their document.
+          kind: z.enum(ITEM_KINDS).optional().catch(undefined),
+        }),
       ),
     }),
   ),
@@ -184,6 +194,12 @@ export type ComposeOptions = {
   /** Defaults to Bahasa Malaysia — what eROSES needs, and what every document
    *  produced before this option existed was written in. */
   lang?: MinutesLang;
+  /** C-1 / D-1: the admin-entered PPM/ROS registration number, printed under
+   *  the letterhead so a reader can check the document against the public
+   *  register. null/absent prints nothing. The save action re-stamps this line
+   *  from the org record (actions.ts stampIdentity), so a client cannot keep a
+   *  stale or invented number by sending it back. */
+  ppmNo?: string | null;
 };
 
 /**
@@ -200,7 +216,30 @@ export function composeMinutesMd(
   const lang = opts.lang ?? "bm";
   const L = LABELS[lang];
   const out: string[] = [];
-  out.push(minutesTitle(lang, opts.orgName), "");
+  out.push(minutesTitle(lang, opts.orgName));
+
+  // C-1: the registration number rides directly under the letterhead. Line
+  // format matches stampIdentity's re-stamp exactly — one format, or the save
+  // action cannot recognise (and de-duplicate) it.
+  const ppm = (opts.ppmNo ?? "").trim();
+  if (ppm !== "") out.push(`No. Pendaftaran (PPM/ROS): ${ppm}`);
+
+  // D-1: "Bil. ____ / 2026". The year is read off the confirmed meeting date;
+  // the running number is a blank for the society to fill in (nobody told
+  // Minit which meeting of the year this was, and Hard Rule 1 says a gap
+  // stays a gap — the document is editable before saving). No date, no line.
+  const dateValue = extraction.meeting_date.value;
+  if (
+    extraction.meeting_date.confidence !== "missing" &&
+    /^\d{4}-/.test(dateValue)
+  ) {
+    out.push(L.bil(dateValue.slice(0, 4)));
+  }
+
+  // D-2: a reading copy must say it is one. BM has no note — it IS the filing
+  // language.
+  if (L.translationNote) out.push("", `[ ${L.translationNote} ]`);
+  out.push("");
 
   const type = extraction.meeting_type;
   if (type.confidence !== "missing" && type.value !== "") {
@@ -219,21 +258,46 @@ export function composeMinutesMd(
   const purpose = summariseSections(plan, lang);
   if (purpose.length > 0) out.push(`## ${L.purpose}`, "", ...purpose, "");
 
+  // D-1: the attendance sheet. When a confirmed office bearer has exactly the
+  // same confirmed name as an attendee, their position is printed beside the
+  // name — a plain string join of two facts the person already confirmed, not
+  // an inference. Anything less than an exact match prints nothing.
+  const positionByName = new Map<string, string>();
+  for (const b of extraction.office_bearers) {
+    if (
+      b.position.confidence !== "missing" &&
+      b.person_name.confidence !== "missing" &&
+      b.person_name.value !== ""
+    ) {
+      positionByName.set(b.person_name.value.trim(), b.position.value);
+    }
+  }
   const attendees = extraction.attendees.filter(
     (a) => a.name.confidence !== "missing" && a.name.value !== "",
   );
   if (attendees.length > 0) {
     out.push(`## ${L.attendance}`, "");
-    attendees.forEach((a, i) => out.push(`${i + 1}. ${a.name.value}`));
+    attendees.forEach((a, i) => {
+      const position = positionByName.get(a.name.value.trim());
+      out.push(
+        `${i + 1}. ${a.name.value}${position ? ` — ${position}` : ""}`,
+      );
+    });
     out.push("");
   }
 
   // Sections that came back empty are dropped rather than printed as a bare
-  // heading with nothing under it.
+  // heading with nothing under it. D-1: an item the model tagged gets its
+  // Perbincangan / Keputusan / Tindakan prefix — the label is printed by code
+  // from a fixed table, so a wrong TAG can misfile a line, but no tag can ever
+  // change what the line says. An untagged item prints exactly as before.
   const sections = plan.sections.filter((s) => s.items.length > 0);
   sections.forEach((s, si) => {
     out.push(`## ${si + 1}. ${tidy(s.heading)}`, "");
-    s.items.forEach((it, ii) => out.push(`${si + 1}.${ii + 1} ${tidy(it.text)}`));
+    s.items.forEach((it, ii) => {
+      const prefix = it.kind ? `${L.kind[it.kind]}: ` : "";
+      out.push(`${si + 1}.${ii + 1} ${prefix}${tidy(it.text)}`);
+    });
     out.push("");
   });
 
@@ -268,6 +332,26 @@ export function composeMinutesMd(
     plan.unresolved.forEach((it, i) => out.push(`${i + 1}. ${tidy(it.text)}`));
     out.push("");
   }
+
+  // D-1: the closing and the signature block. All boilerplate structure of the
+  // genre — the one factual claim ("the meeting ended") is entailed by the
+  // minutes existing at all. The preparer line names the person the session
+  // says confirmed this document (Hard Rule 8); the endorsement line is a
+  // labelled blank for the chairperson to sign at the next meeting — Minit
+  // does not know who that is, so it names nobody.
+  out.push(`## ${L.penutup}`, "", L.closing, "");
+  out.push(
+    L.preparedBy,
+    "",
+    "____________________",
+    `( ${opts.confirmedBy} )`,
+    "",
+    L.endorsedBy,
+    "",
+    "____________________",
+    L.chairSlot,
+    "",
+  );
 
   out.push("---", minutesAuditLine(lang, opts.confirmedBy, opts.dateIso));
 
