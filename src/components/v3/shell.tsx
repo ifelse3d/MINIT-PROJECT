@@ -89,7 +89,12 @@ export function AppShell({
         )}
         style={{ paddingRight: dock.push || undefined }}
       >
-        <main className="mx-auto w-full max-w-4xl px-4 pb-24 pt-4 sm:px-6 md:pb-10 md:pt-6">
+        {/* F-1 (2026-08-25, J #15 #8): max-w-4xl here silently capped EVERY
+            page at 896px — the money chrome asks for 5xl, the calendar for
+            7xl, and both were being squeezed without anyone's page saying so.
+            The shell is now the widest bound (7xl); each page's own container
+            decides its real width, which is where that decision belongs. */}
+        <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-4 sm:px-6 md:pb-10 md:pt-6">
           {/* Phone-only top bar; search for md+ */}
           <MobileTopBar />
           <div className="hidden md:block">

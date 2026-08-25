@@ -80,22 +80,51 @@ export default async function PlanPage() {
         <p className="mt-1 text-base text-[color:var(--v2-text-soft)]">{active.name}</p>
       </div>
 
-      {/* Current plan + the meter */}
-      <div className="v2-glass flex flex-col gap-2 p-5">
-        <p className="text-base text-[color:var(--v2-text-soft)]">
-          <Tri bm="Pelan semasa" zh="当前方案" en="Current plan" />
-        </p>
-        <p className="text-2xl font-semibold">
-          <Tri {...plan.name} />
-        </p>
+      {/* Current plan + the meter. F-2 (2026-08-25): the same BAR the
+          settings page shows, from the same computeUsageState() numbers — a
+          percentage in prose made the reader do the arithmetic the bar
+          exists to do. Still no prices, still no checkout (decision #2 /
+          D12): upgrading remains a conversation with a human. */}
+      <div className="v2-glass flex flex-col gap-3 p-5">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <div>
+            <p className="text-base text-[color:var(--v2-text-soft)]">
+              <Tri bm="Pelan semasa" zh="当前方案" en="Current plan" />
+            </p>
+            <p className="text-2xl font-semibold">
+              <Tri {...plan.name} />
+            </p>
+          </div>
+          {usage && (
+            <p className="text-base">
+              <span className="font-semibold tabular-nums">
+                {usage.usedThisMonth} / {usage.monthlyFreeQuota}
+              </span>{" "}
+              <Tri bm="digunakan" zh="已用" en="used" />
+              {" · "}
+              <span className="font-semibold tabular-nums">{usage.usedPct}%</span>
+            </p>
+          )}
+        </div>
         {usage && (
-          <p className="text-base">
-            <Tri
-              bm={`Bulan ini sudah guna ${usage.usedPct}% daripada penggunaan AI.`}
-              zh={`本月 AI 用量已用 ${usage.usedPct}%。`}
-              en={`${usage.usedPct}% of this month's AI allowance used.`}
+          <div
+            className="h-2.5 w-full overflow-hidden rounded-full bg-muted"
+            role="progressbar"
+            aria-valuenow={usage.usedThisMonth}
+            aria-valuemin={0}
+            aria-valuemax={usage.monthlyFreeQuota}
+          >
+            <div
+              className={`h-full rounded-full ${
+                usage.blocked
+                  ? "bg-red-600"
+                  : usage.totalRemaining <= 10
+                    ? "bg-amber-500"
+                    : "bg-green-600"
+              }`}
+              style={{ width: `${usage.usedPct}%` }}
             />
-          </p>
+          </div>
         )}
       </div>
 

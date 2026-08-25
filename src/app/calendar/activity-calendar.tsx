@@ -211,7 +211,10 @@ export function ActivityCalendar({
                   type="button"
                   onClick={() => setSelectedDay(cell.dayIso)}
                   className={[
-                    "flex min-h-20 flex-col items-stretch gap-1 rounded-lg border p-1.5 text-left transition-colors hover:bg-accent md:min-h-24",
+                    // F-1 (2026-08-25, J #8): taller cells on desktop — the
+                    // shell no longer caps the page at 896px, so the grid has
+                    // real width and the cells can hold a readable day number.
+                    "flex min-h-20 flex-col items-stretch gap-1 rounded-lg border p-1.5 text-left transition-colors hover:bg-accent md:min-h-28 md:p-2",
                     cell.inMonth ? "bg-background" : "bg-muted/30 text-muted-foreground",
                     cell.inMonth && isPast ? "text-muted-foreground" : "",
                     isToday ? "border-2 border-primary" : "",
@@ -222,12 +225,16 @@ export function ActivityCalendar({
                       and side-by-side text collided once we enlarged type for
                       elderly readers. (2026-07-28 audit.) */}
                   <span className="flex flex-col items-start leading-tight sm:flex-row sm:items-baseline sm:justify-between sm:gap-1">
-                    <span className={`text-base ${isToday ? "font-bold" : "font-medium"}`}>
+                    {/* J #8: the day number is what an elderly reader scans
+                        for — text-base was receipt-footnote size on a 1920
+                        screen. Phone sizes are unchanged (a 360px column is
+                        still ~46px wide). */}
+                    <span className={`text-base md:text-xl ${isToday ? "font-bold" : "font-medium"}`}>
                       {cell.dayNum}
                     </span>
                     {lunar && (
                       <span
-                        className={`text-[0.7rem] leading-tight sm:text-sm ${
+                        className={`text-[0.7rem] leading-tight sm:text-sm md:text-base ${
                           lunarSpecial ? "font-semibold text-amber-700" : "text-muted-foreground"
                         }`}
                       >

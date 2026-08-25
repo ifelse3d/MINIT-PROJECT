@@ -87,7 +87,10 @@ export function SectionTabs({
               <Link
                 href={tab.href}
                 aria-current={here ? "page" : undefined}
-                className={`inline-flex min-h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border-2 px-3 text-base font-medium ${tone} ${
+                // F-3 (2026-08-25): min-h-11 = the app's 44px touch-target
+                // floor. These pills are the PRIMARY step navigation on a
+                // phone; 36px was below the floor everything else keeps.
+                className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border-2 px-3 text-base font-medium ${tone} ${
                   // The page you are ON is the one thing this rail must make
                   // unmissable — colour alone cannot do it, because two tabs can
                   // legitimately share a colour.
@@ -118,7 +121,7 @@ export function SectionTabs({
             <Link
               href={records.href}
               aria-current={pathname === records.href ? "page" : undefined}
-              className={`inline-flex min-h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border-2 border-dashed border-slate-300 px-3 text-base font-medium text-slate-600 dark:border-slate-500 dark:text-slate-300 ${
+              className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border-2 border-dashed border-slate-300 px-3 text-base font-medium text-slate-600 dark:border-slate-500 dark:text-slate-300 ${
                 pathname === records.href
                   ? "ring-2 ring-slate-900/70 ring-offset-1 dark:ring-white/80"
                   : "hover:brightness-95 active:scale-95"

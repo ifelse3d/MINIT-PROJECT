@@ -134,7 +134,10 @@ export default async function MoneyHistoryPage({
   const wholeStory = summary.pageCount === 1;
 
   return (
-    <div className="mx-auto w-full max-w-4xl pb-10">
+    // F-1 (2026-08-25): a receipts TABLE page fills the section's width (the
+    // /money chrome is max-w-5xl) — a narrower cap here just squeezed the
+    // columns for nothing (STATE §6: 表格类内容用窄容器).
+    <div className="mx-auto w-full max-w-5xl pb-10">
       {/* An h2, not an h1, and no "back to Money" link: since the 2026-08-23
           split this page sits inside the /money layout, which already carries
           the section's heading, the organisation's name and the tab rail. Two

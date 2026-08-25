@@ -105,7 +105,9 @@ export default async function MinutesHistoryPage({
   const summary = pageSummary(count ?? 0, page, rows.length, PAGE_SIZE);
 
   return (
-    <div className="mx-auto w-full max-w-3xl pb-10">
+    // F-1 (2026-08-25): list/table content fills the section's width — the
+    // 3xl cap squeezed the rows while the rail above sat wider.
+    <div className="mx-auto w-full max-w-5xl pb-10">
       {/* h2 and no back link — the /minutes layout above already carries the
           section heading, the organisation and the tab rail. (2026-08-23.) */}
       <div className="mb-6">
