@@ -55,7 +55,7 @@ export function NotesReview() {
   } | null>(null);
   const {
     sourceLabel,
-    photoDataUrl,
+    photoPages,
     aiBusy,
     aiError,
     nothingYet,
@@ -80,6 +80,7 @@ export function NotesReview() {
     onPhotoPicked,
     startTyping,
     typedByHand,
+    mixedInput,
     openSample,
     backToEmpty,
     alreadySaved,
@@ -162,8 +163,10 @@ export function NotesReview() {
           {missingOutstanding > 0 && (
             <span className="rounded-full bg-rose-100 px-3 py-1.5 text-sm font-semibold text-rose-900 dark:bg-rose-400/15 dark:text-rose-200">
               {/* D-4: "N items unreadable" is the truth about a photo and a
-                  lie about typing — nothing was read at all. */}
-              {typedByHand ? (
+                  lie about typing — nothing was read at all.
+                  I-3: and a lie about a MIXED document too — those fields were
+                  never in the photo; neutral wording instead. */}
+              {typedByHand || mixedInput ? (
                 <Tri
                   bm={`Sila isi ${missingOutstanding} perkara lagi — di bawah`}
                   zh={`请再填 ${missingOutstanding} 项 —— 在下面`}
@@ -403,18 +406,44 @@ export function NotesReview() {
             {aiError}
           </div>
         )}
-        {photoDataUrl && (
+        {photoPages.length > 0 && (
           <details className="group rounded-lg border bg-background">
             <summary className="flex cursor-pointer list-none items-center gap-2 p-3 font-medium hover:bg-accent">
-              🖼️ <Tri bm="Lihat gambar asal" zh="查看原始照片" en="View the original photo" />
+              🖼️{" "}
+              {photoPages.length > 1 ? (
+                <Tri
+                  bm={`Lihat gambar asal (${photoPages.length} halaman)`}
+                  zh={`查看原始照片（${photoPages.length} 页）`}
+                  en={`View the original photos (${photoPages.length} pages)`}
+                />
+              ) : (
+                <Tri bm="Lihat gambar asal" zh="查看原始照片" en="View the original photo" />
+              )}
               <span className="ml-auto text-muted-foreground transition-transform group-open:rotate-90">›</span>
             </summary>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={photoDataUrl}
-              alt={t("Gambar asal", "原始照片", "Original photo")}
-              className="max-h-[70vh] w-full rounded-b-lg object-contain"
-            />
+            {/* I-2 (26 号报告 §3-2): EVERY merged page, labelled — checking an
+                amber field from page 1 used to open page 2's photo only. */}
+            <div className="flex flex-col gap-2 p-2">
+              {photoPages.map((p, i) => (
+                <figure key={i} className="flex flex-col gap-1">
+                  {photoPages.length > 1 && (
+                    <figcaption className="text-sm text-muted-foreground">
+                      {t(`Halaman ${i + 1}`, `第 ${i + 1} 页`, `Page ${i + 1}`)} · {p.name}
+                    </figcaption>
+                  )}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={p.dataUrl}
+                    alt={t(
+                      `Gambar asal halaman ${i + 1}`,
+                      `第 ${i + 1} 页原始照片`,
+                      `Original photo, page ${i + 1}`,
+                    )}
+                    className="max-h-[70vh] w-full rounded-lg object-contain"
+                  />
+                </figure>
+              ))}
+            </div>
           </details>
         )}
         {/* 0-5 (2026-08-25): the old "use sample data until we go paid"

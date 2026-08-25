@@ -106,6 +106,12 @@ export function mergedSourceLabel(
   fileName: string,
 ): string {
   if (!existing) return fileName;
+  // I-4③ (26 号报告 §3-6): once the badge has collapsed to "N × 📄", the file
+  // names are gone — splitting it on " ＋ " counts ONE thing and the total
+  // shrank on every following page (6 pages showed as 4). Parse the count
+  // back out instead.
+  const collapsed = /^(\d+) × 📄$/.exec(existing);
+  if (collapsed) return `${Number(collapsed[1]) + 1} × 📄`;
   const combined = `${existing} ＋ ${fileName}`;
   // A badge, not an audit trail: after a few pages, say how many instead.
   if (combined.length <= 80) return combined;

@@ -381,24 +381,33 @@ export function AskBox({
               />
             </p>
             <div className="flex flex-wrap gap-2">
+              {/* I-4① (26 号报告 §3-6): send what is in the box NOW — the
+                  person often types more hints AFTER Minit asks, and the old
+                  snapshot silently threw those away. */}
               <Button
                 size="lg"
                 disabled={busy !== null}
-                onClick={() => void sendFile(staged, askKind.context, "meeting_notes")}
+                onClick={() =>
+                  void sendFile(staged, question.trim() || askKind.context, "meeting_notes")
+                }
               >
                 📝 <Tri bm="Nota mesyuarat" zh="会议笔记" en="Meeting notes" />
               </Button>
               <Button
                 size="lg"
                 disabled={busy !== null}
-                onClick={() => void sendFile(staged, askKind.context, "ledger_page")}
+                onClick={() =>
+                  void sendFile(staged, question.trim() || askKind.context, "ledger_page")
+                }
               >
                 🧾 <Tri bm="Halaman lejar derma" zh="捐款账页" en="Donation ledger page" />
               </Button>
               <Button
                 size="lg"
                 disabled={busy !== null}
-                onClick={() => void sendFile(staged, askKind.context, "constitution")}
+                onClick={() =>
+                  void sendFile(staged, question.trim() || askKind.context, "constitution")
+                }
               >
                 📜 <Tri bm="Perlembagaan" zh="章程" en="Constitution" />
               </Button>

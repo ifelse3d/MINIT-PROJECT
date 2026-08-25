@@ -101,15 +101,27 @@ export function EinvoisProvider({
       writeDevicePref(v);
       if (!orgBacked) return;
       setOrgVisible(v);
+      // I-4② (26 号报告 §3-6): when the ORGANISATION refuses the save (a
+      // non-admin flipping it, the network dying), the optimistic flip is
+      // ROLLED BACK — a switch left in a position the org never took is a
+      // screen quietly lying until the next reload.
+      const rollBack = () => {
+        setOrgVisible(!v);
+        writeDevicePref(!v);
+      };
       void saveNeedsEinvois(v)
         .then((r) => {
-          if (!r.ok) setSaveError(r.error ?? "failed");
+          if (!r.ok) {
+            rollBack();
+            setSaveError(r.error ?? "failed");
+          }
         })
-        .catch(() =>
+        .catch(() => {
+          rollBack();
           setSaveError(
             "Tidak berjaya disimpan / 没能保存到机构 / Could not save for the organisation",
-          ),
-        );
+          );
+        });
     },
     [orgBacked],
   );

@@ -202,6 +202,29 @@ export type ComposeOptions = {
   ppmNo?: string | null;
 };
 
+// ---------------------------------------------------------------------------
+// I-5 (work order 27): the PPM registration line, ONE source. It used to be
+// hand-copied in three places (compose here, the save action's re-stamp, and
+// the re-stamp's recognition regex) — change any one of them alone and a
+// saved document grows a second registration line, or the re-stamp stops
+// recognising the old one. Same treatment the letterhead title already has.
+// ---------------------------------------------------------------------------
+
+/** The exact label the registration line starts with, everywhere. */
+export const PPM_LINE_PREFIX = "No. Pendaftaran (PPM/ROS):";
+
+/** The full registration line for a document. */
+export function ppmLine(ppm: string): string {
+  return `${PPM_LINE_PREFIX} ${ppm}`;
+}
+
+/** Recognises a registration line — DERIVED from the prefix, so the three
+ *  users cannot drift apart again. */
+export const PPM_LINE_PATTERN = new RegExp(
+  `^${PPM_LINE_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
+  "i",
+);
+
 /**
  * Assemble the document. The model's contribution is headings, phrasing and
  * order; attendance, money and office bearers are rendered straight from the
@@ -218,11 +241,10 @@ export function composeMinutesMd(
   const out: string[] = [];
   out.push(minutesTitle(lang, opts.orgName));
 
-  // C-1: the registration number rides directly under the letterhead. Line
-  // format matches stampIdentity's re-stamp exactly — one format, or the save
-  // action cannot recognise (and de-duplicate) it.
+  // C-1: the registration number rides directly under the letterhead —
+  // ppmLine() is the ONE format (I-5), shared with the save action's re-stamp.
   const ppm = (opts.ppmNo ?? "").trim();
-  if (ppm !== "") out.push(`No. Pendaftaran (PPM/ROS): ${ppm}`);
+  if (ppm !== "") out.push(ppmLine(ppm));
 
   // D-1: "Bil. ____ / 2026". The year is read off the confirmed meeting date;
   // the running number is a blank for the society to fill in (nobody told

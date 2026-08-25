@@ -34,6 +34,7 @@ import {
   MINUTES_TITLE_PATTERN,
   type MinutesLang,
 } from "@/lib/minutes-lang";
+import { ppmLine, PPM_LINE_PATTERN } from "@/lib/minutes-compose";
 
 export type SaveMinutesState = {
   error: string | null;
@@ -351,15 +352,14 @@ function stampIdentity(
   // Replace (or add) the letterhead, in whichever language it was written.
   // C-1: the registration line rides with the title — it is identity, so the
   // client's version of it is discarded and re-stamped like the title itself.
+  // I-5: ppmLine()/PPM_LINE_PATTERN are the ONE format, shared with compose.
   const ppm = (identity.ppmNo ?? "").trim();
   const title =
     minutesTitle(identity.lang, identity.orgName) +
-    (ppm !== "" ? `\nNo. Pendaftaran (PPM/ROS): ${ppm}` : "");
+    (ppm !== "" ? `\n${ppmLine(ppm)}` : "");
   const lines = body.split("\n");
   // Drop a pre-existing registration line (re-stamp, never duplicate).
-  const cleaned = lines.filter(
-    (l) => !/^No\. Pendaftaran \(PPM\/ROS\):/i.test(l.trim()),
-  );
+  const cleaned = lines.filter((l) => !PPM_LINE_PATTERN.test(l.trim()));
   const firstContent = cleaned.findIndex((l) => l.trim() !== "");
   if (
     firstContent !== -1 &&

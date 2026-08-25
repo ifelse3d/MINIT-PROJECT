@@ -54,10 +54,16 @@ export function LedgerReview() {
   const [askWhichPage, setAskWhichPage] = useState<File | null>(null);
   const pageFullyRecorded =
     !isSampleLedger && ledgerPageFullyRecorded(ledger.rows, addedRows);
-  /** Route one picked file: ask first when the last page is fully recorded. */
+  // I-1 (26 号报告 §3-1): a review still in progress gets its own question —
+  // "retake THIS page (replace)" vs "the NEXT page (append)". Before this,
+  // retaking a blurry photo APPENDED every row twice, and confirming both
+  // copies issued two serial receipts for one donation.
+  const reviewInProgress =
+    !isSampleLedger && ledgerSourceLabel !== null && ledger.rows.length > 0;
+  /** Route one picked file: ask first whenever rows are already on screen. */
   function pickLedgerFile(file: File | null) {
     if (!file) return;
-    if (pageFullyRecorded) {
+    if (pageFullyRecorded || reviewInProgress) {
       setAskWhichPage(file);
       return;
     }
@@ -217,49 +223,77 @@ export function LedgerReview() {
           </span>
         </div>
 
-        {/* 0-1 (26 号报告 2-1): which ledger page is this photo? */}
+        {/* 0-1 + I-1 (26 号报告 2-1 & §3-1): which ledger page is this photo?
+            Two situations, one panel: everything already recorded (0-1) asks
+            "new page or more of it"; a review mid-check (I-1) asks "retake
+            (replace) or next page (append)". Same mechanics — replace is
+            mode:"fresh", append is the ordinary merge. */}
         {askWhichPage && !aiBusy && (
           <div className="flex flex-col gap-3 rounded-xl border-2 border-amber-300 bg-amber-50 p-4 dark:bg-amber-400/10">
             <p className="text-base font-medium text-amber-900 dark:text-amber-100">
-              <Tri
-                bm="Semua baris di skrin ini sudah masuk buku daftar. Gambar baharu ini —"
-                zh="现在画面上的每一行都已经入了登记簿。这张新照片是 ——"
-                en="Every row on screen is already in the register. This new photo is —"
-              />
+              {pageFullyRecorded ? (
+                <Tri
+                  bm="Semua baris di skrin ini sudah masuk buku daftar. Gambar baharu ini —"
+                  zh="现在画面上的每一行都已经入了登记簿。这张新照片是 ——"
+                  en="Every row on screen is already in the register. This new photo is —"
+                />
+              ) : (
+                <Tri
+                  bm="Masih ada baris dalam semakan di skrin. Gambar baharu ini —"
+                  zh="画面上还有正在核对的行。这张新照片是 ——"
+                  en="There are rows still being checked on screen. This new photo is —"
+                />
+              )}
             </p>
             <div className="flex flex-wrap items-center gap-3">
               <Button
                 size="lg"
+                variant={pageFullyRecorded ? "default" : "outline"}
                 onClick={() => {
                   const file = askWhichPage;
                   setAskWhichPage(null);
-                  // A new page: the review is replaced wholesale. The register
-                  // keeps everything already recorded — nothing is lost.
+                  // Replace wholesale. The register keeps everything already
+                  // recorded — nothing is lost.
                   void onLedgerPicked(file, "fresh");
                 }}
               >
-                <Tri
-                  bm="Halaman BAHARU — mula semakan bersih"
-                  zh="新的一页帐 —— 开新的核对"
-                  en="A NEW page — start a clean review"
-                />
+                {pageFullyRecorded ? (
+                  <Tri
+                    bm="Halaman BAHARU — mula semakan bersih"
+                    zh="新的一页帐 —— 开新的核对"
+                    en="A NEW page — start a clean review"
+                  />
+                ) : (
+                  <Tri
+                    bm="AMBIL SEMULA halaman ini — ganti bacaan di skrin"
+                    zh="重拍这一页 —— 取代画面上的读取"
+                    en="RETAKE this page — replace what is on screen"
+                  />
+                )}
               </Button>
               <Button
-                variant="outline"
+                variant={pageFullyRecorded ? "outline" : "default"}
                 size="lg"
                 onClick={() => {
                   const file = askWhichPage;
                   setAskWhichPage(null);
-                  // More rows for the same review: the usual append. The rows
-                  // already recorded keep their "added" marks.
+                  // The usual append. Rows already recorded keep their marks.
                   void onLedgerPicked(file);
                 }}
               >
-                <Tri
-                  bm="Sambungan halaman YANG SAMA — tambah di bawah"
-                  zh="同一页帐的后续 —— 接在下面"
-                  en="More of the SAME page — append below"
-                />
+                {pageFullyRecorded ? (
+                  <Tri
+                    bm="Sambungan halaman YANG SAMA — tambah di bawah"
+                    zh="同一页帐的后续 —— 接在下面"
+                    en="More of the SAME page — append below"
+                  />
+                ) : (
+                  <Tri
+                    bm="Halaman SETERUSNYA — tambah di bawah"
+                    zh="下一页 —— 接在下面"
+                    en="The NEXT page — append below"
+                  />
+                )}
               </Button>
               <button
                 type="button"

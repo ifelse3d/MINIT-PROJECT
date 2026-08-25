@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   createContext,
@@ -44,6 +44,7 @@ import {
   compressPhoto,
   loadSavedMinutes,
   saveMinutes,
+  type PhotoPage,
   type SaveOutcome,
 } from "./minutes-storage";
 
@@ -90,7 +91,10 @@ export type MinutesStore = {
   // --- the extraction being worked on --------------------------------------
   extraction: MeetingNotesExtraction;
   sourceLabel: string | null;
+  /** The LAST page's photo (legacy consumers). Prefer photoPages. */
   photoDataUrl: string | null;
+  /** I-2: every merged page's photo, in reading order. */
+  photoPages: PhotoPage[];
   storageNote: SaveOutcome | null;
   aiBusy: boolean;
   aiError: string | null;
@@ -131,6 +135,9 @@ export type MinutesStore = {
   startTyping: () => void;
   /** True when this set of minutes was typed rather than photographed. */
   typedByHand: boolean;
+  /** I-3: a photo has been merged onto typed content — the missing-field
+   *  copy must stop blaming the photo alone. */
+  mixedInput: boolean;
   /**
    * A human has stated that these notes do not record who attended.
    *
@@ -284,13 +291,25 @@ export function MinutesProvider({
   const [sourceLabel, setSourceLabel] = useState<string | null>(null);
   /** Only true if the person deliberately tapped "show me an example". */
   const [showSample, setShowSample] = useState(false);
-  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
+  // I-2: EVERY merged page's photo (the last one doubles as the legacy
+  // single-photo slot in storage). Replaced wholesale on a fresh photo,
+  // appended to on a page-merge.
+  const [photoPages, setPhotoPages] = useState<PhotoPage[]>([]);
+  const photoDataUrl = photoPages.length > 0 ? photoPages[photoPages.length - 1].dataUrl : null;
   const [restored, setRestored] = useState(false);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [storageNote, setStorageNote] = useState<SaveOutcome | null>(null);
   const [typedByHand, setTypedByHand] = useState(false);
   const [noAttendeesRecorded, setNoAttendeesRecorded] = useState(false);
+  /**
+   * I-3 (26 号报告 §3-4): TRUE once a photo has been merged ONTO typed
+   * content. In that state an empty field is a field neither the typing nor
+   * the photo supplied — so the copy must stop claiming "the AI could not
+   * read N items" (they were never in the photo) and the absent-source must
+   * say the neutral truth ("neither the photo nor the notes have this").
+   */
+  const [mixedInput, setMixedInput] = useState(false);
 
   // --- Phase 7 save-to-history state. Declared HERE (not next to
   // saveToHistory below) because the restore effect and onPhotoPicked need the
@@ -340,7 +359,7 @@ export function MinutesProvider({
     if (handed) {
       setExtraction(handed.extraction as MeetingNotesExtraction);
       setSourceLabel(handed.fileName);
-      setPhotoDataUrl(null);
+      setPhotoPages([]);
       setRestored(true);
       return;
     }
@@ -348,7 +367,14 @@ export function MinutesProvider({
     if (saved) {
       setExtraction(saved.extraction);
       setSourceLabel(saved.sourceLabel);
-      setPhotoDataUrl(saved.photoDataUrl);
+      // I-2: pages when the blob has them; a legacy single photo reads as
+      // one page.
+      setPhotoPages(
+        saved.photoPages ??
+          (saved.photoDataUrl
+            ? [{ name: saved.sourceLabel ?? "photo", dataUrl: saved.photoDataUrl }]
+            : []),
+      );
       setTypedByHand(saved.typed === true);
       setNoAttendeesRecorded(saved.noAttendees === true);
       // 0-1 (26 号报告 2-1): "this meeting is already in History" must survive
@@ -379,17 +405,19 @@ export function MinutesProvider({
     const outcome = saveMinutes({
       extraction,
       sourceLabel,
+      // Legacy slot carries the last page for older readers of the blob.
       photoDataUrl,
+      photoPages,
       typed: typedByHand,
       noAttendees: noAttendeesRecorded,
       savedToHistory: alreadySaved,
     });
-    if (outcome === "photo-dropped" && photoDataUrl !== null) {
-      // Clear it from state too, otherwise the failing write repeats forever.
-      setPhotoDataUrl(null);
+    if (outcome === "photo-dropped" && photoPages.length > 0) {
+      // Clear them from state too, otherwise the failing write repeats forever.
+      setPhotoPages([]);
     }
     setStorageNote(outcome === "ok" ? null : outcome);
-  }, [extraction, sourceLabel, photoDataUrl, typedByHand, noAttendeesRecorded, restored, alreadySaved]);
+  }, [extraction, sourceLabel, photoDataUrl, photoPages, typedByHand, noAttendeesRecorded, restored, alreadySaved]);
 
   const findEventsInMinutes = useCallback(async () => {
     setEvError(null);
@@ -513,7 +541,16 @@ export function MinutesProvider({
       setSourceLabel((prev) =>
         continuing ? mergedSourceLabel(prev, file.name) : file.name,
       );
-      setPhotoDataUrl(await compressPhoto(file));
+      // I-2: keep EVERY page's photo — a merge appends, a fresh photo
+      // replaces. Functional update, same reason as the extraction merge.
+      const pageDataUrl = await compressPhoto(file);
+      setPhotoPages((prev) => {
+        const page = pageDataUrl ? [{ name: file.name, dataUrl: pageDataUrl }] : [];
+        return continuing ? [...prev, ...page] : page;
+      });
+      // I-3: a photo landing on TYPED content makes this a mixed document —
+      // remembered so the missing-field copy stops blaming the photo.
+      setMixedInput(continuing && typedByHand ? true : continuing ? mixedInput : false);
       setTypedByHand(false);
       // A new photo is a new meeting — but a page ADDED to this meeting is
       // not: what somebody said about ITS attendance still stands, unless the
@@ -533,7 +570,7 @@ export function MinutesProvider({
     // `continuing` reads these at shutter time (that decision belongs to the
     // moment the photo was taken); the merge itself is a functional update, so
     // it can never be stale no matter what happens while the model reads.
-  }, [t, extraction, sourceLabel, typedByHand]);
+  }, [t, extraction, sourceLabel, typedByHand, mixedInput]);
 
   /**
    * Nothing to photograph — start from a blank sheet and type.
@@ -547,12 +584,13 @@ export function MinutesProvider({
   const startTyping = useCallback(() => {
     setExtraction(emptyMeetingNotesExtraction);
     setSourceLabel(null);
-    setPhotoDataUrl(null);
+    setPhotoPages([]);
     setShowSample(false);
     setEvRows(null);
     setAiError(null);
     setTypedByHand(true);
     setNoAttendeesRecorded(false);
+    setMixedInput(false);
     // 0-1: a blank sheet is a NEW document — the previous meeting's save mark
     // must not travel onto it.
     setSaveResult(null);
@@ -565,8 +603,9 @@ export function MinutesProvider({
     setSourceLabel(null);
     setTypedByHand(false);
     setNoAttendeesRecorded(false);
+    setMixedInput(false);
     setShowSample(false);
-    setPhotoDataUrl(null);
+    setPhotoPages([]);
     setEvRows(null);
     setAiError(null);
     setStorageNote(null);
@@ -588,7 +627,8 @@ export function MinutesProvider({
     setSourceLabel(null);
     setTypedByHand(false);
     setNoAttendeesRecorded(false);
-    setPhotoDataUrl(null);
+    setMixedInput(false);
+    setPhotoPages([]);
     setEvRows(null);
     setAiError(null);
     // 0-1: the example was never saved; leaking the real meeting's "✓ Saved"
@@ -649,10 +689,19 @@ export function MinutesProvider({
         // exact thing Hard Rule 1 exists to stop.
         snippet: typedByHand
           ? t("tiada / tidak berkenaan", "没有这一项", "none / not applicable")
-          : t("tiada dalam nota", "笔记里没写", "not written down in the notes"),
+          : mixedInput
+            ? // I-3: a mixed document has BOTH sources; claiming "not in the
+              // notes" for a field that was never the notes' to carry would
+              // be inventing provenance. The neutral truth instead.
+              t(
+                "tiada dalam gambar mahupun taipan",
+                "照片与笔记都没有",
+                "in neither the photo nor the typing",
+              )
+            : t("tiada dalam nota", "笔记里没写", "not written down in the notes"),
       };
     },
-    [t, typedByHand],
+    [t, typedByHand, mixedInput],
   );
 
   // --- adding and removing rows by hand ------------------------------------
@@ -980,6 +1029,7 @@ export function MinutesProvider({
         extraction,
         sourceLabel,
         photoDataUrl,
+        photoPages,
         storageNote,
         aiBusy,
         aiError,
@@ -990,6 +1040,7 @@ export function MinutesProvider({
         onPhotoPicked,
         startTyping,
         typedByHand,
+        mixedInput,
         noAttendeesRecorded,
         setNoAttendeesRecorded,
         attendanceUnsettled,

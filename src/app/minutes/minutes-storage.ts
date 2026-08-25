@@ -29,10 +29,22 @@ export function minutesStoreKey(): string {
   return scopedKey("minutes:v1");
 }
 
+/** I-2 (26 号报告 §3-2): one merged page, with the photo it came from. */
+export type PhotoPage = { name: string; dataUrl: string };
+
 export type SavedMinutes = {
   extraction: MeetingNotesExtraction;
   sourceLabel: string | null;
+  /** Legacy single-photo slot — still written (the LAST page) so an older
+   *  build reading this blob keeps showing something. */
   photoDataUrl: string | null;
+  /**
+   * I-2: EVERY merged page's photo, in reading order. Before this, a
+   * multi-page merge kept only the last photo — so "view the original"
+   * opened page 2 while the amber field being checked came from page 1.
+   * Optional: older blobs read as "one page at most".
+   */
+  photoPages?: PhotoPage[];
   /**
    * True when this set of minutes was TYPED, not photographed — so there is no
    * file name and no original image, and that is correct rather than missing.
@@ -88,7 +100,7 @@ export function saveMinutes(state: SavedMinutes): SaveOutcome {
     try {
       localStorage.setItem(
         minutesStoreKey(),
-        JSON.stringify({ ...state, photoDataUrl: null }),
+        JSON.stringify({ ...state, photoDataUrl: null, photoPages: [] }),
       );
       return "photo-dropped";
     } catch {

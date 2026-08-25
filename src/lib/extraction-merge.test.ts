@@ -192,4 +192,11 @@ describe("mergedSourceLabel", () => {
     );
     expect(long).toBe("3 × 📄");
   });
+
+  // I-4③ (26 号报告 §3-6): the collapsed badge used to be re-split on " ＋ ",
+  // which counts one thing — so 6 pages displayed as 4, shrinking each merge.
+  it("keeps counting UP after collapsing", () => {
+    expect(mergedSourceLabel("3 × 📄", "page4.jpg")).toBe("4 × 📄");
+    expect(mergedSourceLabel("11 × 📄", "page12.jpg")).toBe("12 × 📄");
+  });
 });
