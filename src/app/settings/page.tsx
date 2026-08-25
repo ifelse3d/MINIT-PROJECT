@@ -271,6 +271,34 @@ export default async function SettingsPage() {
             page that explains a missing configuration was reachable only by
             typing the URL, which is exactly what a beginner cannot do. */}
         <SettingsSection title={<Tri bm="Sistem" zh="系统" en="System" />}>
+          {/* C-2 (anti-impersonation v1): the report channel. Only rendered
+              when a contact address is configured — a report button that goes
+              nowhere is worse than none. */}
+          {process.env.NEXT_PUBLIC_CONTACT_EMAIL && (
+            <SettingsRow
+              label={
+                <Tri
+                  bm="Laporkan penyalahgunaan"
+                  zh="检举冒用"
+                  en="Report impersonation"
+                />
+              }
+              help={
+                <Tri
+                  bm="Jika seseorang membuka pertubuhan atas nama persatuan anda tanpa hak, laporkan kepada kami. Membuka pertubuhan atas nama orang lain melanggar Syarat Penggunaan — akaun boleh digantung dan kami bekerjasama dengan pihak berkuasa."
+                  zh="如果有人未经授权冒用贵社团的名义在 Minit 开机构，请向我们检举。冒名开机构违反《使用条款》—— 账号会被封禁，我们也会配合执法单位。"
+                  en="If someone has set up an organisation in your society's name without authority, report it to us. Impersonating an organisation breaches the Terms of Use — accounts are suspended and we cooperate with the authorities."
+                />
+              }
+            >
+              <a
+                href={`mailto:${process.env.NEXT_PUBLIC_CONTACT_EMAIL}?subject=${encodeURIComponent("Laporan penyalahgunaan / 检举冒用 / Impersonation report")}`}
+                className="text-base underline underline-offset-4"
+              >
+                <Tri bm="Hantar laporan" zh="发送检举" en="Send a report" /> →
+              </a>
+            </SettingsRow>
+          )}
           <SettingsRow
             label={
               <Tri

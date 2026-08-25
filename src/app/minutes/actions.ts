@@ -142,6 +142,9 @@ export async function saveConfirmedMinutes(input: {
           confirmedBy: identity.confirmedBy,
           dateIso: todayIso,
           lang,
+          // C-1: the PPM/ROS number under the letterhead when the admin
+          // entered one — a reader can check it against the public register.
+          ppmNo: identity.ppmNo,
         })
       : renderMinutesDraftBm(extraction, {
           orgName: identity.orgName,
@@ -318,6 +321,8 @@ function stampIdentity(
     confirmedBy: string;
     dateIso: string;
     lang: MinutesLang;
+    /** C-1: printed under the letterhead when present; null prints nothing. */
+    ppmNo?: string | null;
   },
 ): string {
   let body = markdown.replace(/\r\n/g, "\n").trim();
@@ -331,17 +336,26 @@ function stampIdentity(
   }
 
   // Replace (or add) the letterhead, in whichever language it was written.
-  const title = minutesTitle(identity.lang, identity.orgName);
+  // C-1: the registration line rides with the title — it is identity, so the
+  // client's version of it is discarded and re-stamped like the title itself.
+  const ppm = (identity.ppmNo ?? "").trim();
+  const title =
+    minutesTitle(identity.lang, identity.orgName) +
+    (ppm !== "" ? `\nNo. Pendaftaran (PPM/ROS): ${ppm}` : "");
   const lines = body.split("\n");
-  const firstContent = lines.findIndex((l) => l.trim() !== "");
+  // Drop a pre-existing registration line (re-stamp, never duplicate).
+  const cleaned = lines.filter(
+    (l) => !/^No\. Pendaftaran \(PPM\/ROS\):/i.test(l.trim()),
+  );
+  const firstContent = cleaned.findIndex((l) => l.trim() !== "");
   if (
     firstContent !== -1 &&
-    MINUTES_TITLE_PATTERN.test(lines[firstContent].trim())
+    MINUTES_TITLE_PATTERN.test(cleaned[firstContent].trim())
   ) {
-    lines[firstContent] = title;
-    body = lines.join("\n").trim();
+    cleaned[firstContent] = title;
+    body = cleaned.join("\n").trim();
   } else {
-    body = `${title}\n\n${body}`.trim();
+    body = `${title}\n\n${cleaned.join("\n")}`.trim();
   }
 
   const audit = minutesAuditLine(

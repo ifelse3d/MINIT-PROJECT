@@ -24,6 +24,7 @@ import "server-only";
 
 import { getActiveOrg } from "@/lib/active-org";
 import { getSupabaseServer, getSessionUser } from "@/db/supabase-server";
+import { readOrgTypeFlags } from "@/lib/org-flags";
 import { joinUserError } from "@/lib/user-errors";
 
 export type TaxExemptStatus = "none" | "s44_6" | "pure_religious";
@@ -35,6 +36,11 @@ export type DocumentIdentity = {
   taxStatus: TaxExemptStatus;
   /** The real human whose name goes on the audit line (Hard Rule 8). */
   confirmedBy: string;
+  /** C-1 (anti-impersonation v1): the PPM/ROS registration number the admin
+   *  entered, printed on official letterheads so a reader can check it.
+   *  null = not entered (or the column is not applied yet) — print nothing,
+   *  never a placeholder. */
+  ppmNo: string | null;
 };
 
 /** Fail safe: an unrecognised value must never imply tax-deductibility. */
@@ -68,11 +74,17 @@ export async function getDocumentIdentity(): Promise<DocumentIdentity | null> {
     (member?.name as string | undefined)?.trim() || user.email || "";
   if (confirmedBy === "") return null;
 
+  // C-1: its own tolerant read (org-flags), NOT a column added to
+  // getActiveOrg's select — a missing column must degrade to "no number on
+  // the letterhead", never to a broken document route (STATE §6).
+  const { ppmNo } = await readOrgTypeFlags(org.id);
+
   return {
     orgId: org.id,
     orgName: org.name,
     taxStatus: narrowTaxStatus(org.taxExemptStatus),
     confirmedBy,
+    ppmNo,
   };
 }
 

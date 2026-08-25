@@ -61,6 +61,9 @@ export async function POST(request: Request): Promise<Response> {
       {
         ...parsed.data,
         orgName: identity.orgName,
+        // C-1: the registration number is identity — the DB value (admin-
+        // entered) wins over whatever the body claimed.
+        orgRegistrationNo: identity.ppmNo ?? parsed.data.orgRegistrationNo,
         // Only a confirmed extract carries a certifying name.
         confirmedBy:
           parsed.data.status === "confirmed" ? identity.confirmedBy : undefined,

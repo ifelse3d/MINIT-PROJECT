@@ -97,11 +97,21 @@ kami.
 Jangan gunakan Minit untuk menghasilkan dokumen palsu, memuat naik data yang
 anda tiada kuasa untuk memprosesnya, atau cuba memintas had penggunaan AI.
 
+**Penyamaran pertubuhan.** Membuka pertubuhan dalam Minit atas nama persatuan,
+pertubuhan atau badan yang anda tiada kuasa untuk mewakilinya adalah
+pelanggaran syarat ini. Akaun yang berbuat demikian akan digantung, rekod yang
+berkaitan boleh dibekukan sebagai bahan bukti, dan kami akan bekerjasama
+dengan pihak berkuasa. Setiap resit dan dokumen yang dihasilkan menyimpan
+jejak audit — akaun yang mengeluarkannya, e-melnya dan cap masa — dan jejak
+itu boleh diserahkan kepada pihak berkuasa apabila dituntut secara sah.
+
 ## 9. Had penggunaan AI
 
-Setiap tindakan AI dikira terhadap kuota pertubuhan anda. **Permintaan yang
-kami tolak kerana ia di luar skop tidak akan mengurangkan kuota anda.**
-Baki kuota sentiasa dipaparkan.
+Setiap tindakan AI dikira terhadap kuota pertubuhan anda dan baki kuota
+sentiasa dipaparkan. Tindakan hanya dikembalikan apabila permintaan anda
+langsung tidak sampai kepada penyedia AI (contohnya gangguan rangkaian);
+permintaan yang telah dibaca oleh AI — termasuk yang kami tolak sebagai di
+luar skop selepas membacanya — tetap dikira.
 
 ## 10. Penamatan
 
@@ -189,10 +199,21 @@ Processing of personal data is governed by our **Personal Data Protection Notice
 Do not use Minit to produce false documents, to upload data you have no
 authority to process, or to attempt to bypass AI usage limits.
 
+**Impersonating an organisation.** Setting up an organisation in Minit in the
+name of a society, organisation or body you have no authority to represent is
+a breach of these terms. Accounts that do so will be suspended, the related
+records may be frozen as evidence, and we will cooperate with the
+authorities. Every receipt and document generated carries an audit trail —
+the issuing account, its email and a timestamp — and that trail can be
+provided to the authorities on lawful request.
+
 ## 9. AI usage limits
 
-Each AI action counts against your organisation's quota. **Requests we decline
-as out of scope do not reduce your quota.** Your remaining quota is always shown.
+Each AI action counts against your organisation's quota, and your remaining
+quota is always shown. An action is refunded only when your request never
+reached the AI provider at all (for example a network failure); a request the
+AI did read — including one we decline as out of scope after reading it —
+still counts.
 
 ## 10. Termination
 
@@ -215,7 +236,7 @@ The laws of **Malaysia**. Courts of **[[city]]**.
 
 /** Short hash of the text above. This is what a person's consent is recorded
  *  against, so an edited clause is visibly a different version. */
-export const TERMS_VERSION = "52c5ff6e84a8";
+export const TERMS_VERSION = "c10170f71af1";
 
 /** legal/privacy-notice-BM-EN.md — verbatim. */
 export const PRIVACY_MARKDOWN = `# NOTIS PERLINDUNGAN DATA PERIBADI / PERSONAL DATA PROTECTION NOTICE

@@ -95,6 +95,9 @@ export async function POST(request: Request): Promise<Response> {
     collector: data.donation.collector_name ?? identity.confirmedBy,
     confirmedOnIso: issuedIso,
     orgName: identity.orgName,
+    // C-1: the admin-entered PPM/ROS number on the letterhead (undefined =
+    // entered nothing → the line simply does not print).
+    orgRegistrationNo: identity.ppmNo ?? undefined,
     taxStatus: identity.taxStatus,
     confirmedBy: identity.confirmedBy,
   });

@@ -76,6 +76,8 @@ export async function POST(request: Request): Promise<Response> {
     {
       ...parsed.data,
       orgName: identity.orgName,
+      // C-1: the DB value (admin-entered) wins over the body's claim.
+      orgRegistrationNo: identity.ppmNo ?? parsed.data.orgRegistrationNo,
       confirmed: parsed.data.confirmed
         ? { by: identity.confirmedBy, onIso: parsed.data.confirmed.onIso }
         : parsed.data.confirmed,
