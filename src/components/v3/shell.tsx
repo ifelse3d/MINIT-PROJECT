@@ -23,6 +23,7 @@ import { LanguageSwitcher, Tri } from "@/components/language-provider";
 import { FirstRunFlow } from "@/components/first-run-flow";
 import {
   PRIMARY_NAV,
+  SIDEBAR_NAV,
   groupHasActiveChild,
   isActivePath,
   visibleGroupChildren,
@@ -147,8 +148,10 @@ function Rail({ pathname }: { pathname: string }) {
       </div>
 
       <nav className="v2-scroll flex-1 overflow-y-auto px-3">
+        {/* B-1 (J 8/26 #3, 拍板④): SEVEN groups, spread out. Group names are
+            HEADINGS — not clickable, always expanded. No "More" drawer. */}
         <ul className="flex flex-col gap-1">
-          {PRIMARY_NAV.map((entry) => {
+          {SIDEBAR_NAV.map((entry) => {
             if (entry.kind === "item") {
               const active = isActivePath(pathname, entry.item.href, entry.item.exact);
               const Icon = entry.item.icon;
@@ -170,50 +173,52 @@ function Rail({ pathname }: { pathname: string }) {
               );
             }
 
-            const groupActive = groupHasActiveChild(entry, pathname);
             const children = railEntryChildren(entry, einvoisVisible);
             const GroupIcon = entry.icon;
-            const first = children[0];
+            // Lights while you are ANYWHERE inside the group — including the
+            // rail-only steps (/minutes/attendance …) that render no row here,
+            // so the sidebar never goes silent about where you are.
+            const groupActive = groupHasActiveChild(entry, pathname);
             return (
-              <li key={entry.id} className="mt-1">
-                {/* The group header is a LINK to its first page — a heading you
-                    cannot tap is a dead control. */}
-                <Link
-                  href={first?.href ?? "/"}
+              <li key={entry.id} className="mt-2">
+                {/* A heading, deliberately NOT a link (拍板④ "組名不可點"):
+                    every destination is one of the rows right below it, so a
+                    clickable header would be a second door to the same room. */}
+                <div
                   className={cn(
-                    "flex min-h-11 items-center gap-3 rounded-xl px-3 text-base font-semibold transition-colors",
+                    "flex min-h-8 items-center gap-2 px-3 text-sm font-semibold uppercase tracking-wide",
                     groupActive
                       ? "text-[color:var(--v2-primary)]"
-                      : "text-[color:var(--v2-text)] hover:bg-[color:var(--v2-primary-soft)]",
+                      : "text-[color:var(--v2-text-soft)]",
                   )}
                 >
-                  <GroupIcon className="h-5 w-5 shrink-0" strokeWidth={1.8} />
+                  <GroupIcon className="h-4 w-4 shrink-0" strokeWidth={1.8} />
                   <Tri bm={entry.bm} zh={entry.zh} en={entry.en} />
-                </Link>
-                {/* Steps show while you are inside the flow; More lists always
-                    (it is a folder, not a flow). */}
-                {(groupActive || entry.id === "more") && (
-                  <ul className="mb-1 mt-0.5 flex flex-col gap-0.5 border-l border-[color:var(--v2-border)] pl-4 ml-5">
-                    {children.map((child) => {
-                      const active = isActivePath(pathname, child.href, child.exact);
-                      return (
-                        <li key={child.href}>
-                          <Link
-                            href={child.href}
-                            className={cn(
-                              "flex min-h-9 items-center rounded-lg px-2.5 text-[0.95rem] transition-colors",
-                              active
-                                ? "bg-[color:var(--v2-primary-fill)] font-medium text-white"
-                                : "text-[color:var(--v2-text-soft)] hover:bg-[color:var(--v2-primary-soft)] hover:text-[color:var(--v2-text)]",
-                            )}
-                          >
-                            <Tri bm={child.bm} zh={child.zh} en={child.en} />
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
+                </div>
+                {/* Always expanded — a group that hides its rows until you are
+                    inside it is a junk drawer with extra steps. */}
+                <ul className="flex flex-col gap-0.5">
+                  {children.map((child) => {
+                    const active = isActivePath(pathname, child.href, child.exact);
+                    const ChildIcon = child.icon;
+                    return (
+                      <li key={child.href}>
+                        <Link
+                          href={child.href}
+                          className={cn(
+                            "flex min-h-10 items-center gap-3 rounded-xl px-3 pl-5 text-[0.95rem] transition-colors",
+                            active
+                              ? "bg-[color:var(--v2-primary-fill)] font-medium text-white"
+                              : "text-[color:var(--v2-text)] hover:bg-[color:var(--v2-primary-soft)]",
+                          )}
+                        >
+                          <ChildIcon className="h-4.5 w-4.5 shrink-0" strokeWidth={1.8} />
+                          <Tri bm={child.bm} zh={child.zh} en={child.en} />
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
               </li>
             );
           })}

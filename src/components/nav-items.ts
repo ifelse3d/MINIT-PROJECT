@@ -8,6 +8,7 @@ import {
   FileSignature,
   FileCheck,
   FileText,
+  Gauge,
   History,
   Home,
   Landmark,
@@ -26,21 +27,22 @@ import {
 // ---------------------------------------------------------------------------
 // The ONE source of truth for navigation.
 //
-// 2026-08-25 (Stage R redesign, J: "手机 19 格砍成 4"). The whole app now
-// navigates through FOUR entries, identical on desktop (left rail) and phone
-// (bottom tab bar):
+// B-1 (work order 27, J 2026-08-26 #3, 拍板④): the DESKTOP sidebar shows
+// SEVEN groups, spread out — group names are headings (not clickable), always
+// expanded, no "More" junk drawer:
 //
-//   1. Home          — "what do I do today"
-//   2. Minutes       — the minutes flow, in the order it is done
-//   3. Money         — the money flow, in the order it is done
-//   4. More          — everything occasional: calendar, filings, constitution,
-//                      members, glossary, photos, history, tax file, account
+//   主頁 | 會議記錄 | 錢 | 申報 | 組織 | 記錄 | 設置    → SIDEBAR_NAV
+//
+// The PHONE keeps its FOUR bottom tabs untouched (J 2026-08-24 decision,
+// re-confirmed 8/26): Home / Minutes / Money / More → PRIMARY_NAV. The /more
+// page renders the same seven-group layout the desktop shows.
 //
 // Names follow the PERSON's job, not our pipeline ("New minutes", never
-// "Photo & check"). e-Invois lives under More and only shows when the
-// organisation says it needs it (default OFF — J 2026-08-24: optional;
-// eROSES is the legal requirement and stays first). /agm-pack keeps its
-// route but leaves every menu (hidden) — same decision.
+// "Photo & check"). e-Invois only shows when the organisation switched it on
+// (default OFF — J 2026-08-24: optional; eROSES is the legal requirement).
+// railOnly still governs the MINUTES mid-flow steps (attendance, the
+// document); the money steps became visible sidebar rows on 8/26 — J listed
+// them by name in the 錢 group.
 // ---------------------------------------------------------------------------
 
 export type NavItem = {
@@ -83,14 +85,17 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/minutes/attendance", icon: ClipboardCheck, bm: "Kehadiran", zh: "出席者", en: "Attendance", railOnly: true },
   { href: "/minutes/document", icon: FileSignature, bm: "Dokumen siap", zh: "做好的文件", en: "The document", railOnly: true },
   { href: "/minutes/history", icon: History, bm: "Minit lama", zh: "以前的记录", en: "Past minutes" },
-  // Money flow.
-  { href: "/money", icon: Wallet, bm: "Rekod derma", zh: "记录捐款", en: "Record donations", exact: true },
-  { href: "/money/receipts", icon: Receipt, bm: "Jana resit", zh: "开收据", en: "Issue receipts", railOnly: true },
-  { href: "/money/custody", icon: Coins, bm: "Serah tunai", zh: "交现金", en: "Hand over cash", railOnly: true },
+  // Money — B-1 (8/26): with expenses and the statement coming, the index is
+  // "record income", and the once rail-only steps are sidebar rows J listed
+  // by name (记收入·开收据·交现金·收据历史).
+  { href: "/money", icon: Wallet, bm: "Rekod wang masuk", zh: "记收入", en: "Record income", exact: true },
+  { href: "/money/receipts", icon: Receipt, bm: "Jana resit", zh: "开收据", en: "Issue receipts" },
+  { href: "/money/custody", icon: Coins, bm: "Serah tunai", zh: "交现金", en: "Hand over cash" },
   { href: "/money/history", icon: ClipboardList, bm: "Sejarah resit", zh: "收据历史", en: "Receipt history" },
-  // More — occasional pages.
-  { href: "/calendar", icon: CalendarClock, bm: "Kalendar", zh: "日历", en: "Calendar" },
+  // Filings & dates.
+  { href: "/calendar", icon: CalendarClock, bm: "Kalendar & tarikh akhir", zh: "日历与死线", en: "Calendar & deadlines" },
   { href: "/filings", icon: FileCheck, bm: "Pemfailan eROSES", zh: "eROSES 申报", en: "eROSES filings" },
+  // The organisation's own facts.
   { href: "/constitution", icon: ScrollText, bm: "Perlembagaan", zh: "章程", en: "Constitution", exact: true },
   { href: "/constitution/clauses", icon: BookOpen, bm: "Fasal penuh", zh: "条文全文", en: "All clauses" },
   { href: "/members", icon: Users, bm: "Ahli", zh: "成员", en: "Members" },
@@ -100,8 +105,11 @@ export const NAV_ITEMS: NavItem[] = [
   // e-Invois: optional (org switch, default off). The >RM10,000 individual
   // e-invois warning inside the money pages stays regardless of this flag.
   { href: "/money/einvois", icon: Banknote, bm: "Fail cukai (e-Invois)", zh: "税务文件（e-Invois）", en: "Tax file (e-Invois)", einvoisOnly: true },
-  { href: "/orgs", icon: Building2, bm: "Pertubuhan", zh: "组织", en: "Organisations" },
-  { href: "/settings", icon: Settings, bm: "Tetapan", zh: "设置", en: "Settings" },
+  { href: "/orgs", icon: Building2, bm: "Pertubuhan & cawangan", zh: "组织与分会", en: "Organisations & branches" },
+  // C-3: the plan-and-usage page gets its own sidebar row (settings group).
+  // /settings is `exact` so standing on /settings/plan lights ONE row.
+  { href: "/settings/plan", icon: Gauge, bm: "Pelan & penggunaan", zh: "方案与用量", en: "Plan & usage" },
+  { href: "/settings", icon: Settings, bm: "Tetapan", zh: "设置", en: "Settings", exact: true },
   // Route kept, menu entry removed (J 2026-08-24: AGM out of the nav for now).
   { href: "/agm-pack", icon: Landmark, bm: "Pek AGM", zh: "年度大会", en: "AGM", hidden: true },
 ];
@@ -132,8 +140,10 @@ export type NavEntry =
     };
 
 /**
- * THE four entries — the desktop rail and the phone tab bar both render
- * exactly this. Four, not nineteen (J, 2026-08-24).
+ * THE PHONE's four entries — the bottom tab bar renders exactly this. Four,
+ * not nineteen (J 2026-08-24, kept untouched on 8/26: 拍板④ "手機底欄維持
+ * 4 格不動"). The desktop sidebar renders SIDEBAR_NAV below instead; the
+ * /more page shows the same grouped layout as the desktop.
  */
 export const PRIMARY_NAV: NavEntry[] = [
   { kind: "item", item: byHref("/") },
@@ -183,14 +193,104 @@ export const PRIMARY_NAV: NavEntry[] = [
       byHref("/history"),
       byHref("/money/einvois"),
       byHref("/orgs"),
+      byHref("/settings/plan"),
       byHref("/settings"),
     ],
   },
 ];
 
-/** Every page the primary nav links to, groups flattened. */
+/**
+ * THE DESKTOP's seven groups (B-1, J 8/26 #3, 拍板④) — and the layout the
+ * /more page shows. Group names are HEADINGS: not clickable, always expanded.
+ * The 錢 rows are the ones J listed by name; /money/expenses and
+ * /money/report join the group when their real pages land (Stages E and F) —
+ * a menu row pointing at a stub would be a dressed-up dead link.
+ */
+export const SIDEBAR_NAV: NavEntry[] = [
+  { kind: "item", item: byHref("/") },
+  {
+    kind: "group",
+    id: "minutes",
+    icon: FileText,
+    bm: "Minit mesyuarat",
+    zh: "会议记录",
+    en: "Meeting minutes",
+    children: [
+      byHref("/minutes"),
+      byHref("/minutes/attendance"),
+      byHref("/minutes/document"),
+      byHref("/minutes/history"),
+    ],
+  },
+  {
+    kind: "group",
+    id: "money",
+    icon: Wallet,
+    bm: "Wang",
+    zh: "钱",
+    en: "Money",
+    children: [
+      byHref("/money"),
+      byHref("/money/receipts"),
+      byHref("/money/custody"),
+      byHref("/money/einvois"),
+      byHref("/money/history"),
+    ],
+  },
+  {
+    kind: "group",
+    id: "filings",
+    icon: FileCheck,
+    bm: "Pemfailan",
+    zh: "申报",
+    en: "Filings",
+    children: [byHref("/filings"), byHref("/calendar")],
+  },
+  {
+    kind: "group",
+    id: "organisation",
+    icon: Building2,
+    bm: "Pertubuhan",
+    zh: "组织",
+    en: "Organisation",
+    children: [
+      byHref("/members"),
+      byHref("/constitution"),
+      byHref("/constitution/clauses"),
+      byHref("/glossary"),
+      byHref("/orgs"),
+    ],
+  },
+  {
+    kind: "group",
+    id: "records",
+    icon: History,
+    bm: "Rekod",
+    zh: "记录",
+    en: "Records",
+    children: [byHref("/history"), byHref("/inbox")],
+  },
+  {
+    kind: "group",
+    id: "settings",
+    icon: Settings,
+    bm: "Tetapan",
+    zh: "设置",
+    en: "Settings",
+    children: [byHref("/settings/plan"), byHref("/settings")],
+  },
+];
+
+/** Every page the phone nav links to, groups flattened. */
 export function navPages(): NavItem[] {
   return PRIMARY_NAV.flatMap((entry) =>
+    entry.kind === "item" ? [entry.item] : entry.children,
+  );
+}
+
+/** Every page the desktop sidebar links to, groups flattened. */
+export function sidebarPages(): NavItem[] {
+  return SIDEBAR_NAV.flatMap((entry) =>
     entry.kind === "item" ? [entry.item] : entry.children,
   );
 }
@@ -240,17 +340,22 @@ export function sectionWords(href: string): { bm: string; zh: string; en: string
 
 /**
  * Sanity guard used in tests: every NAV_ITEM that is not `hidden` appears
- * exactly once across the four primary entries — no page silently drops out of
- * every menu, and none is listed twice. `hidden` items must NOT appear.
+ * exactly once in the PHONE nav (PRIMARY_NAV) AND exactly once in the DESKTOP
+ * sidebar (SIDEBAR_NAV) — no page silently drops out of either surface, and
+ * none is listed twice. `hidden` items must NOT appear in either.
  */
 export function menusCoverAllItems(): boolean {
-  const listed = navPages().map((i) => i.href);
-  const unique = new Set(listed);
   const expected = NAV_ITEMS.filter((i) => !i.hidden);
-  return (
-    listed.length === unique.size &&
-    unique.size === expected.length &&
-    expected.every((i) => unique.has(i.href)) &&
-    NAV_ITEMS.filter((i) => i.hidden).every((i) => !unique.has(i.href))
-  );
+  const hiddenHrefs = NAV_ITEMS.filter((i) => i.hidden).map((i) => i.href);
+  const covers = (pages: NavItem[]): boolean => {
+    const listed = pages.map((i) => i.href);
+    const unique = new Set(listed);
+    return (
+      listed.length === unique.size &&
+      unique.size === expected.length &&
+      expected.every((i) => unique.has(i.href)) &&
+      hiddenHrefs.every((href) => !unique.has(href))
+    );
+  };
+  return covers(navPages()) && covers(sidebarPages());
 }

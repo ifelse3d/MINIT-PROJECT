@@ -28,7 +28,10 @@ export const CATEGORY_STYLE: Record<
   uploads: { dot: "bg-amber-500", ring: "", bm: "Gambar asal", zh: "原始照片", en: "Original photos", future: false },
   agm: { dot: "bg-indigo-500", ring: "", bm: "Pek AGM", zh: "年度大会", en: "AGM", future: false },
   constitution: { dot: "bg-teal-600", ring: "", bm: "Perlembagaan", zh: "章程", en: "Constitution", future: false },
-  calendar: { dot: "bg-sky-500", ring: "", bm: "Kalendar", zh: "日历", en: "Calendar", future: false },
+  // B-1 (8/26): the sidebar row is named "Calendar & deadlines" — the feed
+  // chip carries the same three words so the section never changes name
+  // between screens (the consistency rule this file exists for).
+  calendar: { dot: "bg-sky-500", ring: "", bm: "Kalendar & tarikh akhir", zh: "日历与死线", en: "Calendar & deadlines", future: false },
   qa: { dot: "bg-rose-500", ring: "", bm: "Soal jawab", zh: "提问与回答", en: "Q&A", future: false },
   deadline: { dot: "", ring: "border-red-500", bm: "Tarikh akhir", zh: "截止", en: "Deadline", future: true },
   event: { dot: "", ring: "border-sky-500", bm: "Acara", zh: "活动", en: "Event", future: true },

@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   NAV_ITEMS,
   PRIMARY_NAV,
+  SIDEBAR_NAV,
   groupHasActiveChild,
   isActivePath,
   menusCoverAllItems,
   navPages,
   sectionWords,
+  sidebarPages,
   visibleGroupChildren,
 } from "./nav-items";
 import { CATEGORY_STYLE } from "@/lib/activity-labels";
@@ -14,19 +16,81 @@ import { CATEGORY_STYLE } from "@/lib/activity-labels";
 // NAV_ITEMS stays the single source of truth for which pages exist; PRIMARY_NAV
 // decides where each one is reached from. These tests keep them in sync so a
 // page can never silently drop out of every menu, or appear twice.
-describe("menu structure (Stage R, 2026-08-25)", () => {
-  it("lists every non-hidden page exactly once across the four entries", () => {
+describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => {
+  it("lists every non-hidden page exactly once on BOTH surfaces", () => {
     expect(menusCoverAllItems()).toBe(true);
   });
 
-  // FOUR entries — Home, Minutes, Money, More — identical on the desktop rail
-  // and the phone tab bar (J, 2026-08-24: "手机 19 格砍成 4"). The assertion
-  // exists so a fifth entry is a decision somebody makes, not something that
-  // happens.
-  it("keeps the primary nav to exactly four entries", () => {
+  // FOUR phone tabs — Home, Minutes, Money, More (J 2026-08-24: "手机 19 格
+  // 砍成 4", re-confirmed untouched on 8/26: 拍板④). The assertion exists so
+  // a fifth tab is a decision somebody makes, not something that happens.
+  it("keeps the phone nav to exactly four entries", () => {
     expect(PRIMARY_NAV).toHaveLength(4);
     expect(PRIMARY_NAV[0].kind).toBe("item");
     expect(PRIMARY_NAV.filter((e) => e.kind === "group")).toHaveLength(3);
+  });
+
+  // SEVEN desktop entries (B-1, J 8/26 #3): Home + six always-expanded groups,
+  // no "More" drawer. The 錢 group's rows are the ones J listed by name.
+  it("keeps the desktop sidebar to Home plus six groups, as J listed them", () => {
+    expect(SIDEBAR_NAV).toHaveLength(7);
+    expect(SIDEBAR_NAV[0].kind).toBe("item");
+    const ids = SIDEBAR_NAV.flatMap((e) => (e.kind === "group" ? [e.id] : []));
+    expect(ids).toEqual([
+      "minutes",
+      "money",
+      "filings",
+      "organisation",
+      "records",
+      "settings",
+    ]);
+  });
+
+  it("composes the sidebar groups exactly as 拍板④ enumerates them", () => {
+    const byId = (id: string) => {
+      const g = SIDEBAR_NAV.find((e) => e.kind === "group" && e.id === id);
+      if (!g || g.kind !== "group") throw new Error(`expected group ${id}`);
+      return g;
+    };
+    // 錢: 记收入 · 开收据 · 交现金 · 税务 e-Invois(开关) · 收据历史.
+    // (/money/expenses and /money/report join when their real pages land —
+    // Stages E and F.)
+    expect(byId("money").children.map((c) => c.href)).toEqual([
+      "/money",
+      "/money/receipts",
+      "/money/custody",
+      "/money/einvois",
+      "/money/history",
+    ]);
+    // 申报: eROSES · 日历与死线. (/agm-pack joins at Stage G-4.)
+    expect(byId("filings").children.map((c) => c.href)).toEqual([
+      "/filings",
+      "/calendar",
+    ]);
+    // 组织: 成员 · 章程 · 条文全文 · 词库 · 组织与分会.
+    expect(byId("organisation").children.map((c) => c.href)).toEqual([
+      "/members",
+      "/constitution",
+      "/constitution/clauses",
+      "/glossary",
+      "/orgs",
+    ]);
+    // 记录: 历史 · 原始照片.
+    expect(byId("records").children.map((c) => c.href)).toEqual([
+      "/history",
+      "/inbox",
+    ]);
+    // 设置: 方案与用量 · 设置.
+    expect(byId("settings").children.map((c) => c.href)).toEqual([
+      "/settings/plan",
+      "/settings",
+    ]);
+  });
+
+  // /settings is `exact` so standing on /settings/plan lights exactly one row.
+  it("never lights the Settings row while on the plan page", () => {
+    expect(isActivePath("/settings/plan", "/settings", true)).toBe(false);
+    expect(isActivePath("/settings", "/settings", true)).toBe(true);
   });
 
   it("puts the minutes flow inside one group, in the order it is done", () => {
@@ -99,12 +163,11 @@ describe("menu structure (Stage R, 2026-08-25)", () => {
     }
   });
 
-  // E-2 (2026-08-25, J #18): the sidebar and the in-page tab rail used to be
-  // mirrors of the same four steps. Now the MENUS list the jobs (start the
-  // flow, see the records) while the mid-flow steps are navigated by the
-  // section's own rail. The steps stay group children — the group must still
-  // open and light anywhere inside the flow — but no menu renders them.
-  it("keeps rail-only steps out of the menus while the group still covers them", () => {
+  // E-2 (2026-08-25, J #18) narrowed by B-1 (8/26): the MINUTES mid-flow
+  // steps stay rail-only — the menus list the jobs, the section's tab rail
+  // owns the steps. The MONEY steps became visible sidebar rows on 8/26
+  // because J listed them by name in the 錢 group (开收据 · 交现金).
+  it("keeps the minutes steps rail-only while the money rows are visible", () => {
     const minutes = PRIMARY_NAV.find((e) => e.kind === "group" && e.id === "minutes")!;
     const money = PRIMARY_NAV.find((e) => e.kind === "group" && e.id === "money")!;
 
@@ -114,18 +177,33 @@ describe("menu structure (Stage R, 2026-08-25)", () => {
     ]);
     expect(visibleGroupChildren(money, true).map((c) => c.href)).toEqual([
       "/money",
+      "/money/receipts",
+      "/money/custody",
       "/money/history",
     ]);
 
-    // The group still opens on the steps the menu no longer lists — landing on
-    // /money/custody from a link must not leave the menu blank about where
-    // you are.
+    // The group still opens on the steps the menu does not list — landing on
+    // /minutes/attendance from a link must not leave the menu blank about
+    // where you are.
     for (const path of ["/minutes/attendance", "/minutes/document"]) {
       expect(groupHasActiveChild(minutes, path)).toBe(true);
     }
     for (const path of ["/money/receipts", "/money/custody"]) {
       expect(groupHasActiveChild(money, path)).toBe(true);
     }
+  });
+
+  // The desktop sidebar and the /more page draw from the SAME structure and
+  // the SAME visibility filter, so the two can never disagree (B-2).
+  it("filters the sidebar groups through the shared helper too", () => {
+    const money = SIDEBAR_NAV.find((e) => e.kind === "group" && e.id === "money")!;
+    expect(visibleGroupChildren(money, false).map((c) => c.href)).not.toContain(
+      "/money/einvois",
+    );
+    expect(visibleGroupChildren(money, true).map((c) => c.href)).toContain(
+      "/money/einvois",
+    );
+    expect(sidebarPages().map((i) => i.href)).toContain("/settings/plan");
   });
 
   it("still filters e-Invois by the org switch through the shared helper", () => {
