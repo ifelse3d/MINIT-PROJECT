@@ -63,6 +63,16 @@ export function CreateOrgForm({
   const [fileError, setFileError] = useState<string | null>(null);
   // B-5: which kind of organisation — decides whether the PPM field shows.
   const [orgType, setOrgType] = useState<"registered" | "committee">("registered");
+  // C-1 (work order 27, 拍板⑤): which plan. Trial is the default and the only
+  // one that changes anything today — standard/hq RECORD the choice
+  // (orgs.plan) and we activate by hand once prices exist. No fake checkout,
+  // no fake prices (D12), quota stays at the trial 15 until then.
+  const [plan, setPlan] = useState<"trial" | "standard" | "hq">("trial");
+  // C-2 (8/20 #19 后段): a NEW society and a society that has EXISTED for
+  // years start in different places — the answer only reorders the landing
+  // card, nothing else. Default "existing": Minit is built for registered
+  // societies, and most of those existed long before tonight.
+  const [societyAge, setSocietyAge] = useState<"existing" | "new">("existing");
   const [reading, setReading] = useState(false);
   const [readFailed, setReadFailed] = useState<string | null>(null);
   /** The post-create work must run once, not on every re-render it causes. */
@@ -90,8 +100,12 @@ export function CreateOrgForm({
     // `replace`, not `push`: Back from the landing page must go to /orgs,
     // not to a spent form that would re-show its success panel and invite a
     // second organisation nobody asked for.
+    // C-2: an EXISTING society's landing card starts with the records it
+    // already has (constitution → committee roster → first notes).
     if (!file) {
-      router.replace(AFTER_CREATE_HOME);
+      router.replace(
+        societyAge === "existing" ? `${AFTER_CREATE_HOME}&lama=1` : AFTER_CREATE_HOME,
+      );
       return;
     }
 
@@ -140,7 +154,7 @@ export function CreateOrgForm({
         setReading(false);
       }
     })();
-  }, [state.ok, file, router, t]);
+  }, [state.ok, file, router, t, societyAge]);
 
   // Stage R clean-ledger tokens (same recipe as authInputClass in login/glass).
   // The old glass style (white/50 on a white card) made these fields invisible
@@ -269,6 +283,152 @@ export function CreateOrgForm({
           </span>
         </label>
       )}
+
+      {/* C-2 (work order 27): brand-new, or already running for years? Only
+          the landing card's order changes — no feature is gated on this. */}
+      <fieldset className="flex flex-col gap-2">
+        <legend className="text-base font-semibold">
+          <Tri
+            bm="Pertubuhan ini…"
+            zh="这个社团是……"
+            en="This organisation is…"
+          />
+        </legend>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {(
+            [
+              {
+                value: "existing" as const,
+                bm: "Sudah lama wujud",
+                zh: "已成立多年的",
+                en: "Established, running for a while",
+                subBm: "Ada perlembagaan, AJK dan rekod sedia ada untuk dimasukkan",
+                subZh: "已有章程、理事和旧记录可以放进来",
+                subEn: "Has a constitution, committee and past records to bring in",
+              },
+              {
+                value: "new" as const,
+                bm: "Baru ditubuhkan",
+                zh: "新成立的",
+                en: "Newly formed",
+                subBm: "Bermula dari kosong — Minit mengiringi dari hari pertama",
+                subZh: "从零开始 —— Minit 从第一天陪着记",
+                subEn: "Starting fresh — Minit records from day one",
+              },
+            ]
+          ).map((opt) => (
+            <label
+              key={opt.value}
+              className={`flex cursor-pointer flex-col rounded-xl border-2 px-4 py-3 ${
+                societyAge === opt.value
+                  ? "border-[color:var(--v2-primary)] bg-[color:var(--v2-primary-soft)]"
+                  : "border-[color:var(--v2-outline-border)]"
+              }`}
+            >
+              <span className="flex items-center gap-2 text-base font-semibold">
+                <input
+                  type="radio"
+                  name="societyAge"
+                  value={opt.value}
+                  checked={societyAge === opt.value}
+                  onChange={() => setSocietyAge(opt.value)}
+                  className="h-5 w-5 accent-[color:var(--v2-primary)]"
+                />
+                <Tri bm={opt.bm} zh={opt.zh} en={opt.en} />
+              </span>
+              <span className="pl-7 text-sm text-muted-foreground">
+                <Tri bm={opt.subBm} zh={opt.subZh} en={opt.subEn} />
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      {/* C-1 (拍板⑤): pick a plan. Trial is the default; standard/hq RECORD
+          the wish and a human activates it — no prices, no checkout (D12),
+          and the AI allowance stays at the trial level until activation. */}
+      <fieldset className="flex flex-col gap-2">
+        <legend className="text-base font-semibold">
+          <Tri bm="Pelan" zh="配套" en="Plan" />
+        </legend>
+        <div className="grid gap-2 sm:grid-cols-3">
+          {(
+            [
+              {
+                value: "trial" as const,
+                bm: "Percubaan",
+                zh: "试用",
+                en: "Trial",
+                subBm: "Percuma buat masa ini · 15 tindakan AI sebulan · 1 pertubuhan",
+                subZh: "目前免费 · 每月 15 次 AI · 1 个机构",
+                subEn: "Free for now · 15 AI actions/month · 1 organisation",
+              },
+              {
+                value: "standard" as const,
+                bm: "Biasa",
+                zh: "标准",
+                en: "Standard",
+                subBm: "Kuota lebih besar untuk pertubuhan yang aktif",
+                subZh: "给活跃社团的更大用量",
+                subEn: "A bigger allowance for an active society",
+              },
+              {
+                value: "hq" as const,
+                bm: "Ibu Pejabat",
+                zh: "总部",
+                en: "HQ",
+                subBm: "Ibu pejabat dengan rangkaian cawangan",
+                subZh: "总部＋分会网络",
+                subEn: "A headquarters with branches",
+              },
+            ]
+          ).map((opt) => (
+            <label
+              key={opt.value}
+              className={`flex cursor-pointer flex-col rounded-xl border-2 px-4 py-3 ${
+                plan === opt.value
+                  ? "border-[color:var(--v2-primary)] bg-[color:var(--v2-primary-soft)]"
+                  : "border-[color:var(--v2-outline-border)]"
+              }`}
+            >
+              <span className="flex items-center gap-2 text-base font-semibold">
+                <input
+                  type="radio"
+                  name="plan"
+                  value={opt.value}
+                  checked={plan === opt.value}
+                  onChange={() => setPlan(opt.value)}
+                  className="h-5 w-5 accent-[color:var(--v2-primary)]"
+                />
+                <Tri bm={opt.bm} zh={opt.zh} en={opt.en} />
+              </span>
+              <span className="pl-7 text-sm text-muted-foreground">
+                <Tri bm={opt.subBm} zh={opt.subZh} en={opt.subEn} />
+              </span>
+            </label>
+          ))}
+        </div>
+        {plan !== "trial" && (
+          <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-sm font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+            <Tri
+              bm="Harga diumumkan selepas kos sebenar diukur. Pilihan anda direkodkan dan kami mengaktifkannya secara manual — sehingga itu, kuota AI kekal pada tahap percubaan (15 sebulan). Tiada bayaran diambil."
+              zh="价格会在量出真实成本后公布。您的选择会先记下来，由我们人工帮您开通 —— 开通之前，AI 用量照试用（每月 15 次）。现在不会收任何钱。"
+              en="Prices are announced once real costs are measured. Your choice is recorded and we activate it by hand — until then the AI allowance stays at the trial level (15/month). Nothing is charged."
+            />
+            {process.env.NEXT_PUBLIC_CONTACT_EMAIL ? (
+              <>
+                {" "}
+                <a
+                  href={`mailto:${process.env.NEXT_PUBLIC_CONTACT_EMAIL}`}
+                  className="underline underline-offset-4"
+                >
+                  {process.env.NEXT_PUBLIC_CONTACT_EMAIL}
+                </a>
+              </>
+            ) : null}
+          </p>
+        )}
+      </fieldset>
 
       {parentChoices.length > 0 && (
         <label className="flex flex-col gap-1">

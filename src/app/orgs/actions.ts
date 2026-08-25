@@ -281,6 +281,13 @@ export async function createOrg(
   const orgTypeRaw = String(formData.get("orgType") ?? "");
   const orgType = orgTypeRaw === "committee" ? "committee" : "registered";
   const ppmNo = String(formData.get("ppmNo") ?? "").trim().slice(0, 64);
+  // C-1 (work order 27, 拍板⑤): the plan the person CHOSE. Recording it is
+  // all that happens — quotas and features change only when a human activates
+  // the plan via the admin path (the privileged-columns trigger blocks any
+  // user-side update; this insert runs under service_role, which is the same
+  // exemption createOrg already relies on). Anything unexpected → trial.
+  const planRaw = String(formData.get("plan") ?? "");
+  const plan = planRaw === "standard" || planRaw === "hq" ? planRaw : "trial";
 
   if (!name) return { error: ERR.name, ok: false };
 
@@ -355,14 +362,17 @@ export async function createOrg(
   }
   // ------------------------------------------------------------------------
 
-  // The org_type/ppm_no columns arrive with migration 20260902000000. Sending
-  // a column PostgREST does not know fails the WHOLE insert, so if that
-  // migration has not run yet, retry with the columns the database has —
-  // creating the organisation must never depend on tomorrow's migration
-  // (STATE §6). The dropped values are the safe default anyway ('registered').
+  // The org_type/ppm_no columns arrive with migration 20260902000000 and
+  // orgs.plan with 20260830000000. Sending a column PostgREST does not know
+  // fails the WHOLE insert, so if a migration has not run yet, retry with the
+  // columns the database has — creating the organisation must never depend on
+  // tomorrow's migration (STATE §6). The dropped values are the safe defaults
+  // anyway ('registered' / 'trial'; a plan wish lost this way is re-statable
+  // on /settings/plan by contacting us, never silently upgraded).
   const extendedRow: Record<string, unknown> = { name, parent_org_id: parentOrgId };
   if (orgType !== "registered") extendedRow.org_type = orgType;
   if (ppmNo !== "") extendedRow.ppm_no = ppmNo;
+  if (plan !== "trial") extendedRow.plan = plan;
   let { data: org, error: orgError } = await admin
     .from("orgs")
     .insert(extendedRow)
@@ -370,8 +380,8 @@ export async function createOrg(
     .single();
   if (
     orgError &&
-    ("org_type" in extendedRow || "ppm_no" in extendedRow) &&
-    /org_type|ppm_no|schema cache/i.test(orgError.message ?? "")
+    ("org_type" in extendedRow || "ppm_no" in extendedRow || "plan" in extendedRow) &&
+    /org_type|ppm_no|plan|schema cache/i.test(orgError.message ?? "")
   ) {
     const retry = await admin
       .from("orgs")

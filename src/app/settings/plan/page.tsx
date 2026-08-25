@@ -126,6 +126,21 @@ export default async function PlanPage() {
             />
           </div>
         )}
+        {/* C-1 (拍板⑤): a chosen-but-not-activated plan is said out loud.
+            The tell is honest arithmetic: the plan says standard/hq but the
+            metered quota is still at the trial level — activation (J's admin
+            SQL) raises the quota, and this note disappears by itself. */}
+        {plan.id !== "trial" &&
+          usage &&
+          usage.monthlyFreeQuota <= PLANS.trial.monthlyAiQuota && (
+            <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-sm font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+              <Tri
+                bm={`Pelan ${plan.name.bm} sudah dipilih — kami mengaktifkannya secara manual selepas harga diumumkan. Sehingga itu, kuota AI kekal pada tahap percubaan (${PLANS.trial.monthlyAiQuota} sebulan).`}
+                zh={`已选「${plan.name.zh}」配套 —— 价格公布后由我们人工开通。开通之前，AI 用量照试用（每月 ${PLANS.trial.monthlyAiQuota} 次）。`}
+                en={`The ${plan.name.en} plan is selected — we activate it by hand once prices are announced. Until then the AI allowance stays at the trial level (${PLANS.trial.monthlyAiQuota}/month).`}
+              />
+            </p>
+          )}
       </div>
 
       {/* Comparison table */}

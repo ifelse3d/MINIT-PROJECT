@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Tri } from "@/components/language-provider";
 import { QUOTA_BLOCKED_MESSAGE, type UsageState } from "@/lib/ai/usage-core";
@@ -93,6 +94,15 @@ export function AiUsageRows({ usage }: { usage: UsageState }) {
             zh={`本月 AI 用量已用 ${pct}%。`}
             en={`${pct}% used this month.`}
           />
+        </p>
+      )}
+      {/* C-3 (work order 27): the amber/red states point at the plan page —
+          "running low" without a door to more is a dead end. */}
+      {(usage.blocked || low) && (
+        <p className="text-sm">
+          <Link href="/settings/plan" className="font-medium underline underline-offset-4">
+            <Tri bm="Lihat pelan" zh="看方案" en="See the plans" /> →
+          </Link>
         </p>
       )}
     </SettingsBlock>

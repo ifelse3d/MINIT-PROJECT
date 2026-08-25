@@ -30,6 +30,7 @@ import { ArrowUp, Camera, Paperclip, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
 import { PdpaNote } from "@/components/pdpa-note";
+import { VoiceButton } from "@/components/voice-input";
 import { writeIntake, type IntakeKind } from "@/lib/intake-handoff";
 import { tidyReply } from "@/lib/tidy-reply";
 import {
@@ -474,6 +475,15 @@ export function AskBox({
               className="w-full resize-y rounded-2xl border-2 border-input bg-white p-3.5 text-lg leading-snug disabled:opacity-60 dark:bg-white/5"
             />
           </label>
+          {/* C-4 (work order 27): speak instead of type — free, browser-side,
+              never the AI quota. Renders nothing where unsupported. */}
+          {hasOrg && !outOfQuota && (
+            <VoiceButton
+              onText={(text) =>
+                setQuestion((q) => (q.trim() ? `${q.trim()} ${text}` : text))
+              }
+            />
+          )}
           <Button
             type="submit"
             size="lg"
@@ -617,11 +627,17 @@ export function AskBox({
       {/* --- what this costs, always visible ------------------------------- */}
       <p className="mt-5 border-t-2 border-[color:var(--v2-border)] pt-3 text-base text-muted-foreground">
         {outOfQuota ? (
-          <Tri
-            bm="Bantuan AI untuk bulan ini sudah habis. Ia bermula semula pada 1 hari bulan depan — semua rekod dan dokumen anda masih boleh dibuka seperti biasa."
-            zh="这个月的 AI 用量已经用完了。下个月 1 号会重新开始 —— 您所有的记录和文件都还能照常打开。"
-            en="This month's AI help is used up. It starts again on the 1st of next month — all your records and documents still open as normal."
-          />
+          <>
+            <Tri
+              bm="Bantuan AI untuk bulan ini sudah habis. Ia bermula semula pada 1 hari bulan depan — semua rekod dan dokumen anda masih boleh dibuka seperti biasa."
+              zh="这个月的 AI 用量已经用完了。下个月 1 号会重新开始 —— 您所有的记录和文件都还能照常打开。"
+              en="This month's AI help is used up. It starts again on the 1st of next month — all your records and documents still open as normal."
+            />{" "}
+            {/* C-3: a used-up meter needs a door, not just a date. */}
+            <Link href="/settings/plan" className="underline underline-offset-4">
+              <Tri bm="Lihat pelan" zh="看方案" en="See the plans" /> →
+            </Link>
+          </>
         ) : (
           /* 0-2 (2026-08-25, J's #14): the AI-path marker stays ("this uses
              the allowance"), the per-question/per-photo "about X%" promises

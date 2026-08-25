@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Tri, useTriText } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
+import { VoiceButton } from "@/components/voice-input";
 import { parseRmToCents, type RegisterDonation } from "@/lib/receipts";
 import { dayIsoMalaysia } from "@/lib/history";
 
@@ -265,18 +266,32 @@ export function TypeDonations({
               return (
                 <tr key={row.key} className="border-t border-[color:var(--v2-border)]">
                   <td className="p-1">
-                    <input
-                      className={inputClass}
-                      value={row.name}
-                      onChange={(e) => update(row.key, { name: e.target.value })}
-                      // A screen reader announces the row; sighted users have
-                      // the column header.
-                      aria-label={t(
-                        `Nama penderma, baris ${index + 1}`,
-                        `捐款人，第 ${index + 1} 行`,
-                        `Donor name, row ${index + 1}`,
-                      )}
-                    />
+                    <span className="flex items-center gap-1">
+                      <input
+                        className={inputClass}
+                        value={row.name}
+                        onChange={(e) => update(row.key, { name: e.target.value })}
+                        // A screen reader announces the row; sighted users have
+                        // the column header.
+                        aria-label={t(
+                          `Nama penderma, baris ${index + 1}`,
+                          `捐款人，第 ${index + 1} 行`,
+                          `Donor name, row ${index + 1}`,
+                        )}
+                      />
+                      {/* C-4: names are the slow part of a forty-row list —
+                          speak one instead. Renders nothing where the browser
+                          has no speech support. */}
+                      <VoiceButton
+                        onText={(text) =>
+                          update(row.key, {
+                            name: row.name.trim()
+                              ? `${row.name.trim()} ${text}`
+                              : text,
+                          })
+                        }
+                      />
+                    </span>
                   </td>
                   <td className="p-1">
                     <input

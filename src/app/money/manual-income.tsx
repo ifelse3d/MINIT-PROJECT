@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { VoiceButton } from "@/components/voice-input";
 import { parseRmToCents, type RegisterDonation } from "@/lib/receipts";
 import { dayIsoMalaysia } from "@/lib/history";
 
@@ -172,11 +173,20 @@ export function ManualIncomeForm({ onAdd, defaultCollector }: Props) {
                 <span className="text-base font-semibold">
                   <Tri bm="Penderma / Pembayar" zh="捐款人 / 付款人" en="Donor / Payer" />
                 </span>
-                <input
-                  className={inputClass}
-                  value={payer}
-                  onChange={(e) => setPayer(e.target.value)}
-                />
+                <span className="flex items-center gap-1">
+                  <input
+                    className={inputClass}
+                    value={payer}
+                    onChange={(e) => setPayer(e.target.value)}
+                  />
+                  {/* C-4: speak the name instead of typing it. Renders
+                      nothing where the browser has no speech support. */}
+                  <VoiceButton
+                    onText={(text) =>
+                      setPayer((p) => (p.trim() ? `${p.trim()} ${text}` : text))
+                    }
+                  />
+                </span>
               </label>
               <label className="flex flex-col gap-1">
                 <span className="text-base font-semibold">
@@ -214,12 +224,20 @@ export function ManualIncomeForm({ onAdd, defaultCollector }: Props) {
                 <span className="text-base font-semibold">
                   <Tri bm="Catatan (pilihan)" zh="备注（可选）" en="Note (optional)" />
                 </span>
-                <input
-                  className={inputClass}
-                  placeholder={t("cth: tabung bumbung", "例：屋顶基金", "e.g. roof fund")}
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                />
+                <span className="flex items-center gap-1">
+                  <input
+                    className={inputClass}
+                    placeholder={t("cth: tabung bumbung", "例：屋顶基金", "e.g. roof fund")}
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                  />
+                  {/* C-4: speak the note instead of typing it. */}
+                  <VoiceButton
+                    onText={(text) =>
+                      setNote((n) => (n.trim() ? `${n.trim()} ${text}` : text))
+                    }
+                  />
+                </span>
               </label>
             </div>
 

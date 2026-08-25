@@ -41,11 +41,40 @@ const NEXT_STEPS = [
   },
 ] as const;
 
+// C-2 (work order 27): a society that has EXISTED for years starts by
+// bringing in what it already has — the constitution, then the committee
+// roster, then the first notes. Same card, different order and one different
+// row; no feature is gated on the answer.
+const EXISTING_STEPS = [
+  {
+    href: "/constitution",
+    icon: "📜",
+    bm: "Muat naik perlembagaan anda (boleh langkau — buat bila-bila)",
+    zh: "先上传章程（可以跳过，随时再做）",
+    en: "Upload your constitution (skippable — any time)",
+  },
+  {
+    href: "/members",
+    icon: "👥",
+    bm: "Masukkan senarai AJK sedia ada (Excel atau taip)",
+    zh: "把现有的理事名单放进来（Excel 或打字）",
+    en: "Bring in the existing committee roster (Excel or typed)",
+  },
+  {
+    href: "/minutes",
+    icon: "📝",
+    bm: "Ambil gambar nota mesyuarat yang terkini",
+    zh: "拍下最近一次的会议笔记",
+    en: "Photograph your latest meeting notes",
+  },
+] as const;
+
 export function WelcomeCard() {
   const params = useSearchParams();
   const t = useTriText();
   const [dismissed, setDismissed] = useState(false);
   if (dismissed || params.get("welcome") !== "1") return null;
+  const steps = params.get("lama") === "1" ? EXISTING_STEPS : NEXT_STEPS;
   return (
     <div className="v2-glass flex flex-col gap-3 border-2 border-green-400/60 p-5">
       <div className="flex items-start justify-between gap-3">
@@ -67,7 +96,7 @@ export function WelcomeCard() {
         </button>
       </div>
       <ul className="flex flex-col gap-2">
-        {NEXT_STEPS.map((s) => (
+        {steps.map((s) => (
           <li key={s.href}>
             <Link
               href={s.href}
