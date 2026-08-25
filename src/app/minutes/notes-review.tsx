@@ -846,11 +846,12 @@ export function NotesReview() {
           labelZh="去出席者名单"
           labelEn="On to who attended"
           blockedReason={
+            // E-3: why it is locked AND what unlocks it, in one sentence.
             nothingYet ? (
               <Tri
-                bm="Belum ada nota dibaca."
-                zh="还没有读到任何笔记。"
-                en="No notes have been read yet."
+                bm="Belum ada nota dibaca — ambil gambar atau taip di atas dahulu, dan senarai kehadiran akan dibuka."
+                zh="还没有读到任何笔记 —— 先在上面拍照或打字，出席者名单就会打开。"
+                en="No notes have been read yet — take a photo or type them in above, and the attendance list opens."
               />
             ) : undefined
           }

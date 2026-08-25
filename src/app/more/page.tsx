@@ -11,7 +11,7 @@
 import Link from "next/link";
 import { LogOut } from "lucide-react";
 import { LanguageSwitcher, Tri } from "@/components/language-provider";
-import { PRIMARY_NAV } from "@/components/nav-items";
+import { PRIMARY_NAV, visibleGroupChildren } from "@/components/nav-items";
 import { signOutToLogin, useActiveOrg } from "@/components/v3/org-chip";
 import { useEinvoisVisible } from "@/lib/einvois-pref";
 
@@ -20,10 +20,7 @@ export default function MorePage() {
   const { email, org } = useActiveOrg();
 
   const more = PRIMARY_NAV.find((e) => e.kind === "group" && e.id === "more");
-  const items =
-    more && more.kind === "group"
-      ? more.children.filter((c) => !c.einvoisOnly || einvoisVisible)
-      : [];
+  const items = more ? visibleGroupChildren(more, einvoisVisible) : [];
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 pb-6">

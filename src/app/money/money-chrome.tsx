@@ -29,8 +29,17 @@ const MONEY_TABS = [
   // only when the organisation has switched it on (Settings). The route
   // itself always works.
   { href: "/money/einvois", labelBm: "Fail cukai", labelZh: "税务文件", labelEn: "Tax file" },
-  { href: "/money/history", labelBm: "Sejarah", labelZh: "历史", labelEn: "History" },
 ] as const;
+
+// E-1 (2026-08-25): receipt history is the section's RECORDS, not the last
+// numbered step. Rendered apart from the chain — no number, never locked.
+// Same word the rest of the app uses for this concept: Sejarah / 历史 / History.
+const MONEY_RECORDS = {
+  href: "/money/history",
+  labelBm: "Sejarah",
+  labelZh: "历史",
+  labelEn: "History",
+} as const;
 
 export function MoneyChrome({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -88,7 +97,6 @@ export function MoneyChrome({ children }: { children: ReactNode }) {
           },
         ]
       : []),
-    { ...MONEY_TABS[4], status: "neutral" },
   ];
 
   return (
@@ -152,8 +160,8 @@ export function MoneyChrome({ children }: { children: ReactNode }) {
         </div>
       )}
 
-      {/* Where am I? One rail, five addresses. */}
-      <SectionTabs tabs={tabs} />
+      {/* Where am I? One rail: the steps, and the records apart from them. */}
+      <SectionTabs tabs={tabs} records={MONEY_RECORDS} />
 
       {/* /money/history is a plain server page with its own heading; the rail
           above is all the frame it needs. */}

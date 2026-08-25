@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Check, Lock } from "lucide-react";
+import { Check, History, Lock } from "lucide-react";
 import { Tri, useTriText } from "@/components/language-provider";
 import type { StepStatus } from "@/components/step-card";
 
@@ -32,13 +32,30 @@ export type SectionTab = {
   count?: number;
 };
 
+/**
+ * E-1 (2026-08-25, J #18): the section's RECORDS — history is not a step.
+ * It used to be the last numbered ring of the chain, which said "after you
+ * finish, you do History", and it wore a number and could sit next to a
+ * padlock. Looking back is not part of doing the job: it gets its own fixed
+ * entry at the far end of the rail — no number, no connector, never locked.
+ */
+export type SectionRecords = {
+  href: string;
+  labelBm: string;
+  labelZh: string;
+  labelEn: string;
+};
+
 export function SectionTabs({
   tabs,
+  records,
   ariaLabelBm = "Langkah",
   ariaLabelZh = "步骤",
   ariaLabelEn = "Steps",
 }: {
   tabs: SectionTab[];
+  /** The section's records page — rendered apart from the numbered steps. */
+  records?: SectionRecords;
   ariaLabelBm?: string;
   ariaLabelZh?: string;
   ariaLabelEn?: string;
@@ -96,6 +113,22 @@ export function SectionTabs({
             </li>
           );
         })}
+        {records && (
+          <li className="ml-auto flex shrink-0 items-center pl-2">
+            <Link
+              href={records.href}
+              aria-current={pathname === records.href ? "page" : undefined}
+              className={`inline-flex min-h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border-2 border-dashed border-slate-300 px-3 text-base font-medium text-slate-600 dark:border-slate-500 dark:text-slate-300 ${
+                pathname === records.href
+                  ? "ring-2 ring-slate-900/70 ring-offset-1 dark:ring-white/80"
+                  : "hover:brightness-95 active:scale-95"
+              }`}
+            >
+              <History aria-hidden className="size-4 shrink-0" strokeWidth={2.2} />
+              <Tri bm={records.labelBm} zh={records.labelZh} en={records.labelEn} />
+            </Link>
+          </li>
+        )}
       </ol>
     </nav>
   );

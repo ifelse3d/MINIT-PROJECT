@@ -22,8 +22,19 @@ const MINUTES_TABS = [
   { href: "/minutes", labelBm: "Ambil / taip", labelZh: "拍或打字", labelEn: "Photo or type" },
   { href: "/minutes/attendance", labelBm: "Kehadiran", labelZh: "出席者", labelEn: "Attendance" },
   { href: "/minutes/document", labelBm: "Minit siap", labelZh: "做好的记录", labelEn: "The document" },
-  { href: "/minutes/history", labelBm: "Sejarah", labelZh: "历史", labelEn: "History" },
 ] as const;
+
+// E-1 (2026-08-25): history is the section's RECORDS, not step 4. It renders
+// apart from the numbered chain — no number, never locked.
+// The label stays "Sejarah / 历史 / History" — the same word the save button
+// and the menus already use for this concept (STATE §6: same concept, same
+// words on every screen).
+const MINUTES_RECORDS = {
+  href: "/minutes/history",
+  labelBm: "Sejarah",
+  labelZh: "历史",
+  labelEn: "History",
+} as const;
 
 export function MinutesChrome({ children }: { children: ReactNode }) {
   const t = useTriText();
@@ -82,7 +93,6 @@ export function MinutesChrome({ children }: { children: ReactNode }) {
               ? "needs-you"
               : "locked",
     },
-    { ...MINUTES_TABS[3], status: "neutral" },
   ];
 
   return (
@@ -156,8 +166,8 @@ export function MinutesChrome({ children }: { children: ReactNode }) {
         )}
       </div>
 
-      {/* Where am I? One rail, four addresses. */}
-      <SectionTabs tabs={tabs} />
+      {/* Where am I? One rail: three steps, and the records apart from them. */}
+      <SectionTabs tabs={tabs} records={MINUTES_RECORDS} />
 
       {/* The one sentence answering "what do I do now?" — it has to survive the
           split, because on a single page the answer was "scroll down". */}

@@ -7,6 +7,7 @@ import {
   menusCoverAllItems,
   navPages,
   sectionWords,
+  visibleGroupChildren,
 } from "./nav-items";
 import { CATEGORY_STYLE } from "@/lib/activity-labels";
 
@@ -96,6 +97,45 @@ describe("menu structure (Stage R, 2026-08-25)", () => {
     ]) {
       expect(hrefs).toContain(href);
     }
+  });
+
+  // E-2 (2026-08-25, J #18): the sidebar and the in-page tab rail used to be
+  // mirrors of the same four steps. Now the MENUS list the jobs (start the
+  // flow, see the records) while the mid-flow steps are navigated by the
+  // section's own rail. The steps stay group children — the group must still
+  // open and light anywhere inside the flow — but no menu renders them.
+  it("keeps rail-only steps out of the menus while the group still covers them", () => {
+    const minutes = PRIMARY_NAV.find((e) => e.kind === "group" && e.id === "minutes")!;
+    const money = PRIMARY_NAV.find((e) => e.kind === "group" && e.id === "money")!;
+
+    expect(visibleGroupChildren(minutes, true).map((c) => c.href)).toEqual([
+      "/minutes",
+      "/minutes/history",
+    ]);
+    expect(visibleGroupChildren(money, true).map((c) => c.href)).toEqual([
+      "/money",
+      "/money/history",
+    ]);
+
+    // The group still opens on the steps the menu no longer lists — landing on
+    // /money/custody from a link must not leave the menu blank about where
+    // you are.
+    for (const path of ["/minutes/attendance", "/minutes/document"]) {
+      expect(groupHasActiveChild(minutes, path)).toBe(true);
+    }
+    for (const path of ["/money/receipts", "/money/custody"]) {
+      expect(groupHasActiveChild(money, path)).toBe(true);
+    }
+  });
+
+  it("still filters e-Invois by the org switch through the shared helper", () => {
+    const more = PRIMARY_NAV.find((e) => e.kind === "group" && e.id === "more")!;
+    expect(visibleGroupChildren(more, false).map((c) => c.href)).not.toContain(
+      "/money/einvois",
+    );
+    expect(visibleGroupChildren(more, true).map((c) => c.href)).toContain(
+      "/money/einvois",
+    );
   });
 
   it("resolves every entry to a real NavItem with all three languages", () => {

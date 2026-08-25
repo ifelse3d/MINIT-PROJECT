@@ -25,6 +25,7 @@ import {
   PRIMARY_NAV,
   groupHasActiveChild,
   isActivePath,
+  visibleGroupChildren,
   type NavEntry,
   type NavItem,
 } from "@/components/nav-items";
@@ -119,8 +120,10 @@ export function AppShell({
 // ---------------------------------------------------------------------------
 
 function railEntryChildren(entry: NavEntry, einvoisVisible: boolean): NavItem[] {
-  if (entry.kind !== "group") return [];
-  return entry.children.filter((c) => !c.einvoisOnly || einvoisVisible);
+  // E-2: rail-only steps (attendance, the document, receipts, custody) are
+  // navigated by the section's own tab rail; the menu lists the jobs. The
+  // shared filter lives in nav-items.ts so /more cannot disagree.
+  return visibleGroupChildren(entry, einvoisVisible);
 }
 
 function Rail({ pathname }: { pathname: string }) {

@@ -62,6 +62,17 @@ export type NavItem = {
    * exists, so a saved link still works.
    */
   einvoisOnly?: true;
+  /**
+   * E-2 (2026-08-25): a mid-flow step whose navigation is the section's own
+   * tab rail, not the menus. It STAYS a group child — so the group still
+   * opens/lights anywhere inside the flow and menusCoverAllItems() still
+   * counts it — but no menu renders a row for it. The sidebar lists the JOBS
+   * (start the flow, see the records); the rail on every page of the section
+   * is where the steps live. Two mirrors of the same four steps was noise
+   * (J #18), and the fix is one owner per question: "where can I go" = menu,
+   * "where am I in this job" = rail.
+   */
+  railOnly?: true;
 };
 
 /** Every page that has a menu entry anywhere. */
@@ -69,13 +80,13 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/", icon: Home, bm: "Utama", zh: "主页", en: "Home" },
   // Minutes flow — named after the JOB, not the pipeline step.
   { href: "/minutes", icon: FileText, bm: "Minit baru", zh: "新的会议记录", en: "New minutes", exact: true },
-  { href: "/minutes/attendance", icon: ClipboardCheck, bm: "Kehadiran", zh: "出席者", en: "Attendance" },
-  { href: "/minutes/document", icon: FileSignature, bm: "Dokumen siap", zh: "做好的文件", en: "The document" },
+  { href: "/minutes/attendance", icon: ClipboardCheck, bm: "Kehadiran", zh: "出席者", en: "Attendance", railOnly: true },
+  { href: "/minutes/document", icon: FileSignature, bm: "Dokumen siap", zh: "做好的文件", en: "The document", railOnly: true },
   { href: "/minutes/history", icon: History, bm: "Minit lama", zh: "以前的记录", en: "Past minutes" },
   // Money flow.
   { href: "/money", icon: Wallet, bm: "Rekod derma", zh: "记录捐款", en: "Record donations", exact: true },
-  { href: "/money/receipts", icon: Receipt, bm: "Jana resit", zh: "开收据", en: "Issue receipts" },
-  { href: "/money/custody", icon: Coins, bm: "Serah tunai", zh: "交现金", en: "Hand over cash" },
+  { href: "/money/receipts", icon: Receipt, bm: "Jana resit", zh: "开收据", en: "Issue receipts", railOnly: true },
+  { href: "/money/custody", icon: Coins, bm: "Serah tunai", zh: "交现金", en: "Hand over cash", railOnly: true },
   { href: "/money/history", icon: ClipboardList, bm: "Sejarah resit", zh: "收据历史", en: "Receipt history" },
   // More — occasional pages.
   { href: "/calendar", icon: CalendarClock, bm: "Kalendar", zh: "日历", en: "Calendar" },
@@ -181,6 +192,22 @@ export const PRIMARY_NAV: NavEntry[] = [
 export function navPages(): NavItem[] {
   return PRIMARY_NAV.flatMap((entry) =>
     entry.kind === "item" ? [entry.item] : entry.children,
+  );
+}
+
+/**
+ * What a MENU actually renders for a group: rail-only steps are skipped
+ * (their navigation is the section's tab rail), and e-Invois obeys the org
+ * switch. One function, used by the desktop sidebar and the /more page, so
+ * the two menus cannot disagree about what exists.
+ */
+export function visibleGroupChildren(
+  entry: NavEntry,
+  einvoisVisible: boolean,
+): NavItem[] {
+  if (entry.kind !== "group") return [];
+  return entry.children.filter(
+    (c) => !c.railOnly && (!c.einvoisOnly || einvoisVisible),
   );
 }
 
