@@ -334,11 +334,14 @@ export function AttendanceReview() {
             onAdd={addNamedAttendees}
           />
 
+          {/* G-3 (2026-08-25, J #14): "Tambah nama sendiri" read as "add MY
+              name" — a committee member pressed it expecting to mark
+              themselves present. It adds ANOTHER row; now it says so. */}
           <AddRowButton
             onClick={() => addExtractionRow("attendees")}
-            labelBm="Tambah nama sendiri"
-            labelZh="自己加一个名字"
-            labelEn="Add a name myself"
+            labelBm="Tambah nama lain"
+            labelZh="自己补一个名字"
+            labelEn="Add another name"
           />
         </>
       )}

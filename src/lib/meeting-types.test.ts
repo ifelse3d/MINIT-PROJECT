@@ -5,6 +5,7 @@ import {
   MEETING_TYPE_LABEL,
   isErosesFileable,
   meetingTypeLabel,
+  meetingTypeUiLabelTri,
   normaliseMeetingType,
 } from "@/lib/meeting-types";
 import { meetingNotesExtractionSchema } from "@/lib/extraction";
@@ -61,6 +62,27 @@ describe("naming a meeting", () => {
 
   it("prints an unknown stored value as written instead of guessing", () => {
     expect(meetingTypeLabel("mesyuarat khas 2019", "bm")).toBe("mesyuarat khas 2019");
+  });
+});
+
+// G-4 (2026-08-25, J #19): zh/EN interfaces carry the BM official name — the
+// term on the government form — while documents keep the single language.
+describe("meetingTypeUiLabelTri", () => {
+  it("prints local name · BM official name, abbreviation once", () => {
+    const agm = meetingTypeUiLabelTri("agm");
+    expect(agm.zh).toBe("常年大会 · Mesyuarat Agung Tahunan (AGM)");
+    expect(agm.en).toBe("Annual General Meeting · Mesyuarat Agung Tahunan (AGM)");
+    expect(agm.bm).toBe("Mesyuarat Agung Tahunan (AGM)");
+  });
+
+  it("leaves the society's own meeting name alone — there is no official BM name to teach", () => {
+    expect(meetingTypeUiLabelTri("other", "青年组周会").zh).toBe("青年组周会");
+    expect(meetingTypeUiLabelTri("other").zh).toBe(MEETING_TYPE_LABEL.other.zh);
+  });
+
+  it("never changes the document-facing label", () => {
+    // The combined form must not leak into filed documents.
+    expect(meetingTypeLabel("agm", "zh")).toBe("常年大会（AGM）");
   });
 });
 

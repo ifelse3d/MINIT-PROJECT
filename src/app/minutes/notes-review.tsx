@@ -8,7 +8,7 @@ import { NextStepLink, PageSection } from "@/components/page-section";
 import { PdpaNote } from "@/components/pdpa-note";
 import { HowItWorksButton } from "@/app/how-it-works";
 import { formatDateLong, isIsoDate } from "@/lib/date-input";
-import { MEETING_TYPES, MEETING_TYPE_LABEL, meetingTypeLabel } from "@/lib/meeting-types";
+import { MEETING_TYPES, meetingTypeUiLabelTri } from "@/lib/meeting-types";
 import { formatRm } from "@/lib/minutes-draft";
 import { parseRmToCents } from "@/lib/receipts";
 import { BeforeReading } from "./before-reading";
@@ -440,20 +440,25 @@ export function NotesReview() {
             display={
               extraction.meeting_type.value === ""
                 ? undefined
-                : t(
-                    meetingTypeLabel(extraction.meeting_type.value, "bm", extraction.meeting_type_label),
-                    meetingTypeLabel(extraction.meeting_type.value, "zh", extraction.meeting_type_label),
-                    meetingTypeLabel(extraction.meeting_type.value, "en", extraction.meeting_type_label),
-                  )
+                : // G-4 (J #19): zh/EN interfaces carry the BM official name —
+                  // it is the term on the government form. Documents keep the
+                  // single-language meetingTypeLabel.
+                  (() => {
+                    const l = meetingTypeUiLabelTri(
+                      extraction.meeting_type.value,
+                      extraction.meeting_type_label,
+                    );
+                    return t(l.bm, l.zh, l.en);
+                  })()
             }
             editor={{
               kind: "choice",
               choices: MEETING_TYPES.map((v) => ({
                 value: v,
                 label: t(
-                  MEETING_TYPE_LABEL[v].bm,
-                  MEETING_TYPE_LABEL[v].zh,
-                  MEETING_TYPE_LABEL[v].en,
+                  meetingTypeUiLabelTri(v).bm,
+                  meetingTypeUiLabelTri(v).zh,
+                  meetingTypeUiLabelTri(v).en,
                 ),
               })),
             }}

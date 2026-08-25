@@ -118,10 +118,13 @@ export function ManualIncomeForm({ onAdd, defaultCollector }: Props) {
               clearly the LAST resort, not a peer of the camera. The fields stay
               hidden until the user asks for them; this copy says what to do
               instead. */}
+          {/* G-5 (2026-08-25, J #17): one sentence, not a paragraph — the
+              three-line version was the heaviest block on an EMPTY page. The
+              "manual" audit tag is still stated, just briefly. */}
           <Tri
-            bm="Cara paling mudah tetap gambar: ambil gambar halaman lejar di langkah 1 di atas dan AI akan mengisi baris-barisnya untuk anda. Guna borang ini hanya kalau derma itu tidak tercatat pada mana-mana kertas — contohnya wang tunai yang diserahkan terus kepada anda. Baris yang ditambah di sini ditanda “manual” supaya juruaudit tahu tiada kertas asalnya."
-            zh="最省力的做法还是拍照：在上面第 1 步拍下账页，AI 会替您把每一行填好。只有在这笔捐款没有记在任何纸上时（例如有人直接把现金交给您）才用这个表格。这里加进去的记录会标上「手动」，让审计知道没有原始纸张。"
-            en="The easiest way is still a photo: take a photo of the ledger page in step 1 above and Minit fills in the lines for you. Use this form only when the donation was never written on any paper — cash handed straight to you, for example. Rows added here are tagged “manual” so an auditor knows there is no original page."
+            bm="Untuk derma yang tiada pada mana-mana kertas. Baris di sini ditanda “manual” untuk juruaudit."
+            zh="给没有记在任何纸上的捐款用。这里的记录会标「手动」，审计看得到。"
+            en="For a donation that is on no paper at all. Rows here are tagged “manual” for the auditor."
           />
         </CardDescription>
       </CardHeader>

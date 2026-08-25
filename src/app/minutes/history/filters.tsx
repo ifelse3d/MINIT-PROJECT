@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
-import { MEETING_TYPES, MEETING_TYPE_LABEL } from "@/lib/meeting-types";
+import { MEETING_TYPES, meetingTypeUiLabelTri } from "@/lib/meeting-types";
 
 // ---------------------------------------------------------------------------
 // Finding the June meeting.
@@ -49,7 +49,7 @@ export function MinutesFilters({
         <select name="type" defaultValue={type} className={field}>
           <option value="">{t("Semua jenis", "全部类型", "All types")}</option>
           {MEETING_TYPES.map((mt) => {
-            const l = MEETING_TYPE_LABEL[mt];
+            const l = meetingTypeUiLabelTri(mt);
             return (
               <option key={mt} value={mt}>
                 {t(l.bm, l.zh, l.en)}

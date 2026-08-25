@@ -2,6 +2,7 @@
 
 import { Fragment, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,9 @@ import { useRegister } from "./register-store";
 
 export function RegisterAndReceipts() {
   const t = useTriText();
+  // G-1: the "type it in" door on step 1 lands here with ?taip=1 — the typing
+  // grid opens ready instead of hiding behind its own button.
+  const arrivedToType = useSearchParams().get("taip") === "1";
   const {
     donations,
     documentOrgName,
@@ -506,6 +510,7 @@ No receipt has been issued, so no number is lost. This cannot be undone.`,
         <TypeDonations
           onAddMany={addManualDonations}
           defaultCollector={registerCollector}
+          defaultOpen={arrivedToType}
         />
         <ManualIncomeForm onAdd={addManualDonation} defaultCollector={registerCollector} />
       </div>

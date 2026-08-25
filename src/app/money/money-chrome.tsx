@@ -22,9 +22,11 @@ import { useRegister } from "./register-store";
 // ---------------------------------------------------------------------------
 
 const MONEY_TABS = [
-  { href: "/money", labelBm: "Baca lejar", labelZh: "读账页", labelEn: "Read the ledger" },
-  { href: "/money/receipts", labelBm: "Resit", labelZh: "开收据", labelEn: "Receipts" },
-  { href: "/money/custody", labelBm: "Serah wang", labelZh: "交现金", labelEn: "Hand over cash" },
+  // G-4 (2026-08-25, J #19): the BM official term rides along in zh/EN — it
+  // is the word on the ledger book, the bank slip and the auditor's mouth.
+  { href: "/money", labelBm: "Baca lejar", labelZh: "读账页 · Lejar", labelEn: "Read the ledger · Lejar" },
+  { href: "/money/receipts", labelBm: "Resit", labelZh: "开收据 · Resit", labelEn: "Receipts · Resit" },
+  { href: "/money/custody", labelBm: "Serah wang", labelZh: "交现金 · Serah Wang", labelEn: "Hand over cash · Serah Wang" },
   // R-6 (2026-08-25): e-Invois is OPTIONAL (J 2026-08-24) — its tab appears
   // only when the organisation has switched it on (Settings). The route
   // itself always works.

@@ -32,6 +32,11 @@ import {
   applyKnownMeetingFacts,
   type KnownMeetingFacts,
 } from "@/lib/meeting-facts";
+import {
+  hasMeetingContent,
+  mergeMeetingExtractions,
+  mergedSourceLabel,
+} from "@/lib/extraction-merge";
 import { addRow, removeRow, rowHasContent, type RowList } from "@/lib/extraction-rows";
 import { saveConfirmedMinutes } from "./actions";
 import {
@@ -422,29 +427,49 @@ export function MinutesProvider({
       // so anything seeded beforehand would be silently thrown away. Doing it
       // here also makes the precedence explicit — on these three facts the
       // person is the source, not a reviewer.
-      setExtraction(
-        applyKnownMeetingFacts(body.extraction as MeetingNotesExtraction, facts, {
+      const read = applyKnownMeetingFacts(
+        body.extraction as MeetingNotesExtraction,
+        facts,
+        {
           location: t("diisi oleh anda", "由您填写", "entered by you"),
           snippet: t(
             "sebelum Minit membaca halaman ini",
             "在 Minit 读这一页之前",
             "before Minit read this page",
           ),
-        }),
+        },
       );
-      setSourceLabel(file.name);
+      // G-2 (2026-08-25, J #10): a photo taken while THIS meeting already has
+      // content — typed rows, or an earlier page — ADDS to it, page by page,
+      // like the constitution flow. Only a fresh/sample page is replaced
+      // wholesale. See lib/extraction-merge.ts for the rules and why.
+      // (isReal is declared further down; spelled out here from its inputs so
+      // the deps array below never touches it before initialisation.)
+      const continuing =
+        (sourceLabel !== null || typedByHand) && hasMeetingContent(extraction);
+      const next = continuing ? mergeMeetingExtractions(extraction, read) : read;
+      setExtraction(next);
+      setSourceLabel(
+        continuing ? mergedSourceLabel(sourceLabel, file.name) : file.name,
+      );
       setPhotoDataUrl(await compressPhoto(file));
       setTypedByHand(false);
-      // A new photo is a new meeting: whatever somebody said about the LAST
-      // one's attendance has nothing to do with this one.
-      setNoAttendeesRecorded(false);
+      // A new photo is a new meeting — but a page ADDED to this meeting is
+      // not: what somebody said about ITS attendance still stands, unless the
+      // new page just produced attendees (then "none recorded" is untrue).
+      setNoAttendeesRecorded(
+        continuing ? noAttendeesRecorded && next.attendees.length === 0 : false,
+      );
       setEvRows(null);
     } catch (e) {
       setAiError(e instanceof Error ? e.message : String(e));
     } finally {
       setAiBusy(false);
     }
-  }, [t]);
+    // The G-2 merge reads the CURRENT extraction and flags, so they are real
+    // dependencies — with only [t] here the closure would merge onto a stale
+    // page (the same stale-closure class the calendar's addEvent avoids).
+  }, [t, extraction, sourceLabel, typedByHand, noAttendeesRecorded]);
 
   /**
    * Nothing to photograph — start from a blank sheet and type.

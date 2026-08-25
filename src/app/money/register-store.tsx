@@ -14,6 +14,7 @@ import {
 } from "react";
 import { useTriText } from "@/components/language-provider";
 import { emptyLedgerExtraction, type LedgerExtraction } from "@/lib/extraction";
+import { mergeLedgerExtractions, mergedSourceLabel } from "@/lib/extraction-merge";
 import {
   allocateReceiptNos,
   eligibleForReceipt,
@@ -297,9 +298,11 @@ export function RegisterProvider({
   }, []);
 
   // --- THE AI INGESTION PATH: ledger photo/PDF → /api/extract-ledger --------
-  // Mirrors the /minutes flow. The extracted rows REPLACE the current ledger
-  // review; the human then confirms/edits field by field before anything can
-  // reach the register.
+  // Mirrors the /minutes flow. G-2 (2026-08-25, J #10): a second page ADDS its
+  // rows under the first page's — the un-added, half-confirmed rows of page 1
+  // used to be wiped by the shutter. Only a fresh (or sample) review is
+  // replaced wholesale. `addedRows` is index-based and existing rows keep
+  // their positions, so the already-added marks stay honest through a merge.
   const onLedgerPicked = useCallback(async (file: File | null) => {
     if (!file) return;
     setAiError(null);
@@ -310,15 +313,19 @@ export function RegisterProvider({
       const res = await fetch("/api/extract-ledger", { method: "POST", body: form });
       const body = await res.json().catch(() => null);
       if (!res.ok) throw new Error(body?.error ?? joinUserError(USER_ERRORS.aiUnavailable));
-      setLedger(body.extraction as LedgerExtraction);
-      setLedgerSourceLabel(file.name);
-      setAddedRows(new Set());
+      const read = body.extraction as LedgerExtraction;
+      const continuing = ledgerSourceLabel !== null && ledger.rows.length > 0;
+      setLedger(continuing ? mergeLedgerExtractions(ledger, read) : read);
+      setLedgerSourceLabel(
+        continuing ? mergedSourceLabel(ledgerSourceLabel, file.name) : file.name,
+      );
+      if (!continuing) setAddedRows(new Set());
     } catch (e) {
       setAiError(e instanceof Error ? e.message : String(e));
     } finally {
       setAiBusy(false);
     }
-  }, []);
+  }, [ledger, ledgerSourceLabel]);
 
   // The organisation's hand-over history, merged in once on mount so a SECOND
   // device (HQ's computer, the branch's shared laptop) sees what the first one

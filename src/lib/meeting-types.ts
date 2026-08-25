@@ -129,6 +129,34 @@ export function meetingTypeLabelTri(
   return { bm: value, zh: value, en: value };
 }
 
+/**
+ * G-4 (2026-08-25, J #19): the UI variant — Chinese and English interfaces
+ * print the BM OFFICIAL name beside the local one ("常年大会（AGM）·
+ * Mesyuarat Agung Tahunan"), because the BM term is what appears on the
+ * government form, the bank letter and the auditor's questions; a secretary
+ * working in Chinese still has to recognise it there. Documents and the
+ * eROSES pack keep using meetingTypeLabel/meetingTypeLabelTri — a combined
+ * label must never reach a filed document.
+ *
+ * "Other" (a society's own name, or the instruction to write one) has no
+ * official BM name to teach, so it is left alone.
+ */
+export function meetingTypeUiLabelTri(
+  value: string,
+  customLabel?: string | null,
+): TriText {
+  const base = meetingTypeLabelTri(value, customLabel);
+  if (!isMeetingType(value) || value === "other") return base;
+  // The abbreviation rides once, on the BM half — "常年大会（AGM）· Mesyuarat
+  // Agung Tahunan (AGM)" would say AGM twice.
+  const local = (s: string) => s.replace(/\s*[（(][A-Z]+[）)]\s*$/, "");
+  return {
+    bm: base.bm,
+    zh: `${local(base.zh)} · ${base.bm}`,
+    en: `${local(base.en)} · ${base.bm}`,
+  };
+}
+
 /** One language, for the deterministic renderers and the eROSES pack. */
 export function meetingTypeLabel(
   value: string,

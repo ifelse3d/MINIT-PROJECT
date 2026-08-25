@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
 import { VoiceButton } from "@/components/voice-input";
-import { MEETING_TYPES, MEETING_TYPE_LABEL } from "@/lib/meeting-types";
+import { MEETING_TYPES, meetingTypeUiLabelTri } from "@/lib/meeting-types";
 import { toIsoDate } from "@/lib/date-input";
 import { EMPTY_MEETING_FACTS, type KnownMeetingFacts } from "@/lib/meeting-facts";
 
@@ -85,7 +85,7 @@ export function BeforeReading({
               {t("Biar Minit baca", "让 Minit 自己读", "Let Minit read it")}
             </option>
             {MEETING_TYPES.map((mt) => {
-              const l = MEETING_TYPE_LABEL[mt];
+              const l = meetingTypeUiLabelTri(mt);
               return (
                 <option key={mt} value={mt}>
                   {t(l.bm, l.zh, l.en)}

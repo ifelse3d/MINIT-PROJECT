@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
 import { ExtractionTable } from "@/components/extraction-table";
@@ -160,6 +161,22 @@ export function LedgerReview() {
                 }}
               />
             </label>
+          )}
+          {/* G-1 (2026-08-25): typing is a first-class way in, beside the
+              camera — same three doors as /minutes. It lands on the typing
+              grid already open (?taip=1). */}
+          {!aiBusy && (
+            <Link
+              href="/money/receipts?taip=1"
+              className="inline-flex min-h-11 items-center gap-2 rounded-md border-2 border-[color:var(--v2-border)] px-4 text-base font-medium hover:bg-accent"
+            >
+              ⌨️{" "}
+              <Tri
+                bm="Tiada kertas — taip sendiri"
+                zh="没有纸张 —— 自己打字"
+                en="No paper — type it in"
+              />
+            </Link>
           )}
           <span className="text-sm text-muted-foreground">
             {ledgerSourceLabel ? (

@@ -80,15 +80,20 @@ export function TypeDonations({
   onAddMany,
   defaultCollector,
   defaultPurpose = "Derma am",
+  defaultOpen = false,
 }: {
   /** Called once with every completed row — one batch, one confirmation. */
   onAddMany: (donations: RegisterDonation[]) => void;
   defaultCollector: string;
   defaultPurpose?: string;
+  /** G-1 (2026-08-25): true when the person arrived through the "type it in"
+   *  door on step 1 — the grid opens ready instead of hiding behind its own
+   *  button on the page they were just sent to. */
+  defaultOpen?: boolean;
 }) {
   const t = useTriText();
   const today = dayIsoMalaysia(new Date().toISOString())!;
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [collector, setCollector] = useState(defaultCollector);
   const [error, setError] = useState<string | null>(null);
   const [added, setAdded] = useState<number | null>(null);

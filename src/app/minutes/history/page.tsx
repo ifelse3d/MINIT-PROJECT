@@ -11,7 +11,7 @@ import {
 import { Tri } from "@/components/language-provider";
 import { getSupabaseServer } from "@/db/supabase-server";
 import { getActiveOrg } from "@/lib/active-org";
-import { isMeetingType, meetingTypeLabelTri } from "@/lib/meeting-types";
+import { isMeetingType, meetingTypeUiLabelTri } from "@/lib/meeting-types";
 import { isIsoDate } from "@/lib/date-input";
 import { PAGE_SIZE, pageRange, pageSummary, parsePage } from "@/lib/list-page";
 import { Pager } from "@/components/pager";
@@ -165,7 +165,9 @@ export default async function MinutesHistoryPage({
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <CardTitle className="text-base">
-                      <Tri {...meetingTypeLabelTri(d.meeting_type ?? "")} />
+                      {/* G-4 (J #19): the BM official name rides along in
+                          zh/EN — it is the term on the filed document below. */}
+                      <Tri {...meetingTypeUiLabelTri(d.meeting_type ?? "")} />
                       {d.meeting_date ? ` — ${d.meeting_date}` : ""}
                     </CardTitle>
                     <CardDescription>
