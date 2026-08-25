@@ -1,5 +1,6 @@
 import {
   Banknote,
+  BarChart3,
   BookOpen,
   Building2,
   CalendarClock,
@@ -94,6 +95,8 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/money/expenses", icon: CreditCard, bm: "Rekod perbelanjaan & tuntutan", zh: "记开支与报销", en: "Spending & claims" },
   { href: "/money/receipts", icon: Receipt, bm: "Jana resit", zh: "开收据", en: "Issue receipts" },
   { href: "/money/custody", icon: Coins, bm: "Serah tunai", zh: "交现金", en: "Hand over cash" },
+  // Stage F: the financial statement — computed, never typed.
+  { href: "/money/report", icon: BarChart3, bm: "Penyata kewangan", zh: "财报", en: "Financial statement" },
   { href: "/money/history", icon: ClipboardList, bm: "Sejarah resit", zh: "收据历史", en: "Receipt history" },
   // Filings & dates.
   { href: "/calendar", icon: CalendarClock, bm: "Kalendar & tarikh akhir", zh: "日历与死线", en: "Calendar & deadlines" },
@@ -176,6 +179,7 @@ export const PRIMARY_NAV: NavEntry[] = [
       byHref("/money/expenses"),
       byHref("/money/receipts"),
       byHref("/money/custody"),
+      byHref("/money/report"),
       byHref("/money/history"),
     ],
   },
@@ -238,6 +242,7 @@ export const SIDEBAR_NAV: NavEntry[] = [
       byHref("/money/expenses"),
       byHref("/money/receipts"),
       byHref("/money/custody"),
+      byHref("/money/report"),
       byHref("/money/einvois"),
       byHref("/money/history"),
     ],

@@ -34,6 +34,7 @@ import {
   type ConfirmedAgm,
 } from "@/lib/standard-deadlines";
 import { dayIsoMalaysia } from "@/lib/history";
+import { formatRm } from "@/lib/minutes-draft";
 
 // ---------------------------------------------------------------------------
 // /filings — a THIN aggregation page (FIX 5). Nothing is rebuilt here:
@@ -51,16 +52,29 @@ const URGENCY_STYLE: Record<Urgency, string> = {
   done: "border-slate-300 bg-slate-100 text-slate-700",
 };
 
+/** F-3: this year's statement totals, computed server-side — never typed. */
+export type FilingsFinance = {
+  year: string;
+  /** The day the totals run to (today, Malaysia time). */
+  toIso: string;
+  incomeTotalCents: number;
+  paymentsTotalCents: number;
+  netCents: number;
+};
+
 export function FilingsView({
   agm,
   confirmed,
   orgType = null,
+  finance = null,
 }: {
   agm: ConfirmedAgm | null;
   /** The latest CONFIRMED minutes' extraction, from the server (S0-5). */
   confirmed: { extraction: MeetingNotesExtraction; confirmedOnIso: string | null } | null;
   /** B-5: 'committee' = internal committee — no eROSES, no annual return. */
   orgType?: "registered" | "committee" | null;
+  /** F-3: computed financial figures for the annual return, or null. */
+  finance?: FilingsFinance | null;
 }) {
   const t = useTriText();
   const extraction = confirmed?.extraction ?? null;
@@ -205,6 +219,92 @@ export function FilingsView({
           )}
         </CardContent>
       </Card>
+
+      {/* F-3 (work order 27): the annual return's FINANCIAL figures — computed
+          from the statement (a table lookup, AI involved nowhere), with the
+          source one tap away. Copyable like the paste-pack rows. */}
+      {finance && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl">
+              💰{" "}
+              <Tri
+                bm={`Angka kewangan ${finance.year} (dikira daripada penyata)`}
+                zh={`${finance.year} 年财务数字（由财报算出）`}
+                en={`${finance.year} financial figures (computed from the statement)`}
+              />
+            </CardTitle>
+            <CardDescription>
+              <Tri
+                bm={`Sehingga ${finance.toIso}. Dikira oleh sistem daripada rekod tersimpan — bukan AI, bukan taipan tangan.`}
+                zh={`算到 ${finance.toIso}。由系统从已保存的记录算出 —— 不是 AI，也不是手抄。`}
+                en={`Up to ${finance.toIso}. Computed by the system from stored records — not AI, not hand-typed.`}
+              />
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            {[
+              {
+                key: "income",
+                bm: "Jumlah penerimaan / Total income",
+                zh: "收入合计",
+                en: "Total income",
+                cents: finance.incomeTotalCents,
+              },
+              {
+                key: "payments",
+                bm: "Jumlah pembayaran / Total payments",
+                zh: "支出合计",
+                en: "Total payments",
+                cents: finance.paymentsTotalCents,
+              },
+              {
+                key: "net",
+                bm: "Lebihan / Kurangan (bersih)",
+                zh: "结余（净额）",
+                en: "Net surplus / deficit",
+                cents: finance.netCents,
+              },
+            ].map((row) => {
+              const value = `${row.cents < 0 ? "-" : ""}${formatRm(Math.abs(row.cents))}`;
+              return (
+                <div
+                  key={row.key}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
+                >
+                  <span className="font-medium">
+                    <Tri bm={row.bm} zh={row.zh} en={row.en} />
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="font-semibold tabular-nums">{value}</span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => copyValue(`finance-${row.key}`, value)}
+                    >
+                      {copied === `finance-${row.key}` ? (
+                        <>✓ <Tri bm="Disalin" zh="已复制" en="Copied" /></>
+                      ) : (
+                        <Tri bm="Salin" zh="复制" en="Copy" />
+                      )}
+                    </Button>
+                  </span>
+                </div>
+              );
+            })}
+            <p className="text-sm text-muted-foreground">
+              <Link href="/money/report" className="underline underline-offset-4">
+                <Tri
+                  bm="Lihat penyata penuh (sumber angka ini)"
+                  zh="看完整财报（这些数字的来源）"
+                  en="See the full statement (the source of these figures)"
+                />{" "}
+                →
+              </Link>
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* 2 — Deadlines */}
       <Card>

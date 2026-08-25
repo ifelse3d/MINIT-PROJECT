@@ -1,7 +1,10 @@
 import { getLatestConfirmedAgm, getLatestConfirmedExtraction } from "@/db/agm";
 import { getActiveOrg } from "@/lib/active-org";
 import { readOrgTypeFlags } from "@/lib/org-flags";
-import { FilingsView } from "./filings-view";
+import { buildFinancialStatement } from "@/lib/financial-statement";
+import { dayIsoMalaysia } from "@/lib/history";
+import { loadStatementRows } from "@/app/money/report/data";
+import { FilingsView, type FilingsFinance } from "./filings-view";
 
 // ---------------------------------------------------------------------------
 // /filings — thin server wrapper.
@@ -29,5 +32,29 @@ export default async function FilingsPage() {
   const { orgType } = active
     ? await readOrgTypeFlags(active.id)
     : { orgType: null };
-  return <FilingsView agm={agm} confirmed={confirmed} orgType={orgType} />;
+
+  // F-3 (work order 27): the annual return's financial figures, COMPUTED —
+  // this year's statement totals from the database, a table lookup with AI
+  // involved nowhere. null (no org / unreadable DB) simply hides the block.
+  let finance: FilingsFinance | null = null;
+  if (active) {
+    const todayIso = dayIsoMalaysia(new Date().toISOString())!;
+    const year = todayIso.slice(0, 4);
+    const period = { fromIso: `${year}-01-01`, toIso: todayIso };
+    const rows = await loadStatementRows(active.id, period);
+    if (rows) {
+      const s = buildFinancialStatement(rows, period);
+      finance = {
+        year,
+        toIso: todayIso,
+        incomeTotalCents: s.incomeTotalCents,
+        paymentsTotalCents: s.paymentsTotalCents,
+        netCents: s.netCents,
+      };
+    }
+  }
+
+  return (
+    <FilingsView agm={agm} confirmed={confirmed} orgType={orgType} finance={finance} />
+  );
 }

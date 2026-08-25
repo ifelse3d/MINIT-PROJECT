@@ -52,13 +52,14 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
       if (!g || g.kind !== "group") throw new Error(`expected group ${id}`);
       return g;
     };
-    // 錢: 记收入 · 记开支与报销 · 开收据 · 交现金 · 税务 e-Invois(开关) ·
-    // 收据历史. (/money/report joins with Stage F's real page.)
+    // 錢: 记收入 · 记开支与报销 · 开收据 · 交现金 · 财报 ·
+    // 税务 e-Invois(开关) · 收据历史 — the full B-1 enumeration, delivered.
     expect(byId("money").children.map((c) => c.href)).toEqual([
       "/money",
       "/money/expenses",
       "/money/receipts",
       "/money/custody",
+      "/money/report",
       "/money/einvois",
       "/money/history",
     ]);
@@ -113,6 +114,7 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
       "/money/expenses",
       "/money/receipts",
       "/money/custody",
+      "/money/report",
       "/money/history",
     ]);
     // The index page must be `exact`, or standing on /money/receipts lights up
@@ -181,6 +183,7 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
       "/money/expenses",
       "/money/receipts",
       "/money/custody",
+      "/money/report",
       "/money/history",
     ]);
 
