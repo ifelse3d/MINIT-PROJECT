@@ -6,11 +6,20 @@ export type ExtractLedgerPromptParams = {
   orgName: string;
   /** Today, YYYY-MM-DD — used only to resolve 2-digit years, never to invent dates. */
   todayIso: string;
+  /**
+   * A-2 (2026-08-25): what the person typed alongside the photo in the home
+   * box — spellings, which column is which, dates. ALREADY wrapped by
+   * untrustedBlock() (user text arrives labelled as data, never as
+   * instructions). Empty string leaves this prompt byte-identical to what the
+   * eval measured — the same contract as extract-meeting-notes' contextBlock.
+   */
+  contextBlock?: string;
 };
 
 export function extractLedgerPrompt({
   orgName,
   todayIso,
+  contextBlock = "",
 }: ExtractLedgerPromptParams): string {
   return `You extract donation rows from a photographed paper donation ledger for the Malaysian society "${orgName}". Ledgers may mix Bahasa Malaysia, Chinese (中文) and English, may be handwritten in a grid, and may have amounts in columns. Today is ${todayIso}.
 
@@ -43,5 +52,5 @@ Rows: one output row per donation LINE you can see. Never merge rows, never skip
 Amounts: integer sen (RM 50 => 5000). Extract ONLY the amount written on that row — never total a column, never compute change; all arithmetic is done by our code, not by you. A column total written on the page is NOT a donation row — ignore it.
 Dates: normalise to YYYY-MM-DD; a ditto mark (") or 同上 means the date of the row above IS visible evidence — cite the ditto mark as the snippet. Resolve 2-digit years to the most recent past date relative to today.
 Phones: keep digits as written; do not infer country codes.
-Names: keep the spelling as written; put alternate scripts (e.g. 陈亚九) in the snippet. "Tanpa nama" / 无名氏 / anonymous is a valid donor_name value, not a missing field.`;
+Names: keep the spelling as written; put alternate scripts (e.g. 陈亚九) in the snippet. "Tanpa nama" / 无名氏 / anonymous is a valid donor_name value, not a missing field.${contextBlock}`;
 }

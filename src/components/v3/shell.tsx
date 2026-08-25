@@ -19,11 +19,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LanguageFirstRunPicker,
-  LanguageSwitcher,
-  Tri,
-} from "@/components/language-provider";
+import { LanguageSwitcher, Tri } from "@/components/language-provider";
+import { FirstRunFlow } from "@/components/first-run-flow";
 import {
   PRIMARY_NAV,
   groupHasActiveChild,
@@ -72,7 +69,7 @@ export function AppShell({
           <LanguageSwitcher />
         </div>
         <main className="relative z-10">{children}</main>
-        <LanguageFirstRunPicker />
+        <FirstRunFlow />
       </div>
     );
   }
@@ -112,7 +109,7 @@ export function AppShell({
           blocked={aiBlocked}
         />
       )}
-      <LanguageFirstRunPicker />
+      <FirstRunFlow />
     </div>
   );
 }

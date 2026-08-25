@@ -144,7 +144,8 @@ async function run() {
   await page.type('input[name="name"]', ORG_NAME);
   await clickByText(page, "button", "创建组织");
   await new Promise((r) => setTimeout(r, 6000));
-  check("org created", page.url().includes("/constitution"));
+  // A-4 (2026-08-25): creating an org (no constitution attached) lands HOME.
+  check("org created", page.url().includes("welcome=1"));
 
   // --- typed minutes -------------------------------------------------------
   await page.goto(`${BASE}/minutes`, { waitUntil: "networkidle2" });

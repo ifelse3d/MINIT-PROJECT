@@ -128,7 +128,9 @@ async function run() {
   await page.type('input[name="name"]', ORG_NAME);
   await clickByText(page, "button", "创建组织");
   await new Promise((r) => setTimeout(r, 6000));
-  check("org creation reaches the onboarding step", page.url().includes("/constitution"));
+  // A-4 (2026-08-25): creating an org (no constitution attached) lands HOME
+  // with the "what next" card, no longer on the constitution page.
+  check("org creation lands home with the welcome card", page.url().includes("welcome=1"));
 
   // --- type 9 donations in (TypeDonations grid) ----------------------------
   await page.goto(`${BASE}/money/receipts`, { waitUntil: "networkidle2" });

@@ -24,6 +24,7 @@ import {
   parseMeetingNotesExtraction,
 } from "@/lib/extraction";
 import { classifyPrompt } from "@/prompts/classify";
+import { untrustedBlock } from "@/prompts/untrusted";
 import { extractMeetingNotesPrompt } from "@/prompts/extract-meeting-notes";
 import { extractLedgerPrompt } from "@/prompts/extract-ledger";
 import { extractConstitutionPrompt } from "@/prompts/extract-constitution";
@@ -123,9 +124,36 @@ export async function POST(req: Request) {
       );
     }
 
-    // Charge the classify step first. requireAiQuota also resolves the org, so
-    // the org name never comes from the browser (prompt-injection surface).
-    const gate = await requireAiQuota(["classify_upload"]);
+    // A-2 (2026-08-25): the box can answer the "what IS this?" question FOR
+    // the classifier — when Minit could not place a page, the box asks the
+    // person and re-sends with the answer. A forced kind skips the classify
+    // model call AND its charge: the person did the classifying.
+    const forcedRaw = String(form.get("kind") ?? "");
+    const forcedKind: Handled | null = isHandled(forcedRaw) ? forcedRaw : null;
+
+    // A-2: what the person typed alongside the file — spellings, which column
+    // is which, dates. User text, so it reaches every prompt as LABELLED DATA
+    // (untrustedBlock), never as instructions. PDPA: never logged.
+    const personalContext = String(form.get("context") ?? "").trim().slice(0, 2000);
+    const contextBlock =
+      personalContext === ""
+        ? ""
+        : `\n\n${untrustedBlock(
+            "NOTES THE PERSON TYPED ALONGSIDE THIS UPLOAD (their own abbreviations, spellings and hints — prefer these spellings when the page matches)",
+            personalContext,
+          )}`;
+
+    // Charge the first step. requireAiQuota also resolves the org, so the org
+    // name never comes from the browser (prompt-injection surface). With a
+    // forced kind the ONE charge is the extract action itself.
+    const firstAction = forcedKind
+      ? forcedKind === "meeting_notes"
+        ? "extract_minutes"
+        : forcedKind === "ledger_page"
+          ? "extract_ledger"
+          : "extract_constitution"
+      : "classify_upload";
+    const gate = await requireAiQuota([firstAction]);
     if (!gate.ok) {
       return NextResponse.json(gate.body, { status: gate.status });
     }
@@ -141,47 +169,51 @@ export async function POST(req: Request) {
     const classifier = getVisionProvider("classify");
     const provider = getVisionProvider("extract");
 
-    // 2026-08-18: attach what the vendor actually charged to the ai_usage row
-    // that paid for it — the pattern extract-ledger has had since 2026-08-03.
-    // Two charged rows here, so two recorders: the classify row is billed
-    // and priced separately from the extract row it decides.
-    const onClassifyUsage = createUsageRecorder(gate.org.id, gate.charges[0]);
-
-    // --- step 1: what IS this page? ---------------------------------------
     let classification: { kind: string; language_detected: string } | null = null;
-    try {
-      const raw = await classifier.extractJson({
-        prompt: classifyPrompt({ filename: file.name }),
-        imageBase64,
-        mimeType: file.type,
-        onUsage: onClassifyUsage,
-      });
-      const parsed = classificationSchema.safeParse(raw);
-      if (parsed.success) classification = parsed.data;
-    } catch {
-      return NextResponse.json(
-        { error: joinUserError(USER_ERRORS.aiUnavailable) },
-        { status: 502 },
-      );
+    if (!forcedKind) {
+      // 2026-08-18: attach what the vendor actually charged to the ai_usage row
+      // that paid for it — the pattern extract-ledger has had since 2026-08-03.
+      // Two charged rows here, so two recorders: the classify row is billed
+      // and priced separately from the extract row it decides.
+      const onClassifyUsage = createUsageRecorder(gate.org.id, gate.charges[0]);
+
+      // --- step 1: what IS this page? -------------------------------------
+      try {
+        const raw = await classifier.extractJson({
+          prompt: classifyPrompt({ filename: file.name }),
+          imageBase64,
+          mimeType: file.type,
+          onUsage: onClassifyUsage,
+        });
+        const parsed = classificationSchema.safeParse(raw);
+        if (parsed.success) classification = parsed.data;
+      } catch {
+        return NextResponse.json(
+          { error: joinUserError(USER_ERRORS.aiUnavailable) },
+          { status: 502 },
+        );
+      }
+
+      if (!classification || !isHandled(classification.kind)) {
+        // Honest outcome, not a guess: we know we could not place this page.
+        // The classify action is still charged — the model did run. The box
+        // turns this into a question ("is it minutes, a ledger page, or the
+        // constitution?") and re-sends with kind= set.
+        return NextResponse.json(
+          {
+            kind: "unknown",
+            error: joinUserError({
+              bm: "Minit tidak pasti halaman ini jenis apa. Kalau ia nota mesyuarat, buka halaman Minit Mesyuarat dan ambil gambar di sana. Kalau ia halaman lejar derma, buka halaman Wang & Resit. Kalau ia perlembagaan, buka halaman Perlembagaan.",
+              zh: "Minit 不太确定这一页是什么。如果是会议笔记，请到「会议记录」页拍；如果是捐款账页，请到「财务与收据」页；如果是章程，请到「章程」页。",
+              en: "Minit is not sure what this page is. If it is meeting notes, open the Meeting Minutes page and take the photo there. If it is a donation ledger page, open Money & Receipts. If it is your constitution, open the Constitution page.",
+            }),
+          },
+          { status: 422 },
+        );
+      }
     }
 
-    if (!classification || !isHandled(classification.kind)) {
-      // Honest outcome, not a guess: we know we could not place this page.
-      // The classify action is still charged — the model did run.
-      return NextResponse.json(
-        {
-          kind: "unknown",
-          error: joinUserError({
-            bm: "Minit tidak pasti halaman ini jenis apa. Kalau ia nota mesyuarat, buka halaman Minit Mesyuarat dan ambil gambar di sana. Kalau ia halaman lejar derma, buka halaman Wang & Resit. Kalau ia perlembagaan, buka halaman Perlembagaan.",
-            zh: "Minit 不太确定这一页是什么。如果是会议笔记，请到「会议记录」页拍；如果是捐款账页，请到「财务与收据」页；如果是章程，请到「章程」页。",
-            en: "Minit is not sure what this page is. If it is meeting notes, open the Meeting Minutes page and take the photo there. If it is a donation ledger page, open Money & Receipts. If it is your constitution, open the Constitution page.",
-          }),
-        },
-        { status: 422 },
-      );
-    }
-
-    const kind: Handled = classification.kind;
+    const kind: Handled = forcedKind ?? (classification!.kind as Handled);
 
     // --- the page cap, again, now that we know WHAT this is ----------------
     //
@@ -215,7 +247,11 @@ export async function POST(req: Request) {
           ? "extract_ledger"
           : "extract_constitution";
     let extractCharge: UsageCharge | undefined;
-    try {
+    if (forcedKind) {
+      // The forced-kind path charged the extract action up front (there is no
+      // classify step) — gate.charges[0] IS the extract charge.
+      extractCharge = gate.charges[0];
+    } else try {
       extractCharge = await checkAndRecordUsage(gate.org.id, extractAction);
     } catch (e) {
       // Only a real quota exhaustion gets the "come back on the 1st" message.
@@ -255,10 +291,10 @@ export async function POST(req: Request) {
         : "";
     const prompt =
       kind === "meeting_notes"
-        ? extractMeetingNotesPrompt({ orgName, todayIso, glossaryBlock })
+        ? extractMeetingNotesPrompt({ orgName, todayIso, glossaryBlock, contextBlock })
         : kind === "ledger_page"
-          ? extractLedgerPrompt({ orgName, todayIso })
-          : extractConstitutionPrompt({ orgName });
+          ? extractLedgerPrompt({ orgName, todayIso, contextBlock })
+          : extractConstitutionPrompt({ orgName, contextBlock });
 
     const validate =
       kind === "meeting_notes"
@@ -343,7 +379,8 @@ ${issues}`,
       kind,
       store: DESTINATION[kind].store,
       page: DESTINATION[kind].page,
-      language: classification.language_detected,
+      // On the forced-kind path no classifier ran, so no detected language.
+      language: classification?.language_detected ?? "unknown",
       fileName: file.name,
       extraction,
       provider: provider.name,

@@ -6,6 +6,7 @@ import { Tri, useTriText } from "@/components/language-provider";
 import { ExtractionTable } from "@/components/extraction-table";
 import { NextStepLink, PageSection } from "@/components/page-section";
 import { PdpaNote } from "@/components/pdpa-note";
+import { HowItWorksButton } from "@/app/how-it-works";
 import { sampleLedgerExtraction } from "@/lib/sample-ledger";
 import {
   eligibleForReceipt,
@@ -184,17 +185,21 @@ export function LedgerReview() {
 
         {/* Opt-in example, quiet and separate from the camera button. */}
         {noLedgerYet && !aiBusy && (
-          <button
-            type="button"
-            onClick={() => showLedgerSample(sampleLedgerExtraction)}
-            className="self-start text-base text-muted-foreground underline underline-offset-4"
-          >
-            <Tri
-              bm="Belum ada lejar di tangan? Lihat contoh"
-              zh="手上还没有账页？看一个示范"
-              en="Ledger not to hand? See an example"
-            />
-          </button>
+          <div className="flex flex-wrap items-center gap-4">
+            <button
+              type="button"
+              onClick={() => showLedgerSample(sampleLedgerExtraction)}
+              className="self-start text-base text-muted-foreground underline underline-offset-4"
+            >
+              <Tri
+                bm="Belum ada lejar di tangan? Lihat contoh"
+                zh="手上还没有账页？看一个示范"
+                en="Ledger not to hand? See an example"
+              />
+            </button>
+            {/* A-3: the walkthrough entry lives on the empty states too. */}
+            <HowItWorksButton variant="link" />
+          </div>
         )}
         {aiError && (
           <div className="rounded-md border border-red-300 bg-red-50 p-4 text-base text-red-900">

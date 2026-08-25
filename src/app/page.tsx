@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Tri } from "@/components/language-provider";
 import { getActiveOrg } from "@/lib/active-org";
@@ -6,59 +7,49 @@ import { getUsage } from "@/lib/ai/usage";
 import { dayIsoMalaysia } from "@/lib/history";
 import { computeStandardDeadlines } from "@/lib/standard-deadlines";
 import { getLatestConfirmedAgm } from "@/db/agm";
-import { orgHasAnyActivity } from "@/db/first-run";
 import { HomeUpcoming } from "./home-upcoming";
-import { HowItWorks } from "./how-it-works";
+import { HowItWorksButton } from "./how-it-works";
+import { WelcomeCard } from "./welcome-card";
 import { AskBox } from "./ask-box";
 
 // ---------------------------------------------------------------------------
-// HOME = "what do I do today" (Stage R, 2026-08-25).
+// HOME = the chat box IS the page (A-2, 2026-08-25, J's #12 #17).
 //
-// Three big task cards — submit meeting minutes / record donations & issue
-// receipts / what to file with eROSES this month — then what is due, then the
-// question box, DEMOTED to the bottom (it used to be the hero; J's brief makes
-// the tasks the hero and the chat secondary).
+// One big box — drop a photo, choose a file, or type; you can type first and
+// confirm before anything is sent; Minit asks back when it cannot place a
+// page. The three task cards are DEMOTED to quick chips under the box: the
+// principle is "the user brings whatever is in their hand, Minit works out
+// where it goes" (the eROSES test, J's #16), and three cards asking them to
+// self-classify were the old model.
 //
-// No organisation yet → ONE card only ("tell Minit your organisation's name"),
-// and no tax deadlines — a deadline for an organisation that does not exist is
-// noise (J's brief).
+// No organisation yet → ONE card only ("tell Minit your organisation's
+// name"), and no tax deadlines — a deadline for an organisation that does not
+// exist is noise (J's brief).
 // ---------------------------------------------------------------------------
 
 export const dynamic = "force-dynamic";
 
-const TASKS = [
+const QUICK_CHIPS = [
   {
     href: "/minutes",
     icon: "📝",
-    tint: "bg-amber-100 dark:bg-amber-100",
-    bm: "Hantar minit mesyuarat",
-    zh: "上交会议记录",
-    en: "Submit meeting minutes",
-    subBm: "Ambil gambar nota tulisan tangan — Minit tulis dokumennya.",
-    subZh: "拍下手写笔记，Minit 帮您写成正式记录。",
-    subEn: "Photograph the handwritten notes — Minit writes the document.",
+    bm: "Minit mesyuarat",
+    zh: "会议记录",
+    en: "Meeting minutes",
   },
   {
     href: "/money",
     icon: "🧾",
-    tint: "bg-green-100 dark:bg-green-100",
-    bm: "Rekod derma & jana resit",
-    zh: "记录捐款、开收据",
-    en: "Record donations & issue receipts",
-    subBm: "Gambar lejar atau taip terus; nombor resit dijana oleh sistem.",
-    subZh: "拍账页或直接打字；收据号码由系统按顺序生成。",
-    subEn: "Photograph the ledger or type it in; receipt numbers come from the system.",
+    bm: "Derma & resit",
+    zh: "捐款与收据",
+    en: "Donations & receipts",
   },
   {
     href: "/filings",
     icon: "📋",
-    tint: "bg-blue-100 dark:bg-blue-100",
-    bm: "Apa nak hantar ke eROSES bulan ini",
-    zh: "本月要交什么 eROSES",
-    en: "What to file with eROSES this month",
-    subBm: "Pek tampal daripada minit yang disahkan, dan tarikh akhir anda.",
-    subZh: "已确认记录做成的粘贴包，和您的截止日期。",
-    subEn: "The paste-pack from confirmed minutes, and your deadlines.",
+    bm: "eROSES bulan ini",
+    zh: "本月 eROSES",
+    en: "eROSES this month",
   },
 ] as const;
 
@@ -66,8 +57,8 @@ export default async function Home() {
   const todayIso = dayIsoMalaysia(new Date().toISOString())!;
   const active = await getActiveOrg();
 
-  // No organisation: ONE card. No task grid, no deadlines, no question box —
-  // nothing here works until Minit knows whose records these are.
+  // No organisation: ONE card. Nothing here works until Minit knows whose
+  // records these are — but "see how it works" is exactly for this moment.
   if (!active) {
     return (
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 pb-10 pt-6">
@@ -87,15 +78,18 @@ export default async function Home() {
               en="Minit needs to know which organisation these documents belong to, so the right name is printed on your receipts and minutes. It takes about a minute."
             />
           </p>
-          <Button asChild size="lg" className="self-start text-base">
-            <Link href="/orgs/new">
-              <Tri
-                bm="Namakan pertubuhan saya →"
-                zh="填写我的机构名称 →"
-                en="Name my organisation →"
-              />
-            </Link>
-          </Button>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button asChild size="lg" className="text-base">
+              <Link href="/orgs/new">
+                <Tri
+                  bm="Namakan pertubuhan saya →"
+                  zh="填写我的机构名称 →"
+                  en="Name my organisation →"
+                />
+              </Link>
+            </Button>
+            <HowItWorksButton variant="link" />
+          </div>
         </div>
       </div>
     );
@@ -103,59 +97,45 @@ export default async function Home() {
 
   const agm = await getLatestConfirmedAgm();
   const deadlines = computeStandardDeadlines(todayIso, { agm });
-  const hasActivity = await orgHasAnyActivity(active.id);
   const usage = await getUsage(active.id).catch(() => null);
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 pb-10">
       <Header />
 
-      {/* 1 — today's three jobs. THE page, per J's brief. */}
+      {/* A-4: the just-created-an-organisation landing note. Reads ?welcome=1,
+          so it needs a Suspense boundary (useSearchParams in a server tree). */}
+      <Suspense fallback={null}>
+        <WelcomeCard />
+      </Suspense>
+
+      {/* 1 — THE box (A-2): photo / file / typing, mixed; type first, then
+          confirm to send; Minit asks back when unsure. */}
+      <AskBox
+        hasOrg
+        initialRemaining={usage?.totalRemaining ?? null}
+        initialUsedPct={usage?.usedPct ?? null}
+      />
+
+      {/* Quick chips — the three task pages, one tap away, no longer the hero. */}
       <section className="flex flex-col gap-3">
-        <h2 className="text-xl font-semibold">
-          <Tri bm="Apa nak buat hari ini?" zh="今天要做什么？" en="What needs doing today?" />
-        </h2>
-        <div className="grid gap-3 sm:grid-cols-3">
-          {TASKS.map((c) => (
+        <div className="flex flex-wrap items-center gap-2">
+          {QUICK_CHIPS.map((c) => (
             <Link
               key={c.href}
               href={c.href}
-              className="v2-glass flex min-h-40 flex-col gap-3 p-5 transition-shadow duration-150 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--v2-primary)] focus-visible:ring-offset-2"
+              className="inline-flex min-h-11 items-center gap-2 rounded-full border-2 border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-4 text-base font-medium hover:border-[color:var(--v2-primary)] hover:bg-[color:var(--v2-primary-soft)]"
             >
-              <span
-                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl ${c.tint}`}
-                aria-hidden
-              >
-                {c.icon}
-              </span>
-              <span className="text-lg font-semibold leading-snug">
-                <Tri bm={c.bm} zh={c.zh} en={c.en} />
-              </span>
-              <span className="text-sm leading-snug text-[color:var(--v2-text-soft)]">
-                <Tri bm={c.subBm} zh={c.subZh} en={c.subEn} />
-              </span>
+              <span aria-hidden>{c.icon}</span>
+              <Tri bm={c.bm} zh={c.zh} en={c.en} />
             </Link>
           ))}
+          <HowItWorksButton variant="link" />
         </div>
       </section>
 
-      {/* First run: how the whole thing works, until something is recorded. */}
-      {!hasActivity && <HowItWorks />}
-
       {/* 2 — what is due (this org's own deadlines, never invented ones) */}
       <HomeUpcoming deadlines={deadlines} todayIso={todayIso} />
-
-      {/* 3 — the question box, demoted to the bottom (J's brief). */}
-      <section className="flex flex-col gap-3">
-        <h2 className="text-xl font-semibold">
-          <Tri bm="Ada soalan?" zh="有问题想问？" en="Have a question?" />
-        </h2>
-        <AskBox
-          hasOrg
-          initialRemaining={usage?.totalRemaining ?? null}
-          initialUsedPct={usage?.usedPct ?? null}
-        />
-      </section>
     </div>
   );
 }

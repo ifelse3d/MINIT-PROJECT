@@ -228,43 +228,6 @@ export function LanguageSwitcher({ tone = "light" }: { tone?: "light" | "dark" }
   );
 }
 
-/**
- * First-visit language choice — a small centred card over a scrim. Three big
- * buttons, one per language, each labelled in ITS OWN language (the only
- * honest way to label a language chooser). Dismissing = keeping 中文.
- */
-export function LanguageFirstRunPicker() {
-  const { needsChoice, setMode } = useLangs();
-  if (!needsChoice) return null;
-  const options: { key: LangKey; label: string; sub: string }[] = [
-    { key: "zh", label: "中文", sub: "以中文使用 Minit" },
-    { key: "bm", label: "Bahasa Malaysia", sub: "Guna Minit dalam BM" },
-    { key: "en", label: "English", sub: "Use Minit in English" },
-  ];
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
-      <div className="v2-glass w-full max-w-sm p-6">
-        <h2 className="text-xl font-semibold">
-          选择语言 · Pilih bahasa · Choose language
-        </h2>
-        <p className="mt-1 text-sm text-[color:var(--v2-text-soft)]">
-          随时可以在设置里更改 · Boleh ditukar di Tetapan · Change any time in
-          Settings
-        </p>
-        <div className="mt-4 flex flex-col gap-2">
-          {options.map((o) => (
-            <button
-              key={o.key}
-              type="button"
-              onClick={() => setMode(o.key)}
-              className="flex flex-col items-start rounded-xl border border-[color:var(--v2-outline-border)] px-4 py-3 text-left transition-colors hover:border-[color:var(--v2-primary)] hover:bg-[color:var(--v2-primary-soft)]"
-            >
-              <span className="text-lg font-semibold">{o.label}</span>
-              <span className="text-sm text-[color:var(--v2-text-soft)]">{o.sub}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
+// A-1 (2026-08-25): the single-step first-visit language picker grew into the
+// three-step first-run flow — src/components/first-run-flow.tsx (language →
+// text size → name & organisation). It keys off the same `needsChoice`.

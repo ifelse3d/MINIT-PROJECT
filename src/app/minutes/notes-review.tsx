@@ -6,6 +6,7 @@ import { Tri, useTriText } from "@/components/language-provider";
 import { StepGroup } from "@/components/step-card";
 import { NextStepLink, PageSection } from "@/components/page-section";
 import { PdpaNote } from "@/components/pdpa-note";
+import { HowItWorksButton } from "@/app/how-it-works";
 import { formatDateLong, isIsoDate } from "@/lib/date-input";
 import { MEETING_TYPES, MEETING_TYPE_LABEL, meetingTypeLabel } from "@/lib/meeting-types";
 import { formatRm } from "@/lib/minutes-draft";
@@ -241,17 +242,21 @@ export function NotesReview() {
             own notes should reach for the camera, not this. It exists so a
             first-timer (or a demo) can see what a finished page looks like. */}
         {nothingYet && (
-          <button
-            type="button"
-            onClick={openSample}
-            className="self-start text-base text-muted-foreground underline underline-offset-4"
-          >
-            <Tri
-              bm="Belum ada nota? Lihat contoh yang sudah siap"
-              zh="还没有笔记？看一个做好的示范"
-              en="No notes yet? See a worked example"
-            />
-          </button>
+          <div className="flex flex-wrap items-center gap-4">
+            <button
+              type="button"
+              onClick={openSample}
+              className="self-start text-base text-muted-foreground underline underline-offset-4"
+            >
+              <Tri
+                bm="Belum ada nota? Lihat contoh yang sudah siap"
+                zh="还没有笔记？看一个做好的示范"
+                en="No notes yet? See a worked example"
+              />
+            </button>
+            {/* A-3: the walkthrough entry lives on the empty states too. */}
+            <HowItWorksButton variant="link" />
+          </div>
         )}
       </div>
       </PageSection>

@@ -10,13 +10,18 @@ import { createOrg, type OrgActionState } from "./actions";
 
 const INITIAL: OrgActionState = { error: null, ok: false };
 
-/** Where a newly created organisation goes next (2026-08-22).
+/** Where a newly created organisation goes next.
  *
- *  J: "CREATE ORGANIZATION 那边不是说可以 upload 他们的 PERLEMBAGAAN 然后 AI 拿吗?"
- *  The upload has always been on /constitution and nothing on this path ever
- *  mentioned it, so nobody found it. ?setup=1 only adds the banner in
- *  constitution/new-org-banner.tsx — the page itself behaves as it always has. */
-const AFTER_CREATE_HREF = "/constitution?setup=1";
+ *  A-4 (2026-08-25, J's #4): the plain path lands HOME, where a "what next"
+ *  card lists the constitution upload as one SKIPPABLE item — no more being
+ *  dumped onto the constitution page as a toll gate.
+ *
+ *  When the person DID attach a constitution here, they still land on
+ *  /constitution — their upload has just been read and is waiting there to be
+ *  reviewed; sending them home away from their own upload would be worse.
+ *  (?setup=1 only adds the banner in constitution/new-org-banner.tsx.) */
+const AFTER_CREATE_HOME = "/?welcome=1";
+const AFTER_CREATE_WITH_FILE = "/constitution?setup=1";
 
 /** Matches ALLOWED_MIME in /api/extract-constitution. A constitution is
  *  usually a photocopy, so a PDF is as likely as a photo. */
@@ -80,11 +85,11 @@ export function CreateOrgForm({
     if (!state.ok || handledRef.current) return;
     handledRef.current = true;
 
-    // `replace`, not `push`: Back from the constitution page must go to /orgs,
+    // `replace`, not `push`: Back from the landing page must go to /orgs,
     // not to a spent form that would re-show its success panel and invite a
     // second organisation nobody asked for.
     if (!file) {
-      router.replace(AFTER_CREATE_HREF);
+      router.replace(AFTER_CREATE_HOME);
       return;
     }
 
@@ -120,7 +125,7 @@ export function CreateOrgForm({
           fileName: file.name,
           extraction: json.extraction,
         });
-        router.replace(AFTER_CREATE_HREF);
+        router.replace(AFTER_CREATE_WITH_FILE);
       } catch {
         setReadFailed(
           t(
@@ -301,7 +306,7 @@ export function CreateOrgForm({
                 />
               </p>
               <Button asChild size="lg">
-                <Link href={AFTER_CREATE_HREF}>
+                <Link href={AFTER_CREATE_WITH_FILE}>
                   <Tri bm="Teruskan" zh="继续" en="Continue" /> →
                 </Link>
               </Button>
@@ -317,7 +322,7 @@ export function CreateOrgForm({
               </p>
               <p className="text-base">
                 <Link
-                  href={AFTER_CREATE_HREF}
+                  href={file ? AFTER_CREATE_WITH_FILE : AFTER_CREATE_HOME}
                   className="text-green-900 underline underline-offset-4"
                 >
                   <Tri

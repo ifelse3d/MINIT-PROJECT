@@ -5,10 +5,17 @@
 
 export type ExtractConstitutionPromptParams = {
   orgName: string;
+  /**
+   * A-2 (2026-08-25): what the person typed alongside the upload in the home
+   * box. ALREADY wrapped by untrustedBlock(); empty string leaves this prompt
+   * byte-identical — the same contract as the other two extractors.
+   */
+  contextBlock?: string;
 };
 
 export function extractConstitutionPrompt({
   orgName,
+  contextBlock = "",
 }: ExtractConstitutionPromptParams): string {
   return `You extract clauses from the registered constitution ("Undang-Undang Tubuh" / 章程) of the Malaysian society "${orgName}". Constitutions are usually Bahasa Malaysia, sometimes bilingual with Chinese (中文) or English, and may be old photocopies or typewritten pages.
 
@@ -40,5 +47,5 @@ Clauses: one output entry per numbered clause or sub-clause you can see (Fasal 5
 clause_no: exactly as printed ("Fasal 12", "12.1", "第十二条").
 heading: only if a heading is printed; a clause with no heading has heading "missing".
 page_ref: ONLY a page number PRINTED on the document itself, e.g. "muka surat 4". If no page number is printed, page_ref is "missing" with value "" — do NOT substitute the photo order. (Photo order belongs in source_ref.location, never in page_ref.)
-If a page is missing from the photos (numbering jumps), do NOT fill the gap — the gap will be shown to the human.`;
+If a page is missing from the photos (numbering jumps), do NOT fill the gap — the gap will be shown to the human.${contextBlock}`;
 }

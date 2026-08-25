@@ -26,7 +26,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowUp, Camera, Paperclip, RotateCcw } from "lucide-react";
+import { ArrowUp, Camera, Paperclip, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
 import { PdpaNote } from "@/components/pdpa-note";
@@ -113,6 +113,14 @@ export function AskBox({
   const [usedPct, setUsedPct] = useState<number | null>(initialUsedPct);
   const [turnsLeft, setTurnsLeft] = useState<number | null>(null);
   const [reading, setReading] = useState<string | null>(null);
+  // A-2 (2026-08-25): a picked file is STAGED, not sent — the person can add
+  // a line of text first ("type first, then confirm to send"), sees exactly
+  // what will go, and presses Send. Choosing a file used to fire the AI (and
+  // the charge) on the spot, which is "choosing a file silently charged you".
+  const [staged, setStaged] = useState<File | null>(null);
+  // Set when Minit could not place the page: it ASKS instead of giving up.
+  // Holds the text that accompanied the failed attempt so the retry carries it.
+  const [askKind, setAskKind] = useState<{ context: string } | null>(null);
 
   const outOfQuota = remaining !== null && remaining <= 0;
 
@@ -186,17 +194,40 @@ export function AskBox({
     }
   }
 
-  async function onFile(file: File | null) {
+  /** A picked file only lands in the staging area; nothing is sent yet. */
+  function stageFile(file: File | null) {
     if (!file || busy) return;
     setError(null);
+    setAskKind(null);
+    setStaged(file);
+  }
+
+  /**
+   * Send the staged file (with whatever was typed as context for the reader).
+   * `forcedKind` is the person's own answer after Minit asked what the page
+   * is — it skips the classifier, so only the read itself is charged.
+   */
+  async function sendFile(file: File, context: string, forcedKind?: IntakeKind) {
+    if (busy) return;
+    setError(null);
+    setAskKind(null);
     setBusy("file");
     setReading(file.name);
     try {
       const form = new FormData();
       form.append("file", file);
+      if (context.trim() !== "") form.append("context", context.trim());
+      if (forcedKind) form.append("kind", forcedKind);
       const res = await fetch("/api/intake", { method: "POST", body: form });
       const body = (await res.json()) as IntakeOk;
-      if (!res.ok || body.kind === "unknown" || !body.page || !body.extraction) {
+      if (body.kind === "unknown") {
+        // Minit could not place the page — ASK, don't give up (A-2). The file
+        // stays staged; the person answers with one tap and only the read is
+        // charged on the retry.
+        setAskKind({ context });
+        return;
+      }
+      if (!res.ok || !body.page || !body.extraction) {
         setError(
           body.error ??
             t(
@@ -213,6 +244,8 @@ export function AskBox({
         fileName: body.fileName ?? file.name,
         extraction: body.extraction,
       });
+      setStaged(null);
+      setQuestion("");
       router.push(body.page);
     } catch {
       setError(
@@ -288,7 +321,7 @@ export function AskBox({
           capture="environment"
           className="hidden"
           onChange={(e) => {
-            onFile(e.target.files?.[0] ?? null);
+            stageFile(e.target.files?.[0] ?? null);
             e.target.value = "";
           }}
         />
@@ -298,10 +331,90 @@ export function AskBox({
           accept="image/*,application/pdf"
           className="hidden"
           onChange={(e) => {
-            onFile(e.target.files?.[0] ?? null);
+            stageFile(e.target.files?.[0] ?? null);
             e.target.value = "";
           }}
         />
+
+        {/* A-2: the staged file, visible and removable BEFORE anything is
+            sent or charged. */}
+        {staged && (
+          <div className="flex flex-wrap items-center gap-3 rounded-2xl border-2 border-[#7c6cf5]/40 bg-white/70 p-3 dark:bg-white/10">
+            <span className="text-base font-medium">
+              📄 {staged.name}{" "}
+              <span className="text-muted-foreground">
+                ({Math.max(1, Math.round(staged.size / 1024))} KB)
+              </span>
+            </span>
+            <span className="text-sm text-muted-foreground">
+              <Tri
+                bm="Belum dihantar — boleh taip beberapa patah dahulu, kemudian tekan Hantar."
+                zh="还没送出 —— 可以先打几句说明，再按送出。"
+                en="Not sent yet — you can type a few words first, then press Send."
+              />
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setStaged(null);
+                setAskKind(null);
+              }}
+              className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-full text-muted-foreground hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-400/10"
+              aria-label={t("Buang fail", "移除档案", "Remove the file")}
+            >
+              <X className="h-5 w-5" strokeWidth={2.2} />
+            </button>
+          </div>
+        )}
+
+        {/* Minit could not place the page → it asks, with one-tap answers.
+            Only the read is charged after the person answers. */}
+        {askKind && staged && (
+          <div className="flex flex-col gap-3 rounded-2xl border-2 border-[color:var(--v2-border)] bg-white/80 p-4 dark:bg-white/10">
+            <p className="text-lg">
+              🤔{" "}
+              <Tri
+                bm={`Minit tidak pasti "${staged.name}" ini halaman jenis apa. Beritahu Minit — ia jenis yang mana?`}
+                zh={`Minit 看不出「${staged.name}」是哪一种文件。告诉 Minit —— 这是哪一种？`}
+                en={`Minit is not sure what kind of page "${staged.name}" is. Tell Minit — which is it?`}
+              />
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="lg"
+                disabled={busy !== null}
+                onClick={() => void sendFile(staged, askKind.context, "meeting_notes")}
+              >
+                📝 <Tri bm="Nota mesyuarat" zh="会议笔记" en="Meeting notes" />
+              </Button>
+              <Button
+                size="lg"
+                disabled={busy !== null}
+                onClick={() => void sendFile(staged, askKind.context, "ledger_page")}
+              >
+                🧾 <Tri bm="Halaman lejar derma" zh="捐款账页" en="Donation ledger page" />
+              </Button>
+              <Button
+                size="lg"
+                disabled={busy !== null}
+                onClick={() => void sendFile(staged, askKind.context, "constitution")}
+              >
+                📜 <Tri bm="Perlembagaan" zh="章程" en="Constitution" />
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                disabled={busy !== null}
+                onClick={() => {
+                  setStaged(null);
+                  setAskKind(null);
+                }}
+              >
+                <Tri bm="Bukan satu pun — batal" zh="都不是，取消" en="None of these — cancel" />
+              </Button>
+            </div>
+          </div>
+        )}
 
         {busy === "file" && (
           <p className="rounded-2xl border-2 border-[#7c6cf5]/40 bg-white/70 p-4 text-lg font-medium dark:bg-white/10">
@@ -314,12 +427,16 @@ export function AskBox({
           </p>
         )}
 
-        {/* Type a question. Enter sends; Shift+Enter makes a new line. */}
+        {/* Type a question — or type context for the staged file. Enter sends;
+            Shift+Enter makes a new line. One Send button for both paths (A-2):
+            with a file staged it sends the file (plus the typed words as hints
+            for the reader); without one it asks the assistant. */}
         <form
           className="flex flex-col gap-3 sm:flex-row sm:items-end"
           onSubmit={(e) => {
             e.preventDefault();
-            send(question);
+            if (staged) void sendFile(staged, question);
+            else void send(question);
           }}
         >
           <label className="flex-1">
@@ -334,24 +451,43 @@ export function AskBox({
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
-                  send(question);
+                  if (staged) void sendFile(staged, question);
+                  else void send(question);
                 }
               }}
-              placeholder={t(
-                "cth: Bila saya kena hantar Penyata Tahunan?",
-                "例如：年度呈报什么时候要交？",
-                "e.g. When do I have to file the Annual Return?",
-              )}
+              placeholder={
+                staged
+                  ? t(
+                      "Apa-apa yang membantu bacaan — ejaan nama, singkatan, tarikh. Boleh kosong.",
+                      "写点帮助读取的话 —— 名字的写法、缩写、日期。可以留空。",
+                      "Anything that helps the reading — name spellings, abbreviations, dates. Can be empty.",
+                    )
+                  : t(
+                      "cth: Bila saya kena hantar Penyata Tahunan?",
+                      "例如：年度呈报什么时候要交？",
+                      "e.g. When do I have to file the Annual Return?",
+                    )
+              }
               className="w-full resize-y rounded-2xl border-2 border-input bg-white p-3.5 text-lg leading-snug disabled:opacity-60 dark:bg-white/5"
             />
           </label>
           <Button
             type="submit"
             size="lg"
-            disabled={!hasOrg || busy !== null || outOfQuota || !question.trim()}
+            disabled={
+              !hasOrg ||
+              busy !== null ||
+              outOfQuota ||
+              (staged === null && !question.trim())
+            }
           >
-            {busy === "chat" ? (
-              <Tri bm="Sebentar…" zh="想一下…" en="One moment…" />
+            {busy !== null ? (
+              <Tri bm="Sebentar…" zh="请稍等…" en="One moment…" />
+            ) : staged ? (
+              <>
+                <ArrowUp className="h-5 w-5" strokeWidth={2.4} />
+                <Tri bm="Hantar" zh="送出" en="Send" />
+              </>
             ) : (
               <>
                 <ArrowUp className="h-5 w-5" strokeWidth={2.4} />
