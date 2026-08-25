@@ -1,6 +1,12 @@
 # Supabase 郵件模板（Confirm sign up ＋ Reset password）
 
-> 寫於 2026-08-25 通宵（Stage W-1b）。**J 明天 5 分鐘貼上**。
+> 寫於 2026-08-25 通宵（Stage W-1b）。
+>
+> 🔴 **2026-08-25 早上 J 實際打開後發現：現在的 Supabase 免費方案不給直接改模板了。**
+> Dashboard 寫「Set up custom SMTP to edit templates」——要嘛升 Pro、要嘛先接自己的
+> SMTP（Resend／Postmark 等，且要先有網域）。**所以這件事順延到「有網域＋SMTP」
+> 那一天（上線前後）**，模板文字已備好在下面，到時照貼即可。
+> 沒改模板之前，確認信仍然是 Supabase 預設樣子——能用，只是不好看。
 >
 > 為什麼要做：現在的確認信寄件人是「Supabase Auth」、內文一句都沒提 Minit——
 > 註冊的人會以為是詐騙信，不敢點。貼上這兩份模板後，信件開頭就是
@@ -13,10 +19,9 @@
 3. 點 **Reset password** 分頁 → 換成下面第二份 → **Save**
 4. 完成。不用碰程式碼，不用重新部署。
 
-> ⚠️ **寄件人地址（from address）現在改不了。** 要把「noreply@mail.app.supabase.io」
-> 換成自己的網域（例如 mail@minit.my），需要：①先有網域 ②開一個 SMTP 服務
-> （Resend／Postmark 等）③在 Authentication → Emails → SMTP Settings 填進去。
-> **那是上線之後的事，今天不用管。**
+> ⚠️ 上面的貼法步驟以「SMTP 已接好」為前提。接 SMTP 的順序：①先有網域
+> ②開一個 SMTP 服務（Resend／Postmark 等，都有免費層）③在 Authentication →
+> Emails → SMTP Settings 填進去 → 模板編輯就解鎖了，寄件人也會變成你的網域。
 
 > 模板裡的 `{{ .ConfirmationURL }}` 是 Supabase 的變數，**原樣保留，不要翻譯、不要改**。
 

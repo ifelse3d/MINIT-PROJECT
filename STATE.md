@@ -51,13 +51,17 @@
 - **Stage W**：DECISIONS 加 **D9～D13**；competition-facts 加「Registration: COMPLETED July 2026」；
   `docs/supabase-email-templates.md`（J 明天 5 分钟贴）；r1-draft/r1c-draft 移 `competition/archive/`
 
-### 🔴 J 明早的事（全部写在 22-報告，这里只留索引）
+### 🔴 J 的事（全部写在 22-報告，这里只留索引；8/25 早上更新）
 
 1. **跑 migration 18～22**（20260827 collector_name · 20260828 minutes client_id ·
    20260829 needs_einvois · 20260830 orgs.plan · 20260831 app_errors），跑完 `npm run check:migrations`
-2. **git push**（5 支新 commit；跳出 GitHub 选帐号视窗时选你的帐号）
-3. **贴 Supabase 邮件模板**（`docs/supabase-email-templates.md`，5 分钟）
+2. **git push** —— `minit-v2\push-cabang.bat` 8/25 早上补好了（之前只在旧树，J 找不到是对的）。
+   11 支 commit 待推。跳 GitHub 选帐号视窗时选自己的帐号。
+3. ~~贴 Supabase 邮件模板~~ → **已顺延**：8/25 早 J 实机发现免费方案要先接自订 SMTP
+   （或升 Pro）才能改模板。模板文字备好在 `docs/supabase-email-templates.md`，等网域+SMTP。
 4. （可选）Vercel 环境变数加 `ADMIN_EMAILS=你的email` 开 /admin；`NEXT_PUBLIC_CONTACT_EMAIL` 开联络按钮
+
+**新对话开场 PROMPT**：`C:\dev\_J-要做的事-下一個session開場PROMPT-20260825.md`（整段贴）。
 
 ### ❓ 未决问题（比上一版少了的已并入 docs/DECISIONS.md D9–D13）
 
