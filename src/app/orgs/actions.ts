@@ -276,6 +276,11 @@ export async function createOrg(
   const yourName = String(formData.get("yourName") ?? "").trim();
   const parentRaw = String(formData.get("parentOrgId") ?? "").trim();
   const parentOrgId = /^\d+$/.test(parentRaw) ? Number(parentRaw) : null;
+  // B-5 (2026-08-25, 建議①②): what KIND of organisation, and the optional
+  // PPM/ROS registration number (printed on official letterheads, C-1).
+  const orgTypeRaw = String(formData.get("orgType") ?? "");
+  const orgType = orgTypeRaw === "committee" ? "committee" : "registered";
+  const ppmNo = String(formData.get("ppmNo") ?? "").trim().slice(0, 64);
 
   if (!name) return { error: ERR.name, ok: false };
 
@@ -350,11 +355,32 @@ export async function createOrg(
   }
   // ------------------------------------------------------------------------
 
-  const { data: org, error: orgError } = await admin
+  // The org_type/ppm_no columns arrive with migration 20260902000000. Sending
+  // a column PostgREST does not know fails the WHOLE insert, so if that
+  // migration has not run yet, retry with the columns the database has —
+  // creating the organisation must never depend on tomorrow's migration
+  // (STATE §6). The dropped values are the safe default anyway ('registered').
+  const extendedRow: Record<string, unknown> = { name, parent_org_id: parentOrgId };
+  if (orgType !== "registered") extendedRow.org_type = orgType;
+  if (ppmNo !== "") extendedRow.ppm_no = ppmNo;
+  let { data: org, error: orgError } = await admin
     .from("orgs")
-    .insert({ name, parent_org_id: parentOrgId })
+    .insert(extendedRow)
     .select("id")
     .single();
+  if (
+    orgError &&
+    ("org_type" in extendedRow || "ppm_no" in extendedRow) &&
+    /org_type|ppm_no|schema cache/i.test(orgError.message ?? "")
+  ) {
+    const retry = await admin
+      .from("orgs")
+      .insert({ name, parent_org_id: parentOrgId })
+      .select("id")
+      .single();
+    org = retry.data;
+    orgError = retry.error;
+  }
   if (orgError || !org) return { error: ERR.failed, ok: false };
 
   if (parentOrgId === null) {

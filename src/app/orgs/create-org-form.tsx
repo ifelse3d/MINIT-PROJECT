@@ -61,6 +61,8 @@ export function CreateOrgForm({
   // ---------------------------------------------------------------------
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  // B-5: which kind of organisation — decides whether the PPM field shows.
+  const [orgType, setOrgType] = useState<"registered" | "committee">("registered");
   const [reading, setReading] = useState(false);
   const [readFailed, setReadFailed] = useState<string | null>(null);
   /** The post-create work must run once, not on every re-render it causes. */
@@ -176,6 +178,97 @@ export function CreateOrgForm({
           />
         </span>
       </label>
+
+      {/* B-5 (建議①②): what KIND of organisation this is. Two big choices,
+          not a bare enum: a committee-type org gets the same features minus
+          the eROSES/annual-return nagging that does not apply to it. */}
+      <fieldset className="flex flex-col gap-2">
+        <legend className="text-base font-semibold">
+          <Tri bm="Jenis pertubuhan" zh="机构类型" en="Type of organisation" />
+        </legend>
+        <label
+          className={`flex cursor-pointer flex-col rounded-xl border-2 px-4 py-3 ${
+            orgType === "registered"
+              ? "border-[color:var(--v2-primary)] bg-[color:var(--v2-primary-soft)]"
+              : "border-[color:var(--v2-outline-border)]"
+          }`}
+        >
+          <span className="flex items-center gap-2 text-base font-semibold">
+            <input
+              type="radio"
+              name="orgType"
+              value="registered"
+              checked={orgType === "registered"}
+              onChange={() => setOrgType("registered")}
+              className="h-5 w-5 accent-[color:var(--v2-primary)]"
+            />
+            <Tri
+              bm="Persatuan berdaftar (ROS/PPM)"
+              zh="注册社团（ROS/PPM）"
+              en="Registered society (ROS/PPM)"
+            />
+          </span>
+          <span className="pl-7 text-sm text-muted-foreground">
+            <Tri
+              bm="Didaftarkan dengan Jabatan Pendaftaran Pertubuhan — Minit mengingatkan Penyata Tahunan eROSES."
+              zh="在社团注册局注册的社团 —— Minit 会提醒 eROSES 年度呈报。"
+              en="Registered with the Registrar of Societies — Minit reminds you about the eROSES Annual Return."
+            />
+          </span>
+        </label>
+        <label
+          className={`flex cursor-pointer flex-col rounded-xl border-2 px-4 py-3 ${
+            orgType === "committee"
+              ? "border-[color:var(--v2-primary)] bg-[color:var(--v2-primary-soft)]"
+              : "border-[color:var(--v2-outline-border)]"
+          }`}
+        >
+          <span className="flex items-center gap-2 text-base font-semibold">
+            <input
+              type="radio"
+              name="orgType"
+              value="committee"
+              checked={orgType === "committee"}
+              onChange={() => setOrgType("committee")}
+              className="h-5 w-5 accent-[color:var(--v2-primary)]"
+            />
+            <Tri
+              bm="Jawatankuasa dalaman / sementara"
+              zh="内部／临时委员会"
+              en="Internal / ad-hoc committee"
+            />
+          </span>
+          <span className="pl-7 text-sm text-muted-foreground">
+            <Tri
+              bm="Jawatankuasa acara, tabung khas dan seumpamanya — semua ciri yang sama, tanpa peringatan eROSES."
+              zh="活动筹委会、专款小组之类 —— 功能都一样，只是没有 eROSES 提醒。"
+              en="Event committees, special funds and the like — same features, without the eROSES reminders."
+            />
+          </span>
+        </label>
+      </fieldset>
+
+      {orgType === "registered" && (
+        <label className="flex flex-col gap-1">
+          <span className="text-base font-semibold">
+            <Tri
+              bm="No. pendaftaran PPM/ROS (pilihan)"
+              zh="PPM/ROS 注册号（可不填）"
+              en="PPM/ROS registration no. (optional)"
+            />
+          </span>
+          <input name="ppmNo" className={inputCls} maxLength={64} placeholder="PPM-000-00-00000000" />
+          {/* C-1 (anti-impersonation v1): when filled it is printed on
+              official document letterheads, so a reader can check it. */}
+          <span className="text-sm text-muted-foreground">
+            <Tri
+              bm="Jika diisi, nombor ini dicetak pada kepala surat dokumen rasmi anda — orang boleh menyemaknya."
+              zh="填了的话，这个号码会印在正式文件的页首 —— 别人可以核对。"
+              en="If filled in, this number is printed on your official document letterheads — anyone can check it."
+            />
+          </span>
+        </label>
+      )}
 
       {parentChoices.length > 0 && (
         <label className="flex flex-col gap-1">

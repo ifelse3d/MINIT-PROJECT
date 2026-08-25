@@ -87,7 +87,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const gate = await requireAiQuota(["draft_minutes"]);
+    const gate = await requireAiQuota(["draft_minutes"], { cap: "upload" });
     if (!gate.ok) {
       return NextResponse.json(gate.body, { status: gate.status });
     }

@@ -6,6 +6,7 @@ import { getActiveOrg } from "@/lib/active-org";
 import { getUsage } from "@/lib/ai/usage";
 import { dayIsoMalaysia } from "@/lib/history";
 import { computeStandardDeadlines } from "@/lib/standard-deadlines";
+import { readOrgTypeFlags } from "@/lib/org-flags";
 import { getLatestConfirmedAgm } from "@/db/agm";
 import { HomeUpcoming } from "./home-upcoming";
 import { HowItWorksButton } from "./how-it-works";
@@ -88,6 +89,16 @@ export default async function Home() {
                 />
               </Link>
             </Button>
+            {/* B-2: the second door — joining an existing society by code. */}
+            <Button asChild size="lg" variant="outline" className="text-base">
+              <Link href="/orgs/join">
+                <Tri
+                  bm="Saya ada kod jemputan"
+                  zh="我有邀请码"
+                  en="I have an invite code"
+                />
+              </Link>
+            </Button>
             <HowItWorksButton variant="link" />
           </div>
         </div>
@@ -96,7 +107,9 @@ export default async function Home() {
   }
 
   const agm = await getLatestConfirmedAgm();
-  const deadlines = computeStandardDeadlines(todayIso, { agm });
+  // B-5: an internal committee has no annual return — no nagging about one.
+  const { orgType } = await readOrgTypeFlags(active.id);
+  const deadlines = computeStandardDeadlines(todayIso, { agm, orgType });
   const usage = await getUsage(active.id).catch(() => null);
 
   return (

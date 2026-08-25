@@ -6,6 +6,7 @@ import { Tri } from "@/components/language-provider";
 import { ROLE_LABEL, labelFor } from "@/lib/status-labels";
 import { getSupabaseServer, getSessionUser } from "@/db/supabase-server";
 import { getActiveOrg } from "@/lib/active-org";
+import { can } from "@/lib/roles";
 import { AddCommitteeRow, ImportCommittee, RemoveCommitteeButton } from "./members-form";
 
 // /members — who is in this society, and in what capacity.
@@ -64,7 +65,9 @@ export default async function MembersPage() {
     users = (u.data ?? []) as AppUser[];
   }
 
-  const canEdit = active !== null && active.role !== "auditor_readonly";
+  // B-4: matches the server action's own check (minutes_write) — the UI is
+  // never the authority, but it must not offer a form the server will refuse.
+  const canEdit = active !== null && can(active.role, "minutes_write");
 
   // How many of the filed committee still have no name as printed on their IC.
   //

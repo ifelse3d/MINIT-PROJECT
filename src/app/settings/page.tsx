@@ -6,8 +6,11 @@ import { getSessionUser, getSupabaseServer } from "@/db/supabase-server";
 import { getActiveOrg } from "@/lib/active-org";
 import { getUsage } from "@/lib/ai/usage";
 import { dayIsoMalaysia } from "@/lib/history";
+import { can } from "@/lib/roles";
 import { AiUsageRows } from "./ai-usage-rows";
 import { AppearanceRows } from "./appearance-rows";
+import { listInvites, listMembers } from "./member-actions";
+import { MembersRows } from "./members-rows";
 import { ChangePasswordRows } from "./change-password-rows";
 import { DeleteOrgSection } from "./delete-org-section";
 import { DeleteRegisterSection } from "./delete-register-section";
@@ -86,6 +89,12 @@ export default async function SettingsPage() {
   const [user, active] = await Promise.all([getSessionUser(), getActiveOrg()]);
   const usage = active ? await getUsage(active.id) : null;
   const receiptSeries = active ? await loadReceiptSeries(active.id) : null;
+  // B-3: the member & invite card, admins only. Both lists degrade to [] when
+  // the invites migration has not run yet; pressing "generate" then says so.
+  const isAdmin = active !== null && can(active.role, "manage_org");
+  const [members, invites] = isAdmin
+    ? await Promise.all([listMembers(active.id), listInvites(active.id)])
+    : [[], []];
 
   return (
     <div className="mx-auto w-full max-w-2xl pb-10">
@@ -198,6 +207,9 @@ export default async function SettingsPage() {
               </div>
             </SettingsRow>
           )}
+
+          {/* B-3: members & invite codes — the admin's door. */}
+          {isAdmin && <MembersRows members={members} invites={invites} />}
 
           {/* R-6: whether the optional e-Invois pages show at all. */}
           {active && <EinvoisRows />}

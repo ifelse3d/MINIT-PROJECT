@@ -75,6 +75,13 @@ export const ROLE_LABEL: Record<string, TriLabel> = {
     zh: "收款人（收捐款）",
     en: "Collector (collects donations)",
   },
+  // B-2 (2026-08-25): invite codes made this role reachable for the first
+  // time; until then it existed only in the DB check constraint.
+  committee: {
+    bm: "Ahli jawatankuasa (lihat & muat naik)",
+    zh: "理事（可查看、可上传）",
+    en: "Committee member (view & upload)",
+  },
   auditor_readonly: {
     bm: "Juruaudit (lihat sahaja)",
     zh: "审计（只能查看）",

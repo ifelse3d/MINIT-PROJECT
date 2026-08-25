@@ -153,7 +153,7 @@ export async function POST(req: Request) {
           ? "extract_ledger"
           : "extract_constitution"
       : "classify_upload";
-    const gate = await requireAiQuota([firstAction]);
+    const gate = await requireAiQuota([firstAction], { cap: "upload" });
     if (!gate.ok) {
       return NextResponse.json(gate.body, { status: gate.status });
     }

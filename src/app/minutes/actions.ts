@@ -22,6 +22,7 @@ import { getActiveOrg } from "@/lib/active-org";
 import { getDocumentIdentity } from "@/lib/doc-identity";
 import { parseMeetingNotesExtraction } from "@/lib/extraction";
 import { normaliseMeetingType } from "@/lib/meeting-types";
+import { can, permissionError } from "@/lib/roles";
 import { isSampleMeetingExtraction } from "@/lib/sample-guard";
 import { renderMinutesDraftBm } from "@/lib/minutes-draft";
 import { joinUserError, inputProblemError, USER_ERRORS } from "@/lib/user-errors";
@@ -76,12 +77,10 @@ export async function saveConfirmedMinutes(input: {
       ok: false,
     };
   }
-  if (active.role === "auditor_readonly") {
-    return {
-      error:
-        "Akaun auditor hanya boleh membaca / 审计账号只能查看，不能保存 / Auditor accounts are read-only",
-      ok: false,
-    };
+  // B-4: confirming minutes into the audit trail is minutes_write —
+  // hq_admin and the secretary (建議①).
+  if (!can(active.role, "minutes_write")) {
+    return { error: permissionError("minutes_write"), ok: false };
   }
 
   const parsed = parseMeetingNotesExtraction(input.extraction);

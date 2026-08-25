@@ -81,7 +81,7 @@ export async function POST(req: Request) {
 
     // Phase 7.5a: charge the quota BEFORE any AI vendor is called.
     // One extraction = one action (the rule-7 retry below is not charged).
-    const gate = await requireAiQuota(["extract_minutes"]);
+    const gate = await requireAiQuota(["extract_minutes"], { cap: "upload" });
     if (!gate.ok) {
       return NextResponse.json(gate.body, { status: gate.status });
     }

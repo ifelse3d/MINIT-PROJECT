@@ -2,6 +2,7 @@
 
 import { getActiveOrg } from "@/lib/active-org";
 import { getSessionUser, getSupabaseServer } from "@/db/supabase-server";
+import { can } from "@/lib/roles";
 import { DEADLINE_KINDS, type DeadlineKind } from "@/lib/deadlines";
 
 // ---------------------------------------------------------------------------
@@ -80,6 +81,8 @@ export async function setDeadlineDone(input: {
   if (!user) return { ok: false, reason: "no_session" };
   const active = await getActiveOrg();
   if (!active) return { ok: false, reason: "no_org" };
+  // B-4: ticking a deadline is calendar_write — everyone except the auditor.
+  if (!can(active.role, "calendar_write")) return { ok: false, reason: "db" };
 
   const supabase = await getSupabaseServer();
   const { error } = await supabase.from("deadlines").upsert(

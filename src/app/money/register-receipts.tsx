@@ -256,11 +256,13 @@ export function RegisterAndReceipts() {
           </p>
         )}
         {issueNotice === "readonly" && (
+          /* B-4: not only auditors any more — a collector or secretary who
+             reaches this button gets the same refusal, naming who to ask. */
           <p className="rounded-xl border-2 border-slate-300 bg-slate-50 p-3 text-base font-medium text-slate-800 dark:bg-white/10 dark:text-slate-100">
             <Tri
-              bm="Akaun anda ialah akaun juruaudit — boleh melihat sahaja, tidak boleh menjana resit. Minta pentadbir pertubuhan untuk melakukannya."
-              zh="您的账号是审计账号，只能查看，不能开收据。请让机构管理员来处理。"
-              en="Your account is an auditor account — view only, it cannot issue receipts. Ask an organisation administrator to do it."
+              bm="Peranan anda tidak boleh menjana resit — itu tugas bendahari atau pentadbir. Minta mereka melakukannya."
+              zh="您的角色不能开收据 —— 开收据是财政或管理员的事，请找他们处理。"
+              en="Your role cannot issue receipts — that is the treasurer's or an administrator's job. Ask them to do it."
             />
           </p>
         )}

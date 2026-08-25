@@ -107,7 +107,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const gate = await requireAiQuota(["import_roster"]);
+    const gate = await requireAiQuota(["import_roster"], { cap: "upload" });
     if (!gate.ok) return NextResponse.json(gate.body, { status: gate.status });
 
     const provider = getVisionProvider("extract");

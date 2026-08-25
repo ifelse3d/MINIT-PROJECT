@@ -36,6 +36,7 @@
 
 import { getSupabaseServer, getSessionUser } from "@/db/supabase-server";
 import { getActiveOrg } from "@/lib/active-org";
+import { can, permissionError } from "@/lib/roles";
 import {
   isConfirmedClauseArray,
   type ConfirmedClause,
@@ -78,12 +79,10 @@ export async function saveConstitutionClauses(input: {
       ok: false,
     };
   }
-  if (active.role === "auditor_readonly") {
-    return {
-      error:
-        "Akaun auditor hanya boleh membaca / 审计账号只能查看，不能保存 / Auditor accounts are read-only",
-      ok: false,
-    };
+  // B-4: storing the organisation's constitution is minutes_write —
+  // hq_admin and the secretary (建議①).
+  if (!can(active.role, "minutes_write")) {
+    return { error: permissionError("minutes_write"), ok: false };
   }
 
   // The client is not the authority on shape. A malformed blob here would end

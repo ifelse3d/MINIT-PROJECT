@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { Tri, useTriText } from "@/components/language-provider";
 import { PasswordInput } from "@/components/password-input";
 import { getSupabaseBrowser } from "@/db/supabase-browser";
+import { stashInviteCode } from "@/lib/invite-stash";
 import { LEGAL_VERSIONS } from "@/legal/documents";
 import {
   AUTH_CARD,
@@ -43,6 +44,10 @@ export default function LoginPage() {
   // Sign-up only. Unticked by default and never remembered: a pre-ticked box is
   // not consent under the PDPA, and neither is one the person never saw.
   const [agreed, setAgreed] = useState(false);
+  // Sign-up only, OPTIONAL (B-2): an invite code typed here is stashed on the
+  // device and fills itself in on /orgs/join after the first sign-in — email
+  // confirmation sits between typing it and being able to use it.
+  const [inviteCode, setInviteCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -191,8 +196,11 @@ export default function LoginPage() {
           );
           return;
         }
+        // B-2: keep the invite code for after the email round-trip — it fills
+        // itself in on /orgs/join once they are signed in.
+        if (inviteCode.trim() !== "") stashInviteCode(inviteCode);
         if (data.session) {
-          window.location.assign("/orgs");
+          window.location.assign(inviteCode.trim() !== "" ? "/orgs/join" : "/orgs");
         } else {
           // Email confirmation is ON in this Supabase project.
           setNotice(
@@ -321,6 +329,38 @@ export default function LoginPage() {
                 required
                 minLength={MIN_PASSWORD_LENGTH}
               />
+            </label>
+          )}
+
+          {/* B-2 (2026-08-25): the OPTIONAL invite code. Someone invited to an
+              existing society types it here once; it waits out the
+              email-confirmation round-trip in localStorage and fills itself in
+              on /orgs/join after the first sign-in. Blank = starting a new
+              society — the normal path is untouched. */}
+          {mode === "signup" && (
+            <label className="flex flex-col gap-2">
+              <span className={labelCls}>
+                <Tri
+                  bm="Kod jemputan (jika ada)"
+                  zh="邀请码（有就填）"
+                  en="Invite code (if you have one)"
+                />
+              </span>
+              <input
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value)}
+                className={`${inputCls} font-mono uppercase tracking-widest`}
+                placeholder="ABCD-EFGH"
+                autoComplete="off"
+                maxLength={16}
+              />
+              <span className="text-sm leading-relaxed text-[color:var(--v2-text-soft)]">
+                <Tri
+                  bm="Pentadbir pertubuhan anda yang memberikannya. Tiada kod? Biarkan kosong — anda boleh buka pertubuhan sendiri selepas log masuk."
+                  zh="邀请码由机构管理员提供。没有的话留空 —— 登录后可以自己开新社团。"
+                  en="Your organisation's administrator gives you one. No code? Leave it blank — you can start a new society after signing in."
+                />
+              </span>
             </label>
           )}
 

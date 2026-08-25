@@ -18,6 +18,7 @@
 import { revalidatePath } from "next/cache";
 import { getSupabaseServer, getSessionUser } from "@/db/supabase-server";
 import { getActiveOrg } from "@/lib/active-org";
+import { can, permissionError } from "@/lib/roles";
 import { describeBadLines, parseCommitteePaste } from "@/lib/bulk-paste";
 import { xlsxToPasteText } from "@/lib/roster-xlsx";
 
@@ -52,7 +53,9 @@ export async function addCommitteeMember(
   if (!user) return { error: ERR.login, ok: false };
   const active = await getActiveOrg();
   if (!active) return { error: ERR.noOrg, ok: false };
-  if (active.role === "auditor_readonly") return { error: ERR.readOnly, ok: false };
+  if (!can(active.role, "minutes_write")) {
+    return { error: permissionError("minutes_write"), ok: false };
+  }
 
   const position = String(formData.get("position") ?? "").trim();
   const personName = String(formData.get("personName") ?? "").trim();
@@ -90,6 +93,9 @@ export async function removeCommitteeMember(
   if (!user) return { error: ERR.login, ok: false };
   const active = await getActiveOrg();
   if (!active) return { error: ERR.noOrg, ok: false };
+  if (!can(active.role, "minutes_write")) {
+    return { error: permissionError("minutes_write"), ok: false };
+  }
 
   const id = Number(formData.get("id"));
   if (!Number.isInteger(id)) return { error: ERR.failed, ok: false };
@@ -122,7 +128,9 @@ export async function importCommittee(
   if (!user) return { error: ERR.login, ok: false };
   const active = await getActiveOrg();
   if (!active) return { error: ERR.noOrg, ok: false };
-  if (active.role === "auditor_readonly") return { error: ERR.readOnly, ok: false };
+  if (!can(active.role, "minutes_write")) {
+    return { error: permissionError("minutes_write"), ok: false };
+  }
 
   const text = await readPastedOrFile(formData);
   if (text.trim() === "") return { error: BULK_ERR.empty, ok: false };

@@ -17,6 +17,7 @@ import "server-only";
 import { getSupabase } from "@/db/supabase";
 import { getSupabaseServer } from "@/db/supabase-server";
 import { getActiveOrg, type ActiveOrg } from "@/lib/active-org";
+import { can, permissionError, type Capability } from "@/lib/roles";
 import type { TokenUsage } from "./provider";
 import {
   AI_RATE_WINDOW_SECONDS,
@@ -348,7 +349,7 @@ export type QuotaGate =
 
 export type QuotaErrorBody = {
   error: string;
-  code: "NO_ORG" | "QUOTA_EXCEEDED" | "RATE_LIMITED" | "METERING_FAILED";
+  code: "NO_ORG" | "QUOTA_EXCEEDED" | "RATE_LIMITED" | "METERING_FAILED" | "NO_PERMISSION";
   usage?: UsageState;
 };
 
@@ -357,9 +358,15 @@ export type QuotaErrorBody = {
  * (RLS-checked) and charges `cost` actions. Returns either the org to
  * proceed with, or the exact status + JSON body to send back.
  * 402 = "payment required" — the UI recognises it and shows the top-up card.
+ *
+ * B-4 (2026-08-25): pass `cap` to also require a role capability BEFORE
+ * anything is charged — the extraction routes pass "upload" so an
+ * auditor_readonly account cannot spend the organisation's quota. Left off
+ * for the chat/ask routes, where asking questions is reading.
  */
 export async function requireAiQuota(
   actions: AiAction[],
+  opts?: { cap?: Capability },
 ): Promise<QuotaGate> {
   const org = await getActiveOrg();
   if (!org) {
@@ -371,6 +378,13 @@ export async function requireAiQuota(
           "Pilih pertubuhan dahulu / choose an organisation first (log masuk diperlukan / login required).",
         code: "NO_ORG",
       },
+    };
+  }
+  if (opts?.cap && !can(org.role, opts.cap)) {
+    return {
+      ok: false,
+      status: 403,
+      body: { error: permissionError(opts.cap), code: "NO_PERMISSION" },
     };
   }
 

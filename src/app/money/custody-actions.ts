@@ -2,6 +2,7 @@
 
 import { getActiveOrg } from "@/lib/active-org";
 import { getSessionUser, getSupabaseServer } from "@/db/supabase-server";
+import { can } from "@/lib/roles";
 import type { RemittanceBatch } from "@/lib/custody";
 
 // ---------------------------------------------------------------------------
@@ -52,6 +53,11 @@ export async function saveRemittanceBatch(
   if (!user) return { ok: false, reason: "no_session" };
   const active = await getActiveOrg();
   if (!active) return { ok: false, reason: "no_org" };
+  // B-4: recording a hand-over is money_collect — collectors (their own
+  // cash), the treasurer and hq_admin. Read-only and committee roles cannot
+  // write custody records; the UI treats this as "saved on this device only"
+  // and says so (custodyLocalOnly).
+  if (!can(active.role, "money_collect")) return { ok: false, reason: "db" };
 
   const supabase = await getSupabaseServer();
   const { error } = await supabase.from("remittance_batches").upsert(

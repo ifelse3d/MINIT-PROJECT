@@ -53,6 +53,9 @@ const probes = [
   ["20260829000000 orgs needs_einvois", "orgs", "needs_einvois"],
   ["20260830000000 orgs plan", "orgs", "plan"],
   ["20260831000000 app_errors", "app_errors", "route"],
+  ["20260902000000 invites + org type", "invites", "code"],
+  ["20260902000000 invites + org type", "orgs", "org_type"],
+  ["20260902000000 invites + org type", "orgs", "ppm_no"],
 ];
 
 const headers = { apikey: key, Authorization: `Bearer ${key}` };

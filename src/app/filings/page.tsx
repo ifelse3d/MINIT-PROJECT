@@ -1,4 +1,6 @@
 import { getLatestConfirmedAgm, getLatestConfirmedExtraction } from "@/db/agm";
+import { getActiveOrg } from "@/lib/active-org";
+import { readOrgTypeFlags } from "@/lib/org-flags";
 import { FilingsView } from "./filings-view";
 
 // ---------------------------------------------------------------------------
@@ -18,9 +20,14 @@ export default async function FilingsPage() {
   // S0-5 (2026-08-25): the paste-pack is built from the latest CONFIRMED
   // minutes in the database — a signed document — never from this browser's
   // half-checked draft. Different devices now see the same pack.
-  const [agm, confirmed] = await Promise.all([
+  const [agm, confirmed, active] = await Promise.all([
     getLatestConfirmedAgm(),
     getLatestConfirmedExtraction(),
+    getActiveOrg().catch(() => null),
   ]);
-  return <FilingsView agm={agm} confirmed={confirmed} />;
+  // B-5: an internal committee gets no eROSES/annual-return nagging.
+  const { orgType } = active
+    ? await readOrgTypeFlags(active.id)
+    : { orgType: null };
+  return <FilingsView agm={agm} confirmed={confirmed} orgType={orgType} />;
 }

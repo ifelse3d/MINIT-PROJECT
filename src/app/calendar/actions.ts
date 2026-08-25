@@ -2,6 +2,7 @@
 
 import { getActiveOrg } from "@/lib/active-org";
 import { getSessionUser, getSupabaseServer } from "@/db/supabase-server";
+import { can } from "@/lib/roles";
 import { isSimpleEvent, type SimpleEvent } from "@/lib/local-events";
 
 // ---------------------------------------------------------------------------
@@ -60,6 +61,8 @@ export async function saveEvent(event: SimpleEvent): Promise<SaveOutcome> {
   if (!user) return { ok: false, reason: "no_session" };
   const active = await getActiveOrg();
   if (!active) return { ok: false, reason: "no_org" };
+  // B-4: every role except the read-only auditor may write the calendar.
+  if (!can(active.role, "calendar_write")) return { ok: false, reason: "db" };
 
   const supabase = await getSupabaseServer();
   const { error } = await supabase.from("events_meetings").upsert(
@@ -88,6 +91,7 @@ export async function deleteEvent(clientId: string): Promise<SaveOutcome> {
   if (!user) return { ok: false, reason: "no_session" };
   const active = await getActiveOrg();
   if (!active) return { ok: false, reason: "no_org" };
+  if (!can(active.role, "calendar_write")) return { ok: false, reason: "db" };
 
   const supabase = await getSupabaseServer();
   const { error } = await supabase

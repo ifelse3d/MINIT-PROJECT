@@ -43,6 +43,14 @@ export type StandardDeadlineOptions = {
    */
   agm?: ConfirmedAgm | null;
   einvoisCount?: number;
+  /**
+   * B-5 (2026-08-25): 'committee' = an internal/ad-hoc committee, not a
+   * ROS-registered society — no annual return exists for it, so no
+   * annual-return deadline is emitted even when an AGM was recorded. The
+   * CALENDAR passes nothing here on purpose (日曆照常 — J's call); this is
+   * for the home dashboard and /filings nagging.
+   */
+  orgType?: "registered" | "committee" | null;
 };
 
 /**
@@ -54,10 +62,10 @@ export function computeStandardDeadlines(
   todayIso: string,
   options: StandardDeadlineOptions = {},
 ): Deadline[] {
-  const { agm = null, einvoisCount = 3 } = options;
+  const { agm = null, einvoisCount = 3, orgType = null } = options;
 
   const einvois = upcomingEinvoisDeadlines(todayIso, einvoisCount);
-  if (!agm) return sortDeadlines(einvois, todayIso);
+  if (!agm || orgType === "committee") return sortDeadlines(einvois, todayIso);
 
   const annual = annualReturnDeadline(
     agm.meetingDateIso,

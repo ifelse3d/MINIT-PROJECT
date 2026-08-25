@@ -12,6 +12,7 @@
 import { revalidatePath } from "next/cache";
 import { getSupabaseServer, getSessionUser } from "@/db/supabase-server";
 import { getActiveOrg } from "@/lib/active-org";
+import { can, permissionError } from "@/lib/roles";
 import { describeBadLines, parseGlossaryPaste } from "@/lib/bulk-paste";
 import { xlsxToPasteText } from "@/lib/roster-xlsx";
 
@@ -41,8 +42,10 @@ export async function addGlossaryTerm(
   if (!user) return { error: ERR.login, ok: false };
   const active = await getActiveOrg();
   if (!active) return { error: ERR.noOrg, ok: false };
-  if (active.role === "auditor_readonly") {
-    return { error: ERR.readOnly, ok: false };
+  // B-4: the glossary teaches the reader how this society writes — the
+  // secretary's desk (minutes_write).
+  if (!can(active.role, "minutes_write")) {
+    return { error: permissionError("minutes_write"), ok: false };
   }
 
   const term = String(formData.get("term") ?? "").trim();
@@ -85,6 +88,9 @@ export async function deleteGlossaryTerm(
   if (!user) return { error: ERR.login, ok: false };
   const active = await getActiveOrg();
   if (!active) return { error: ERR.noOrg, ok: false };
+  if (!can(active.role, "minutes_write")) {
+    return { error: permissionError("minutes_write"), ok: false };
+  }
 
   const id = Number(formData.get("id"));
   if (!Number.isInteger(id)) return { error: ERR.failed, ok: false };
@@ -118,7 +124,9 @@ export async function importGlossary(
   if (!user) return { error: ERR.login, ok: false };
   const active = await getActiveOrg();
   if (!active) return { error: ERR.noOrg, ok: false };
-  if (active.role === "auditor_readonly") return { error: ERR.readOnly, ok: false };
+  if (!can(active.role, "minutes_write")) {
+    return { error: permissionError("minutes_write"), ok: false };
+  }
 
   const text = await readPastedOrFile(formData);
   if (text.trim() === "") {

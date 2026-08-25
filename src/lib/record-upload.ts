@@ -10,6 +10,7 @@ import "server-only";
 
 import { getSupabaseServer } from "@/db/supabase-server";
 import { getActiveOrg } from "@/lib/active-org";
+import { can } from "@/lib/roles";
 
 type UploadKind =
   | "meeting_notes"
@@ -25,7 +26,7 @@ export async function recordUpload(
 ): Promise<void> {
   try {
     const active = await getActiveOrg();
-    if (!active || active.role === "auditor_readonly") return;
+    if (!active || !can(active.role, "upload")) return;
 
     const supabase = await getSupabaseServer();
 

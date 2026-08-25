@@ -23,6 +23,7 @@
 import { getSupabaseServer } from "@/db/supabase-server";
 import { getActiveOrg } from "@/lib/active-org";
 import { maskName } from "@/lib/mask";
+import { can } from "@/lib/roles";
 import { containsSampleDonation } from "@/lib/sample-guard";
 
 export type RowToIssue = {
@@ -80,7 +81,11 @@ export async function issueAndSaveReceipts(
 ): Promise<IssueResult> {
   const active = await getActiveOrg();
   if (!active) return { saved: false, reason: "no_org" };
-  if (active.role === "auditor_readonly") return { saved: false, reason: "readonly" };
+  // B-4: issuing receipts is money_write — hq_admin and treasurer. A
+  // collector records donations and hands cash over; the numbered receipt is
+  // the treasurer's act (建議①). Auditors were already refused; the same door
+  // now also names collectors, secretaries and committee members.
+  if (!can(active.role, "money_write")) return { saved: false, reason: "readonly" };
   if (rows.length === 0) return { saved: true, receiptNos: {} };
 
   // Stage 0-1: the sample ledger is read-only. The UI no longer offers the

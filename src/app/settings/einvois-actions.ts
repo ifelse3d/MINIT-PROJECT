@@ -11,6 +11,7 @@
 // the same rule this action states out loud.
 import { getSupabaseServer } from "@/db/supabase-server";
 import { getActiveOrg } from "@/lib/active-org";
+import { can } from "@/lib/roles";
 
 export type EinvoisSaveState = { ok: boolean; error: string | null };
 
@@ -23,7 +24,7 @@ export async function saveNeedsEinvois(value: boolean): Promise<EinvoisSaveState
         "Pilih pertubuhan dahulu / 请先选择机构 / Choose an organisation first",
     };
   }
-  if (active.role !== "hq_admin") {
+  if (!can(active.role, "manage_org")) {
     return {
       ok: false,
       error:

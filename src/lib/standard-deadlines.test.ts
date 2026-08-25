@@ -18,6 +18,18 @@ const agm: ConfirmedAgm = {
 };
 
 describe("computeStandardDeadlines", () => {
+  it("B-5: a committee-type org gets NO annual-return deadline even with a confirmed AGM", () => {
+    const out = computeStandardDeadlines("2026-07-19", { agm, orgType: "committee" });
+    expect(out.some((d) => d.kind === "annual_return_60d")).toBe(false);
+  });
+
+  it("B-5: a registered org (or unknown type) keeps the annual return", () => {
+    for (const orgType of ["registered", null] as const) {
+      const out = computeStandardDeadlines("2026-07-19", { agm, orgType });
+      expect(out.some((d) => d.kind === "annual_return_60d")).toBe(true);
+    }
+  });
+
   it("returns the annual return plus the next 3 month-ends, urgency-sorted", () => {
     const out = computeStandardDeadlines("2026-07-19", { agm });
     expect(out.map((d) => `${d.kind}:${d.dueDateIso}`)).toEqual([

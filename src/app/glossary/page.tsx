@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tri } from "@/components/language-provider";
 import { getSupabaseServer, getSessionUser } from "@/db/supabase-server";
 import { getActiveOrg } from "@/lib/active-org";
+import { can } from "@/lib/roles";
 import { AddTermForm, DeleteTermButton, ImportGlossary } from "./glossary-form";
 
 // /glossary — the organisation teaches Minit its own words.
@@ -41,7 +42,9 @@ export default async function GlossaryPage() {
     rows = (data ?? []) as Row[];
   }
 
-  const canEdit = active !== null && active.role !== "auditor_readonly";
+  // B-4: matches the server action's own check (minutes_write) — the UI is
+  // never the authority, but it must not offer a form the server will refuse.
+  const canEdit = active !== null && can(active.role, "minutes_write");
 
   return (
     <div className="mx-auto w-full max-w-5xl pb-10">

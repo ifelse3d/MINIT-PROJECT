@@ -54,10 +54,13 @@ const URGENCY_STYLE: Record<Urgency, string> = {
 export function FilingsView({
   agm,
   confirmed,
+  orgType = null,
 }: {
   agm: ConfirmedAgm | null;
   /** The latest CONFIRMED minutes' extraction, from the server (S0-5). */
   confirmed: { extraction: MeetingNotesExtraction; confirmedOnIso: string | null } | null;
+  /** B-5: 'committee' = internal committee — no eROSES, no annual return. */
+  orgType?: "registered" | "committee" | null;
 }) {
   const t = useTriText();
   const extraction = confirmed?.extraction ?? null;
@@ -73,8 +76,8 @@ export function FilingsView({
     [extraction],
   );
   const deadlines = useMemo(
-    () => (todayIso ? computeStandardDeadlines(todayIso, { agm }) : []),
-    [todayIso, agm],
+    () => (todayIso ? computeStandardDeadlines(todayIso, { agm, orgType }) : []),
+    [todayIso, agm, orgType],
   );
 
   async function copyValue(field: string, value: string) {
@@ -107,6 +110,19 @@ export function FilingsView({
           </h1>
         </div>
       </div>
+
+      {/* B-5: an internal committee files nothing with ROS — say so instead
+          of nagging, but keep the page working (a saved link must not break). */}
+      {orgType === "committee" && (
+        <p className="rounded-xl border-2 border-[color:var(--v2-border)] bg-[color:var(--v2-card)] p-4 text-base">
+          ℹ️{" "}
+          <Tri
+            bm="Pertubuhan ini didaftarkan dalam Minit sebagai jawatankuasa dalaman/sementara — ia tidak memfailkan Penyata Tahunan eROSES. Bahagian di bawah kekal untuk rujukan."
+            zh="这个机构在 Minit 里登记为内部／临时委员会 —— 不需要向 eROSES 提交年度呈报。下面的内容仅供参考。"
+            en="This organisation is set up in Minit as an internal/ad-hoc committee — it does not file an eROSES Annual Return. The sections below stay for reference."
+          />
+        </p>
+      )}
 
       {/* 1 — eROSES Annual Return paste-pack */}
       <Card>
