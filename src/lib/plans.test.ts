@@ -6,6 +6,12 @@ describe("plans (S-1, 2026-08-25)", () => {
     expect(PLANS.trial.maxRootOrgs).toBe(1);
   });
 
+  it("the trial quota is 15 actions/month (J's decision, 2026-08-25 — NOT 100)", () => {
+    // Deliberately enough to prove the value and not enough to live on free
+    // forever. The DB default matches (migration 20260901000000).
+    expect(PLANS.trial.monthlyAiQuota).toBe(15);
+  });
+
   it("no plan announces a price yet — pricing waits for real cost data", () => {
     for (const id of PLAN_ORDER) {
       expect(PLANS[id].priceRm).toBeNull();

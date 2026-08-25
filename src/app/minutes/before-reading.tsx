@@ -186,10 +186,11 @@ export function BeforeReading({
         {/* Said HERE, at the last moment before it happens, because "choosing a
             file silently charged you" is on the UX defect list. */}
         <span className="text-sm text-muted-foreground">
+          {/* 0-2: path marker only — no "about X%" promise. */}
           <Tri
-            bm="Ini menggunakan kira-kira 1% daripada penggunaan AI bulan ini."
-            zh="这会用掉本月 AI 用量的约 1%。"
-            en="This uses about 1% of the monthly AI allowance."
+            bm="Ini menggunakan kuota AI bulanan."
+            zh="这会用本月的 AI 用量。"
+            en="This uses the monthly AI allowance."
           />
         </span>
       </div>

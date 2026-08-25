@@ -4,6 +4,7 @@ import { Plus, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
+import { useMinutes } from "./minutes-store";
 
 // ---------------------------------------------------------------------------
 // The two controls that were missing from every list in Minit: add a line, and
@@ -38,6 +39,12 @@ export function DeletableRow({
   what: string;
 }) {
   const t = useTriText();
+  // Stage 0-1: the worked example is read-only — rows can be looked at but
+  // not deleted, so no trash control at all rather than one that does nothing.
+  const { isSample } = useMinutes();
+  if (isSample) {
+    return <div className="group/row relative">{children}</div>;
+  }
   return (
     <div className="group/row relative">
       {children}
@@ -82,6 +89,9 @@ export function AddRowButton({
   labelZh: string;
   labelEn: string;
 }) {
+  // Stage 0-1: no adding rows to the worked example either.
+  const { isSample } = useMinutes();
+  if (isSample) return null;
   return (
     <Button variant="outline" size="lg" className="mt-2 self-start text-base" onClick={onClick}>
       <Plus aria-hidden className="size-5" strokeWidth={2.4} />

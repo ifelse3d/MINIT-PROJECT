@@ -29,7 +29,6 @@ import { Tri, useTriText } from "@/components/language-provider";
 import { GlassBadge } from "./surfaces";
 import { AnswerSources, type AnswerSource } from "./answer-sources";
 import { tidyReply } from "@/lib/tidy-reply";
-import { pctOfQuota } from "@/lib/ai/usage-display";
 
 type Turn = {
   role: "user" | "assistant";
@@ -195,10 +194,13 @@ export function AIPanel({
             <Tri bm="Tanya Minit" zh="问一问 Minit" en="Ask Minit" />
           </p>
           <p className="text-base text-[color:var(--v2-text-soft)]">
+            {/* 0-2 (2026-08-25, J's #14): the AI-path marker stays; the
+                per-question "about X%" promise is gone — the only number is
+                the "X% used" badge beside this. */}
             <Tri
-              bm={`Setiap soalan guna kira-kira ${pctOfQuota(1)}% penggunaan bulanan`}
-              zh={`每问一次约占本月 AI 用量 ${pctOfQuota(1)}%`}
-              en={`Each question uses about ${pctOfQuota(1)}% of the monthly allowance`}
+              bm="Soalan di sini menggunakan kuota AI bulanan"
+              zh="在这里提问会用本月的 AI 用量"
+              en="Questions here use the monthly AI allowance"
             />
           </p>
         </div>

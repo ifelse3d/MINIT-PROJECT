@@ -19,7 +19,8 @@ export type OrgActionState = { error: string | null; ok: boolean };
 // ---------------------------------------------------------------------------
 // P0-3 — HOW MANY ORGANISATIONS ONE ACCOUNT MAY CREATE.
 //
-// Every org carries its own `monthly_free_quota` (100 AI actions). Before this
+// Every org carries its own `monthly_free_quota` (15 AI actions since
+// migration 20260901000000 — J 2026-08-25). Before this
 // cap existed, one signed-in person could create organisations in a loop and
 // mint free AI for as long as they kept typing — and the go-live checklist asks
 // for `Confirm email = OFF` so a judge can get in within five seconds, which

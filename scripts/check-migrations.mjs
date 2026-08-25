@@ -139,7 +139,19 @@ console.log(`
             select proname, prosecdef from pg_proc where proname = 'cari_minit';
 
           prosecdef MUST be false. true means SECURITY DEFINER, which bypasses
-          RLS and would let the assistant read every society's minutes.`);
+          RLS and would let the assistant read every society's minutes.
+
+          20260901000000_trial_quota_15.sql only changes a column DEFAULT
+          (new orgs get 15 free actions/month), which PostgREST cannot see.
+          Confirm by eye in the SQL editor — this must print 15:
+
+            select column_default from information_schema.columns
+             where table_schema = 'public' and table_name = 'orgs'
+               and column_name = 'monthly_free_quota';
+
+          (The file also carries a COMMENTED optional section that lowers
+          EXISTING orgs still on the old 100 default — J's call whether to
+          uncomment and run it.)`);
 
 // Row counts, so "this page is empty" is answered by data, not by guessing.
 console.log("\n--- rows ---");

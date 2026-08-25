@@ -87,10 +87,11 @@ export function AiUsageRows({ usage }: { usage: UsageState }) {
         </p>
       ) : (
         <p className="text-sm text-muted-foreground">
+          {/* 0-2: the meter is the ONE number; no per-action "about X%". */}
           <Tri
-            bm={`Sudah guna ${pct}% bulan ini. Setiap pengekstrakan gambar atau carian AI mengguna kira-kira 1–2%.`}
-            zh={`本月 AI 用量已用 ${pct}%。每次照片提取或 AI 搜索约占 1～2%。`}
-            en={`${pct}% used this month. Each photo extraction or AI search uses about 1–2%.`}
+            bm={`Sudah guna ${pct}% bulan ini.`}
+            zh={`本月 AI 用量已用 ${pct}%。`}
+            en={`${pct}% used this month.`}
           />
         </p>
       )}

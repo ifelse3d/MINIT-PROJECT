@@ -291,6 +291,15 @@ export function RegisterAndReceipts() {
             </div>
           </div>
         )}
+        {issueNotice === "sample" && (
+          <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+            <Tri
+              bm="Ada baris CONTOH dalam daftar — resit tidak dijana dan tiada apa-apa disimpan. Nombor resit sebenar tidak boleh digunakan untuk derma rekaan. Padam baris contoh itu dahulu, kemudian cuba lagi."
+              zh="登记簿里有示范用的记录——收据没有生成，也没有写入任何东西。真实的收据号码不能用在虚构的捐款上。请先删掉那些示范记录，再试一次。"
+              en="The register contains SAMPLE rows — no receipts were issued and nothing was saved. Real receipt numbers cannot be spent on fictional donations. Delete the sample rows first, then try again."
+            />
+          </p>
+        )}
         {issueNotice === "error" && (
           <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">
             {/* issue_receipts() is one DB transaction (2026-08-25): a failure

@@ -198,10 +198,11 @@ export function MinutesDocument() {
                   )}
                 </Button>
                 <span className="text-sm text-muted-foreground">
+                  {/* 0-2: path marker only — no "about X%" promise. */}
                   <Tri
-                    bm="Kira-kira 1% daripada penggunaan AI bulanan."
-                    zh="约占本月 AI 用量的 1%。"
-                    en="About 1% of the monthly AI allowance."
+                    bm="Ini menggunakan kuota AI bulanan."
+                    zh="这会用本月的 AI 用量。"
+                    en="This uses the monthly AI allowance."
                   />
                 </span>
               </div>

@@ -135,8 +135,11 @@ export function CreateOrgForm({
     })();
   }, [state.ok, file, router, t]);
 
+  // Stage R clean-ledger tokens (same recipe as authInputClass in login/glass).
+  // The old glass style (white/50 on a white card) made these fields invisible
+  // in light mode — J's first report after the redesign, 2026-08-25.
   const inputCls =
-    "w-full rounded-xl border border-white/60 bg-white/50 px-3 py-2 text-base outline-none backdrop-blur focus:ring-2 focus:ring-[#7c6cf5]/40 dark:border-white/10 dark:bg-white/5";
+    "w-full rounded-xl border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-3 py-2 text-base text-[color:var(--v2-text)] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[color:var(--v2-primary)] focus:shadow-[0_0_0_3px_rgba(91,75,214,0.18)]";
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
@@ -156,6 +159,17 @@ export function CreateOrgForm({
           />
         </span>
         <input name="yourName" className={inputCls} maxLength={120} />
+        {/* This name really is used: it becomes members_roles.name, and
+            doc-identity.ts prints it on every confirmed document's audit line
+            ("Drafted by Minit, confirmed by …"). Say so BEFORE they type —
+            J's ask, 2026-08-25. Blank falls back to the login email. */}
+        <span className="text-sm text-muted-foreground">
+          <Tri
+            bm="Nama ini dicetak pada minit dan dokumen yang anda sahkan nanti («disahkan oleh …»). Kalau kosong, email log masuk anda yang digunakan."
+            zh="之后您确认会议记录和文件时，落款会印这个名字（「confirmed by …」）。留空就会印您的登入 email。"
+            en="This name is printed on the minutes and documents you confirm later (“confirmed by …”). If left blank, your login email is used instead."
+          />
+        </span>
       </label>
 
       {parentChoices.length > 0 && (
@@ -227,10 +241,11 @@ export function CreateOrgForm({
             </p>
           )}
           <p className="text-sm text-muted-foreground">
+            {/* 0-2: AI-path marker stays, the "about 1%" promise is gone. */}
             <Tri
-              bm="Sekali sahaja seumur hidup pertubuhan. Kira-kira 1% daripada penggunaan AI bulan ini."
-              zh="一个社团一辈子做一次。约占本月 AI 用量的 1%。"
-              en="Once in the life of the society. About 1% of this month's AI allowance."
+              bm="Sekali sahaja seumur hidup pertubuhan. Ini menggunakan kuota AI bulanan."
+              zh="一个社团一辈子做一次。这一步会用本月的 AI 用量。"
+              en="Once in the life of the society. This uses the monthly AI allowance."
             />
           </p>
         </div>

@@ -29,9 +29,9 @@ import { useRouter } from "next/navigation";
 import { ArrowUp, Camera, Paperclip, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
+import { PdpaNote } from "@/components/pdpa-note";
 import { writeIntake, type IntakeKind } from "@/lib/intake-handoff";
 import { tidyReply } from "@/lib/tidy-reply";
-import { pctOfQuota } from "@/lib/ai/usage-display";
 import {
   AnswerSources,
   type AnswerSource,
@@ -484,23 +484,29 @@ export function AskBox({
             en="This month's AI help is used up. It starts again on the 1st of next month — all your records and documents still open as normal."
           />
         ) : (
-          /* F-1 (2026-08-25, J's decision #4): the meter reads as a PERCENTAGE
-             of the month, everywhere. It always says what the percentage is OF
-             ("guna / 用了 / used") — a bare percentage reads as the remaining
-             one, which is the opposite. */
+          /* 0-2 (2026-08-25, J's #14): the AI-path marker stays ("this uses
+             the allowance"), the per-question/per-photo "about X%" promises
+             are gone. The ONE number is the meter — "X% used this month" —
+             always saying what the percentage is OF ("guna / 用了 / used"),
+             because a bare percentage reads as the remaining one. */
           <Tri
-            bm={`Setiap soalan guna kira-kira ${pctOfQuota(1)}% daripada penggunaan AI bulanan; setiap gambar kira-kira ${pctOfQuota(2)}%.${
+            bm={`Soalan dan gambar di sini menggunakan kuota AI bulanan.${
               usedPct === null ? "" : ` Bulan ini sudah guna ${usedPct}%.`
             }`}
-            zh={`每问一次约占本月 AI 用量 ${pctOfQuota(1)}%；每张照片约 ${pctOfQuota(2)}%。${
-              usedPct === null ? "" : `本月 AI 用量已用 ${usedPct}%。`
+            zh={`在这里提问或上传照片会用本月的 AI 用量。${
+              usedPct === null ? "" : `本月已用 ${usedPct}%。`
             }`}
-            en={`Each question uses about ${pctOfQuota(1)}% of the monthly AI allowance; each photo about ${pctOfQuota(2)}%.${
+            en={`Questions and photos here use the monthly AI allowance.${
               usedPct === null ? "" : ` ${usedPct}% used this month.`
             }`}
           />
         )}
       </p>
+      {/* 0-5 (2026-08-25): the paid-tier privacy notice sits beside the door
+          that sends things to the AI — not on some other page. */}
+      <div className="mt-2">
+        <PdpaNote />
+      </div>
     </section>
   );
 }

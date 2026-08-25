@@ -12,6 +12,8 @@ import {
 import { getActiveOrg } from "@/lib/active-org";
 import { getSessionUser } from "@/db/supabase-server";
 import { getUsage } from "@/lib/ai/usage";
+import { readNeedsEinvois } from "@/lib/einvois-server";
+import { EinvoisProvider } from "@/lib/einvois-pref";
 import { StorageScopeProvider } from "@/lib/storage-scope";
 import { AppShell } from "@/components/v3/shell";
 
@@ -81,6 +83,11 @@ export default async function RootLayout({
   // home-page mount).
   const active = await getActiveOrg().catch(() => null);
   const usage = active ? await getUsage(active.id).catch(() => null) : null;
+  // 0-4: the e-Invois switch follows the ORGANISATION. null = unknown (no
+  // org, or the column/fetch failed) → the client falls back to the old
+  // device preference instead of breaking. Deliberately a separate query —
+  // see src/lib/einvois-server.ts.
+  const needsEinvois = active ? await readNeedsEinvois(active.id) : null;
   // S0-4: localStorage records are namespaced by person AND organisation, so a
   // second member on a shared laptop can never read or overwrite the first
   // member's register. Resolved here, on the server — a page cannot invent it.
@@ -121,16 +128,18 @@ export default async function RootLayout({
             {/* Only a REAL cookie counts as "already chosen" — passing the
                 zh fallback would silently suppress the first-run picker. */}
             <LanguageProvider initialMode={isLangMode(cookieLang) ? cookieLang : undefined}>
-              {/* AppShell picks the chrome for the route: full shell everywhere,
-                  bare (language switcher only) on /login. */}
-              <AppShell
-                showAiLauncher={Boolean(active)}
-                aiRemaining={usage?.totalRemaining ?? null}
-                aiUsedPct={usage?.usedPct ?? null}
-                aiBlocked={usage?.blocked ?? false}
-              >
-                {children}
-              </AppShell>
+              <EinvoisProvider orgValue={needsEinvois}>
+                {/* AppShell picks the chrome for the route: full shell everywhere,
+                    bare (language switcher only) on /login. */}
+                <AppShell
+                  showAiLauncher={Boolean(active)}
+                  aiRemaining={usage?.totalRemaining ?? null}
+                  aiUsedPct={usage?.usedPct ?? null}
+                  aiBlocked={usage?.blocked ?? false}
+                >
+                  {children}
+                </AppShell>
+              </EinvoisProvider>
             </LanguageProvider>
           </AppearanceProvider>
         </StorageScopeProvider>

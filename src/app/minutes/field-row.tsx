@@ -87,7 +87,9 @@ export function FieldRow({
   // AI could not find this in your notes" is nonsense when there are no notes
   // and no AI ran. Read from the store rather than threaded through as a prop —
   // there are a dozen call sites and none of them care. (2026-08-23.)
-  const { typedByHand } = useMinutes();
+  // Stage 0-1: the worked example is read-only — no Correct/Edit/absent
+  // buttons at all, rather than buttons that do nothing.
+  const { typedByHand, isSample } = useMinutes();
 
   const isMissing = field.confidence === "missing";
 
@@ -251,23 +253,25 @@ export function FieldRow({
                 display ?? field.value
               )}
             </span>
-            {field.confidence === "check" && (
+            {!isSample && field.confidence === "check" && (
               <Button variant="outline" onClick={onConfirm}>
                 ✓&nbsp;<Tri bm="Betul" zh="没错" en="Correct" />
               </Button>
             )}
-            <Button variant="outline" onClick={startEditing}>
-              {isMissing ? (
-                editor.kind === "choice" ? (
-                  <Tri bm="Pilih" zh="选一个" en="Choose" />
+            {!isSample && (
+              <Button variant="outline" onClick={startEditing}>
+                {isMissing ? (
+                  editor.kind === "choice" ? (
+                    <Tri bm="Pilih" zh="选一个" en="Choose" />
+                  ) : (
+                    <Tri bm="Isi sendiri" zh="自己填写" en="Fill in" />
+                  )
                 ) : (
-                  <Tri bm="Isi sendiri" zh="自己填写" en="Fill in" />
-                )
-              ) : (
-                <Tri bm="Ubah" zh="修改" en="Edit" />
-              )}
-            </Button>
-            {isMissing && onMarkAbsent && (
+                  <Tri bm="Ubah" zh="修改" en="Edit" />
+                )}
+              </Button>
+            )}
+            {!isSample && isMissing && onMarkAbsent && (
               <Button variant="outline" onClick={onMarkAbsent}>
                 {typedByHand ? (
                   <Tri bm="Tiada / tidak berkenaan" zh="没有这一项" en="Leave this out" />

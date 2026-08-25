@@ -54,7 +54,7 @@ export function ChangePasswordRows({ email }: { email: string }) {
   const [done, setDone] = useState(false);
 
   const inputCls =
-    "w-full rounded-xl border border-white/60 bg-white/50 px-3 py-2 text-base outline-none backdrop-blur focus:ring-2 focus:ring-[#7c6cf5]/40 dark:border-white/10 dark:bg-white/5";
+    "w-full rounded-xl border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-3 py-2 text-base text-[color:var(--v2-text)] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[color:var(--v2-primary)] focus:shadow-[0_0_0_3px_rgba(91,75,214,0.18)]";
 
   function close() {
     setOpen(false);

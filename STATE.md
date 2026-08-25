@@ -5,7 +5,10 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-25 清晨（MYT）· Fable 5 通宵 session（施工单 21 v2：Stage 0 → R → F → S → W 全做完）**
+**最后更新：2026-08-25 白天（MYT）· Fable 5**
+**下一步的唯一依据：`C:\dev\_J-要做的事\24-大改造施工單-20260825.md`**（J 22 条实测反馈
+讨论定稿：全面重做、角色/邀请码、防冒充、额度 30、正式会议文件模板；允许跨 session，
+每次收工在那份单上勾进度）。通宵内容（施工单 21 v2 全做完）见下。
 
 ---
 
@@ -51,15 +54,14 @@
 - **Stage W**：DECISIONS 加 **D9～D13**；competition-facts 加「Registration: COMPLETED July 2026」；
   `docs/supabase-email-templates.md`（J 明天 5 分钟贴）；r1-draft/r1c-draft 移 `competition/archive/`
 
-### 🔴 J 的事（全部写在 22-報告，这里只留索引；8/25 早上更新）
+### 🔴 J 的事（8/25 白天实测更新）
 
-1. **跑 migration 18～22**（20260827 collector_name · 20260828 minutes client_id ·
-   20260829 needs_einvois · 20260830 orgs.plan · 20260831 app_errors），跑完 `npm run check:migrations`
-2. **git push** —— `minit-v2\push-cabang.bat` 8/25 早上补好了（之前只在旧树，J 找不到是对的）。
-   11 支 commit 待推。跳 GitHub 选帐号视窗时选自己的帐号。
-3. ~~贴 Supabase 邮件模板~~ → **已顺延**：8/25 早 J 实机发现免费方案要先接自订 SMTP
-   （或升 Pro）才能改模板。模板文字备好在 `docs/supabase-email-templates.md`，等网域+SMTP。
-4. （可选）Vercel 环境变数加 `ADMIN_EMAILS=你的email` 开 /admin；`NEXT_PUBLIC_CONTACT_EMAIL` 开联络按钮
+1. ~~跑 migration 18～22~~ → **已完成**（8/25 `check:migrations` 实测 22 支全 APPLIED）
+2. ~~git push~~ → **已完成**（8/25 实测 `origin/main..HEAD` 为 0）
+3. ~~贴 Supabase 邮件模板~~ → **已顺延**：免费方案要先接自订 SMTP（或升 Pro）才能改模板。
+   模板文字备好在 `docs/supabase-email-templates.md`，等网域+SMTP。
+4. **看 24 号施工单第 1 节的三个建议**，回 OK 或改哪条（角色/邀请码、防冒充范围、试用额度 30）
+5. （可选）Vercel 环境变数加 `ADMIN_EMAILS=你的email` 开 /admin；`NEXT_PUBLIC_CONTACT_EMAIL` 开联络按钮
 
 **新对话开场 PROMPT**：`C:\dev\_J-要做的事-下一個session開場PROMPT-20260825.md`（整段贴）。
 

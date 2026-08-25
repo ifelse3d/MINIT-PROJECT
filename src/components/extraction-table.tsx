@@ -46,9 +46,13 @@ export type ExtractionCell = {
   confidence: Confidence;
   sourceRef: { location: string; snippet: string } | null;
   kind?: "text" | "date" | "amount";
-  onConfirm: () => void;
-  /** Apply the typed value. Return an error message to keep editing, or null on success. */
-  onSave: (raw: string) => string | null;
+  /** Absent = the cell is READ-ONLY (Stage 0-1: sample rows). The value is
+   *  plain text, there is no confirm button, and tapping it does nothing —
+   *  the source snippet stays reachable. */
+  onConfirm?: () => void;
+  /** Apply the typed value. Return an error message to keep editing, or null
+   *  on success. Absent = read-only, same as onConfirm. */
+  onSave?: (raw: string) => string | null;
 };
 
 export type ExtractionRow = {
@@ -73,6 +77,7 @@ function EditableCell({ cell, label }: { cell: ExtractionCell; label?: ReactNode
   const [error, setError] = useState<string | null>(null);
   const kind = cell.kind ?? "text";
   const isMissing = cell.confidence === "missing";
+  const readOnly = !cell.onSave;
 
   function startEditing() {
     setDraft(cell.editText);
@@ -81,7 +86,7 @@ function EditableCell({ cell, label }: { cell: ExtractionCell; label?: ReactNode
   }
 
   function save() {
-    const err = cell.onSave(draft.trim());
+    const err = cell.onSave ? cell.onSave(draft.trim()) : null;
     if (err) {
       setError(err);
       return;
@@ -143,23 +148,38 @@ function EditableCell({ cell, label }: { cell: ExtractionCell; label?: ReactNode
           />
         </button>
 
-        {/* Value — tap to edit. min-h-11 so the tap target is real. */}
-        <button
-          type="button"
-          onClick={startEditing}
-          className={`min-h-11 rounded-lg px-2 py-1 text-left text-base underline decoration-dotted decoration-1 underline-offset-4 hover:bg-muted/60 ${
-            isMissing ? "font-medium text-red-700 italic" : ""
-          }`}
-        >
-          {isMissing ? (
-            <Tri bm="— tiada —" zh="— 没有 —" en="— not found —" />
-          ) : (
-            cell.display
-          )}
-        </button>
+        {/* Value — tap to edit; plain text when the row is read-only.
+            min-h-11 so the tap target is real. */}
+        {readOnly ? (
+          <span
+            className={`min-h-11 px-2 py-1 text-left text-base ${
+              isMissing ? "font-medium text-red-700 italic" : ""
+            }`}
+          >
+            {isMissing ? (
+              <Tri bm="— tiada —" zh="— 没有 —" en="— not found —" />
+            ) : (
+              cell.display
+            )}
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={startEditing}
+            className={`min-h-11 rounded-lg px-2 py-1 text-left text-base underline decoration-dotted decoration-1 underline-offset-4 hover:bg-muted/60 ${
+              isMissing ? "font-medium text-red-700 italic" : ""
+            }`}
+          >
+            {isMissing ? (
+              <Tri bm="— tiada —" zh="— 没有 —" en="— not found —" />
+            ) : (
+              cell.display
+            )}
+          </button>
+        )}
 
         {/* Quick confirm for amber fields, right in the cell. */}
-        {cell.confidence === "check" && (
+        {cell.confidence === "check" && cell.onConfirm && (
           <Button variant="outline" onClick={cell.onConfirm}>
             ✓&nbsp;<Tri bm="Betul" zh="没错" en="Correct" />
           </Button>

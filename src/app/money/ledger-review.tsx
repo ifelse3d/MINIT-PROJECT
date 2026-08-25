@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
 import { ExtractionTable } from "@/components/extraction-table";
 import { NextStepLink, PageSection } from "@/components/page-section";
+import { PdpaNote } from "@/components/pdpa-note";
 import { sampleLedgerExtraction } from "@/lib/sample-ledger";
 import {
   eligibleForReceipt,
@@ -178,6 +179,9 @@ export function LedgerReview() {
           </span>
         </div>
 
+        {/* 0-5: the paid-tier privacy notice beside the upload door. */}
+        <PdpaNote />
+
         {/* Opt-in example, quiet and separate from the camera button. */}
         {noLedgerYet && !aiBusy && (
           <button
@@ -205,12 +209,14 @@ export function LedgerReview() {
           <div className="flex flex-wrap items-center gap-3 rounded-xl border-2 border-amber-300 bg-amber-50 p-3 dark:bg-amber-400/10">
             <p className="min-w-56 flex-1 text-base font-medium text-amber-900 dark:text-amber-100">
             <Tri
-              bm="Baris di bawah ialah CONTOH — bukan derma sebenar. Ia ada supaya anda boleh lihat cara kerjanya. Kalau anda tambah baris contoh ini ke daftar dan jana resit, nombor resit sebenar akan terpakai dan tidak boleh dikitar semula. Ambil gambar lejar anda sendiri dahulu."
-              zh="下面这些是示范用的记录，不是真实捐款，只是让您先看看流程。如果把示范记录加进登记簿并开收据，会用掉真实的收据号码，而且号码不能回收。请先拍下您自己的账页。"
-              en="The rows below are an EXAMPLE, not real donations — they are here so you can see how this works. If you add them to the register and issue receipts, real receipt numbers will be used up and cannot be recycled. Take a photo of your own ledger page first."
+              bm="Baris di bawah ialah CONTOH — bukan derma sebenar, dan hanya boleh dilihat. Ia tidak boleh disahkan, dimasukkan ke daftar atau diberi resit, supaya nombor resit sebenar tidak terbakar pada derma rekaan. Ambil gambar lejar anda sendiri dahulu."
+              zh="下面这些是示范用的记录，不是真实捐款，只能看。示范记录不能确认、不能加进登记簿、也不能开收据——这样真实的收据号码才不会被虚构的捐款用掉。请先拍下您自己的账页。"
+              en="The rows below are an EXAMPLE, not real donations — and they are view-only. They cannot be confirmed, added to the register or given receipts, so real receipt numbers are never spent on fictional donations. Take a photo of your own ledger page first."
             />
             </p>
-            <Button variant="outline" onClick={ledgerBackToEmpty}>
+            {/* Stage 0-1: the way OUT of the example is the biggest thing in
+                the banner — for the person who tapped it by accident. */}
+            <Button size="lg" className="text-base" onClick={ledgerBackToEmpty}>
               <Tri bm="Tutup contoh" zh="关掉示范" en="Close the example" />
             </Button>
           </div>
@@ -248,6 +254,8 @@ export function LedgerReview() {
                       : "confirmed",
                 "confirmed" as "confirmed" | "check" | "missing"
               );
+            // Stage 0-1: sample rows are READ-ONLY — no confirm, no edit. A
+            // cell without handlers renders as plain text (extraction-table).
             const textCell = (
               field: "donor_name" | "donated_at" | "purpose",
               kind: "text" | "date"
@@ -257,15 +265,24 @@ export function LedgerReview() {
               confidence: r[field].confidence,
               sourceRef: r[field].source_ref,
               kind,
-              onConfirm: () => mutateLedger((l) => confirmTextField(l.rows[i][field])),
-              onSave: (v: string) => {
-                mutateLedger((l) => editTextField(l.rows[i][field], v));
-                return null;
-              },
+              ...(isSampleLedger
+                ? {}
+                : {
+                    onConfirm: () =>
+                      mutateLedger((l) => confirmTextField(l.rows[i][field])),
+                    onSave: (v: string) => {
+                      mutateLedger((l) => editTextField(l.rows[i][field], v));
+                      return null;
+                    },
+                  }),
             });
             return {
               status: worst,
-              warning: !eligibleForReceipt(r) ? (
+              warning: isSampleLedger ? (
+                // Every sample row says so itself — the banner above scrolls
+                // away, the label on the row does not.
+                <Tri bm="CONTOH — lihat sahaja" zh="示范 —— 只能看" en="SAMPLE — view only" />
+              ) : !eligibleForReceipt(r) ? (
                 <Tri
                   bm="Belum layak resit — sahkan dahulu"
                   zh="暂不能开收据 —— 请先确认"
@@ -283,25 +300,29 @@ export function LedgerReview() {
                   confidence: r.amount_cents.confidence,
                   sourceRef: r.amount_cents.source_ref,
                   kind: "amount" as const,
-                  onConfirm: () =>
-                    mutateLedger((l) => confirmTextField(l.rows[i].amount_cents)),
-                  onSave: (v: string) => {
-                    const cents = parseRmToCents(v);
-                    if (cents === null) {
-                      return t(
-                        "Jumlah tak sah — contoh: 50 atau 12.50",
-                        "金额无效 — 例如 50 或 12.50",
-                        "Invalid amount — e.g. 50 or 12.50"
-                      );
-                    }
-                    mutateLedger((l) => {
-                      const f = l.rows[i].amount_cents;
-                      f.value = cents;
-                      f.confidence = "confirmed";
-                      f.source_ref = f.source_ref ?? userSource();
-                    });
-                    return null;
-                  },
+                  ...(isSampleLedger
+                    ? {}
+                    : {
+                        onConfirm: () =>
+                          mutateLedger((l) => confirmTextField(l.rows[i].amount_cents)),
+                        onSave: (v: string) => {
+                          const cents = parseRmToCents(v);
+                          if (cents === null) {
+                            return t(
+                              "Jumlah tak sah — contoh: 50 atau 12.50",
+                              "金额无效 — 例如 50 或 12.50",
+                              "Invalid amount — e.g. 50 or 12.50"
+                            );
+                          }
+                          mutateLedger((l) => {
+                            const f = l.rows[i].amount_cents;
+                            f.value = cents;
+                            f.confidence = "confirmed";
+                            f.source_ref = f.source_ref ?? userSource();
+                          });
+                          return null;
+                        },
+                      }),
                 },
                 textCell("donated_at", "date"),
                 textCell("purpose", "text"),
@@ -309,25 +330,30 @@ export function LedgerReview() {
             };
           })}
         />
-        {/* Rows only reach the register after explicit human confirmation */}
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            onClick={addConfirmedRowsToRegister}
-            disabled={
-              ledger.rows.filter((r, i) => eligibleForReceipt(r) && !addedRows.has(i)).length === 0
-            }
-            size="lg"
-            className="text-base"
-          >
-            ➕{" "}
-            <Tri
-              bm="Masukkan baris disahkan ke daftar"
-              zh="把已确认的行加入登记"
-              en="Add confirmed rows to register"
-            />{" "}
-            ({rowsReadyToAdd})
-          </Button>
-        </div>
+        {/* Rows only reach the register after explicit human confirmation.
+            Stage 0-1: while the SAMPLE is on screen there is no button at all —
+            not a greyed-out one — because there is nothing legitimate it could
+            ever do; the register-store and the server refuse sample rows too. */}
+        {!isSampleLedger && (
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              onClick={addConfirmedRowsToRegister}
+              disabled={
+                ledger.rows.filter((r, i) => eligibleForReceipt(r) && !addedRows.has(i)).length === 0
+              }
+              size="lg"
+              className="text-base"
+            >
+              ➕{" "}
+              <Tri
+                bm="Masukkan baris disahkan ke daftar"
+                zh="把已确认的行加入登记"
+                en="Add confirmed rows to register"
+              />{" "}
+              ({rowsReadyToAdd})
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Where this page hands off to. Before the split these two steps shared

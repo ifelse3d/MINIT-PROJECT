@@ -499,9 +499,13 @@ export function MinutesProvider({
   // Generic updater for one field inside the extraction tree.
   const updateField = useCallback(
     (apply: (e: MeetingNotesExtraction) => MeetingNotesExtraction) => {
+      // Stage 0-1: the worked example is read-only — its fields cannot be
+      // confirmed or edited (isSample is derived below; this is the same
+      // condition, spelled out because the callback is created earlier).
+      if (showSample && sourceLabel === null && !typedByHand) return;
       setExtraction((prev) => apply(structuredClone(prev)));
     },
-    [],
+    [showSample, sourceLabel, typedByHand],
   );
 
   const confirmField = useCallback((f: TextLikeField) => {

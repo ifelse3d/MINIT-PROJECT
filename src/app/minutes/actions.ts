@@ -22,6 +22,7 @@ import { getActiveOrg } from "@/lib/active-org";
 import { getDocumentIdentity } from "@/lib/doc-identity";
 import { parseMeetingNotesExtraction } from "@/lib/extraction";
 import { normaliseMeetingType } from "@/lib/meeting-types";
+import { isSampleMeetingExtraction } from "@/lib/sample-guard";
 import { renderMinutesDraftBm } from "@/lib/minutes-draft";
 import { joinUserError, inputProblemError, USER_ERRORS } from "@/lib/user-errors";
 import { dayIsoMalaysia } from "@/lib/history";
@@ -95,6 +96,17 @@ export async function saveConfirmedMinutes(input: {
     };
   }
   const extraction = parsed.data;
+
+  // Stage 0-1: the worked example can never be saved as a real meeting. The
+  // client already keys saving off isReal, but the client is not the authority
+  // on what enters an organisation's audit trail.
+  if (isSampleMeetingExtraction(extraction)) {
+    return {
+      error:
+        "Ini contoh sahaja — ia tidak boleh disimpan sebagai mesyuarat sebenar. Ambil gambar nota anda sendiri dahulu / 这是示范内容，不能保存成真实会议记录。请先拍您自己的笔记 / This is the worked example — it cannot be saved as a real meeting. Photograph your own notes first",
+      ok: false,
+    };
+  }
 
   // Hard Rule 8: the audit line names the real signed-in human, resolved on the
   // server. Never the browser's idea of who confirmed it.

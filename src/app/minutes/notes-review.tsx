@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
 import { StepGroup } from "@/components/step-card";
 import { NextStepLink, PageSection } from "@/components/page-section";
+import { PdpaNote } from "@/components/pdpa-note";
 import { formatDateLong, isIsoDate } from "@/lib/date-input";
 import { MEETING_TYPES, MEETING_TYPE_LABEL, meetingTypeLabel } from "@/lib/meeting-types";
 import { formatRm } from "@/lib/minutes-draft";
@@ -231,14 +232,11 @@ export function NotesReview() {
             />
           </details>
         )}
-        <p className="text-base text-muted-foreground">
-          ⚠{" "}
-          <Tri
-            bm="Guna nota contoh dahulu — jangan muat naik nama atau nombor IC orang sebenar sampai kami bertukar ke pelan berbayar. Ini melindungi privasi mereka."
-            zh="目前请先用示范笔记 —— 在我们换成付费方案之前，先不要上传真实的姓名或身份证号码，以保护他们的隐私。"
-            en="Use example notes for now — do not upload real names or IC numbers until we move to a paid plan. This protects their privacy."
-          />
-        </p>
+        {/* 0-5 (2026-08-25): the old "use sample data until we go paid"
+            warning dated from the free-tier days and had gone wrong — the API
+            is on the PAID tier (J confirmed 8/25). Real data is allowed; what
+            people deserve to know is in the shared PdpaNote. */}
+        <PdpaNote />
         {/* Opt-in example. Deliberately quiet and LAST: someone holding their
             own notes should reach for the camera, not this. It exists so a
             first-timer (or a demo) can see what a finished page looks like. */}

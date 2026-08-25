@@ -23,6 +23,7 @@
 import { getSupabaseServer } from "@/db/supabase-server";
 import { getActiveOrg } from "@/lib/active-org";
 import { maskName } from "@/lib/mask";
+import { containsSampleDonation } from "@/lib/sample-guard";
 
 export type RowToIssue = {
   /** Client-side row id, echoed back so the UI can match numbers to rows.
@@ -55,10 +56,14 @@ export type IssueResult =
        *                 letters in Settings first (each branch needs its own so
        *                 a receipt says who issued it — J, 2026-08-22), or
        *                 explicitly accept the default.
+       * sample        — at least one row is the worked-example ledger's
+       *                 fictional data (Stage 0-1). Issuing would burn real,
+       *                 gap-free receipt numbers on donations that never
+       *                 happened; nothing was attempted.
        * failed        — nothing was written (the RPC is one transaction);
        *                 safe to try again.
        */
-      reason: "no_org" | "readonly" | "failed" | "needs_prefix";
+      reason: "no_org" | "readonly" | "failed" | "needs_prefix" | "sample";
     }
   | { saved: true; receiptNos: Record<string, string> };
 
@@ -77,6 +82,11 @@ export async function issueAndSaveReceipts(
   if (!active) return { saved: false, reason: "no_org" };
   if (active.role === "auditor_readonly") return { saved: false, reason: "readonly" };
   if (rows.length === 0) return { saved: true, receiptNos: {} };
+
+  // Stage 0-1: the sample ledger is read-only. The UI no longer offers the
+  // buttons, but the UI is not the authority — a receipt number is permanent,
+  // so the refusal lives here, before anything is written.
+  if (containsSampleDonation(rows)) return { saved: false, reason: "sample" };
 
   const supabase = await getSupabaseServer();
 

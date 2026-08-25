@@ -13,7 +13,7 @@ import {
 const INITIAL: MemberActionState = { error: null, ok: false };
 
 const inputCls =
-  "w-full rounded-lg border border-white/60 bg-white/60 px-3 py-2 text-base outline-none backdrop-blur focus:ring-2 focus:ring-[#7c6cf5]/40 dark:border-white/10 dark:bg-white/5";
+  "w-full rounded-lg border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-3 py-2 text-base text-[color:var(--v2-text)] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[color:var(--v2-primary)] focus:shadow-[0_0_0_3px_rgba(91,75,214,0.18)]";
 
 const errorCls =
   "rounded-xl border-2 border-red-300 bg-red-50 p-3 text-base font-medium whitespace-pre-line text-red-900 dark:bg-red-400/10 dark:text-red-100";
@@ -244,10 +244,11 @@ export function ImportCommittee() {
                 📷 <Tri bm="Gambar / PDF" zh="照片 / PDF" en="Photo / PDF" />
               </span>
               <span className="block text-sm text-muted-foreground">
+                {/* 0-2: the paid-path marker stays, the "about 1%" goes. */}
                 <Tri
-                  bm="Untuk senarai bergambar atau format lain. Kira-kira 1% daripada penggunaan AI bulanan."
-                  zh="给照片、PDF、或格式不对的名单。约占本月 AI 用量的 1%。"
-                  en="For a photographed list or any other format. About 1% of the monthly AI allowance."
+                  bm="Untuk senarai bergambar atau format lain. Ini menggunakan kuota AI bulanan."
+                  zh="给照片、PDF、或格式不对的名单。这条路会用本月的 AI 用量。"
+                  en="For a photographed list or any other format. This uses the monthly AI allowance."
                 />
               </span>
             </button>
@@ -402,9 +403,9 @@ Setiausaha, 林小美
                         />
                       ) : (
                         <Tri
-                          bm="Tak difahami? Biar Minit yang baca · guna 1 kuota AI"
-                          zh="看不懂？让 Minit 帮你读 · 约占本月 AI 用量的 1%"
-                          en="Not understood? Let Minit read it · about 1% of the monthly AI allowance"
+                          bm="Tak difahami? Biar Minit yang baca · guna kuota AI"
+                          zh="看不懂？让 Minit 帮你读 · 会用 AI 用量"
+                          en="Not understood? Let Minit read it · uses the AI allowance"
                         />
                       )}
                     </Button>

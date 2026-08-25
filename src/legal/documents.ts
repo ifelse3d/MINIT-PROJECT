@@ -310,11 +310,14 @@ Peribadi Rentas Sempadan (2025).
 
 **Kami tidak menjual data anda. Kami tidak berkongsi data anda untuk pengiklanan.**
 
-⚠ **[[JIKA MASIH MENGGUNAKAN PERINGKAT PERCUMA GEMINI:]]** peringkat percuma
-pembekal AI mungkin menggunakan input untuk melatih model mereka. Oleh itu
-Minit **hanya menerima data contoh/rekaan** sehingga kami beralih kepada
-perkhidmatan berbayar dengan perjanjian pemprosesan data. Jangan muat naik
-data penderma sebenar sebelum kami memaklumkan bahawa peralihan itu selesai.
+**Peringkat berbayar (sejak Ogos 2026):** akses AI Minit berjalan pada
+peringkat API **berbayar**, dan di bawah terma berbayar itu input anda
+**tidak digunakan untuk melatih** model pembekal. Walaupun begitu, amalan
+kami tetap: hantar seminimum mungkin data peribadi yang tidak perlu —
+nombor kad pengenalan hampir tidak pernah diperlukan. Jika pada bila-bila
+masa perkhidmatan AI kami kembali kepada peringkat percuma (yang mungkin
+menggunakan input untuk latihan), kami akan memaklumkan dan hanya menerima
+data contoh/rekaan sepanjang tempoh itu.
 
 ## 7. Keselamatan
 
@@ -440,10 +443,13 @@ Transfer Guidelines.
 
 **We do not sell your data. We do not share your data for advertising.**
 
-⚠ **[[IF STILL ON THE GEMINI FREE TIER:]]** free tiers of AI providers may use
-inputs to train their models. Minit therefore accepts **sample/fictional data
-only** until we move to a paid service under a data-processing agreement. Do
-not upload real donor data before we confirm that move is complete.
+**Paid tier (since August 2026):** Minit's AI access runs on the **paid**
+API tier, and under those paid terms your inputs are **not used to train**
+the provider's models. Our practice stays the same regardless: send as
+little unnecessary personal data as possible — IC numbers are almost never
+needed. If our AI service ever returns to a free tier (which may use inputs
+for training), we will say so and accept sample/fictional data only for as
+long as that lasts.
 
 ## 7. Security
 
@@ -504,7 +510,7 @@ We will show any material change in the app before it takes effect.
 
 /** Short hash of the text above. This is what a person's consent is recorded
  *  against, so an edited clause is visibly a different version. */
-export const PRIVACY_VERSION = "66bb1d2ed7d9";
+export const PRIVACY_VERSION = "75ad66b1b92a";
 
 /** Both versions together — what goes into the signup consent record. */
 export const LEGAL_VERSIONS = {

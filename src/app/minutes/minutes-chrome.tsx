@@ -124,12 +124,14 @@ export function MinutesChrome({ children }: { children: ReactNode }) {
           <div className="flex flex-wrap items-center gap-3 rounded-xl border-2 border-amber-300 bg-amber-50 p-3 dark:bg-amber-400/10">
             <p className="min-w-56 flex-1 text-base font-medium text-amber-900 dark:text-amber-100">
               <Tri
-                bm="Ini contoh sahaja — bukan data anda."
-                zh="这是示范内容，不是您的资料。"
-                en="This is the worked example — not your data."
+                bm="Ini contoh sahaja — bukan data anda, dan hanya boleh dilihat. Ia tidak boleh diubah atau disimpan."
+                zh="这是示范内容，不是您的资料，只能看——不能修改，也不能保存。"
+                en="This is the worked example — not your data, and view-only. It cannot be edited or saved."
               />
             </p>
-            <Button variant="outline" onClick={backToEmpty}>
+            {/* Stage 0-1: the way OUT of the example is the biggest thing in
+                the banner — for the person who tapped it by accident. */}
+            <Button size="lg" className="text-base" onClick={backToEmpty}>
               <Tri bm="Tutup contoh" zh="关掉示范" en="Close the example" />
             </Button>
           </div>

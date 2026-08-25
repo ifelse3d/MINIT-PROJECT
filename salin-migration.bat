@@ -70,6 +70,9 @@ echo    19.  20260828000000  kunci anti-duplikasi minit / minutes anti-duplicate
 echo    20.  20260829000000  suis e-Invois pilihan / optional e-Invois switch
 echo    21.  20260830000000  pelan langganan / subscription plan column
 echo    22.  20260831000000  jadual ralat / error log table
+echo    23.  20260901000000  kuota percubaan 15 / trial quota 15 per month
+echo         ^^^ Dalam fail itu ada bahagian PILIHAN (dikomen) untuk org lama.
+echo             The file has an OPTIONAL commented section for existing orgs.
 echo.
 echo     0.  Keluar / Quit
 echo.
@@ -98,6 +101,7 @@ if "%pick%"=="19" set f=20260828000000_minutes_docs_client_id.sql& goto copy
 if "%pick%"=="20" set f=20260829000000_orgs_needs_einvois.sql& goto copy
 if "%pick%"=="21" set f=20260830000000_orgs_plan.sql& goto copy
 if "%pick%"=="22" set f=20260831000000_app_errors.sql& goto copy
+if "%pick%"=="23" set f=20260901000000_trial_quota_15.sql& goto copy
 
 echo.
 echo    Nombor tak sah / not a valid number.

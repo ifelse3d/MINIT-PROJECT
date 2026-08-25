@@ -66,7 +66,13 @@ import { loadRemittanceBatches, saveRemittanceBatch } from "./custody-actions";
 /** What issuing receipts told us, for the message shown afterwards.
  *  ("reconcile" retired 2026-08-25: issue_receipts() is one DB transaction,
  *  so a partial write can no longer happen.) */
-export type IssueNotice = "saved" | "local" | "error" | "readonly" | "needs_prefix";
+export type IssueNotice =
+  | "saved"
+  | "local"
+  | "error"
+  | "readonly"
+  | "needs_prefix"
+  | "sample";
 
 export type RegisterStore = {
   // --- identity, resolved on the server (never client-chosen) --------------
@@ -373,6 +379,10 @@ export function RegisterProvider({
   // Confirmed ledger rows → register (explicit human action; deterministic
   // TS mapping — receipt eligibility rules live in receipts.ts).
   const addConfirmedRowsToRegister = useCallback(() => {
+    // Stage 0-1: the worked example is read-only. Its rows never reach the
+    // register, so they can never reach the receipt series. The button is
+    // hidden while the sample is shown; this guard is for every other path.
+    if (isSampleLedger) return;
     const eligible = ledger.rows
       .map((r, i) => ({ r, i }))
       .filter(({ r, i }) => eligibleForReceipt(r) && !addedRows.has(i));
@@ -400,7 +410,7 @@ export function RegisterProvider({
       eligible.forEach(({ i }) => next.add(i));
       return next;
     });
-  }, [ledger, addedRows, registerCollector, setDonations]);
+  }, [isSampleLedger, ledger, addedRows, registerCollector, setDonations]);
 
   // --- Editing a register row BEFORE its receipt is issued ------------------
   const saveDonation = useCallback(
@@ -493,6 +503,13 @@ export function RegisterProvider({
         // The org still has the shared default prefix and no receipts yet —
         // send the person to Settings to pick their own letters first.
         setIssueNotice("needs_prefix");
+        return;
+      }
+      if (result.reason === "sample") {
+        // Stage 0-1: sample rows (added before the sample became read-only,
+        // or hand-crafted) may not burn real receipt numbers. Nothing was
+        // written; the person is told to remove the sample rows first.
+        setIssueNotice("sample");
         return;
       }
       setIssueNotice("error");

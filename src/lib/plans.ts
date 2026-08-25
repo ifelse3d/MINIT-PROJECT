@@ -47,7 +47,11 @@ export const PLANS: Record<PlanId, Plan> = {
   trial: {
     id: "trial",
     name: { bm: "Percubaan", zh: "试用", en: "Trial" },
-    monthlyAiQuota: TBD_PRICING(100),
+    // DECIDED (J 2026-08-25, work order 24 建議③): 15 actions/month — enough
+    // to prove the value (a constitution + a meeting + a few ledger pages +
+    // questions), deliberately not enough to live on free forever. Not
+    // TBD_PRICING any more. DB default: migration 20260901000000.
+    monthlyAiQuota: 15,
     // DECIDED (J 2026-08-22): the trial covers exactly one organisation.
     maxRootOrgs: 1,
     maxBranches: null,
