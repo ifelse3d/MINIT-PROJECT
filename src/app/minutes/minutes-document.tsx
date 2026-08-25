@@ -49,6 +49,7 @@ export function MinutesDocument() {
     alreadySaved,
     saveResult,
     saveToHistory,
+    backToEmpty,
     pastePack,
     evRows,
     evBusy,
@@ -318,7 +319,7 @@ export function MinutesDocument() {
               </Link>
             </div>
           </div>
-          {saveResult === "ok" && (
+          {alreadySaved && (
             <>
               <p className="rounded-xl border-2 border-green-400 bg-green-50 p-3 text-base font-medium text-green-900 dark:bg-green-400/10 dark:text-green-100">
                 ✓{" "}
@@ -328,6 +329,26 @@ export function MinutesDocument() {
                   en="The minutes are saved in the organisation's history."
                 />
               </p>
+              {/* 0-1 (26 号报告 2-1): the explicit way OUT of a finished
+                  meeting. Without it the saved meeting sat in the workspace
+                  forever, and next month's photo merged into it. Safe to
+                  press: the document above is already in History. */}
+              <div className="flex flex-wrap items-center gap-3">
+                <Button size="lg" onClick={backToEmpty}>
+                  <Tri
+                    bm="Mula mesyuarat baharu"
+                    zh="开始记录新的会议"
+                    en="Start a new meeting"
+                  />
+                </Button>
+                <p className="text-base text-muted-foreground">
+                  <Tri
+                    bm="Halaman kerja dikosongkan — minit yang disimpan kekal dalam Sejarah."
+                    zh="工作区会清空 —— 已保存的会议记录还在「历史」里，不会不见。"
+                    en="Clears this workspace — the saved minutes stay in History."
+                  />
+                </p>
+              </div>
             </>
           )}
           {saveResult && saveResult !== "ok" && (

@@ -39,7 +39,9 @@ import { DEADLINE_KINDS, type DeadlineKind } from "@/lib/deadlines";
 
 export type DeadlineOutcome =
   | { ok: true }
-  | { ok: false; reason: "no_org" | "no_session" | "db" };
+  /** "permission" ≠ "db": a role refusal recurs on every retry, so the UI
+   *  must say whose job it is, not "try again later" (26 号报告 2-4). */
+  | { ok: false; reason: "no_org" | "no_session" | "permission" | "db" };
 
 /**
  * The id for one deadline occurrence.
@@ -82,7 +84,8 @@ export async function setDeadlineDone(input: {
   const active = await getActiveOrg();
   if (!active) return { ok: false, reason: "no_org" };
   // B-4: ticking a deadline is calendar_write — everyone except the auditor.
-  if (!can(active.role, "calendar_write")) return { ok: false, reason: "db" };
+  if (!can(active.role, "calendar_write"))
+    return { ok: false, reason: "permission" };
 
   const supabase = await getSupabaseServer();
   const { error } = await supabase.from("deadlines").upsert(

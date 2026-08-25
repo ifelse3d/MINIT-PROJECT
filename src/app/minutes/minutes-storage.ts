@@ -50,6 +50,15 @@ export type SavedMinutes = {
    * has no such key, `undefined` reads as false, and the person is asked once.
    */
   noAttendees?: boolean;
+  /**
+   * 0-1 (26 号报告 2-1): true when THIS workspace content has been saved to
+   * the organisation's History. It has to survive a reload — next month's
+   * photo must trigger the "same meeting, or a new one?" question, or the new
+   * meeting silently merges into the saved one. Optional like the others:
+   * older blobs read as "not saved", which only means the question is not
+   * asked — the safe direction.
+   */
+  savedToHistory?: boolean;
 };
 
 export function loadSavedMinutes(): SavedMinutes | null {

@@ -136,6 +136,27 @@ export function eligibleForReceipt(row: LedgerExtraction["rows"][number]): boole
   );
 }
 
+/**
+ * 0-1 (26 号报告 2-1): is this ledger review FINISHED — every row that could
+ * go into the register has gone in, and at least one actually did?
+ *
+ * This is the money-side analogue of the minutes' "already saved to History":
+ * once it is true, the next photo gets asked "another page of this ledger, or
+ * a new one?" instead of silently appending under rows that were already
+ * turned into receipts — which is how one donation ends up with two serial
+ * numbers. `addedRows` is index-based, matching the register store.
+ */
+export function ledgerPageFullyRecorded(
+  rows: LedgerExtraction["rows"],
+  addedRows: ReadonlySet<number>,
+): boolean {
+  return (
+    rows.length > 0 &&
+    addedRows.size > 0 &&
+    rows.every((r, i) => !eligibleForReceipt(r) || addedRows.has(i))
+  );
+}
+
 // ----- Manual amount entry (RM string → cents) -------------------------------
 
 /**

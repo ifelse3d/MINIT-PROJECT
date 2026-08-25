@@ -95,6 +95,38 @@ describe("mergeMeetingExtractions", () => {
       "青年组周会",
     );
   });
+
+  // 0-3 (26 号报告 2-3): while the model reads page 2 (5–20 s), the person can
+  // keep confirming page 1's fields. The stores now merge with a functional
+  // update, i.e. onto the state AS IT IS when the read returns — this test
+  // simulates that one confirmation landing mid-read, and pins BOTH halves:
+  // merging onto the current state keeps the tick; merging onto the
+  // shutter-time snapshot (the old bug) would silently revert it.
+  it("a field confirmed while the AI was reading survives the merge", () => {
+    const atShutter = meeting({
+      meeting_date: check("2026-08-25"),
+      resolutions: [{ text: check("家长班改到礼堂") }],
+    });
+    // Mid-read, the person taps "没错" on the date.
+    const whileReading = meeting({
+      meeting_date: confirmed("2026-08-25"),
+      resolutions: [{ text: check("家长班改到礼堂") }],
+    });
+    const page2 = meeting({
+      meeting_date: check("2026-08-26"), // the model mis-reads the date
+      resolutions: [{ text: check("Perarakan bermula 8 pagi") }],
+    });
+
+    // Functional update (the fix): the tick stands, page 2 still appends.
+    const merged = mergeMeetingExtractions(whileReading, page2);
+    expect(merged.meeting_date.confidence).toBe("confirmed");
+    expect(merged.meeting_date.value).toBe("2026-08-25");
+    expect(merged.resolutions).toHaveLength(2);
+
+    // Shutter-time snapshot (the old bug): the tick would be gone.
+    const stale = mergeMeetingExtractions(atShutter, page2);
+    expect(stale.meeting_date.confidence).not.toBe("confirmed");
+  });
 });
 
 describe("hasMeetingContent", () => {

@@ -113,7 +113,12 @@ export type MinutesStore = {
    * model reads. See lib/meeting-facts.ts for why the date in particular
    * cannot be left to the model.
    */
-  onPhotoPicked: (file: File | null, facts?: KnownMeetingFacts) => Promise<void>;
+  onPhotoPicked: (
+    file: File | null,
+    facts?: KnownMeetingFacts,
+    /** 0-1: "fresh" = the person said this photo starts a NEW meeting. */
+    mode?: "auto" | "fresh",
+  ) => Promise<void>;
   /**
    * Start a set of minutes with no photo at all.
    *
@@ -284,6 +289,27 @@ export function MinutesProvider({
   const [typedByHand, setTypedByHand] = useState(false);
   const [noAttendeesRecorded, setNoAttendeesRecorded] = useState(false);
 
+  // --- Phase 7 save-to-history state. Declared HERE (not next to
+  // saveToHistory below) because the restore effect and onPhotoPicked need the
+  // setters: 0-1 (26 号报告 2-1) made "this workspace was already saved" a fact
+  // that must survive a reload and gate the next photo.
+  const [saveBusy, setSaveBusy] = useState(false);
+  const [saveResult, setSaveResult] = useState<"ok" | string | null>(null);
+  // WHICH extraction object was stored — object identity, so any edit (which
+  // clones the extraction) unlocks saving again. See `alreadySaved` on the
+  // store type for why this exists (found by scripts/e2e-minutes.mjs).
+  const [savedFor, setSavedFor] = useState<MeetingNotesExtraction | null>(null);
+  const alreadySaved = saveResult === "ok" && savedFor === extraction;
+
+  // S0-3 (2026-08-25): one idempotency key per DOCUMENT, not per attempt. A
+  // double tap or a timed-out retry re-sends the SAME key, and the server
+  // refuses to store the same document twice. A new extraction is a new
+  // document, so the key resets with it.
+  const saveClientIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    saveClientIdRef.current = null;
+  }, [extraction]);
+
   // events-in-minutes bridge
   const [evRows, setEvRows] = useState<EvRow[] | null>(null);
   const [evBusy, setEvBusy] = useState(false);
@@ -322,6 +348,15 @@ export function MinutesProvider({
       setPhotoDataUrl(saved.photoDataUrl);
       setTypedByHand(saved.typed === true);
       setNoAttendeesRecorded(saved.noAttendees === true);
+      // 0-1 (26 号报告 2-1): "this meeting is already in History" must survive
+      // the reload, or next month's photo of a NEW meeting silently merges
+      // into last month's. Handing setSavedFor the SAME object that went into
+      // setExtraction keeps the identity check working; the first edit clones
+      // the extraction and unlocks everything again, exactly as before.
+      if (saved.savedToHistory) {
+        setSaveResult("ok");
+        setSavedFor(saved.extraction);
+      }
     }
     setRestored(true);
   }, []);
@@ -344,13 +379,14 @@ export function MinutesProvider({
       photoDataUrl,
       typed: typedByHand,
       noAttendees: noAttendeesRecorded,
+      savedToHistory: alreadySaved,
     });
     if (outcome === "photo-dropped" && photoDataUrl !== null) {
       // Clear it from state too, otherwise the failing write repeats forever.
       setPhotoDataUrl(null);
     }
     setStorageNote(outcome === "ok" ? null : outcome);
-  }, [extraction, sourceLabel, photoDataUrl, typedByHand, noAttendeesRecorded, restored]);
+  }, [extraction, sourceLabel, photoDataUrl, typedByHand, noAttendeesRecorded, restored, alreadySaved]);
 
   const findEventsInMinutes = useCallback(async () => {
     setEvError(null);
@@ -409,6 +445,12 @@ export function MinutesProvider({
   const onPhotoPicked = useCallback(async (
     file: File | null,
     facts: KnownMeetingFacts = EMPTY_MEETING_FACTS,
+    // 0-1 (26 号报告 2-1): "fresh" is the person's answer to "start a new
+    // meeting?" asked when the workspace still shows a SAVED meeting — the
+    // read then replaces the workspace wholesale instead of merging last
+    // month's confirmed fields over this month's page. "auto" keeps the G-2
+    // behaviour: an unsaved workspace with content means "another page".
+    mode: "auto" | "fresh" = "auto",
   ) => {
     if (!file) return;
     setAiError(null);
@@ -446,19 +488,38 @@ export function MinutesProvider({
       // (isReal is declared further down; spelled out here from its inputs so
       // the deps array below never touches it before initialisation.)
       const continuing =
-        (sourceLabel !== null || typedByHand) && hasMeetingContent(extraction);
-      const next = continuing ? mergeMeetingExtractions(extraction, read) : read;
-      setExtraction(next);
-      setSourceLabel(
-        continuing ? mergedSourceLabel(sourceLabel, file.name) : file.name,
+        mode !== "fresh" &&
+        (sourceLabel !== null || typedByHand) &&
+        hasMeetingContent(extraction);
+      // A fresh start also drops the old meeting's save mark — the workspace
+      // now holds a NEW document that has not been saved anywhere.
+      if (mode === "fresh") {
+        setSaveResult(null);
+        setSavedFor(null);
+      }
+      // 0-3 (26 号报告 2-3): the person can keep confirming fields during the
+      // 5–20 s the model spends reading. Merging onto the snapshot captured at
+      // the shutter silently reverted every one of those confirmations, so the
+      // merge is a FUNCTIONAL update onto whatever the extraction is NOW.
+      // (`continuing` still reads the shutter-time snapshot: whether this
+      // photo is "another page of the same meeting" was decided when it was
+      // taken, and confirming fields cannot change that answer.)
+      setExtraction((current) =>
+        continuing ? mergeMeetingExtractions(current, read) : read,
+      );
+      setSourceLabel((prev) =>
+        continuing ? mergedSourceLabel(prev, file.name) : file.name,
       );
       setPhotoDataUrl(await compressPhoto(file));
       setTypedByHand(false);
       // A new photo is a new meeting — but a page ADDED to this meeting is
       // not: what somebody said about ITS attendance still stands, unless the
       // new page just produced attendees (then "none recorded" is untrue).
+      // Merged attendees are existing ∪ read, and the flag being set implies
+      // the existing list was empty — so "still none recorded" ⟺ the flag
+      // held AND this page read none.
       setNoAttendeesRecorded(
-        continuing ? noAttendeesRecorded && next.attendees.length === 0 : false,
+        (prev) => (continuing ? prev && read.attendees.length === 0 : false),
       );
       setEvRows(null);
     } catch (e) {
@@ -466,10 +527,10 @@ export function MinutesProvider({
     } finally {
       setAiBusy(false);
     }
-    // The G-2 merge reads the CURRENT extraction and flags, so they are real
-    // dependencies — with only [t] here the closure would merge onto a stale
-    // page (the same stale-closure class the calendar's addEvent avoids).
-  }, [t, extraction, sourceLabel, typedByHand, noAttendeesRecorded]);
+    // `continuing` reads these at shutter time (that decision belongs to the
+    // moment the photo was taken); the merge itself is a functional update, so
+    // it can never be stale no matter what happens while the model reads.
+  }, [t, extraction, sourceLabel, typedByHand]);
 
   /**
    * Nothing to photograph — start from a blank sheet and type.
@@ -489,6 +550,10 @@ export function MinutesProvider({
     setAiError(null);
     setTypedByHand(true);
     setNoAttendeesRecorded(false);
+    // 0-1: a blank sheet is a NEW document — the previous meeting's save mark
+    // must not travel onto it.
+    setSaveResult(null);
+    setSavedFor(null);
   }, []);
 
   /** Clean, empty page: no example, no half-read photo, nothing saved. */
@@ -502,6 +567,10 @@ export function MinutesProvider({
     setEvRows(null);
     setAiError(null);
     setStorageNote(null);
+    // 0-1: an empty page has been saved nowhere — without this, the "✓ Saved"
+    // state of the meeting just cleared away leaked onto the blank workspace.
+    setSaveResult(null);
+    setSavedFor(null);
     try {
       localStorage.removeItem(minutesStoreKey());
     } catch {
@@ -519,6 +588,10 @@ export function MinutesProvider({
     setPhotoDataUrl(null);
     setEvRows(null);
     setAiError(null);
+    // 0-1: the example was never saved; leaking the real meeting's "✓ Saved"
+    // onto it would be the sample-vs-real confusion all over again.
+    setSaveResult(null);
+    setSavedFor(null);
   }, []);
 
   // Generic updater for one field inside the extraction tree.
@@ -859,23 +932,8 @@ export function MinutesProvider({
   );
 
   // --- Phase 7: save the confirmed minutes to the org's history -------------
-  const [saveBusy, setSaveBusy] = useState(false);
-  const [saveResult, setSaveResult] = useState<"ok" | string | null>(null);
-  // WHICH extraction object was stored — object identity, so any edit (which
-  // clones the extraction) unlocks saving again. See `alreadySaved` on the
-  // store type for why this exists (found by scripts/e2e-minutes.mjs).
-  const [savedFor, setSavedFor] = useState<MeetingNotesExtraction | null>(null);
-  const alreadySaved = saveResult === "ok" && savedFor === extraction;
-
-  // S0-3 (2026-08-25): one idempotency key per DOCUMENT, not per attempt. A
-  // double tap or a timed-out retry re-sends the SAME key, and the server
-  // refuses to store the same document twice. A new extraction is a new
-  // document, so the key resets with it.
-  const saveClientIdRef = useRef<string | null>(null);
-  useEffect(() => {
-    saveClientIdRef.current = null;
-  }, [extraction]);
-
+  // (State lives further up, next to the other workspace state — the restore
+  // effect and onPhotoPicked read it for 0-1.)
   const saveToHistory = useCallback(async () => {
     setSaveBusy(true);
     setSaveResult(null);

@@ -230,6 +230,15 @@ export async function POST(req: Request) {
       kind === "meeting_notes" ? "minutes" : kind === "ledger_page" ? "ledger" : "constitution",
     );
     if (!kindLimit.ok) {
+      // 26 号报告 2-2: on the forced-kind path the gate charged the EXTRACT
+      // action up front, and this rejection happens before any vendor call —
+      // "the vendor was never reached" is exactly the refund rule (CLAUDE.md
+      // rule 10). Without this, retrying the same too-big PDF burned a month's
+      // trial quota while the AI never read a word. On the classify path only
+      // classify_upload has been charged so far, and that model DID run.
+      if (forcedKind) {
+        await refundUsage(gate.org.id, gate.charges[0]);
+      }
       return NextResponse.json(
         {
           kind,

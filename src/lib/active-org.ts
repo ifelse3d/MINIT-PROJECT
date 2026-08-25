@@ -33,10 +33,14 @@ export async function getMemberships(): Promise<Membership[]> {
   const user = await getSessionUser();
   if (!user) return [];
   const supabase = await getSupabaseServer();
+  // Ordered so "the first membership" is the SAME org on every machine —
+  // useActiveOrg() in org-chip.tsx runs this exact fallback client-side, and
+  // the two must never disagree about which org that is.
   const { data } = await supabase
     .from("members_roles")
     .select("role, org:orgs (id, name, parent_org_id, is_demo)")
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .order("org_id");
   return (
     (data as unknown as (Membership & { org: Membership["org"] | null })[]) ??
     []

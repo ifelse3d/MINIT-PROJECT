@@ -56,8 +56,13 @@ export function CalendarShell({
   agm: ConfirmedAgm | null;
 }) {
   const [events, setEvents] = useState<SimpleEvent[]>([]);
-  /** Set when the organisation's copy could not be written. Told, not swallowed. */
-  const [syncFailed, setSyncFailed] = useState(false);
+  /**
+   * Why the organisation's copy could not be written, or null. Told, not
+   * swallowed — and told TRUTHFULLY: "permission" means a read-only account
+   * was refused by the role check, which no amount of retrying fixes, so it
+   * gets the "whose job is this" sentence instead of "try again later".
+   */
+  const [syncIssue, setSyncIssue] = useState<"permission" | "other" | null>(null);
 
   useEffect(() => {
     // The device's list goes up immediately; the organisation's is merged in
@@ -79,10 +84,14 @@ export function CalendarShell({
 
   /** Fire-and-forget: the event is already on screen and already on this device. */
   function syncSave(ev: SimpleEvent) {
-    void saveEvent(ev).then((r) => setSyncFailed(!r.ok));
+    void saveEvent(ev).then((r) =>
+      setSyncIssue(r.ok ? null : r.reason === "permission" ? "permission" : "other"),
+    );
   }
   function syncDelete(id: string) {
-    void deleteEvent(id).then((r) => setSyncFailed(!r.ok));
+    void deleteEvent(id).then((r) =>
+      setSyncIssue(r.ok ? null : r.reason === "permission" ? "permission" : "other"),
+    );
   }
 
   function persist(next: SimpleEvent[]) {
@@ -169,7 +178,16 @@ export function CalendarShell({
       {/* One line, at the bottom, never a blocking dialog: the calendar itself
           is working. What is NOT working is the part the committee cannot see,
           which is exactly the part that has to be said out loud. */}
-      {syncFailed && (
+      {syncIssue === "permission" && (
+        <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-base text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+          <Tri
+            bm="Akaun anda baca sahaja, jadi acara ini tidak dimasukkan ke rekod pertubuhan — ia kekal pada peranti ini sahaja. Minta mana-mana ahli jawatankuasa (kecuali juruaudit) menambahnya."
+            zh="您的账号是只读（审计）账号，这个活动进不了机构的记录 —— 只存在这台设备上。要让其他委员看到，请找除审计外的任何成员来添加。"
+            en="Your account is read-only, so this event was not added to the organisation's records — it stays on this device only. Ask any committee member (except the auditor) to add it."
+          />
+        </p>
+      )}
+      {syncIssue === "other" && (
         <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-base text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
           <Tri
             bm="Acara ini disimpan pada peranti ini sahaja — ia belum sampai ke rekod pertubuhan, jadi ahli jawatankuasa lain tidak akan melihatnya. Pilih pertubuhan anda, atau cuba lagi apabila ada talian."

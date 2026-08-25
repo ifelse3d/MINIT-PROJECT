@@ -5,8 +5,9 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-25 深夜（MYT）· Fable 5（大改造 session 2：Stage D/E/F/G/W 做完——24 号单全部完成）**
-**24 号施工单已全部勾完（`C:\dev\_J-要做的事\24-大改造施工單-20260825.md`）。**
+**最后更新：2026-08-26 晚（MYT）· Fable 5（讨论 session：J 走完系统给了 5 条反馈，全部拍板定案——零代码改动）**
+**🔴 现行工作单：`C:\dev\_J-要做的事\27-最後衝刺施工單-20260826.md`（今晚无人值守通宵做，明天 8/27 J 在场才上线；Stage 顺序＝优先序，0 是上线门槛）。**
+**24 号施工单已全部勾完；26 号检查报告的 4 个 bug＋OrgChip 收尾＝27 号单 Stage 0。**
 **给 J 看的这一轮报告：`C:\dev\_J-要做的事\25-大改造進度報告.md`（固定档名，每轮覆写）。**
 
 ---
@@ -70,12 +71,12 @@
 
 ### 🔴 J 的事（这一轮结束时）
 
-1. **push**（`push-cabang.bat`）——本机 main 领先 6 支 commit（D/E/F/G/W ＋这份 STATE）。
-   **本轮零新 migration**，push 完 app 直接是新的。
+1. **明早的六步**在 27 号单第 1 节：看报告 → 贴 migration 25（＋platform_admins 那句）
+   → `npm run check:migrations` → **push**（本机 main 领先 6 支 commit＋今晚新增的）
+   → 跟 Claude 上线（先 env 后 deploy）。
 2. （可选）`NEXT_PUBLIC_CONTACT_EMAIL` 配了之后，「检举冒用」入口才会出现（C-2）
 3. 老三样不变：真手写 3～4 张＋答案（eval 用）；Vercel 上线那天要在场；eROSES 逐栏抄录
-4. ⚠ 距离 **8/31 23:59 竞赛截止只剩 6 天**（内部 cutoff 建议 8/31 18:00）——
-   24 号单做完了，下一个 session 的重心应该转到**上线（DEPLOY）＋提交材料**
+4. ⚠ 距离 **8/31 23:59 竞赛截止只剩 5 天**（内部 cutoff 建议 8/31 18:00）
 
 ### ❓ 未决问题（+1 观察；旧的照旧）
 
@@ -84,29 +85,41 @@
 3. 法律实体（金流前置，D12），试点前要答
 4. 真实手写 eval：**92.9% 量的仍是印刷体**。J 拍 3～4 张真手写＋答案后重跑 `npm run eval`
 5. Supabase 邮件模板（顺延中：等网域＋SMTP，文字备好在 `docs/supabase-email-templates.md`）
-6. 🆕 观察到的小 bug（已开背景任务卡）：**同一帐号在全新装置登入后，页面本体认得
-   active org（页首印机构名），左下 OrgChip 却显示「填写您的机构名称」** ——
-   client 的 useActiveOrg() 在 fresh session 拿不到 org，与 server 的 getActiveOrg()
-   不一致。可用 e2e 登入流重现。不挡使用，但两边自相矛盾会吓到人。
+6. ✅ **已修（2026-08-25 深夜小修 session）** OrgChip fresh-login 不一致：
+   `useActiveOrg()`（`src/components/v3/org-chip.tsx`）原本只读 `minit_active_org`
+   cookie，fresh session 没 cookie 就回 null；现在补上与 server `getActiveOrg()`
+   相同的两层解析（cookie 指到的 org 查不到 → 第一个 direct membership），
+   两边的「第一个 membership」都加了 `order by org_id` 钉死同一个答案。
+   `e2e:money` 新增第 14 条检查（全新 incognito session 登入既有帐号，OrgChip
+   必须印机构名）——**实测过拿掉修正它会红**。tsc 0 · vitest 721 全过 ·
+   e2e:money 15/15。改动在工作树（3 档），未 commit。
 
 ### ⏭ 下一个 session 从哪开始
 
-**24 号单做完了，没有下一张施工单。** 离截止 6 天，候选优先序（J 拍板）：
+**照 `C:\dev\_J-要做的事\27-最後衝刺施工單-20260826.md` 做，从第一个没打勾的条目开始。**
+开场 prompt 是 28 号（J 每轮贴同一段）。J 2026-08-26 的拍板全部记在 27 号单第 0 节
+（四卡首页、钱区全簿记＋claim 完整批准流、实物捐赠收据、侧栏七组、配套进场、
+CONTOH 禁令、「能做的都做，不要说等赛后」——原赛后项改「上线后第一批」）。
 
-1. 🔴 **Vercel 上线**——`docs/上线与截图-给J的步骤.md` 已备好（含「预设分支是旧版」
-   那个坑的解法）；J 要在场（老三样之一）。上线才有 demo URL 可写进提交。
-2. 🔴 **真手写 eval**——等 J 的 3～4 张真手写＋答案，跑 `npm run eval`，
-   把量出来的数字换进 one-pager（现在写的是「印刷体 92.9%＋限制声明」）。
-3. **提交材料终核**——one-pager 已核过一轮（本轮只改了 721 这个数字）；
-   deck、demo 影片（脚本在 `competition/demo-video-script.md`，还没录）、
-   8/14 官方规则快照逐条对（`gpt handoff\`）。
-4. （若有空）OrgChip fresh-login 不一致（未决 #6）＋ G-2 混合输入的首次实拍。
+今晚做系统；明早 J：贴 migration 25 → check → push → **Vercel 上线（J 在场，
+`docs/上线与截图-给J的步骤.md`，先 env 后 deploy）**。上线后第一批：QR 查证页、
+SMTP、RLS 深化、G-2 混合输入实拍。真手写 eval 照旧等 J 的照片。
+提交材料终核＝27 号单 W-4，**8/31 23:59 截止（内部 cutoff 8/31 18:00）**。
 
 ---
 
 ## 6. 已知陷阱（踩过的，别再踩）
 
 ### 2026-08-25 深夜新增（session 2，D～W 那一轮）
+
+- 🔴 **同一个事实有两条解析路（server 一条、client 一条），只改一条就会自相矛盾——
+  而且没有测试会抓到，因为两条各自都「对」。** active org 的解析 server 端是
+  cookie → 第一个 membership → null（`getActiveOrg()`），client 端原本只有 cookie
+  → null（`useActiveOrg()`）——fresh session 没 cookie 时页首印机构名、侧栏却叫人
+  「填写您的机构名称」。修法是把 fallback 复制到 client 并在两边都 `order by org_id`
+  钉死「第一个」是同一个；防再犯靠 e2e 的 fresh-session 检查（拿掉修正实测会红）。
+  **判断方法：凡是「client 也要显示 server 算出来的东西」，先问 client 是重算还是
+  重用——重算的就要逐条对齐 server 的 fallback 顺序，并留一个 fresh session 的测试。**
 
 - 🔴 **「每一页都窄」的时候，先查最外层的壳，再查页面。** 全站九个页面在 1920 上
   都挤在 896px 里，而每一页自己明明写着 max-w-5xl 或 7xl —— 因为 shell 的

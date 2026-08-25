@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
@@ -12,6 +12,7 @@ import { sampleLedgerExtraction } from "@/lib/sample-ledger";
 import {
   eligibleForReceipt,
   findDuplicateDonations,
+  ledgerPageFullyRecorded,
   parseRmToCents,
 } from "@/lib/receipts";
 import { formatRm } from "@/lib/minutes-draft";
@@ -43,6 +44,25 @@ export function LedgerReview() {
     rowsReadyToAdd,
     donations,
   } = useRegister();
+
+  /**
+   * 0-1 (26 号报告 2-1): a photo taken while everything on screen is ALREADY
+   * in the register. Appending a new page under rows that were already turned
+   * into receipts is how one donation gets two serial numbers — so the file
+   * waits here until the person answers "same ledger, or a new page?".
+   */
+  const [askWhichPage, setAskWhichPage] = useState<File | null>(null);
+  const pageFullyRecorded =
+    !isSampleLedger && ledgerPageFullyRecorded(ledger.rows, addedRows);
+  /** Route one picked file: ask first when the last page is fully recorded. */
+  function pickLedgerFile(file: File | null) {
+    if (!file) return;
+    if (pageFullyRecorded) {
+      setAskWhichPage(file);
+      return;
+    }
+    void onLedgerPicked(file);
+  }
 
   const ledgerRows = ledger.rows;
   const duplicateGroups = useMemo(
@@ -133,7 +153,7 @@ export function LedgerReview() {
               className="hidden"
               disabled={aiBusy}
               onChange={(e) => {
-                onLedgerPicked(e.target.files?.[0] ?? null);
+                pickLedgerFile(e.target.files?.[0] ?? null);
                 e.target.value = "";
               }}
             />
@@ -156,7 +176,7 @@ export function LedgerReview() {
                 accept="image/*,application/pdf"
                 className="hidden"
                 onChange={(e) => {
-                  onLedgerPicked(e.target.files?.[0] ?? null);
+                  pickLedgerFile(e.target.files?.[0] ?? null);
                   e.target.value = "";
                 }}
               />
@@ -196,6 +216,68 @@ export function LedgerReview() {
             )}
           </span>
         </div>
+
+        {/* 0-1 (26 号报告 2-1): which ledger page is this photo? */}
+        {askWhichPage && !aiBusy && (
+          <div className="flex flex-col gap-3 rounded-xl border-2 border-amber-300 bg-amber-50 p-4 dark:bg-amber-400/10">
+            <p className="text-base font-medium text-amber-900 dark:text-amber-100">
+              <Tri
+                bm="Semua baris di skrin ini sudah masuk buku daftar. Gambar baharu ini —"
+                zh="现在画面上的每一行都已经入了登记簿。这张新照片是 ——"
+                en="Every row on screen is already in the register. This new photo is —"
+              />
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                size="lg"
+                onClick={() => {
+                  const file = askWhichPage;
+                  setAskWhichPage(null);
+                  // A new page: the review is replaced wholesale. The register
+                  // keeps everything already recorded — nothing is lost.
+                  void onLedgerPicked(file, "fresh");
+                }}
+              >
+                <Tri
+                  bm="Halaman BAHARU — mula semakan bersih"
+                  zh="新的一页帐 —— 开新的核对"
+                  en="A NEW page — start a clean review"
+                />
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => {
+                  const file = askWhichPage;
+                  setAskWhichPage(null);
+                  // More rows for the same review: the usual append. The rows
+                  // already recorded keep their "added" marks.
+                  void onLedgerPicked(file);
+                }}
+              >
+                <Tri
+                  bm="Sambungan halaman YANG SAMA — tambah di bawah"
+                  zh="同一页帐的后续 —— 接在下面"
+                  en="More of the SAME page — append below"
+                />
+              </Button>
+              <button
+                type="button"
+                className="text-base text-muted-foreground underline underline-offset-4"
+                onClick={() => setAskWhichPage(null)}
+              >
+                <Tri bm="Batal" zh="先不要" en="Cancel" />
+              </button>
+            </div>
+            <p className="text-sm text-amber-900/80 dark:text-amber-100/80">
+              <Tri
+                bm="Derma yang sudah direkodkan kekal dalam buku daftar — pilihan ini hanya mengemas skrin semakan."
+                zh="已经入登记簿的捐款不会受影响 —— 这里只决定核对画面怎么继续。"
+                en="Donations already recorded stay in the register — this choice only decides how this review screen continues."
+              />
+            </p>
+          </div>
+        )}
 
         {/* 0-5: the paid-tier privacy notice beside the upload door. */}
         <PdpaNote />

@@ -51,7 +51,7 @@ export function MinutesChrome({ children }: { children: ReactNode }) {
     outstandingHereOutsideAttendance,
     groups,
     attendanceUnsettled,
-    saveResult,
+    alreadySaved,
     storageNote,
     backToEmpty,
   } = useMinutes();
@@ -84,8 +84,12 @@ export function MinutesChrome({ children }: { children: ReactNode }) {
     },
     {
       ...MINUTES_TABS[2],
+      // 0-1: `alreadySaved` (identity-checked), not `saveResult === "ok"` —
+      // the old check kept the green tick after the workspace moved on to a
+      // DIFFERENT document (new photo, blank sheet), which is exactly the
+      // "looks saved, is not" confusion this stage removes.
       status:
-        saveResult === "ok"
+        alreadySaved
           ? "done"
           : isSample
             ? "example"
@@ -190,7 +194,7 @@ export function MinutesChrome({ children }: { children: ReactNode }) {
             zh={`有 ${outstanding} 项 Minit 希望您核对 —— 这一页 ${outstandingHereOutsideAttendance} 项，出席者名单 ${groups.attendees.outstanding} 项。`}
             en={`${outstanding} item(s) need your check — ${outstandingHereOutsideAttendance} on this page, ${groups.attendees.outstanding} in the attendance list.`}
           />
-        ) : saveResult === "ok" ? (
+        ) : alreadySaved ? (
           <Tri
             bm="Siap — minit ini sudah tersimpan dalam sejarah pertubuhan anda."
             zh="完成 —— 这份会议记录已经存进您机构的历史里了。"

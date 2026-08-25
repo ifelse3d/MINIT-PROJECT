@@ -103,18 +103,50 @@ export function useActiveOrg(): {
         if (!cancelled && data) setOrgCount(data.length);
       });
 
-    if (orgId === null) {
-      setOrg(null);
-    } else {
-      supabase
-        .from("orgs")
-        .select("name, is_demo")
-        .eq("id", orgId)
-        .maybeSingle()
-        .then(({ data }) => {
-          if (!cancelled) setOrg(data ?? null);
-        });
+    // Same resolution order as the server's getActiveOrg(): cookie value (if
+    // it still points at a reachable org) → first direct membership → null.
+    // A fresh browser session has no cookie yet the server still resolves an
+    // org, so stopping at the cookie made this chip say "name your
+    // organisation" right next to a header printing the org's name.
+    async function loadOrg() {
+      if (orgId !== null) {
+        const { data } = await supabase
+          .from("orgs")
+          .select("name, is_demo")
+          .eq("id", orgId)
+          .maybeSingle();
+        if (cancelled) return;
+        if (data) {
+          setOrg(data as { name: string; is_demo: boolean });
+          return;
+        }
+      }
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (cancelled) return;
+      if (!user) {
+        setOrg(null);
+        return;
+      }
+      // members_roles is org-visible under RLS, so filter to OUR rows —
+      // exactly what the server's getMemberships() does. Ordered by org_id to
+      // match its "first membership" (see active-org.ts), and — also like it —
+      // skipping orphan rows whose org was deleted (the join returns null), so
+      // both sides land on the same first REACHABLE org. No limit: a person's
+      // own memberships are a handful of rows, and the server reads them all.
+      const { data: rows } = await supabase
+        .from("members_roles")
+        .select("org:orgs (name, is_demo)")
+        .eq("user_id", user.id)
+        .order("org_id");
+      if (cancelled) return;
+      const first = (
+        rows as { org: { name: string; is_demo: boolean } | null }[] | null
+      )?.find((r) => r.org !== null);
+      setOrg(first?.org ?? null);
     }
+    loadOrg();
     return () => {
       cancelled = true;
     };

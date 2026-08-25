@@ -30,8 +30,10 @@ import { EventsSection } from "../events-section";
 export default function AddEventsPage() {
   const [events, setEvents] = useState<SimpleEvent[]>([]);
   const [added, setAdded] = useState(0);
-  /** Set when the organisation's copy could not be written. Told, not swallowed. */
-  const [syncFailed, setSyncFailed] = useState(false);
+  /** Why the organisation's copy could not be written, or null. Told, not
+   *  swallowed — "permission" gets the "whose job is this" sentence, because
+   *  a role refusal recurs on every retry (26 号报告 2-4). */
+  const [syncIssue, setSyncIssue] = useState<"permission" | "other" | null>(null);
 
   useEffect(() => setEvents(loadEvents()), []);
 
@@ -42,7 +44,9 @@ export default function AddEventsPage() {
     setAdded((n) => n + 1);
     // Fire-and-forget: the event is already on screen and already on this
     // device, so a failed sync costs reach, not the person's typing.
-    void saveEvent(ev).then((r) => setSyncFailed(!r.ok));
+    void saveEvent(ev).then((r) =>
+      setSyncIssue(r.ok ? null : r.reason === "permission" ? "permission" : "other"),
+    );
   }
 
   return (
@@ -73,7 +77,16 @@ export default function AddEventsPage() {
 
       <EventsSection onAdd={addEvent} />
 
-      {syncFailed && (
+      {syncIssue === "permission" && (
+        <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-base text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+          <Tri
+            bm="Akaun anda baca sahaja, jadi acara ini tidak dimasukkan ke rekod pertubuhan — ia kekal pada peranti ini sahaja. Minta mana-mana ahli jawatankuasa (kecuali juruaudit) menambahnya."
+            zh="您的账号是只读（审计）账号，这个活动进不了机构的记录 —— 只存在这台设备上。要让其他委员看到，请找除审计外的任何成员来添加。"
+            en="Your account is read-only, so this event was not added to the organisation's records — it stays on this device only. Ask any committee member (except the auditor) to add it."
+          />
+        </p>
+      )}
+      {syncIssue === "other" && (
         <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-base text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
           <Tri
             bm="Acara ini disimpan pada peranti ini sahaja — ia belum sampai ke rekod pertubuhan, jadi ahli jawatankuasa lain tidak akan melihatnya. Pilih pertubuhan anda, atau cuba lagi apabila ada talian."

@@ -8,6 +8,7 @@ import { NextStepLink, PageSection } from "@/components/page-section";
 import { PdpaNote } from "@/components/pdpa-note";
 import { HowItWorksButton } from "@/app/how-it-works";
 import { formatDateLong, isIsoDate } from "@/lib/date-input";
+import type { KnownMeetingFacts } from "@/lib/meeting-facts";
 import { MEETING_TYPES, meetingTypeUiLabelTri } from "@/lib/meeting-types";
 import { formatRm } from "@/lib/minutes-draft";
 import { parseRmToCents } from "@/lib/receipts";
@@ -39,6 +40,19 @@ export function NotesReview() {
    * to hold, and on the board they look identical.
    */
   const [pending, setPending] = useState<File | null>(null);
+  /**
+   * 0-1 (26 号报告 2-1): a photo taken while the workspace still shows a
+   * meeting that is ALREADY SAVED to History. Before this question existed,
+   * next month's photo silently merged into last month's saved meeting — the
+   * old confirmed date and venue overrode the new page's, the save gate
+   * stayed green, and a July-dated document with August content walked
+   * straight into History. The file and typed facts wait here until the
+   * person answers "same meeting, or a new one?".
+   */
+  const [askWhichMeeting, setAskWhichMeeting] = useState<{
+    file: File;
+    facts: KnownMeetingFacts;
+  } | null>(null);
   const {
     sourceLabel,
     photoDataUrl,
@@ -68,6 +82,7 @@ export function NotesReview() {
     typedByHand,
     openSample,
     backToEmpty,
+    alreadySaved,
   } = useMinutes();
 
   // D-4: has the typist actually entered anything yet? Decides when the
@@ -317,9 +332,71 @@ export function NotesReview() {
             onRead={(facts) => {
               const file = pending;
               setPending(null);
+              // 0-1: the workspace still shows a meeting that is already in
+              // History — ask which meeting this photo belongs to BEFORE
+              // reading, or last month's saved fields merge over this one's.
+              if (alreadySaved) {
+                setAskWhichMeeting({ file, facts });
+                return;
+              }
               void onPhotoPicked(file, facts);
             }}
           />
+        )}
+        {/* 0-1 (26 号报告 2-1): which meeting is this photo? */}
+        {askWhichMeeting && !aiBusy && (
+          <div className="flex flex-col gap-3 rounded-xl border-2 border-amber-300 bg-amber-50 p-4 dark:bg-amber-400/10">
+            <p className="text-base font-medium text-amber-900 dark:text-amber-100">
+              <Tri
+                bm="Mesyuarat di skrin ini sudah disimpan ke Sejarah. Gambar baharu ini —"
+                zh="现在画面上的这场会议已经保存到历史了。这张新照片是 ——"
+                en="The meeting on screen is already saved to History. This new photo is —"
+              />
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                size="lg"
+                onClick={() => {
+                  const a = askWhichMeeting;
+                  setAskWhichMeeting(null);
+                  // A new meeting: the workspace is replaced wholesale and the
+                  // old meeting stays safe in History.
+                  void onPhotoPicked(a.file, a.facts, "fresh");
+                }}
+              >
+                <Tri
+                  bm="Mesyuarat BAHARU — mula halaman bersih"
+                  zh="新的一场会议 —— 开新的一份"
+                  en="A NEW meeting — start a clean page"
+                />
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => {
+                  const a = askWhichMeeting;
+                  setAskWhichMeeting(null);
+                  // Another page of the SAME meeting: the usual page-by-page
+                  // merge. Editing re-opens saving, so the person can save the
+                  // grown document again afterwards.
+                  void onPhotoPicked(a.file, a.facts);
+                }}
+              >
+                <Tri
+                  bm="Halaman lagi untuk mesyuarat YANG SAMA"
+                  zh="同一场会议的另一页 —— 加进来"
+                  en="Another page of the SAME meeting"
+                />
+              </Button>
+              <button
+                type="button"
+                className="text-base text-muted-foreground underline underline-offset-4"
+                onClick={() => setAskWhichMeeting(null)}
+              >
+                <Tri bm="Batal" zh="先不要" en="Cancel" />
+              </button>
+            </div>
+          </div>
         )}
         {aiError && (
           <div className="rounded-md border border-red-300 bg-red-50 p-4 text-base text-red-900">

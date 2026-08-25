@@ -56,8 +56,10 @@ export function UpcomingSidebar({
   const [copied, setCopied] = useState<string | null>(null);
   /** `kind:due_date` of every deadline somebody has ticked off. */
   const [done, setDone] = useState<Set<string>>(new Set());
-  /** Set when a tick could not be written, so it exists on this device only. */
-  const [tickFailed, setTickFailed] = useState(false);
+  /** Why a tick could not be written, or null. "permission" gets the "whose
+   *  job is this" sentence — a role refusal recurs on every retry, so "try
+   *  again when you have a signal" would be a lie (26 号报告 2-4). */
+  const [tickIssue, setTickIssue] = useState<"permission" | "other" | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,7 +94,9 @@ export function UpcomingSidebar({
       dueDateIso: d.dueDateIso,
       source: d.source,
       done: next,
-    }).then((r) => setTickFailed(!r.ok));
+    }).then((r) =>
+      setTickIssue(r.ok ? null : r.reason === "permission" ? "permission" : "other"),
+    );
   }
 
   const deadlines = useMemo(
@@ -200,7 +204,16 @@ export function UpcomingSidebar({
         })}
       </div>
 
-      {tickFailed && (
+      {tickIssue === "permission" && (
+        <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+          <Tri
+            bm="Akaun anda baca sahaja, jadi tanda “sudah difailkan” ini tidak dimasukkan ke rekod pertubuhan — ahli lain masih nampak tarikh akhir ini merah. Minta mana-mana ahli jawatankuasa (kecuali juruaudit) menandakannya."
+            zh="您的账号是只读（审计）账号，这个「已经做了」的标记进不了机构的记录 —— 其他委员看到的这条死线还是红的。请找除审计外的任何成员来标记。"
+            en="Your account is read-only, so this “already filed” tick did not reach the organisation's records — other members will still see this deadline in red. Ask any committee member (except the auditor) to tick it."
+          />
+        </p>
+      )}
+      {tickIssue === "other" && (
         <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
           <Tri
             bm="Tanda “sudah difailkan” ini ada pada peranti ini sahaja — ahli jawatankuasa lain masih akan nampak tarikh akhir ini merah. Pilih pertubuhan anda, atau cuba lagi apabila ada talian."

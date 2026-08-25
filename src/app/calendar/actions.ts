@@ -35,8 +35,12 @@ import { isSimpleEvent, type SimpleEvent } from "@/lib/local-events";
 export type SaveOutcome =
   /** Written to the organisation's records; every device will see it. */
   | { ok: true }
-  /** Not written. `reason` is for us; the UI says one plain sentence. */
-  | { ok: false; reason: "no_org" | "no_session" | "db" };
+  /** Not written. `reason` is for us; the UI says one plain sentence.
+   *  "permission" is NOT "db": a read-only account refused by the role check
+   *  will be refused again on every retry, so telling that person "try again
+   *  when you have a signal" is a lie — the UI must instead say whose job it
+   *  is (26 号报告 2-4). */
+  | { ok: false; reason: "no_org" | "no_session" | "permission" | "db" };
 
 /** The Malaysian midnight of a YYYY-MM-DD, as the timestamptz the column wants. */
 function startOfDayUtc8(dateIso: string): string {
@@ -62,7 +66,8 @@ export async function saveEvent(event: SimpleEvent): Promise<SaveOutcome> {
   const active = await getActiveOrg();
   if (!active) return { ok: false, reason: "no_org" };
   // B-4: every role except the read-only auditor may write the calendar.
-  if (!can(active.role, "calendar_write")) return { ok: false, reason: "db" };
+  if (!can(active.role, "calendar_write"))
+    return { ok: false, reason: "permission" };
 
   const supabase = await getSupabaseServer();
   const { error } = await supabase.from("events_meetings").upsert(
@@ -91,7 +96,8 @@ export async function deleteEvent(clientId: string): Promise<SaveOutcome> {
   if (!user) return { ok: false, reason: "no_session" };
   const active = await getActiveOrg();
   if (!active) return { ok: false, reason: "no_org" };
-  if (!can(active.role, "calendar_write")) return { ok: false, reason: "db" };
+  if (!can(active.role, "calendar_write"))
+    return { ok: false, reason: "permission" };
 
   const supabase = await getSupabaseServer();
   const { error } = await supabase

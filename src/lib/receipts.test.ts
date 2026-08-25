@@ -6,6 +6,7 @@ import {
   findDuplicateDonations,
   findSequenceGaps,
   isRegisterDonationArray,
+  ledgerPageFullyRecorded,
   formatReceiptNo,
   normalizeMyPhone,
   parseReceiptNo,
@@ -176,6 +177,31 @@ describe("ledger extraction contract + receipt eligibility", () => {
     const eligible = sampleLedgerExtraction.rows.map(eligibleForReceipt);
     // Row 3 (index 2) is the smudged one — everything else qualifies.
     expect(eligible).toEqual([true, true, false, true, true, true]);
+  });
+});
+
+// 0-1 (26 号报告 2-1): the money-side "already saved" state. When it is true,
+// the next ledger photo must ASK "same page or a new one?" — appending a new
+// page under rows already turned into receipts is how one donation gets two
+// serial numbers.
+describe("ledgerPageFullyRecorded", () => {
+  const rows = sampleLedgerExtraction.rows; // index 2 is not receipt-eligible
+  const everyEligible = new Set([0, 1, 3, 4, 5]);
+
+  it("true once every eligible row is in the register (smudged rows do not block)", () => {
+    expect(ledgerPageFullyRecorded(rows, everyEligible)).toBe(true);
+  });
+
+  it("false while any eligible row is still un-added", () => {
+    expect(ledgerPageFullyRecorded(rows, new Set([0, 1, 3, 4]))).toBe(false);
+  });
+
+  it("false for an empty review and for a review where nothing was recorded", () => {
+    // Empty: there is nothing on screen to protect, no question to ask.
+    expect(ledgerPageFullyRecorded([], new Set())).toBe(false);
+    // Rows present but none recorded: the review is simply unfinished work —
+    // photographing another page is the ordinary page-by-page flow.
+    expect(ledgerPageFullyRecorded(rows, new Set())).toBe(false);
   });
 });
 

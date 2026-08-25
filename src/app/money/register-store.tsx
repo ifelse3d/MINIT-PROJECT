@@ -100,7 +100,11 @@ export type RegisterStore = {
   aiBusy: boolean;
   aiError: string | null;
   addedRows: Set<number>;
-  onLedgerPicked: (file: File | null) => Promise<void>;
+  onLedgerPicked: (
+    file: File | null,
+    /** 0-1: "fresh" = the person said this photo starts a NEW ledger page. */
+    mode?: "auto" | "fresh",
+  ) => Promise<void>;
   showLedgerSample: (extraction: LedgerExtraction) => void;
   ledgerBackToEmpty: () => void;
   mutateLedger: (fn: (l: LedgerExtraction) => void) => void;
@@ -303,7 +307,15 @@ export function RegisterProvider({
   // used to be wiped by the shutter. Only a fresh (or sample) review is
   // replaced wholesale. `addedRows` is index-based and existing rows keep
   // their positions, so the already-added marks stay honest through a merge.
-  const onLedgerPicked = useCallback(async (file: File | null) => {
+  const onLedgerPicked = useCallback(async (
+    file: File | null,
+    // 0-1 (26 号报告 2-1): "fresh" is the person's answer to "a new ledger
+    // page?" asked when everything on screen is already in the register — the
+    // read then replaces the review wholesale (the recorded donations
+    // themselves live in the register and are untouched). "auto" keeps the
+    // G-2 page-by-page merge for a review still in progress.
+    mode: "auto" | "fresh" = "auto",
+  ) => {
     if (!file) return;
     setAiError(null);
     setAiBusy(true);
@@ -314,10 +326,20 @@ export function RegisterProvider({
       const body = await res.json().catch(() => null);
       if (!res.ok) throw new Error(body?.error ?? joinUserError(USER_ERRORS.aiUnavailable));
       const read = body.extraction as LedgerExtraction;
-      const continuing = ledgerSourceLabel !== null && ledger.rows.length > 0;
-      setLedger(continuing ? mergeLedgerExtractions(ledger, read) : read);
-      setLedgerSourceLabel(
-        continuing ? mergedSourceLabel(ledgerSourceLabel, file.name) : file.name,
+      const continuing =
+        mode !== "fresh" && ledgerSourceLabel !== null && ledger.rows.length > 0;
+      // 0-3 (26 号报告 2-3): the person can keep ticking rows during the
+      // 5–20 s the model spends reading. Merging onto the snapshot captured at
+      // the shutter silently reverted every one of those confirmations, so the
+      // merge is a FUNCTIONAL update onto whatever the ledger is NOW.
+      // (`continuing` still reads the shutter-time snapshot: whether this
+      // photo is "another page" was decided when it was taken, and ticking
+      // rows cannot change that answer.)
+      setLedger((current) =>
+        continuing ? mergeLedgerExtractions(current, read) : read,
+      );
+      setLedgerSourceLabel((prev) =>
+        continuing ? mergedSourceLabel(prev, file.name) : file.name,
       );
       if (!continuing) setAddedRows(new Set());
     } catch (e) {

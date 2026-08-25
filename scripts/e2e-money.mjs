@@ -252,6 +252,47 @@ async function run() {
   const n1 = await countReceipts();
   check("receipts row count matches 9", n1 === 9, `count=${n1}`);
 
+  // --- fresh-session sign-in: OrgChip must agree with the server -----------
+  // A brand-new browser session (no cookies, no localStorage) signing into an
+  // account that already owns an org has no minit_active_org cookie, so the
+  // server resolves the org by falling back to the first membership. The
+  // sidebar OrgChip runs the same fallback client-side — it must show the org
+  // name, never "填写您的机构名称" next to a header printing that very name.
+  {
+    const ctx = await browser.createBrowserContext();
+    const fresh = await ctx.newPage();
+    fresh.setDefaultTimeout(30000);
+    await fresh.setViewport({ width: 1280, height: 900 });
+    fresh.on("pageerror", (e) => consoleErrors.push(String(e).slice(0, 160)));
+    await fresh.evaluateOnNewDocument(() => {
+      try {
+        localStorage.setItem("minit.lang.v2", "zh");
+        document.cookie = "minit-lang=zh;path=/";
+      } catch {}
+    });
+    await fresh.goto(`${BASE}/login`, { waitUntil: "networkidle2" });
+    await fresh.type('input[type="email"]', TEST_EMAIL);
+    await fresh.type('input[type="password"]', TEST_PASSWORD);
+    await Promise.all([
+      fresh.waitForNavigation({ waitUntil: "networkidle2", timeout: 45000 }),
+      fresh.click('button[type="submit"]'),
+    ]);
+    // The chip resolves asynchronously — poll until it settles.
+    let freshText = "";
+    for (let i = 0; i < 20; i++) {
+      freshText = await fresh.evaluate(() => document.body.innerText);
+      if (freshText.includes("您正在记录的机构")) break;
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    check(
+      "fresh-session OrgChip shows the org, not 'name your organisation'",
+      freshText.includes("您正在记录的机构") &&
+        freshText.includes(ORG_NAME) &&
+        !freshText.includes("填写您的机构名称"),
+    );
+    await ctx.close();
+  }
+
   // --- delete the org through Settings (typed confirmation) ----------------
   await page.goto(`${BASE}/settings`, { waitUntil: "networkidle2" });
   // EXACT text: "删除…" is the org-delete opener; a loose match hits the
