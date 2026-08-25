@@ -12,47 +12,27 @@ import { HomeUpcoming } from "./home-upcoming";
 import { HowItWorksButton } from "./how-it-works";
 import { WelcomeCard } from "./welcome-card";
 import { AskBox } from "./ask-box";
+import { TaskCards } from "./task-cards";
 
 // ---------------------------------------------------------------------------
-// HOME = the chat box IS the page (A-2, 2026-08-25, J's #12 #17).
+// HOME = four task cards, then the chat box (A-1, work order 27 — J 8/26 #1).
 //
-// One big box — drop a photo, choose a file, or type; you can type first and
-// confirm before anything is sent; Minit asks back when it cannot place a
-// page. The three task cards are DEMOTED to quick chips under the box: the
-// principle is "the user brings whatever is in their hand, Minit works out
-// where it goes" (the eROSES test, J's #16), and three cards asking them to
-// self-classify were the old model.
+// 2026-08-25 made the chat box the whole page with three quiet chips under
+// it; J walked the system the next day and the box alone did not say what
+// Minit MAKES. So the four jobs are named up top as big cards (minutes /
+// money / financial statement / hand-to-AI — see task-cards.tsx), and the box
+// stays right below them, permanent: the "hand it to AI" card focuses it
+// rather than opening some fourth page. The eROSES-test principle stands —
+// the box still takes whatever is in the person's hand and works out where
+// it goes; the cards are for the person who already knows which job they
+// came to do.
 //
 // No organisation yet → ONE card only ("tell Minit your organisation's
-// name"), and no tax deadlines — a deadline for an organisation that does not
-// exist is noise (J's brief).
+// name"), no task cards, and no tax deadlines — a deadline for an
+// organisation that does not exist is noise (J's brief; A-2 of order 27).
 // ---------------------------------------------------------------------------
 
 export const dynamic = "force-dynamic";
-
-const QUICK_CHIPS = [
-  {
-    href: "/minutes",
-    icon: "📝",
-    bm: "Minit mesyuarat",
-    zh: "会议记录",
-    en: "Meeting minutes",
-  },
-  {
-    href: "/money",
-    icon: "🧾",
-    bm: "Derma & resit",
-    zh: "捐款与收据",
-    en: "Donations & receipts",
-  },
-  {
-    href: "/filings",
-    icon: "📋",
-    bm: "eROSES bulan ini",
-    zh: "本月 eROSES",
-    en: "eROSES this month",
-  },
-] as const;
 
 export default async function Home() {
   const todayIso = dayIsoMalaysia(new Date().toISOString())!;
@@ -122,32 +102,22 @@ export default async function Home() {
         <WelcomeCard />
       </Suspense>
 
-      {/* 1 — THE box (A-2): photo / file / typing, mixed; type first, then
-          confirm to send; Minit asks back when unsure. */}
+      {/* 1 — the four task cards: what Minit makes, one tap each (A-1). */}
+      <TaskCards />
+
+      {/* 2 — THE box: photo / file / typing, mixed; type first, then
+          confirm to send; Minit asks back when unsure. Card ④ focuses it. */}
       <AskBox
         hasOrg
         initialRemaining={usage?.totalRemaining ?? null}
         initialUsedPct={usage?.usedPct ?? null}
       />
 
-      {/* Quick chips — the three task pages, one tap away, no longer the hero. */}
-      <section className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {QUICK_CHIPS.map((c) => (
-            <Link
-              key={c.href}
-              href={c.href}
-              className="inline-flex min-h-11 items-center gap-2 rounded-full border-2 border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-4 text-base font-medium hover:border-[color:var(--v2-primary)] hover:bg-[color:var(--v2-primary-soft)]"
-            >
-              <span aria-hidden>{c.icon}</span>
-              <Tri bm={c.bm} zh={c.zh} en={c.en} />
-            </Link>
-          ))}
-          <HowItWorksButton variant="link" />
-        </div>
-      </section>
+      <div className="flex flex-wrap items-center gap-2">
+        <HowItWorksButton variant="link" />
+      </div>
 
-      {/* 2 — what is due (this org's own deadlines, never invented ones) */}
+      {/* 3 — what is due (this org's own deadlines, never invented ones) */}
       <HomeUpcoming deadlines={deadlines} todayIso={todayIso} />
     </div>
   );

@@ -444,6 +444,9 @@ export function AskBox({
               {t("Soalan anda", "您的问题", "Your question")}
             </span>
             <textarea
+              // A-1 (work order 27): the "Hand it to AI" task card focuses
+              // this box by id — the card is a doorway to HERE, not a page.
+              id="minit-ask-input"
               value={question}
               rows={2}
               disabled={!hasOrg || busy !== null || outOfQuota}
