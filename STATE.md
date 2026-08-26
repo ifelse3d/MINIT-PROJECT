@@ -5,108 +5,109 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-27 凌晨（MYT）· Fable 5（27 号施工单通宵 session：Stage 0→A→B→C→D→E→F→G→H→I→K→W 全部做完）**
-**🔴 27 号施工单（`C:\dev\_J-要做的事\27-最後衝刺施工單-20260826.md`）全部条目已勾完（含就地注记）。**
-**给 J 看的这一轮报告：`C:\dev\_J-要做的事\25-大改造進度報告.md`（固定档名，已覆写——明早从那里开始）。**
+**最后更新：2026-08-28 凌晨（MYT）· Fable 5（31 号单自动接力·场次 1：两个遗留档收尾 → Stage P 全部 → Stage R 全部 → Stage A 全部）**
+**🔴 31 号单（`C:\dev\_J-要做的事\31-上線後修理總單-20260827.md`）场次 1 已全部勾完；下一场＝场次 2（Stage B 钱区＋migration 26）。**
+**给 J 看的这一轮报告：`C:\dev\_J-要做的事\25-大改造進度報告.md`（固定档名，已覆写）。**
 
 ---
 
-## 🌙 现在在哪里（2026-08-27 凌晨）
+## 🌙 现在在哪里（2026-08-28 凌晨，场次 1 收工）
 
-> **27 号单整单完成。** 一个通宵 session 做完 12 个 Stage，各自 commit（Stage 0
-> `8f023f3` · A `32d8999` · B `68bc62c` · C `3e07f21` · D `663bdf9` · E `146ff17` ·
-> F `f22f969` · G `2e55ebd` · H 零改动（早已做好，验证后勾单）· I `41d3cd9` ·
-> K `23dcc99` · W 收尾一支），**未 push —— push 是 J 的事**。
-> 🔴 **migration 25（`supabase/migrations/20260903000000_final_sprint.sql`）已写好、
-> 未套用** —— J 明早贴（salin-migration.bat 第 25 项；check:migrations 已有 7 个新探针）。
-> 程式码在 migration 未跑时全部诚实降级（db_behind 一句话，零 throw，实测过）。
+> **已上线**：https://minit-project.vercel.app（Vercel 专案 if-else/minit-project）。
+> push 到 main 自动重新部署——**push 是 J 的事**（push-cabang.bat）。
+> 线上资料库两个 org（15「J」、58「avocado」），migration 1–25 全部 APPLIED。
+> **本场 6 支 commit、全部未 push**：
+> `29fd9d8`（上轮遗留两档收尾，上一手已 commit）· `1349612`（P-1）·
+> `371fb06`（P-2..P-4）· `7e44a54`（Stage R）· `8049833`（Stage A）·
+> `d60c4a8`（STATE.md 收工）。
+> 🔴 **migration 26 还没写**——那是场次 2（Stage B）唯一授权的一支。
 
 ### 现场量到的（不是听说的）
 
-- 四道关（每个 Stage 收尾各跑一次）：`tsc` **0** · `eslint` **21（与基准逐字相同）** ·
-  `vitest` **766 全过（62 档；本轮 +45 个新测试）** · `build` ✓
-- 三支端到端同夜全绿：`e2e:money` **15/15** · `e2e:minutes` **11/11** ·
-  `e2e:roles` **13/13（+3：collector 交 claim 的表单在、交出去拿到诚实的
-  db_behind 句（migration 后同一脚本自动走真路）、批准钮对 collector 不渲染）**。
-- 60 张 competition 截图（360/768/1280 × 浅色深色）**全部重拍**，console errors 0。
-  抽查可见：新四卡首页、七组侧栏、/money/expenses、/money/report。
-- `npm audit`：10 → **2**（`npm audit fix` 无 --force；剩 exceljs/uuid moderate，
-  维持「等上游」）。
-- ⚠ **没能验证的**：migration 25 没套用（D8：J 手贴），所以实物收据、claim 流、
-  feedback、分人计量、admin 加额度的「真路」今晚只走到诚实降级那一层＋单元/route
-  测试；e2e:roles 的 claim 检查在 migration 后第一次跑才是实战。拍照读取（G-2 混合
-  输入、新的 extract-expense prompt）没实拍过——烧真额度，等上线后 J 顺手来一轮。
+- 四道关（P、A 两个代码 Stage 收尾各跑一次）：`tsc` **0** · `eslint` **21（与基准
+  逐字相同：20 errors + 1 warning）** · `vitest` **783 全过（64 档；本场 +17 个新测试）** ·
+  `build` ✓
+- `e2e:money` 本场跑了两次（P 收尾＋A 收尾）：**15/15、15/15**，page errors 0。
+- ⚠ **没能验证的**：P-1 的修复没法在本机复现 Vercel 的 60 秒击杀（deadline 逻辑
+  有单元测试＋route 测试，但「真被掐时 504 有没有到达浏览器」要等线上再遇一次才算
+  实证）；/admin 的三种小计要等线上有带 provider/model 的新流量才看得到内容；
+  A-1 的骨架只在 build 里验证了产出，没起 dev server 逐页点过。
 
-### 这一轮做了什么（细节看各 commit message 与 25-報告）
+### 这一场做了什么（P-1 断线案结论在 31 号单 P-1 条目里，一句话版见下）
 
-- **Stage 0 上线门槛**（26 号报告 4 bug＋OrgChip）：存档后工作区生命周期（savedToHistory
-  过 reload、「开始新的会议」一键、拍照前「同一场还是新的？」两区都问）；forced-kind
-  超页数退款（第一支 API route 测试）；AI 读取中确认不被冲掉（functional update 两区）；
-  日历权限拒绝讲真话（"permission" reason＋找谁做文案三处）；OrgChip 孤儿过滤＋4 档 commit。
-- **Stage A 四卡首页**：task-cards.tsx（📝📊🧾✨，卡④聚焦聊天框不开新页）；chips 撤。
-- **Stage B 侧栏七组**：新 SIDEBAR_NAV（桌面＋/more 同源），组名不可点恒展开；
-  手机 4 格原样；menusCoverAllItems 改查两个面。
-- **Stage C 配套进场**：开组织三张配套卡（选标准/总部记 orgs.plan＋人工开通说明，
-  额度照旧）；新旧社团三问（舊社團 landing 卡改序 ?lama=1）；额度黄/红加「看方案→」；
-  语音接进钱区打字格/手动收入/首页聊天框。
-- **Stage D 实物捐赠＋收入拍照路**：donations.kind/item_desc/est_value_cents（migration
-  25 节①＋issue_receipts v5）；打字格「实物」一型；收据印品项不印钱
-  （receiptBoxContent 纯函数直测）；e-Invois/custody 三处排除（各有测试）；手动收入
-  七类补「拍单据」入口（人选类型只填空 purpose、标 check）。
-- **Stage E 支出与 Claim**：/money/expenses 真页（记开支＋交报销＋待批清单＋我的
-  claim 状态）；lib/claims.ts forward-only 状态机（8 测）；decide 带 status 条件防
-  并发双赢；新 extract-expense prompt＋route（新 action extract_expense，退款照规矩）。
-- **Stage F 财报**：lib/financial-statement.ts（现金制：支出只算 recorded/paid；实物
-  另列附表；7 测）；/money/report（本月/上月/今年＋自订期间＋PDF 匯出——瀏覽器只送
-  期間，server 從 DB 重算重蓋抬頭）；/filings 加「由财报算出」三行可复制＋来源链接。
-- **Stage G 真名单进申报＋CONTOH 禁令**：paste-pack 理事栏改吃 committee_roster
-  （含 name_official；缺→挡在申报、点名去成员页；AI 读的 office_bearers 连 fallback
-  都不是）；AGM 包/银行摘录真路全部 server 从 DB 建（roster、决议、抬头、PPM——
-  浏览器一个字都进不了文件），示範走 ?contoh=1 且用虚构社团自己的名字；/agm-pack
-  回选单（申报组）＋去缩写。6 个 route 测试。
-- **Stage H**：验证后确认 8/23 已全部做好（member_groups 表已套用、groups-card、
-  roster-picker 分组多选）——零改动，migration 25 节③刻意留空。
-- **Stage I 小修包**：重拍同页帐问「取代/追加」；多页照片全存（photoPages）；混合
-  输入文案与来源不说谎（mixedInput 状态）；分类三键送当下的字；e-Invois 开关失败
-  回滚；页数徽章不再缩水（有测试）；PPM 行单一来源（ppmLine＋派生 regex）。
-- **Stage K 管理台＋帐务＋品质**：feedback 表单（设置页）＋/admin 收件箱；ai_usage
-  分人（recorder 落 uid、失败自动退回不带 user_id——计费永不因分人失败；/admin 与
-  设置卡按人小计）；admin_grant_credits 有审计的路（platform_admins fail-closed、
-  credit_grants、/admin 卡只在 DB 名单里才现身；4 测）；品质八项（用量条/
-  countUnreviewed/cookie 段落各收一份、layout 并行、NUL 转义、量词、nowrap、
-  来源卡并印 BM）；audit fix。
-- **Stage W**：roles e2e +3 条；60 张截图重拍；one-pager 补全簿记一句＋766 测试数；
-  demo script 两格更新；DECISIONS.md **D17**；migration 25 终审（整份可重跑）。
+- **P-1 断线＋ai_usage id=5 合案**：结论＝route 重试链（最坏 6 次 20 秒呼叫＋backoff）
+  超过 Vercel maxDuration=60s，函数被平台掐死后退款/app_errors/回应一行都跑不到。
+  修法三件套：①所有 AI route 共用 50 秒 vendor 预算（`ROUTE_AI_DEADLINE_MS`，
+  postVendorJson 把每次尝试上限压进剩余预算、不够就抛 `VendorTimeoutError`，
+  留 10 秒给退款＋记录＋回应）②新 `src/lib/ai/vendor-failure.ts`：任何厂商失败
+  **先落 app_errors 再回应**（吞错是 id=5 查无可查的根因）；/api/ask 两步失败
+  以前不退款不记录，一并修正；/api/chat 工具回退/规则7重试也记录了 ③逾时回 504
+  「这次不算、已退回」（只在真退款的路上说）；ask-box 把「网络断了」和「伺服器
+  没回应」分成两句真话。9 个新测试。
+- **P-2 /health 补 OpenAI**：`routedProviders()`/`requiredAiKeyEnvVars()` 进
+  provider.ts，/health 和 check:ai 读同一份逻辑（不再两套）；4 测钉死
+  「chat 路由指 openai 而 key 缺时 /health 必须红」。
+- **P-3 全站 MYT**：`formatMytDateTime()`（固定 +8、印「MYT」、坏输入回 —）进
+  lib/history.ts＋4 测；修掉 /admin 两处生 UTC slice、/inbox 与 /minutes/history
+  两处无时区 toLocaleString；审计行/日历/保管核对过本来就对。
+- **P-4 /admin 那包**：select 补 provider/model/action/tokens（带两级降级退路）；
+  每 org「供应商·模型·动作」三种小计（TS 加总，"?" 列印出来——null provider 正是
+  id=5 的签名，要让操作者看见）；成本 6 位小数＋RM 固定估算（1 USD≈RM4.70，写明）；
+  侧栏「管理台」入口（新 `src/lib/admin-gate.ts`，server 只传布林；/admin 404 不动）；
+  /admin 全页接 <Tri>；feedback 空状态不再怪 migration 25。
+- **Stage R 规则同步**：DECISIONS.md 新增 **D18–D21**（姓名预设全显／付款方式＋
+  交现金改保管页／品牌杠杆／e-Invois 直接可交）；CLAUDE.md Hard Rule 5 就地注记
+  指向 D18；HOW_MINIT_WORKS.md 两句过时陈述就地修正。
+- **Stage A 体感**：15+1 支 loading.tsx（共用骨架 `src/components/route-loading.tsx`），
+  换页立刻有反应；问一问面板头部重排三行；开场白从「我看不到您的记录」（8/22 起
+  就是假话）换成「可以问记录，答案附出处」；/more 语言排旁补三语并排开关的指路；
+  侧栏机构卡改「当前机构：X · 切换 →」可点（/more 同款，e2e 断言同步）。
 
-### 🔴 J 的事（这一轮结束时）
+### 🔴 J 的事（场次 1 结束时）
 
-1. **明早的六步**在 27 号单第 1 节：看 25-報告 → 双击 salin-migration.bat 选 **25**
-   贴进 SQL Editor Run → **再贴一句把自己设成平台管理员**（报告最上面有）→
-   `npm run check:migrations`（新 7 个 probe 要 APPLIED）→ 双击 push-cabang.bat
-   （本机 main 领先 origin 约 12 支 commit）→ 开新 session 说「上线」
-   （`docs/上线与截图-给J的步骤.md`，**先 env 后 deploy**）。
-2. （可选）`NEXT_PUBLIC_CONTACT_EMAIL` 配了之后，「检举冒用」与配套卡的联络 email 才现身
-3. 老三样：真手写 3～4 张＋答案（eval）；上线在场；eROSES 逐栏核对
-4. ⚠ **8/31 23:59 竞赛截止（内部 cutoff 8/31 18:00）——还剩 4 天**
+1. **双击 `push-cabang.bat`**（本机 main 领先 origin 6 支 commit）→ 1~3 分钟后
+   线上自动更新 → 开 /health 看全绿（现在会检查 OPENAI_API_KEY 了——如果它变红，
+   是 Vercel 环境变量缺 key，不是坏了）。
+2. **两个地区核对**（治「换页慢」的另一半，步骤在 25-報告）：Vercel Settings →
+   Functions → Region 和 Supabase Settings → General → Region 各抄一个贴给 Claude。
+3. 开新对话贴 31 号单 §10 的灰框 → 场次 2（钱区＋migration 26）。
+4. ⚠ **8/31 23:59 竞赛截止（内部 cutoff 18:00）——还剩 3 天**；one-pager 的 [YOU]
+   两处还空着（正式 URL 已有：https://minit-project.vercel.app）。
 
 ### ❓ 未决问题
 
-1. 🔴 新 Supabase region —— 若隐私告知要写 region，J 在 Dashboard 看一眼填进 legal
-2. 助手本身用哪个模型 —— 建议 `openai:gpt-5.6-luna`，等 bench（真实手写样本之后）
+1. 🔴 Vercel/Supabase region 是否同区 —— 等 J 抄来两个值（§1-5；不同区=每击多几百 ms）
+2. 助手本身用哪个模型 —— 建议 `openai:gpt-5.6-luna`，等 bench（场次 5，真手写之后）
 3. 法律实体（金流前置，D12），试点前要答
-4. 真实手写 eval：92.9% 量的仍是印刷体。J 拍照后重跑 `npm run eval`
-5. Supabase 邮件模板（顺延：等网域＋SMTP，文字备好在 `docs/supabase-email-templates.md`）
+4. 真实手写 eval：92.9% 量的仍是印刷体。J 拍照后重跑 `npm run eval`（场次 5 D-b）
+5. Supabase 邮件模板（顺延：等网域＋SMTP）；Supabase Site URL 还停在 localhost
+   （31 号单 §11，J 一分钟改）
 
 ### ⏭ 下一个 session 从哪开始
 
-**27 号单做完了。** 明早 J 在场：贴 migration 25 → check → push → **Vercel 上线**。
-上线后第一批（新 session）：QR 查证页、SMTP、逐角色 RLS 深化、G-2 混合输入实拍、
-migration 后重跑 e2e:roles 看 claim 真路。真手写 eval 照旧等 J 的照片。
-提交材料终核＝上线拿到正式 URL 后把 one-pager 的 [YOU] 补上，**8/31 23:59 截止**。
+**31 号单场次 2：Stage B 钱区大整修（B-1～B-10）**，含 migration 26
+（donations.payment_method + transfer_proof_path——那一场唯一授权写的 migration）。
+之后场次 3（Stage C＋D-a）→ 场次 4（E＋F＋G-1/G-2）→ 场次 5（早上 J 在场：
+D-b 照片、bench 实跑）。贴 31 号单 §10 的灰框开工即可，单上已勾的不重做。
 
 ---
 
 ## 6. 已知陷阱（踩过的，别再踩）
+
+### 2026-08-28 凌晨新增（31 号单场次 1）
+
+- 🔴 **serverless 函数被平台掐死（maxDuration）之后，你的 catch/finally 一行都不会跑。**
+  「每次呼叫各有 20 秒 timeout」不等于「整个 route 会在 60 秒内结束」——重试×2、
+  规则 7 再来一轮、classify+extract 两步，加起来轻松破 60。被掐死的函数不退款、
+  不落 app_errors、不回应，用户看到「断线」，帐上留一笔全 null 的扣费（id=5）。
+  **判断方法：任何「循环里呼叫外部服务」的 route，先算最坏情况总时长，再和平台的
+  硬顶比；预算要从 route 顶上传下去共用，并留出收尾（退款/记录/回应）的时间。**
+- ⚠️ **测「时间预算」逻辑时，mock 是瞬时的——预算永远不会自然缩小。** 第一版测试
+  给了 2.5 秒预算＋三个瞬时 503，期望「跑不满三次」，实际三次全跑（每次都不花时间）。
+  正解：让**投影的 backoff** 去吃预算（backoffMs 传非零值），或者操纵时钟。
+- ⚠️ **`catch {}`（不绑变量）是搜索「吞错点」的好线索。** 这次 grep `catch \{` 一口气
+  找出 8 个 AI route 里的静默吞错；修完之后新规矩是：AI route 里的厂商失败一律走
+  `vendorFailureResponse()`（记录＋回应），退款留在 route 里贴着它要退的那笔 charge。
 
 ### 2026-08-27 凌晨新增（27 号单通宵那一轮）
 
