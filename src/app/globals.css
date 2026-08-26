@@ -73,9 +73,12 @@
   --destructive: oklch(0.577 0.245 27.325);
   /* Was oklch(0.922) ≈ #e8e8e8 — about 1.04:1 against the glass surface, i.e.
      every card and row separator in the app was invisible, so grids read as one
-     undifferentiated block. Darkened to a visible hairline. */
-  --border: oklch(0.82 0 0);
-  --input: oklch(0.78 0 0);
+     undifferentiated block. Darkened once to a visible hairline (0.82 ≈ 1.6:1),
+     and again for C-5 (work order 31, WCAG 1.4.11): a component boundary needs
+     NON-TEXT contrast ≥ 3:1, computed separately from text contrast.
+     oklch(0.64) ≈ #919191 ⇒ ≈ 3.2:1 on the white card; inputs a step darker. */
+  --border: oklch(0.64 0 0);
+  --input: oklch(0.62 0 0);
   --ring: oklch(0.708 0 0);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
@@ -143,16 +146,17 @@
 
        The actual value is written to the style attribute of <html>, before first
        paint, from the person's saved choice — see components/appearance-provider.tsx
-       and the boot script in app/layout.tsx. Four steps: 100 / 112.5 / 125 / 140%.
+       and the boot script in app/layout.tsx. Four steps (C-8 recalibration,
+       work order 31): 93.75 / 106.25 / 118.75 / 133.75%.
 
-       The 112.5% below is only the fallback for a first visit or a browser with
+       The 106.25% below is only the fallback for a first visit or a browser with
        storage disabled. A PERCENTAGE, never a px value: it must still multiply
        whatever the person may already have set as their browser default.
 
        Do not put a font-size on <body> as well — that would make body text
        bigger while leaving all the small rem-based text behind, which was
        exactly the original bug. */
-    font-size: 112.5%;
+    font-size: 106.25%;
   }
 }
 
@@ -188,10 +192,15 @@
   --v2-card: #ffffff;
   --v2-glass: var(--v2-card);         /* legacy name, solid value */
   --v2-glass-strong: var(--v2-card);
-  --v2-border: #d8dbe2;               /* card edge: shadow + surface carry the
-                                         boundary; buttons use the darker one */
-  --v2-outline-border: rgba(71, 77, 96, 0.65); /* 3.6:1 on white — an outline
-                                         button's border IS its affordance */
+  /* C-5 (work order 31, J #5): #d8dbe2 measured 1.4:1 on the white card —
+     in light mode card edges and row separators were invisible. WCAG 1.4.11
+     wants NON-TEXT contrast ≥ 3:1, computed on its own (text contrast passing
+     says nothing about borders — STATE §6). #888ea0 ⇒ 3.27:1 on the white
+     card and 3.04:1 on the #f6f7f9 page behind it. */
+  --v2-border: #888ea0;
+  --v2-outline-border: rgba(71, 77, 96, 0.7); /* ≈ #7e828f ⇒ 3.8:1 on white —
+                                         an outline button's border IS its
+                                         affordance (was 0.65 ⇒ 3.4:1) */
   --v2-shadow: 0 0.0625rem 0.1875rem rgba(16, 24, 40, 0.07),
     0 0.0625rem 0.125rem rgba(16, 24, 40, 0.04);
   --v2-shadow-soft: 0 0.25rem 0.75rem -0.25rem rgba(91, 75, 214, 0.35);

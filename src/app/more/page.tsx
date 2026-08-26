@@ -19,9 +19,12 @@ export default function MorePage() {
   const [einvoisVisible] = useEinvoisVisible();
   const { email, org } = useActiveOrg();
 
-  // Every sidebar group; Home is the bottom bar's own first tab, so the item
-  // entry is skipped here.
-  const groups = SIDEBAR_NAV.filter((e) => e.kind === "group");
+  // Every sidebar entry; Home is the bottom bar's own first tab, so that one
+  // item is skipped here. Other top-level items (C-1: the calendar) render as
+  // single rows so they cannot silently drop off the phone.
+  const entries = SIDEBAR_NAV.filter(
+    (e) => !(e.kind === "item" && e.item.href === "/"),
+  );
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 pb-6">
@@ -43,8 +46,29 @@ export default function MorePage() {
         </p>
       )}
 
-      {groups.map((group) => {
-        if (group.kind !== "group") return null;
+      {entries.map((group) => {
+        if (group.kind !== "group") {
+          const Icon = group.item.icon;
+          return (
+            <ul
+              key={group.item.href}
+              className="v2-glass flex flex-col overflow-hidden p-0"
+            >
+              <li>
+                <Link
+                  href={group.item.href}
+                  className="flex min-h-14 items-center gap-3 px-4 text-base font-medium transition-colors hover:bg-[color:var(--v2-primary-soft)]"
+                >
+                  <Icon
+                    className="h-5 w-5 shrink-0 text-[color:var(--v2-primary)]"
+                    strokeWidth={1.8}
+                  />
+                  <Tri bm={group.item.bm} zh={group.item.zh} en={group.item.en} />
+                </Link>
+              </li>
+            </ul>
+          );
+        }
         const items = visibleGroupChildren(group, einvoisVisible);
         if (items.length === 0) return null;
         const GroupIcon = group.icon;

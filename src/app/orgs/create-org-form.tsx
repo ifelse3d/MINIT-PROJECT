@@ -168,7 +168,30 @@ export function CreateOrgForm({
         <span className="text-base font-semibold">
           <Tri bm="Nama pertubuhan" zh="组织名称" en="Organisation name" />
         </span>
-        <input name="name" className={inputCls} required maxLength={200} />
+        {/* C-4 (拍板 33): typed letters turn into CAPITALS as they land — the
+            ROS register writes society names in capitals, and a mixed-case
+            name here would disagree with every official document. Uppercasing
+            never changes the string length, so the caret keeps its place. */}
+        <input
+          name="name"
+          className={inputCls}
+          required
+          maxLength={200}
+          autoCapitalize="characters"
+          onChange={(e) => {
+            const el = e.currentTarget;
+            const pos = el.selectionStart;
+            el.value = el.value.toUpperCase();
+            if (pos !== null) el.setSelectionRange(pos, pos);
+          }}
+        />
+        <span className="text-sm text-muted-foreground">
+          <Tri
+            bm="Nama berdaftar rasmi sentiasa dalam HURUF BESAR."
+            zh="官方注册名称一律大写。"
+            en="Official registered names are always in CAPITALS."
+          />
+        </span>
       </label>
 
       <label className="flex flex-col gap-1">

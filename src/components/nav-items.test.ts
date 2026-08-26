@@ -30,11 +30,14 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
     expect(PRIMARY_NAV.filter((e) => e.kind === "group")).toHaveLength(3);
   });
 
-  // SEVEN desktop entries (B-1, J 8/26 #3): Home + six always-expanded groups,
-  // no "More" drawer. The 錢 group's rows are the ones J listed by name.
-  it("keeps the desktop sidebar to Home plus six groups, as J listed them", () => {
-    expect(SIDEBAR_NAV).toHaveLength(7);
+  // EIGHT desktop entries (B-1, J 8/26 #3; amended by 拍板 30 on 8/27): Home,
+  // six collapsible groups, and the calendar as its own row — moved OUT of the
+  // 申报 group because deadlines are a daily page, not a filing chore.
+  it("keeps the desktop sidebar to Home + calendar + six groups, as J listed them", () => {
+    expect(SIDEBAR_NAV).toHaveLength(8);
     expect(SIDEBAR_NAV[0].kind).toBe("item");
+    const items = SIDEBAR_NAV.flatMap((e) => (e.kind === "item" ? [e.item.href] : []));
+    expect(items).toEqual(["/", "/calendar"]);
     const ids = SIDEBAR_NAV.flatMap((e) => (e.kind === "group" ? [e.id] : []));
     expect(ids).toEqual([
       "minutes",
@@ -63,10 +66,10 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
       "/money/einvois",
       "/money/history",
     ]);
-    // 申报: eROSES · 日历与死线 · 常年大会文件包 (G-4 撿回).
+    // 申报: eROSES · 常年大会文件包 (G-4 撿回; 拍板 30 moved the calendar out
+    // to its own top-level row — asserted above).
     expect(byId("filings").children.map((c) => c.href)).toEqual([
       "/filings",
-      "/calendar",
       "/agm-pack",
     ]);
     // 组织: 成员 · 章程 · 条文全文 · 词库 · 组织与分会.

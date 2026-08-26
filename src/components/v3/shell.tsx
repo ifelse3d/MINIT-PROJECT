@@ -18,10 +18,11 @@
 // ---------------------------------------------------------------------------
 
 import Link from "next/link";
-import { Wrench } from "lucide-react";
+import { ChevronDown, Wrench } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { LanguageSwitcher, Tri } from "@/components/language-provider";
 import { FirstRunFlow } from "@/components/first-run-flow";
+import { usePersistentState } from "@/lib/use-persistent-state";
 import {
   PRIMARY_NAV,
   SIDEBAR_NAV,
@@ -37,8 +38,11 @@ import { OrgChip, useActiveOrg } from "./org-chip";
 import { TopSearch } from "./top-search";
 import { AIDock, useAIDock } from "./ai-dock";
 
-/** Routes rendered without nav/search/theme chrome. */
-const BARE_ROUTES = ["/login", "/reset-password"];
+/** Routes rendered without nav/search/theme chrome. C-7 (work order 31, 客①):
+ *  the legal pages joined — a Terms page inside the app shell, with a sidebar
+ *  and a search bar, read like an app screen instead of a document. They keep
+ *  their own "back to sign in" link (legal-document.tsx). */
+const BARE_ROUTES = ["/login", "/reset-password", "/terms", "/privacy"];
 
 function isBareRoute(pathname: string | null): boolean {
   if (!pathname) return false;
@@ -138,8 +142,30 @@ function railEntryChildren(entry: NavEntry, einvoisVisible: boolean): NavItem[] 
   return visibleGroupChildren(entry, einvoisVisible);
 }
 
+/**
+ * C-1 (拍板 30): which sidebar groups this DEVICE has folded shut. Groups are
+ * OPEN unless the person closed them (`true` = closed), so a brand-new group
+ * added later starts open without a migration of anybody's stored blob.
+ * A device preference like text size — deliberately not org-scoped.
+ */
+const CLOSED_GROUPS_KEY = "minit.sidebar.closed.v1";
+const isClosedMap = (parsed: unknown): boolean =>
+  typeof parsed === "object" &&
+  parsed !== null &&
+  !Array.isArray(parsed) &&
+  Object.values(parsed as Record<string, unknown>).every(
+    (v) => typeof v === "boolean",
+  );
+
 function Rail({ pathname, showAdmin }: { pathname: string; showAdmin: boolean }) {
   const [einvoisVisible] = useEinvoisVisible();
+  const [closed, setClosed] = usePersistentState<Record<string, boolean>>(
+    CLOSED_GROUPS_KEY,
+    {},
+    isClosedMap,
+  );
+  const toggleGroup = (id: string) =>
+    setClosed((prev) => ({ ...prev, [id]: !prev[id] }));
 
   return (
     <aside
@@ -185,14 +211,18 @@ function Rail({ pathname, showAdmin }: { pathname: string; showAdmin: boolean })
             // rail-only steps (/minutes/attendance …) that render no row here,
             // so the sidebar never goes silent about where you are.
             const groupActive = groupHasActiveChild(entry, pathname);
+            const isOpen = !closed[entry.id];
             return (
               <li key={entry.id} className="mt-2">
-                {/* A heading, deliberately NOT a link (拍板④ "組名不可點"):
-                    every destination is one of the rows right below it, so a
-                    clickable header would be a second door to the same room. */}
-                <div
+                {/* C-1 (拍板 30, amending 拍板④'s "組名不可點"): the heading is
+                    a FOLD control now — never a navigation link. Default open;
+                    this device remembers what was closed. */}
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(entry.id)}
+                  aria-expanded={isOpen}
                   className={cn(
-                    "flex min-h-8 items-center gap-2 px-3 text-sm font-semibold uppercase tracking-wide",
+                    "flex min-h-9 w-full items-center gap-2 rounded-lg px-3 text-sm font-semibold uppercase tracking-wide transition-colors hover:bg-[color:var(--v2-primary-soft)]",
                     groupActive
                       ? "text-[color:var(--v2-primary)]"
                       : "text-[color:var(--v2-text-soft)]",
@@ -200,10 +230,19 @@ function Rail({ pathname, showAdmin }: { pathname: string; showAdmin: boolean })
                 >
                   <GroupIcon className="h-4 w-4 shrink-0" strokeWidth={1.8} />
                   <Tri bm={entry.bm} zh={entry.zh} en={entry.en} />
-                </div>
-                {/* Always expanded — a group that hides its rows until you are
-                    inside it is a junk drawer with extra steps. */}
-                <ul className="flex flex-col gap-0.5">
+                  <ChevronDown
+                    aria-hidden
+                    className={cn(
+                      "ml-auto h-4 w-4 shrink-0 transition-transform",
+                      isOpen ? "" : "-rotate-90",
+                    )}
+                    strokeWidth={2}
+                  />
+                </button>
+                {/* Folded away is folded away — but the header above keeps its
+                    active colour, so a closed group never goes silent about
+                    holding the page you are on. */}
+                <ul className={cn("flex flex-col gap-0.5", isOpen ? "" : "hidden")}>
                   {children.map((child) => {
                     const active = isActivePath(pathname, child.href, child.exact);
                     const ChildIcon = child.icon;

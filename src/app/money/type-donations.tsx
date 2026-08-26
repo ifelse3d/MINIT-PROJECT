@@ -288,7 +288,13 @@ export function TypeDonations({
   if (!open) {
     return (
       <div className="flex flex-col items-start gap-2">
-        <Button variant="outline" onClick={() => setOpenChoice(true)}>
+        {/* C-6: h-auto + whitespace-normal — the long label must WRAP on a
+            375px phone; nowrap made this one button drag the page sideways. */}
+        <Button
+          variant="outline"
+          className="h-auto min-h-11 max-w-full whitespace-normal text-left"
+          onClick={() => setOpenChoice(true)}
+        >
           <Tri
             bm="Ramai penderma, tiada kertas — taip senarai"
             zh="很多人捐款、没有账页 —— 打字输入整份名单"

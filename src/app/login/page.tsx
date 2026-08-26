@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Tri, useTriText } from "@/components/language-provider";
 import { PasswordInput } from "@/components/password-input";
@@ -51,6 +51,24 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // C-3 (拍板 32): sign-up ends HERE, signed out, with ?registered=1 — the
+  // person logs in themselves. This flag renders the "registered, please sign
+  // in" line in whatever language the reader has chosen.
+  const [justRegistered, setJustRegistered] = useState(false);
+
+  useEffect(() => {
+    // setTimeout(0), not a synchronous setState: the frozen eslint baseline
+    // counts react-hooks/set-state-in-effect as an error (STATE §6).
+    const timer = setTimeout(() => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("registered") === "1") setJustRegistered(true);
+      } catch {
+        // No URL to read — nothing to show.
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -200,7 +218,12 @@ export default function LoginPage() {
         // itself in on /orgs/join once they are signed in.
         if (inviteCode.trim() !== "") stashInviteCode(inviteCode);
         if (data.session) {
-          window.location.assign(inviteCode.trim() !== "" ? "/orgs/join" : "/orgs");
+          // C-3 (拍板 32): registering does NOT walk you into the app. Sign
+          // the fresh session out and land back here with ?registered=1 —
+          // "registration worked, now sign in" — a full navigation so the
+          // server never sees the discarded session cookie.
+          await supabase.auth.signOut();
+          window.location.assign("/login?registered=1");
         } else {
           // Email confirmation is ON in this Supabase project.
           setNotice(
@@ -411,6 +434,18 @@ export default function LoginPage() {
             </label>
           )}
 
+          {/* C-3: shown after the ?registered=1 round-trip, until the person
+              starts doing something else with the form. */}
+          {justRegistered && mode === "signin" && !error && !notice && (
+            <p className="text-base font-medium text-green-700">
+              ✓{" "}
+              <Tri
+                bm="Pendaftaran berjaya — sila log masuk"
+                zh="注册成功，请登录"
+                en="Registration successful — please sign in"
+              />
+            </p>
+          )}
           {error && <p className="text-base font-medium text-red-700">{error}</p>}
           {notice && <p className="text-base font-medium text-amber-800">{notice}</p>}
 

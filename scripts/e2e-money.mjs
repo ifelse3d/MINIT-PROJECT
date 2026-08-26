@@ -28,7 +28,9 @@ const SERVICE = env.SUPABASE_SERVICE_ROLE_KEY;
 
 const TEST_EMAIL = "zzz-e2e-money@example.com";
 const TEST_PASSWORD = "E2e#" + Math.random().toString(36).slice(2, 10) + "Aa1";
-const ORG_NAME = "ZZZ e2e 测试社团（可删）";
+// Already uppercase: the create form uppercases as you type (C-4, 拍板 33),
+// and the REST lookups below must match what actually got stored.
+const ORG_NAME = "ZZZ E2E 测试社团（可删）";
 const BASE = "http://localhost:3000";
 
 const failures = [];

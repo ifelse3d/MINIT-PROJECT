@@ -115,7 +115,10 @@ export const NAV_ITEMS: NavItem[] = [
   // C-3: the plan-and-usage page gets its own sidebar row (settings group).
   // /settings is `exact` so standing on /settings/plan lights ONE row.
   { href: "/settings/plan", icon: Gauge, bm: "Pelan & penggunaan", zh: "方案与用量", en: "Plan & usage" },
-  { href: "/settings", icon: Settings, bm: "Tetapan", zh: "设置", en: "Settings", exact: true },
+  // C-1 (work order 31, J #4): the row was "Settings" INSIDE a group called
+  // "Settings" — 設置>設置. The group keeps the section name; the row says what
+  // is actually on the page: your account and how the app looks.
+  { href: "/settings", icon: Settings, bm: "Akaun & paparan", zh: "账号与显示", en: "Account & display", exact: true },
   // G-4 (8/26): back in the menus — the pack builds from the REAL roster now.
   // Spelled out, no bare abbreviation (G-4).
   { href: "/agm-pack", icon: Landmark, bm: "Pek Mesyuarat Agung (AGM)", zh: "常年大会文件包", en: "AGM pack" },
@@ -210,11 +213,13 @@ export const PRIMARY_NAV: NavEntry[] = [
 ];
 
 /**
- * THE DESKTOP's seven groups (B-1, J 8/26 #3, 拍板④) — and the layout the
- * /more page shows. Group names are HEADINGS: not clickable, always expanded.
- * The 錢 rows are the ones J listed by name; /money/expenses joined when its
- * real page landed (Stage E) and /money/report joins with Stage F — a menu
- * row pointing at a stub would be a dressed-up dead link.
+ * THE DESKTOP's layout (B-1, J 8/26 #3, 拍板④; amended by 拍板 30 on 8/27) —
+ * and the layout the /more page shows. Home and the calendar are top-level
+ * rows; the six groups are COLLAPSIBLE headers (default open, remembered per
+ * device — shell.tsx owns that state). The 錢 rows are the ones J listed by
+ * name; /money/expenses joined when its real page landed (Stage E) and
+ * /money/report joins with Stage F — a menu row pointing at a stub would be a
+ * dressed-up dead link.
  */
 export const SIDEBAR_NAV: NavEntry[] = [
   { kind: "item", item: byHref("/") },
@@ -249,6 +254,9 @@ export const SIDEBAR_NAV: NavEntry[] = [
       byHref("/money/history"),
     ],
   },
+  // C-1 (拍板 30): the calendar is a DAILY page, not a filing chore — it moved
+  // out of the 申报 group onto its own top-level row.
+  { kind: "item", item: byHref("/calendar") },
   {
     kind: "group",
     id: "filings",
@@ -256,7 +264,7 @@ export const SIDEBAR_NAV: NavEntry[] = [
     bm: "Pemfailan",
     zh: "申报",
     en: "Filings",
-    children: [byHref("/filings"), byHref("/calendar"), byHref("/agm-pack")],
+    children: [byHref("/filings"), byHref("/agm-pack")],
   },
   {
     kind: "group",

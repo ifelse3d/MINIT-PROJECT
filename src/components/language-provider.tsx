@@ -185,8 +185,15 @@ export function useLocalizedError() {
 }
 
 /**
- * The single-select language chips (top bar, /login, first-run picker).
- * In the advanced "all" mode every chip shows lit — tapping one leaves it.
+ * The single-select language control (top bar, /login, /more, Settings).
+ *
+ * C-2 (work order 31, 拍板 31): on a PHONE the three chips collapse into one
+ * dropdown — three pills did not fit next to anything else on 375px. On
+ * md+ the three chips stay visible: the three languages are a selling point,
+ * and the desktop does not hide them. Both render from the same `mode`; CSS
+ * decides which one is on screen, so there is exactly one source of truth.
+ * In the advanced "all" mode every chip shows lit — tapping one leaves it —
+ * and the dropdown grows a fourth option naming the side-by-side view.
  */
 export function LanguageSwitcher({ tone = "light" }: { tone?: "light" | "dark" }) {
   const { mode, setMode } = useLangs();
@@ -198,6 +205,31 @@ export function LanguageSwitcher({ tone = "light" }: { tone?: "light" | "dark" }
   const dark = tone === "dark";
   return (
     <div className="flex items-center gap-1" title="Bahasa · 语言 · Language">
+      {/* Phone: one dropdown. */}
+      <select
+        value={mode}
+        onChange={(e) => {
+          if (isLangMode(e.target.value) && e.target.value !== "all") {
+            setMode(e.target.value);
+          }
+        }}
+        aria-label="Bahasa · 语言 · Language"
+        className={
+          dark
+            ? "rounded-full border border-white/40 bg-transparent px-3 py-1.5 text-sm font-semibold text-white md:hidden"
+            : "rounded-full border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-3 py-1.5 text-sm font-semibold text-[color:var(--v2-text)] md:hidden"
+        }
+      >
+        {items.map((it) => (
+          <option key={it.key} value={it.key}>
+            {it.label}
+          </option>
+        ))}
+        {/* Only while the advanced side-by-side view is on — the dropdown must
+            be able to SHOW the current mode; switching away is one tap. */}
+        {mode === "all" && <option value="all">BM · 中文 · EN</option>}
+      </select>
+      {/* md+: the three chips, unchanged. */}
       {items.map((it) => {
         const active = mode === it.key || mode === "all";
         return (
@@ -208,12 +240,12 @@ export function LanguageSwitcher({ tone = "light" }: { tone?: "light" | "dark" }
             aria-pressed={active}
             className={
               dark
-                ? `whitespace-nowrap rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors ${
+                ? `hidden whitespace-nowrap rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors md:inline-block ${
                     active
                       ? "border-white/40 bg-white/[0.18] text-white"
                       : "border-transparent text-white/80 hover:bg-white/[0.1] hover:text-white"
                   }`
-                : `whitespace-nowrap rounded-full border px-3 py-1 text-sm font-semibold transition-colors ${
+                : `hidden whitespace-nowrap rounded-full border px-3 py-1 text-sm font-semibold transition-colors md:inline-block ${
                     active
                       ? "border-transparent bg-[color:var(--v2-primary-fill)] text-white"
                       : "border-[color:var(--v2-outline-border)] text-[color:var(--v2-text-soft)] hover:bg-[color:var(--v2-primary-soft)]"

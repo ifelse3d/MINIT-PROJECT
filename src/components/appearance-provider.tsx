@@ -18,7 +18,7 @@
 // together — which is what keeps the layout looking deliberate at every step.
 // We set it as a PERCENTAGE so it still multiplies whatever the person may have
 // already set as their browser default; someone who has set their browser to
-// 24px and picks "Besar" here gets 30px, not 20px.
+// 24px and picks "Besar" here gets 28.5px, not 19px.
 //
 // Stored per device (localStorage), not per account: the same person legitimately
 // wants large type on their phone and normal type on the office laptop, and this
@@ -38,12 +38,17 @@ import {
 export const TEXT_SIZES = ["small", "medium", "large", "xlarge"] as const;
 export type TextSize = (typeof TEXT_SIZES)[number];
 
-/** Root font-size percentage per step. `medium` is the default. */
+/** Root font-size percentage per step. `medium` is the default.
+ *
+ * C-8 (work order 31, 客③): the whole ladder came DOWN half a step (6.25
+ * percentage points) — "medium" at 18px read oversized on ordinary screens,
+ * and "small" at 16px was not actually small. The rem system is untouched:
+ * one root percentage still scales type and spacing together. */
 export const TEXT_SIZE_PERCENT: Record<TextSize, number> = {
-  small: 100, // 16px on a default browser — for younger eyes / small laptops
-  medium: 112.5, // 18px — the default
-  large: 125, // 20px
-  xlarge: 140, // 22.4px — for a reader who is really struggling
+  small: 93.75, // 15px on a default browser — genuinely compact
+  medium: 106.25, // 17px — the default
+  large: 118.75, // 19px
+  xlarge: 133.75, // ~21.4px — for a reader who is really struggling
 };
 
 export const TEXT_SIZE_LABELS: Record<
@@ -187,7 +192,7 @@ export function useAppearance(): AppearanceValue {
 export const APPEARANCE_BOOT_SCRIPT = `
 (function () {
   try {
-    var p = { small: 100, medium: 112.5, large: 125, xlarge: 140 };
+    var p = { small: 93.75, medium: 106.25, large: 118.75, xlarge: 133.75 };
     var s = localStorage.getItem(${JSON.stringify(SIZE_KEY)});
     if (!p[s]) s = "medium";
     document.documentElement.style.fontSize = p[s] + "%";
@@ -196,7 +201,7 @@ export const APPEARANCE_BOOT_SCRIPT = `
       document.documentElement.classList.add("dark");
     }
   } catch (e) {
-    document.documentElement.style.fontSize = "112.5%";
+    document.documentElement.style.fontSize = "106.25%";
   }
 })();
 `;

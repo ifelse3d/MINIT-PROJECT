@@ -42,11 +42,14 @@ export function MinutesFilters({
       action="/minutes/history"
       className="mb-6 flex flex-wrap items-end gap-3 rounded-2xl border-2 border-[color:var(--v2-border)] bg-white/60 p-4 dark:bg-white/5"
     >
-      <label className="flex flex-col gap-1">
+      {/* C-6: w-full + min-w-0, or the select's longest option (the full BM
+          meeting names ride along in every language — G-4) sets its intrinsic
+          width and drags the whole page sideways on a 375px phone. */}
+      <label className="flex w-full min-w-0 flex-col gap-1 sm:w-auto">
         <span className="text-sm font-medium text-muted-foreground">
           <Tri bm="Jenis mesyuarat" zh="会议类型" en="Meeting type" />
         </span>
-        <select name="type" defaultValue={type} className={field}>
+        <select name="type" defaultValue={type} className={`${field} w-full min-w-0 sm:w-auto sm:max-w-72`}>
           <option value="">{t("Semua jenis", "全部类型", "All types")}</option>
           {MEETING_TYPES.map((mt) => {
             const l = meetingTypeUiLabelTri(mt);
