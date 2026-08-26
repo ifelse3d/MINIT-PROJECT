@@ -13,8 +13,11 @@
 // prompt, the same three limits (per turn, per conversation, per month). Having
 // two assistants that behaved differently was itself a source of confusion.
 //
-// What has NOT changed: the assistant cannot see the organisation's records, and
-// the prompt makes it say so rather than invent a number or a clause. It answers
+// 2026-08-22/23 (A-3 catch-up): the assistant CAN see this organisation's
+// records now — six RLS-scoped lookup tools (confirmed minutes, donations,
+// receipts, constitution clauses, committee, deadlines), every claim carrying
+// a clickable source. The old "cannot see your records" line in this comment
+// and in the opener below outlived that change by five days. It still answers
 // with a "go to this page" button wherever the real work happens on a page.
 //
 // PDPA: the transcript lives in this component's state only. Closing the panel
@@ -184,44 +187,20 @@ export function AIPanel({
 
   return (
     <aside className="v2-glass flex h-full w-full flex-col rounded-[28px] p-4 sm:p-5">
-      {/* Header */}
+      {/* Header — A-2 (work order 31, J: 「排版很不好，弄到那麼長」).
+          The old header put icon + title + description + quota badge + close
+          all on ONE flex row; in the narrow docked panel the badge squeezed
+          the title into one character per line. Now three rows, each with a
+          single job: title line (icon · name · close), badge line, then the
+          explanation as small print. Nothing competes with the title for
+          width any more. */}
       <div className="flex items-center gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#5b4bd6] via-[#6f5ef2] to-[#67cea4] text-white shadow-[0_12px_30px_-8px_rgba(124,108,245,0.7)]">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#5b4bd6] via-[#6f5ef2] to-[#67cea4] text-white shadow-[0_12px_30px_-8px_rgba(124,108,245,0.7)]">
           <Sparkles className="h-5 w-5" strokeWidth={1.9} />
         </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-lg font-semibold text-[color:var(--v2-text)]">
-            <Tri bm="Tanya Minit" zh="问一问 Minit" en="Ask Minit" />
-          </p>
-          <p className="text-base text-[color:var(--v2-text-soft)]">
-            {/* 0-2 (2026-08-25, J's #14): the AI-path marker stays; the
-                per-question "about X%" promise is gone — the only number is
-                the "X% used" badge beside this. */}
-            <Tri
-              bm="Soalan di sini menggunakan kuota AI bulanan"
-              zh="在这里提问会用本月的 AI 用量"
-              en="Questions here use the monthly AI allowance"
-            />
-          </p>
-        </div>
-        {/* 2026-08-22, J: "为什么还是在额度呢？不是说要换去 PERCENTAGE 吗".
-            Both numbers, not one: "99 left" is the concrete thing an older
-            treasurer acts on, and the percentage is what makes "am I about to
-            run out" readable at a glance. The word "guna / 用了 / used" is
-            carried with the figure on purpose — "Baki 99 · 1%" on its own reads
-            as "1% LEFT", which is the opposite of what it says. */}
-        {/* F-1 (2026-08-25, J's decision #4): the badge reads the percentage,
-            with "used" carried on it so it cannot be misread as "X% left".
-            The raw count only appears when the percentage is unknown. */}
-        {remaining !== null && (
-          <GlassBadge tone={remaining > 0 ? "info" : "missing"}>
-            <Tri
-              bm={usedPct === null ? `Baki ${remaining}` : `${usedPct}% guna bulan ini`}
-              zh={usedPct === null ? `剩 ${remaining}` : `本月已用 ${usedPct}%`}
-              en={usedPct === null ? `${remaining} left` : `${usedPct}% used this month`}
-            />
-          </GlassBadge>
-        )}
+        <p className="min-w-0 flex-1 truncate text-lg font-semibold text-[color:var(--v2-text)]">
+          <Tri bm="Tanya Minit" zh="问一问 Minit" en="Ask Minit" />
+        </p>
         {onClose && (
           <button
             type="button"
@@ -233,15 +212,50 @@ export function AIPanel({
           </button>
         )}
       </div>
+      {/* 2026-08-22, J: "为什么还是在额度呢？不是说要换去 PERCENTAGE 吗".
+          Both numbers, not one: "99 left" is the concrete thing an older
+          treasurer acts on, and the percentage is what makes "am I about to
+          run out" readable at a glance. The word "guna / 用了 / used" is
+          carried with the figure on purpose — "Baki 99 · 1%" on its own reads
+          as "1% LEFT", which is the opposite of what it says. */}
+      {/* F-1 (2026-08-25, J's decision #4): the badge reads the percentage,
+          with "used" carried on it so it cannot be misread as "X% left".
+          The raw count only appears when the percentage is unknown. */}
+      {remaining !== null && (
+        <div className="mt-2">
+          <GlassBadge tone={remaining > 0 ? "info" : "missing"}>
+            <Tri
+              bm={usedPct === null ? `Baki ${remaining}` : `${usedPct}% guna bulan ini`}
+              zh={usedPct === null ? `剩 ${remaining}` : `本月已用 ${usedPct}%`}
+              en={usedPct === null ? `${remaining} left` : `${usedPct}% used this month`}
+            />
+          </GlassBadge>
+        </div>
+      )}
+      <p className="mt-1.5 text-sm text-[color:var(--v2-text-soft)]">
+        {/* 0-2 (2026-08-25, J's #14): the AI-path marker stays; the
+            per-question "about X%" promise is gone — the only number is
+            the "X% used" badge above. */}
+        <Tri
+          bm="Soalan di sini menggunakan kuota AI bulanan"
+          zh="在这里提问会用本月的 AI 用量"
+          en="Questions here use the monthly AI allowance"
+        />
+      </p>
 
       {/* Conversation */}
       <div className="v2-scroll mt-4 flex flex-1 flex-col gap-3 overflow-y-auto">
         {turns.length === 0 && (
           <div className="rounded-3xl rounded-tl-lg bg-white/60 p-4 text-base leading-relaxed text-[color:var(--v2-text)] ring-1 ring-white/60 dark:bg-white/10 dark:ring-white/10">
+            {/* A-3 (work order 31): the "I cannot see your records" opener was
+                written BEFORE 2026-08-22, when the assistant got its six
+                lookup tools — it has been able to read the org's confirmed
+                records (with a citation on every claim) for days while this
+                line kept denying it. Now it says what is true. */}
             <Tri
-              bm="Tanya apa-apa tentang dokumen persatuan — istilah, tarikh akhir, atau halaman mana untuk buat sesuatu. Saya tidak dapat melihat rekod pertubuhan anda dari sini, jadi untuk nombor sebenar saya akan tunjukkan halaman yang ada nombor itu."
-              zh="任何关于社团文件的事都可以问 —— 专业词的意思、截止日期、或者某件事要去哪一页做。我从这里看不到您机构的记录，所以要看真实数字时，我会带您去有那个数字的页面。"
-              en="Ask anything about society paperwork — what a term means, a deadline, or which page does a thing. I cannot see your organisation's records from here, so for real numbers I will point you at the page that has them."
+              bm="Tanya saya tarikh akhir, perlembagaan, atau rekod pertubuhan anda — mesyuarat yang disahkan, derma, resit. Setiap jawapan datang dengan sumbernya supaya anda boleh semak sendiri."
+              zh="可以问我截止日期、章程、或你们机构的记录 —— 已确认的会议、捐款、收据。每个答案都会附上出处，让您自己核对。"
+              en="Ask me about deadlines, the constitution, or your organisation's records — confirmed meetings, donations, receipts. Every answer comes with its source so you can check it yourself."
             />
           </div>
         )}

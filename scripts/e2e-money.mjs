@@ -278,15 +278,18 @@ async function run() {
       fresh.click('button[type="submit"]'),
     ]);
     // The chip resolves asynchronously — poll until it settles.
+    // A-5 (work order 31): the chip's label is now 「当前机构」 and the card is
+    // a link to /orgs — the mechanism under test (client fallback matches the
+    // server's) is unchanged.
     let freshText = "";
     for (let i = 0; i < 20; i++) {
       freshText = await fresh.evaluate(() => document.body.innerText);
-      if (freshText.includes("您正在记录的机构")) break;
+      if (freshText.includes("当前机构")) break;
       await new Promise((r) => setTimeout(r, 500));
     }
     check(
       "fresh-session OrgChip shows the org, not 'name your organisation'",
-      freshText.includes("您正在记录的机构") &&
+      freshText.includes("当前机构") &&
         freshText.includes(ORG_NAME) &&
         !freshText.includes("填写您的机构名称"),
     );

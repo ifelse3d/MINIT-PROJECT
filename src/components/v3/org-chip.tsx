@@ -222,19 +222,23 @@ export function OrgChip({
     );
   }
 
-  // There IS an organisation: show it. Not a button — a label.
+  // There IS an organisation: show it — and let it be TAPPED. A-5 (work
+  // order 31, J #1): the old card was a dead label reading 「您正在记录的机构
+  // J」; the one thing someone wants at that moment is to go manage/switch it,
+  // and the card refused the tap. Now: "当前机构：J · 切换 →", a link to /orgs.
   return (
-    <div
+    <Link
+      href="/orgs"
       className={cn(
-        "rounded-2xl bg-white/60 px-3.5 py-2.5 dark:bg-white/10",
+        "block rounded-2xl bg-white/60 px-3.5 py-2.5 transition-colors hover:bg-white/80 dark:bg-white/10 dark:hover:bg-white/20",
         className,
       )}
     >
-      <p className="text-base text-[color:var(--v2-text-soft)]">
-        <Tri bm="Anda merekod untuk" zh="您正在记录的机构" en="You are recording for" />
+      <p className="text-sm text-[color:var(--v2-text-soft)]">
+        <Tri bm="Pertubuhan semasa" zh="当前机构" en="Current organisation" />
       </p>
       <p className="mt-0.5 flex flex-wrap items-center gap-2">
-        <span className="text-base font-semibold text-[color:var(--v2-text)]">
+        <span className="min-w-0 flex-1 truncate text-base font-semibold text-[color:var(--v2-text)]">
           {org.name}
         </span>
         {org.is_demo && (
@@ -242,8 +246,11 @@ export function OrgChip({
             DEMO
           </span>
         )}
+        <span className="text-sm text-[color:var(--v2-text-soft)]">
+          <Tri bm="Tukar" zh="切换" en="Switch" /> →
+        </span>
       </p>
-    </div>
+    </Link>
   );
 }
 

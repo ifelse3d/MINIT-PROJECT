@@ -30,10 +30,16 @@ export default function MorePage() {
       </h1>
 
       {org && (
+        // A-5 (work order 31): same wording and tap-through as the sidebar's
+        // org card — "当前机构：J · 切换 →", a link, not a dead label.
         <p className="text-base text-[color:var(--v2-text-soft)]">
-          <Tri bm="Anda merekod untuk" zh="您正在记录的机构" en="You are recording for" />
-          {": "}
-          <span className="font-semibold text-[color:var(--v2-text)]">{org.name}</span>
+          <Link href="/orgs" className="hover:underline">
+            <Tri bm="Pertubuhan semasa" zh="当前机构" en="Current organisation" />
+            {": "}
+            <span className="font-semibold text-[color:var(--v2-text)]">{org.name}</span>
+            {" · "}
+            <Tri bm="Tukar" zh="切换" en="Switch" /> →
+          </Link>
         </p>
       )}
 
@@ -69,7 +75,20 @@ export default function MorePage() {
       })}
 
       <div className="flex items-center justify-between gap-3">
-        <LanguageSwitcher />
+        <div className="flex flex-col gap-1">
+          <LanguageSwitcher />
+          {/* A-4 (work order 31): the side-by-side view exists but only the
+              settings page said so — say it where the languages are picked. */}
+          <p className="text-xs text-[color:var(--v2-text-soft)]">
+            <Link href="/settings" className="underline underline-offset-4">
+              <Tri
+                bm="Mahu ketiga-tiga bahasa serentak? Buka di Tetapan →"
+                zh="想三种语言并排显示？到「设置」打开 →"
+                en="Want all three languages at once? Turn it on in Settings →"
+              />
+            </Link>
+          </p>
+        </div>
         {email && (
           <button
             type="button"
