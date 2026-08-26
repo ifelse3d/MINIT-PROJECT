@@ -7,7 +7,7 @@ import { Tri, useTriText } from "@/components/language-provider";
 import { NextStepLink, PageSection } from "@/components/page-section";
 import { ConfidenceBadge } from "@/components/confidence-badge";
 import { FieldRow } from "./field-row";
-import { AddRowButton, DeletableRow } from "./row-controls";
+import { DeletableRow } from "./row-controls";
 import { RosterPicker } from "./roster-picker";
 import { useMinutes } from "./minutes-store";
 
@@ -48,11 +48,11 @@ export function AttendanceReview() {
     extraction,
     groups,
     nothingYet,
+    isSample,
     updateField,
     confirmField: confirm,
     editField: edit,
     markAbsent,
-    addExtractionRow,
     addNamedAttendees,
     removeExtractionRow,
     rowHasContent,
@@ -60,6 +60,41 @@ export function AttendanceReview() {
     setNoAttendeesRecorded,
     attendanceUnsettled,
   } = useMinutes();
+
+  /**
+   * D-2 (work order 31, 客⑫⑬): adding a person is TYPING A NAME, Excel-style —
+   * not "add an empty red row" (which sorted itself to the TOP of the list,
+   * into the needs-you pile, while the person was building the list from the
+   * bottom). A typed name is a human assertion, so it arrives confirmed with
+   * "entered by you" as its provenance (same standard as editField), lands at
+   * the END of the list, and the input stays put for the next name.
+   */
+  const [newName, setNewName] = useState("");
+  const addTypedAttendee = () => {
+    const v = newName.trim();
+    if (v === "") return;
+    updateField((e) => {
+      const have = new Set(
+        e.attendees.map((a) => a.name.value.trim().toLowerCase()),
+      );
+      // Typing somebody twice is a slip, not an instruction to record twice —
+      // same rule as the roster picker.
+      if (!have.has(v.toLowerCase())) {
+        e.attendees.push({
+          name: {
+            value: v,
+            confidence: "confirmed",
+            source_ref: {
+              location: t("diisi oleh anda", "由您填写", "entered by you"),
+              snippet: v,
+            },
+          },
+        });
+      }
+      return e;
+    });
+    setNewName("");
+  };
 
   /** Rows opened for editing. A clean name stays one line until tapped. */
   const [openRows, setOpenRows] = useState<Set<number>>(new Set());
@@ -334,15 +369,56 @@ export function AttendanceReview() {
             onAdd={addNamedAttendees}
           />
 
-          {/* G-3 (2026-08-25, J #14): "Tambah nama sendiri" read as "add MY
-              name" — a committee member pressed it expecting to mark
-              themselves present. It adds ANOTHER row; now it says so. */}
-          <AddRowButton
-            onClick={() => addExtractionRow("attendees")}
-            labelBm="Tambah nama lain"
-            labelZh="自己补一个名字"
-            labelEn="Add another name"
-          />
+          {/* D-2: type a name, press Enter, type the next — the row appears at
+              the END of the list and this box does not move. (Replaces the old
+              "add an empty row" button, whose blank red row jumped to the top
+              of the needs-you pile.) */}
+          {!isSample && (
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="add-attendee" className="text-base font-semibold">
+                <Tri
+                  bm="Tambah nama lain"
+                  zh="自己补名字"
+                  en="Add more names"
+                />
+              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  id="add-attendee"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addTypedAttendee();
+                    }
+                  }}
+                  maxLength={120}
+                  placeholder={t(
+                    "Taip satu nama, tekan Enter",
+                    "打一个名字，按 Enter 加入",
+                    "Type one name, press Enter",
+                  )}
+                  className="h-12 w-full max-w-md rounded-lg border border-input bg-white px-3 text-base dark:bg-transparent"
+                />
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={addTypedAttendee}
+                  disabled={newName.trim() === ""}
+                >
+                  + <Tri bm="Tambah" zh="加入" en="Add" />
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                <Tri
+                  bm="Nama baharu masuk di HUJUNG senarai; kotak ini kekal di sini — taip nama demi nama."
+                  zh="新名字会排在名单最后，这个输入格不会跳走 —— 可以一个接一个打。"
+                  en="New names join the END of the list and this box stays put — type name after name."
+                />
+              </p>
+            </div>
+          )}
         </>
       )}
 

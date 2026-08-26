@@ -39,6 +39,13 @@ const MINUTES_RECORDS = {
 export function MinutesChrome({ children }: { children: ReactNode }) {
   const t = useTriText();
   const pathname = usePathname();
+  // D-1② (work order 31, 客⑭): /minutes/history is the section's RECORDS, not
+  // a stop in the workspace — so it renders none of the workspace chrome: no
+  // step rail, no "what do I do now" banner (which happily announced "Done —
+  // saved" over a page that lists ten years of documents), no sample/storage
+  // notes. Declared before the store hooks CANNOT be — hooks must run on every
+  // render — so the early return sits after useMinutes() below.
+  const isHistory = pathname?.startsWith("/minutes/history") ?? false;
   const {
     sourceLabel,
     typedByHand,
@@ -98,6 +105,26 @@ export function MinutesChrome({ children }: { children: ReactNode }) {
               : "locked",
     },
   ];
+
+  if (isHistory) {
+    return (
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 pb-10 text-base">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-100/80 text-3xl ring-1 ring-white/60 backdrop-blur dark:bg-amber-400/15 dark:ring-white/10">
+            📝
+          </div>
+          <h1 className="text-3xl font-semibold tracking-tight">
+            <span className="v2-gradient-text">
+              <Tri bm="Minit Mesyuarat" zh="会议记录" en="Meeting Minutes" />
+            </span>
+          </h1>
+        </div>
+        <div key={pathname} className="flex flex-col gap-6">
+          {children}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 pb-10 text-base">

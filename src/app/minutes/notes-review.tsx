@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
 import { StepGroup } from "@/components/step-card";
 import { NextStepLink, PageSection } from "@/components/page-section";
+import { PageThumbs } from "@/components/page-thumbs";
 import { PdpaNote } from "@/components/pdpa-note";
 import { HowItWorksButton } from "@/app/how-it-works";
 import { formatDateLong, isIsoDate } from "@/lib/date-input";
@@ -53,6 +55,14 @@ export function NotesReview() {
     file: File;
     facts: KnownMeetingFacts;
   } | null>(null);
+  /**
+   * D-1 (work order 31, 客⑭): after a save, /minutes shows a clean "saved"
+   * card instead of the whole review wall wearing green ticks. This flag is
+   * the small way back IN — for adding a page to the saved meeting or fixing
+   * something — and it deliberately does not persist: a fresh visit to a
+   * saved workspace should always start at the card.
+   */
+  const [reopenSaved, setReopenSaved] = useState(false);
   const {
     sourceLabel,
     photoPages,
@@ -195,6 +205,55 @@ export function NotesReview() {
     </PageSection>
   );
 
+  // D-1: the clean completion card. The whole review UI (fields, preview,
+  // green ticks) stays out of sight until the person explicitly reopens it.
+  if (alreadySaved && !reopenSaved) {
+    return (
+      <PageSection
+        titleBm="Mesyuarat sebelum ini sudah disimpan ✓"
+        titleZh="上一场已存好 ✓"
+        titleEn="The last meeting is saved ✓"
+        summary={
+          <Tri
+            bm="Ia selamat dalam Sejarah pertubuhan anda. Halaman kerja ini sedia untuk mesyuarat yang seterusnya."
+            zh="它已经安全存进机构的「历史」里了。这个工作区随时可以开始记下一场。"
+            en="It is safe in your organisation's History. This workspace is ready for the next meeting."
+          />
+        }
+      >
+        <div className="flex flex-wrap items-center gap-3">
+          <Button size="lg" onClick={backToEmpty}>
+            <Tri
+              bm="Mula mesyuarat baharu"
+              zh="开始新的会议"
+              en="Start a new meeting"
+            />
+          </Button>
+          <Button asChild size="lg" variant="outline">
+            <Link href="/minutes/document">
+              <Tri
+                bm="Lihat dokumen yang siap"
+                zh="查看做好的文件"
+                en="See the finished document"
+              />
+            </Link>
+          </Button>
+        </div>
+        <button
+          type="button"
+          onClick={() => setReopenSaved(true)}
+          className="self-start text-sm text-muted-foreground underline underline-offset-4"
+        >
+          <Tri
+            bm="Perlu betulkan sesuatu atau tambah halaman untuk mesyuarat itu? Buka semula ruang kerja"
+            zh="要修改内容、或补拍同一场会议的另一页？重新打开工作区"
+            en="Need to fix something, or add another page of that meeting? Reopen the workspace"
+          />
+        </button>
+      </PageSection>
+    );
+  }
+
   return (
     <>
       <PageSection
@@ -326,6 +385,16 @@ export function NotesReview() {
             </Button>
           )}
         </div>
+        {/* D-6 (work order 31, J #22, 拍板 41): Word/Excel cannot be read yet —
+            say the PDF workaround HERE, at the gate, before somebody picks a
+            .docx and gets refused. Real conversion is Stage F. */}
+        <p className="text-sm text-muted-foreground">
+          <Tri
+            bm="Fail Word/Excel: sila simpan sebagai PDF dahulu, kemudian muat naik PDF itu (telefon: Kongsi → Cetak → Simpan sebagai PDF)."
+            zh="Word/Excel 档：请先另存为 PDF 再上传（手机：分享 → 列印 → 存成 PDF）。"
+            en="Word/Excel files: save as PDF first, then upload the PDF (on a phone: Share → Print → Save as PDF)."
+          />
+        </p>
         {/* The step between choosing a file and spending a credit on it. */}
         {pending && (
           <BeforeReading
@@ -406,46 +475,10 @@ export function NotesReview() {
             {aiError}
           </div>
         )}
-        {photoPages.length > 0 && (
-          <details className="group rounded-lg border bg-background">
-            <summary className="flex cursor-pointer list-none items-center gap-2 p-3 font-medium hover:bg-accent">
-              🖼️{" "}
-              {photoPages.length > 1 ? (
-                <Tri
-                  bm={`Lihat gambar asal (${photoPages.length} halaman)`}
-                  zh={`查看原始照片（${photoPages.length} 页）`}
-                  en={`View the original photos (${photoPages.length} pages)`}
-                />
-              ) : (
-                <Tri bm="Lihat gambar asal" zh="查看原始照片" en="View the original photo" />
-              )}
-              <span className="ml-auto text-muted-foreground transition-transform group-open:rotate-90">›</span>
-            </summary>
-            {/* I-2 (26 号报告 §3-2): EVERY merged page, labelled — checking an
-                amber field from page 1 used to open page 2's photo only. */}
-            <div className="flex flex-col gap-2 p-2">
-              {photoPages.map((p, i) => (
-                <figure key={i} className="flex flex-col gap-1">
-                  {photoPages.length > 1 && (
-                    <figcaption className="text-sm text-muted-foreground">
-                      {t(`Halaman ${i + 1}`, `第 ${i + 1} 页`, `Page ${i + 1}`)} · {p.name}
-                    </figcaption>
-                  )}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={p.dataUrl}
-                    alt={t(
-                      `Gambar asal halaman ${i + 1}`,
-                      `第 ${i + 1} 页原始照片`,
-                      `Original photo, page ${i + 1}`,
-                    )}
-                    className="max-h-[70vh] w-full rounded-lg object-contain"
-                  />
-                </figure>
-              ))}
-            </div>
-          </details>
-        )}
+        {/* D-3 (work order 31, J #8): the same look-back the money review has —
+            every uploaded page as a tappable thumbnail (shared page-thumbs.tsx),
+            instead of a fold-out stack of full-size images. */}
+        <PageThumbs pages={photoPages} />
         {/* 0-5 (2026-08-25): the old "use sample data until we go paid"
             warning dated from the free-tier days and had gone wrong — the API
             is on the PAID tier (J confirmed 8/25). Real data is allowed; what

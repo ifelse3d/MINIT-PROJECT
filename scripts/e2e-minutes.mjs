@@ -154,10 +154,19 @@ async function run() {
   await clickByText(page, "button", "自己打字");
   await new Promise((r) => setTimeout(r, 800));
 
-  // meeting type: choice editor
+  // meeting type: choice editor. NOT page.$("select"): since C-2 the shell
+  // itself carries a language <select>, so the FIRST select on the page is no
+  // longer the field editor — find the one holding the meeting types.
   const typeOk = await editRow(page, "会议类型", async () => {
-    const sel = await page.$("select");
-    if (sel) await sel.select("committee");
+    await page.evaluate(() => {
+      const sel = [...document.querySelectorAll("select")].find((s) =>
+        [...s.options].some((o) => o.value === "committee"),
+      );
+      if (!sel) return;
+      sel.value = "committee";
+      sel.dispatchEvent(new Event("input", { bubbles: true }));
+      sel.dispatchEvent(new Event("change", { bubbles: true }));
+    });
   });
   check("meeting type set", typeOk);
 
@@ -207,7 +216,11 @@ async function run() {
   await new Promise((r) => setTimeout(r, 5000));
   text = await page.evaluate(() => document.body.innerText);
   console.log("AFTER SAVE SNIPPET >>>", text.slice(0, 700).split(String.fromCharCode(10)).join(" | "));
-  check("first save reports success", saved1 && text.includes("已经保存到机构的历史"));
+  // D-1 (work order 31): a successful save walks back to /minutes (an SPA
+  // push — no page.goto here, the app did the moving) and shows the clean
+  // completion card instead of the review wall.
+  check("D-1 first save lands on /minutes with the clean saved card",
+    saved1 && page.url().replace(/\/$/, "").endsWith("/minutes") && text.includes("上一场已存好"));
 
   // press again if the button still exists (retry path); otherwise call it a
   // pass — the UI hiding the button after success is also a fine defence.
@@ -234,6 +247,13 @@ async function run() {
   } else {
     console.log("NOTE: client_id column absent (migration 20260828000000 not applied yet) — idempotency currently relies on it; run the migration.");
   }
+
+  // --- D-1②: /minutes/history is records, not workspace --------------------
+  await page.goto(`${BASE}/minutes/history`, { waitUntil: "networkidle2" });
+  await new Promise((r) => setTimeout(r, 800));
+  text = await page.evaluate(() => document.body.innerText);
+  check("D-1 history page shows no step rail and no done banner",
+    text.includes("会议记录历史") && !text.includes("拍或打字") && !text.includes("存进您机构的历史"));
 
   // --- /filings reads the CONFIRMED document from the server (S0-5) --------
   await page.goto(`${BASE}/filings`, { waitUntil: "networkidle2" });

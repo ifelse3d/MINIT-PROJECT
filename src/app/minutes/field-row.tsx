@@ -89,7 +89,14 @@ export function FieldRow({
   // there are a dozen call sites and none of them care. (2026-08-23.)
   // Stage 0-1: the worked example is read-only — no Correct/Edit/absent
   // buttons at all, rather than buttons that do nothing.
-  const { typedByHand, isSample } = useMinutes();
+  const { typedByHand, isSample, photoPages } = useMinutes();
+  /**
+   * D-3 (work order 31, J #8): which original page sits beside the editor.
+   * Set when editing starts — from the field's own source_ref where it names
+   * a page — and steppable, because "page 2, line 3" is sometimes wrong and
+   * the person needs to look at page 1 to know that.
+   */
+  const [comparePage, setComparePage] = useState(0);
 
   const isMissing = field.confidence === "missing";
 
@@ -103,6 +110,14 @@ export function FieldRow({
   const startEditing = () => {
     setDraft(field.value);
     setProblem(null);
+    // D-3: open the compare panel on the page the AI says it read from.
+    const m = field.source_ref?.location.match(
+      /(?:halaman|page)\s*(\d+)|第\s*(\d+)\s*页/i,
+    );
+    const n = m ? Number(m[1] ?? m[2]) : NaN;
+    setComparePage(
+      Number.isFinite(n) && n >= 1 && n <= photoPages.length ? n - 1 : 0,
+    );
     setEditing(true);
   };
 
@@ -283,6 +298,60 @@ export function FieldRow({
           </>
         )}
       </div>
+
+      {/* D-3 (work order 31, J #8): the ORIGINAL page, beside the editor —
+          inline above the keyboard on a phone, a floating card on the right on
+          md+ (fixed, so it stays in view while the list scrolls). Only for
+          photographed minutes: a typed sheet has no original to compare. */}
+      {editing && !typedByHand && photoPages.length > 0 && photoPages[comparePage] && (
+        <figure className="mt-1 flex flex-col gap-2 rounded-xl border-2 border-[color:var(--v2-border)] bg-[color:var(--v2-card)] p-3 md:fixed md:right-6 md:top-24 md:z-30 md:w-80 md:shadow-xl">
+          <figcaption className="flex flex-wrap items-center gap-2 text-sm font-medium">
+            🖼️{" "}
+            <Tri bm="Gambar asal" zh="原照对照" en="The original page" />
+            {photoPages.length > 1 && (
+              <span className="ml-auto inline-flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setComparePage((p) => (p + photoPages.length - 1) % photoPages.length)
+                  }
+                  className="inline-flex min-h-8 min-w-8 items-center justify-center rounded-full border border-[color:var(--v2-outline-border)] hover:bg-accent"
+                  aria-label={t("Halaman sebelum", "上一页", "Previous page")}
+                >
+                  ‹
+                </button>
+                <span className="text-sm tabular-nums text-muted-foreground">
+                  {comparePage + 1}/{photoPages.length}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setComparePage((p) => (p + 1) % photoPages.length)}
+                  className="inline-flex min-h-8 min-w-8 items-center justify-center rounded-full border border-[color:var(--v2-outline-border)] hover:bg-accent"
+                  aria-label={t("Halaman seterusnya", "下一页", "Next page")}
+                >
+                  ›
+                </button>
+              </span>
+            )}
+          </figcaption>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={photoPages[comparePage].dataUrl}
+            alt={t(
+              `Gambar asal halaman ${comparePage + 1}`,
+              `第 ${comparePage + 1} 页原始照片`,
+              `Original photo, page ${comparePage + 1}`,
+            )}
+            className="max-h-72 w-full rounded-lg bg-black/5 object-contain"
+          />
+          {field.source_ref && (
+            <p className="text-xs text-muted-foreground">
+              <Tri bm="AI baca di" zh="AI 读到的位置" en="The AI read this at" />{" "}
+              {field.source_ref.location}
+            </p>
+          )}
+        </figure>
+      )}
 
       {/* What Minit understood, in words, BEFORE it is saved. 2/2/2026 and
           3/12/2026 are both day-first here (the Malaysian convention) and no

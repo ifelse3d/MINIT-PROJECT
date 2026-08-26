@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ConfidenceBadge } from "@/components/confidence-badge";
 import { Tri } from "@/components/language-provider";
@@ -64,6 +65,7 @@ export function MinutesDocument() {
   // one a secretary actually finishes a meeting on — made them drag-select the
   // text by hand. Same paste pack, same helper, same behaviour now.
   const [copiedEroses, setCopiedEroses] = useState<string | null>(null);
+  const router = useRouter();
 
   async function copyErosesValue(field: string, value: string) {
     try {
@@ -295,7 +297,14 @@ export function MinutesDocument() {
             <div className="flex flex-wrap items-center gap-3">
               <Button
                 size="lg"
-                onClick={saveToHistory}
+                onClick={async () => {
+                  // D-1 (work order 31, 客⑭): a successful save ENDS the
+                  // sitting — back to /minutes, which shows the clean "saved"
+                  // card. router.push is an SPA move: the layout (and the
+                  // saved mark it holds) stays mounted.
+                  const ok = await saveToHistory();
+                  if (ok) router.push("/minutes");
+                }}
                 // Neither the example nor an empty page may enter a real
                 // organisation's audit trail — hence isReal, not !isSample.
                 // `alreadySaved`: THIS document is stored; a second press

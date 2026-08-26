@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
 import { ExtractionTable } from "@/components/extraction-table";
 import { NextStepLink, PageSection } from "@/components/page-section";
+import { PageThumbs } from "@/components/page-thumbs";
 import { PdpaNote } from "@/components/pdpa-note";
 import { HowItWorksButton } from "@/app/how-it-works";
 import { sampleLedgerExtraction } from "@/lib/sample-ledger";
@@ -61,8 +62,8 @@ export function LedgerReview() {
    * waits here until the person answers "same ledger, or a new page?".
    */
   const [askWhichPage, setAskWhichPage] = useState<File | null>(null);
-  /** B-5③: which uploaded page is open full-size (index into ledgerPages). */
-  const [viewPage, setViewPage] = useState<number | null>(null);
+  // B-5③'s "which page is open full-size" state moved into the shared
+  // PageThumbs component (D-3) along with the viewer it drove.
   /**
    * B-5④: a freshly picked photo waits HERE until the person says whether the
    * page records INCOME or SPENDING. A tester photographed a shopping receipt
@@ -421,76 +422,9 @@ export function LedgerReview() {
 
         {/* B-5③ (J #14): every page already read into this review, as
             thumbnails — so a multi-page upload can be looked back at instead
-            of trusting memory about what page 2 was. */}
-        {ledgerPages.length > 0 && !isSampleLedger && (
-          <div className="flex flex-wrap items-center gap-2">
-            {ledgerPages.map((p, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => setViewPage(i)}
-                className="flex w-24 flex-col items-center gap-1 rounded-lg border border-[color:var(--v2-outline-border)] bg-white/60 p-1.5 hover:bg-accent dark:bg-white/5"
-                title={p.name}
-              >
-                {p.dataUrl ? (
-                  // A data: URL from the user's own device — next/image cannot
-                  // optimise it and would only add wrapper cost.
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={p.dataUrl}
-                    alt={p.name}
-                    className="h-16 w-full rounded object-cover"
-                  />
-                ) : (
-                  <span className="flex h-16 w-full items-center justify-center rounded bg-muted text-2xl">
-                    📄
-                  </span>
-                )}
-                <span className="w-full truncate text-xs text-muted-foreground">
-                  {t("muka", "第", "p.")} {i + 1} · {p.name}
-                </span>
-              </button>
-            ))}
-            <span className="text-sm text-muted-foreground">
-              <Tri
-                bm="Tekan untuk lihat semula"
-                zh="点一下可以回看"
-                en="Tap to look back at a page"
-              />
-            </span>
-          </div>
-        )}
-        {viewPage !== null && ledgerPages[viewPage] && (
-          <div
-            className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-black/70 p-4"
-            role="dialog"
-            aria-modal="true"
-            onClick={() => setViewPage(null)}
-          >
-            <p className="max-w-full truncate text-sm font-medium text-white">
-              {ledgerPages[viewPage].name}
-            </p>
-            {ledgerPages[viewPage].dataUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={ledgerPages[viewPage].dataUrl}
-                alt={ledgerPages[viewPage].name}
-                className="max-h-[80vh] max-w-full rounded-lg object-contain"
-              />
-            ) : (
-              <p className="rounded-lg bg-white/90 p-6 text-base">
-                <Tri
-                  bm="Fail PDF — pratonton tidak tersedia di sini."
-                  zh="这是 PDF 文件 —— 这里没有预览。"
-                  en="A PDF file — no preview here."
-                />
-              </p>
-            )}
-            <Button size="lg" variant="secondary" onClick={() => setViewPage(null)}>
-              <Tri bm="Tutup" zh="关闭" en="Close" />
-            </Button>
-          </div>
-        )}
+            of trusting memory about what page 2 was. Shared with the minutes
+            flow since D-3 (page-thumbs.tsx). */}
+        {!isSampleLedger && <PageThumbs pages={ledgerPages} />}
 
         {/* 0-5: the paid-tier privacy notice beside the upload door. */}
         <PdpaNote />

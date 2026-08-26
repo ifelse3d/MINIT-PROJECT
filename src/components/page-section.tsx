@@ -85,18 +85,33 @@ export function NextStepLink({
       </p>
     );
   }
+  if (back) {
+    return (
+      <Link
+        href={href}
+        className="inline-flex items-center gap-2 self-start text-base text-muted-foreground underline underline-offset-4"
+      >
+        <ArrowLeft aria-hidden className="size-4" strokeWidth={2.4} />
+        <Tri bm={labelBm} zh={labelZh} en={labelEn} />
+      </Link>
+    );
+  }
+  // D-5 (work order 31, 客⑪): the button itself says "Next" — a sentence like
+  // "On to who attended" made every forward button a different shape to scan.
+  // The sentence survives as the small line underneath: it still says where
+  // the tap goes, it just stops being the label.
   return (
     <Link
       href={href}
-      className={
-        back
-          ? "inline-flex items-center gap-2 self-start text-base text-muted-foreground underline underline-offset-4"
-          : "inline-flex min-h-11 items-center gap-2 self-start rounded-full bg-primary px-5 text-base font-medium text-primary-foreground shadow hover:bg-primary/90 active:scale-95"
-      }
+      className="inline-flex min-h-12 flex-col items-start gap-0.5 self-start rounded-2xl bg-primary px-5 py-2.5 text-primary-foreground shadow hover:bg-primary/90 active:scale-95"
     >
-      {back && <ArrowLeft aria-hidden className="size-4" strokeWidth={2.4} />}
-      <Tri bm={labelBm} zh={labelZh} en={labelEn} />
-      {!back && <ArrowRight aria-hidden className="size-5" strokeWidth={2.4} />}
+      <span className="inline-flex items-center gap-2 text-base font-semibold">
+        <Tri bm="Seterusnya" zh="下一步" en="Next" />
+        <ArrowRight aria-hidden className="size-5" strokeWidth={2.4} />
+      </span>
+      <span className="text-sm font-normal opacity-90">
+        <Tri bm={labelBm} zh={labelZh} en={labelEn} />
+      </span>
     </Link>
   );
 }

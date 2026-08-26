@@ -247,7 +247,9 @@ export type MinutesStore = {
    * save, which is correct.
    */
   alreadySaved: boolean;
-  saveToHistory: () => Promise<void>;
+  /** Resolves true when the document reached History — D-1: the caller then
+   *  walks back to /minutes (SPA push, the layout stays mounted). */
+  saveToHistory: () => Promise<boolean>;
 
   // --- eROSES + calendar ---------------------------------------------------
   pastePack: ReturnType<typeof buildPastePack>;
@@ -1010,10 +1012,12 @@ export function MinutesProvider({
       });
       setSaveResult(result.ok ? "ok" : result.error ?? "error");
       if (result.ok) setSavedFor(extraction);
+      return result.ok === true;
     } catch {
       setSaveResult(
         "Tidak berjaya disimpan — cuba lagi / 没有保存成功 —— 请再试一次 / Could not save — try again",
       );
+      return false;
     } finally {
       setSaveBusy(false);
     }

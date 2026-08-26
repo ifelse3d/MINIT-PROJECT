@@ -117,8 +117,15 @@ export function SectionTabs({
                   <Lock aria-hidden className="size-4 shrink-0" strokeWidth={2.4} />
                 )}
                 {tab.status === "needs-you" && typeof tab.count === "number" && tab.count > 0 && (
-                  <span className="rounded-full bg-amber-900/10 px-2 text-sm font-bold">
-                    {tab.count}
+                  // D-4 (work order 31, 客⑩): a solid badge that SAYS what the
+                  // number is. The old faint circle with a bare digit read as
+                  // decoration, not as "3 things are waiting for you".
+                  <span className="rounded-full bg-amber-700 px-2 py-0.5 text-sm font-bold text-white dark:bg-amber-400 dark:text-black">
+                    {t(
+                      `${tab.count} untuk disemak`,
+                      `${tab.count} 项待核对`,
+                      `${tab.count} to check`,
+                    )}
                   </span>
                 )}
               </Link>
