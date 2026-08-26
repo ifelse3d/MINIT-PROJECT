@@ -12,8 +12,16 @@
 // scrollback, a screenshot, or a chat log.
 import fs from "node:fs";
 import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
-const ENV = String.raw`C:\dev\minit\.env.local`;
+// 2026-08-26: this was hardcoded to C:\dev\minit — the OLD tree. Double-clicked
+// from minit-v2 it copied the OLD project's .env.local (old Supabase project
+// ivsqiycvahcevzgokgvc) onto the clipboard, and pasting that into Vercel would
+// have deployed a site talking to the wrong database while looking perfectly
+// normal. Identical to the bug already fixed in check-migrations.mjs — this
+// script was missed. Resolved relative to this file so it always reads the
+// tree it lives in.
+const ENV = fileURLToPath(new URL("../.env.local", import.meta.url));
 
 let text;
 try {
