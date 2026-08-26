@@ -26,6 +26,7 @@ import { canDecideClaim, canSubmitClaim, type ExpenseStatus } from "@/lib/claims
 import { formatRm } from "@/lib/minutes-draft";
 import { parseRmToCents } from "@/lib/receipts";
 import { dayIsoMalaysia } from "@/lib/history";
+import { consumeExpensePhoto } from "@/lib/expense-handoff";
 import type { ExpenseExtraction } from "@/lib/extraction";
 import {
   decideClaim,
@@ -111,6 +112,19 @@ export function ExpensesView({ role }: { role: string }) {
   // --- the photo reader (pre-fills the form; the human confirms by saving) --
   const [reading, setReading] = useState(false);
   const [readNote, setReadNote] = useState<string | null>(null);
+
+  // B-5④: the ledger page's "this is spending" answer sends its photo here.
+  // It waits behind an explicit, priced button — never read automatically.
+  const [handedPhoto, setHandedPhoto] = useState<File | null>(null);
+  useEffect(() => {
+    // Deferred a tick: the hand-off is an external (module-level) mailbox and
+    // the read must happen once after mount, not during the render pass.
+    const id = setTimeout(() => {
+      const file = consumeExpensePhoto();
+      if (file) setHandedPhoto(file);
+    }, 0);
+    return () => clearTimeout(id);
+  }, []);
 
   async function readReceipt(file: File | null) {
     if (!file || reading) return;
@@ -325,6 +339,39 @@ export function ExpensesView({ role }: { role: string }) {
                 >
                   <Tri bm="Tuntutan saya sendiri" zh="我自己的报销" en="My own claim" />
                 </Button>
+              </div>
+            )}
+
+            {/* B-5④: the photo that came over from the ledger page. */}
+            {handedPhoto && (
+              <div className="flex flex-col gap-2 rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-base text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+                <p className="font-medium">
+                  📷{" "}
+                  <Tri
+                    bm={`Gambar dari halaman lejar dibawa ke sini: ${handedPhoto.name}`}
+                    zh={`刚才在读账页选「这是开支」的那张照片带过来了：${handedPhoto.name}`}
+                    en={`The photo from the ledger page came along: ${handedPhoto.name}`}
+                  />
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    disabled={reading}
+                    onClick={() => {
+                      const file = handedPhoto;
+                      setHandedPhoto(null);
+                      void readReceipt(file);
+                    }}
+                  >
+                    <Tri
+                      bm="Baca resit ini (1 tindakan AI)"
+                      zh="读取这张单据（用 1 次 AI 额度）"
+                      en="Read this receipt (1 AI action)"
+                    />
+                  </Button>
+                  <Button variant="ghost" onClick={() => setHandedPhoto(null)}>
+                    <Tri bm="Tidak perlu" zh="不用了" en="No need" />
+                  </Button>
+                </div>
               </div>
             )}
 

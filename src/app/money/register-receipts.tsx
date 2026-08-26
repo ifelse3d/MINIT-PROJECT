@@ -17,6 +17,7 @@ import {
 import { formatRm } from "@/lib/minutes-draft";
 import { maskName } from "@/lib/mask";
 import { downloadFromApi } from "@/lib/download-file";
+import { chooseReceiptPrefix } from "./actions";
 import { DonationEditor } from "./donation-editor";
 import { ManualIncomeForm } from "./manual-income";
 import { TypeDonations } from "./type-donations";
@@ -53,6 +54,7 @@ export function RegisterAndReceipts() {
     registerCollector,
     receiptsIssued,
     cashInHandCents,
+    unreceipted: unreceiptedCount,
     saveDonation,
     deleteDonation,
     addManualDonation,
@@ -60,15 +62,22 @@ export function RegisterAndReceipts() {
     issueReceipts,
     issueBusy,
     issueNotice,
+    setIssueNotice,
     setError,
     onLedgerPicked,
     aiBusy,
   } = useRegister();
 
   const [editingId, setEditingId] = useState<string | null>(null);
-  // PDPA (Hard Rule 5): donor names are MASKED by default in list views.
-  // The toggle reveals them only for the current visit — never persisted.
-  const [showNames, setShowNames] = useState(false);
+  // D18 (拍板 35, 2026-08-27): names show IN FULL by default — the treasurer
+  // typed them, and a record system must show whose record it is. "Hide
+  // names" is for the moments the screen faces OUTWARD (print, share,
+  // screenshot); never persisted.
+  const [showNames, setShowNames] = useState(true);
+  // B-4①: the receipt-letters dialog (issueNotice === "needs_prefix").
+  const [prefixInput, setPrefixInput] = useState("");
+  const [prefixBusy, setPrefixBusy] = useState(false);
+  const [prefixError, setPrefixError] = useState<string | null>(null);
   // R-5 (2026-08-25): a temple event is forty rows. At ≥8 the card grid turns
   // into a compact LIST with search and batch selection — a register is a
   // ledger, not a photo album.
@@ -180,82 +189,119 @@ export function RegisterAndReceipts() {
           {/* Issuing receipts is IRREVERSIBLE: it locks every amount and
               burns a block of sequential numbers that can never be reused.
               So the button asks once before it fires. */}
-          {!receiptsIssued && !confirmIssue && (
+          {!receiptsIssued && (
             <Button
               onClick={() => setConfirmIssue(true)}
               size="lg"
               className="text-base"
               disabled={issueBusy}
             >
-              <Tri bm="Jana resit berurutan" zh="生成正式收据" en="Issue receipts" />
+              {issueBusy ? (
+                <Tri bm="Menjana…" zh="生成中…" en="Issuing…" />
+              ) : (
+                <Tri bm="Jana resit berurutan" zh="生成正式收据" en="Issue receipts" />
+              )}
             </Button>
           )}
+          {/* B-4② (J #15): the second confirmation stays (numbers are legal
+              and non-reusable) but is ONE clear dialog now, not a yellow box
+              stacking buttons into the page. */}
           {!receiptsIssued && confirmIssue && (
-            <div className="flex flex-col gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3">
-              <p className="text-sm text-amber-900">
-                <Tri
-                  bm="Nombor resit tidak boleh dibatalkan atau diubah selepas ini, dan jumlah wang akan dikunci. Teruskan?"
-                  zh="收据编号一经生成即无法取消或修改，金额也将锁定。确定继续吗？"
-                  en="Receipt numbers cannot be cancelled or changed afterwards, and the amounts are locked. Continue?"
-                />
-              </p>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  size="lg"
-                  className="text-base"
-                  disabled={issueBusy}
-                  onClick={() => {
-                    setConfirmIssue(false);
-                    void issueReceipts();
-                  }}
-                >
-                  {issueBusy ? (
-                    <Tri bm="Menjana…" zh="生成中…" en="Issuing…" />
-                  ) : (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+              role="dialog"
+              aria-modal="true"
+            >
+              <div className="flex w-full max-w-md flex-col gap-3 rounded-2xl border bg-background p-5 shadow-xl">
+                <p className="text-lg font-semibold">
+                  <Tri
+                    bm={`Jana resit untuk ${unreceiptedCount} derma?`}
+                    zh={`要为 ${unreceiptedCount} 笔捐款生成收据吗？`}
+                    en={`Issue receipts for ${unreceiptedCount} donation(s)?`}
+                  />
+                </p>
+                <p className="text-base text-muted-foreground">
+                  <Tri
+                    bm="Setiap resit dapat nombor berurutan yang kekal. Selepas ini nombor tidak boleh dibatalkan atau diubah, dan jumlah wang dikunci untuk audit."
+                    zh="每张收据会拿到一个永久的顺序编号。生成之后编号无法取消或修改，金额也会锁定以供审计。"
+                    en="Each receipt gets a permanent sequential number. Afterwards the numbers cannot be cancelled or changed, and the amounts are locked for the audit trail."
+                  />
+                </p>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="text-base"
+                    disabled={issueBusy}
+                    onClick={() => setConfirmIssue(false)}
+                  >
+                    <Tri bm="Batal" zh="取消" en="Cancel" />
+                  </Button>
+                  <Button
+                    size="lg"
+                    className="text-base"
+                    disabled={issueBusy}
+                    onClick={() => {
+                      setConfirmIssue(false);
+                      void issueReceipts();
+                    }}
+                  >
                     <Tri bm="Ya, jana resit" zh="是，生成收据" en="Yes, issue receipts" />
-                  )}
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="text-base"
-                  disabled={issueBusy}
-                  onClick={() => setConfirmIssue(false)}
-                >
-                  <Tri bm="Batal" zh="取消" en="Cancel" />
-                </Button>
+                  </Button>
+                </div>
               </div>
             </div>
           )}
           <Link href="/money/history" className="text-sm underline underline-offset-4">
             <Tri bm="Sejarah resit" zh="收据历史" en="Receipt history" /> →
           </Link>
-          {/* PDPA: names masked by default; reveal is a deliberate tap */}
+          {/* D18 (拍板 35): full names show by default — the treasurer typed
+              them. Hiding is for the moments the screen faces OUTWARD:
+              printing, sharing, a screenshot over a shoulder. */}
           <Button variant="outline" size="sm" onClick={() => setShowNames((v) => !v)}>
             {showNames ? (
-              <Tri bm="🙈 Sorok nama" zh="隐藏姓名" en="Hide names" />
+              <Tri
+                bm="🙈 Sorok nama (untuk cetak/kongsi)"
+                zh="隐藏姓名（打印/分享时用）"
+                en="Hide names (for print/share)"
+              />
             ) : (
-              <Tri bm="👁 Tunjuk nama" zh="显示姓名" en="Show names" />
+              <Tri bm="👁 Tunjuk nama semula" zh="恢复显示姓名" en="Show names again" />
             )}
           </Button>
           {!showNames && (
             <span className="text-sm text-muted-foreground">
               <Tri
-                bm="Nama penderma disorok untuk melindungi privasi mereka"
-                zh="为保护捐款人隐私，姓名已隐藏"
-                en="Donor names are hidden to protect their privacy"
+                bm="Nama disorok — selepas berkongsi, tekan sekali lagi untuk memaparkannya semula."
+                zh="姓名已隐藏 —— 分享完再点一下就恢复。"
+                en="Names hidden — after sharing, tap again to bring them back."
               />
             </span>
           )}
         </div>
         {issueNotice === "saved" && (
-          <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-800">
-            <Tri
-              bm="Resit disimpan ke sejarah pertubuhan"
-              zh="收据已保存到组织历史"
-              en="Receipts saved to the organisation's history"
-            />
-          </p>
+          /* B-4④ (J #16): after the numbers land, say what happens NEXT —
+             the tester issued a receipt and then stared at the page. */
+          <div className="flex flex-col gap-1.5 rounded-xl border-2 border-green-400 bg-green-50 p-3 text-base text-green-900 dark:bg-green-400/10 dark:text-green-100">
+            <p className="font-medium">
+              ✓{" "}
+              <Tri
+                bm="Resit disimpan ke sejarah pertubuhan"
+                zh="收据已保存到组织历史"
+                en="Receipts saved to the organisation's history"
+              />
+            </p>
+            <p className="text-sm">
+              <Tri
+                bm="Seterusnya: setiap kad di bawah ada butang “Muat turun resit” dan “Hantar WhatsApp” untuk penderma itu. Tunai yang diterima — pergi rekod simpanannya:"
+                zh="下一步：下面每张卡片上都有「下载收据」和「用 WhatsApp 发送」按钮，可以发给捐款人。收的是现金的 —— 去记现金保管："
+                en="Next: every card below has “Download receipt” and “Send on WhatsApp” for that donor. Cash you received — go record its custody:"
+              />{" "}
+              <Link href="/money/custody" className="font-medium underline underline-offset-4">
+                <Tri bm="Rekod simpanan tunai" zh="现金保管记录" en="Cash custody record" /> →
+              </Link>
+            </p>
+          </div>
         )}
         {issueNotice === "local" && (
           <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
@@ -277,30 +323,142 @@ export function RegisterAndReceipts() {
             />
           </p>
         )}
+        {/* B-4① (J #12): the receipt-letters choice happens HERE, in one
+            dialog — no more trip to Settings that testers never came back
+            from. Explains what the letters ARE, takes the letters, done. */}
         {issueNotice === "needs_prefix" && (
-          <div className="flex flex-col gap-2 rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-base text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
-            <p className="font-medium">
-              <Tri
-                bm="Sebelum resit pertama: pilih huruf resit pertubuhan anda dahulu (contoh: PSH-2026-0001). Setiap cawangan perlu huruf sendiri supaya resit menunjukkan siapa yang mengeluarkannya. Selepas resit pertama, huruf itu dikunci."
-                zh="开第一张收据之前：请先为您的机构选一组收据字母（例如 PSH-2026-0001）。每个分会要有自己的字母，收据才看得出是谁开的。开出第一张之后，字母就不能再改了。"
-                en="Before the first receipt: choose your organisation's receipt letters (e.g. PSH-2026-0001). Each branch needs its own letters so a receipt shows who issued it. After the first receipt they are locked."
-              />
-            </p>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button size="lg" className="text-base" asChild>
-                <Link href="/settings">
-                  <Tri bm="Pilih huruf di Tetapan" zh="去设置选字母" en="Choose letters in Settings" />
-                </Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="text-base"
-                disabled={issueBusy}
-                onClick={() => void issueReceipts({ acceptDefaultPrefix: true })}
-              >
-                <Tri bm="Guna 'MIN' sahaja" zh="就用 MIN 继续" en="Continue with 'MIN'" />
-              </Button>
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="flex w-full max-w-lg flex-col gap-3 rounded-2xl border bg-background p-5 shadow-xl">
+              <p className="text-lg font-semibold">
+                <Tri
+                  bm="Sebelum resit pertama: pilih huruf resit anda"
+                  zh="开第一张收据之前：先选收据字母"
+                  en="Before the first receipt: choose your receipt letters"
+                />
+              </p>
+              <p className="text-base text-muted-foreground">
+                <Tri
+                  bm="Huruf ini ialah PANGKAL nombor resit — contoh: huruf PSH memberi resit PSH-2026-0001. Setiap cawangan perlu huruf sendiri supaya resit menunjukkan siapa yang mengeluarkannya. Selepas resit pertama dikeluarkan, huruf itu dikunci dan tidak boleh diubah lagi."
+                  zh="这组字母是收据编号的开头 —— 例如选 PSH，收据就是 PSH-2026-0001。每个分会要有自己的字母，收据才看得出是谁开的。开出第一张之后，字母就锁定，不能再改。"
+                  en="These letters are the START of every receipt number — e.g. choosing PSH gives PSH-2026-0001. Each branch needs its own letters so a receipt shows who issued it. After the first receipt they are locked and cannot change."
+                />
+              </p>
+              <label className="flex flex-col gap-1">
+                <span className="text-base font-semibold">
+                  <Tri
+                    bm="Huruf anda (2–8 huruf/angka)"
+                    zh="您的字母（2–8 个字母或数字）"
+                    en="Your letters (2–8 letters/digits)"
+                  />
+                </span>
+                <input
+                  value={prefixInput}
+                  onChange={(e) => {
+                    setPrefixInput(e.target.value.toUpperCase());
+                    setPrefixError(null);
+                  }}
+                  placeholder="PSH"
+                  maxLength={8}
+                  className="w-40 rounded-md border border-input bg-background px-3 py-2 font-mono text-lg uppercase shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </label>
+              {prefixInput && (
+                <p className="text-sm text-muted-foreground">
+                  <Tri bm="Contoh resit" zh="收据示例" en="Example receipt" />:{" "}
+                  <span className="font-mono">
+                    {prefixInput}-{new Date().getFullYear()}-0001
+                  </span>
+                </p>
+              )}
+              {prefixError && (
+                <p className="rounded-md bg-red-50 px-3 py-2 text-sm font-medium text-red-800">
+                  {prefixError}
+                </p>
+              )}
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <Button
+                  size="lg"
+                  variant="ghost"
+                  className="text-base"
+                  disabled={prefixBusy}
+                  onClick={() => {
+                    setIssueNotice(null);
+                    setPrefixError(null);
+                  }}
+                >
+                  <Tri bm="Nanti dahulu" zh="先不要" en="Not now" />
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="text-base"
+                  disabled={issueBusy || prefixBusy}
+                  onClick={() => void issueReceipts({ acceptDefaultPrefix: true })}
+                >
+                  <Tri bm="Guna 'MIN' sahaja" zh="就用 MIN 继续" en="Continue with 'MIN'" />
+                </Button>
+                <Button
+                  size="lg"
+                  className="text-base"
+                  disabled={prefixBusy || prefixInput.trim() === ""}
+                  onClick={() => {
+                    void (async () => {
+                      setPrefixBusy(true);
+                      setPrefixError(null);
+                      try {
+                        const result = await chooseReceiptPrefix(prefixInput);
+                        if (result.ok) {
+                          setIssueNotice(null);
+                          // The prefix is set — issue with the letters chosen.
+                          await issueReceipts();
+                          return;
+                        }
+                        setPrefixError(
+                          result.reason === "invalid"
+                            ? t(
+                                "Huruf tidak sah — mula dengan huruf, 2 hingga 8 huruf/angka. Contoh: PSH, KLG2.",
+                                "字母无效 —— 要以字母开头，共 2 到 8 个字母或数字。例如：PSH、KLG2。",
+                                "Not valid — start with a letter, 2 to 8 letters/digits. Examples: PSH, KLG2.",
+                              )
+                            : result.reason === "not_admin"
+                              ? t(
+                                  "Hanya pentadbir pertubuhan boleh menetapkan huruf ini. Minta pentadbir membuatnya di Tetapan — atau teruskan dengan 'MIN'.",
+                                  "只有机构管理员能设定这组字母。请管理员在设置里设定 —— 或者先用 MIN 继续。",
+                                  "Only an organisation admin can set these letters. Ask an admin to set them in Settings — or continue with 'MIN'.",
+                                )
+                              : result.reason === "frozen"
+                                ? t(
+                                    "Resit sudah wujud, jadi huruf telah dikunci.",
+                                    "已经开过收据，字母已锁定。",
+                                    "Receipts already exist, so the letters are locked.",
+                                  )
+                                : t(
+                                    "Tidak berjaya disimpan. Cuba lagi.",
+                                    "没能保存，请再试一次。",
+                                    "Could not be saved. Try again.",
+                                  ),
+                        );
+                      } finally {
+                        setPrefixBusy(false);
+                      }
+                    })();
+                  }}
+                >
+                  {prefixBusy ? (
+                    <Tri bm="Menyimpan…" zh="保存中…" en="Saving…" />
+                  ) : (
+                    <Tri
+                      bm="Guna huruf ini & jana resit"
+                      zh="用这组字母开收据"
+                      en="Use these letters & issue"
+                    />
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         )}

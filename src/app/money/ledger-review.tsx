@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
 import { ExtractionTable } from "@/components/extraction-table";
@@ -16,7 +16,9 @@ import {
   parseRmToCents,
 } from "@/lib/receipts";
 import { formatRm } from "@/lib/minutes-draft";
+import { handExpensePhoto } from "@/lib/expense-handoff";
 import { PaymentMethodToggle } from "./payment-method-toggle";
+import { TypeDonations } from "./type-donations";
 import { useRegister } from "./register-store";
 
 // ---------------------------------------------------------------------------
@@ -47,7 +49,10 @@ export function LedgerReview() {
     addConfirmedRowsToRegister,
     rowsReadyToAdd,
     donations,
+    addManualDonations,
+    registerCollector,
   } = useRegister();
+  const router = useRouter();
 
   /**
    * 0-1 (26 号报告 2-1): a photo taken while everything on screen is ALREADY
@@ -58,6 +63,15 @@ export function LedgerReview() {
   const [askWhichPage, setAskWhichPage] = useState<File | null>(null);
   /** B-5③: which uploaded page is open full-size (index into ledgerPages). */
   const [viewPage, setViewPage] = useState<number | null>(null);
+  /**
+   * B-5④: a freshly picked photo waits HERE until the person says whether the
+   * page records INCOME or SPENDING. A tester photographed a shopping receipt
+   * on this page and it became a "BUY MATERIAL" donation with a real receipt
+   * number — the one question below is what prevents that.
+   */
+  const [askDirection, setAskDirection] = useState<File | null>(null);
+  /** B-5①: the in-page typing grid (no more jump to another page). */
+  const [typingOpen, setTypingOpen] = useState(false);
   const pageFullyRecorded =
     !isSampleLedger && ledgerPageFullyRecorded(ledger.rows, addedRows);
   // I-1 (26 号报告 §3-1): a review still in progress gets its own question —
@@ -66,9 +80,15 @@ export function LedgerReview() {
   // copies issued two serial receipts for one donation.
   const reviewInProgress =
     !isSampleLedger && ledgerSourceLabel !== null && ledger.rows.length > 0;
-  /** Route one picked file: ask first whenever rows are already on screen. */
+  /** B-5④: every picked file answers "income or spending?" first. */
   function pickLedgerFile(file: File | null) {
     if (!file) return;
+    setAskDirection(file);
+  }
+
+  /** The person said INCOME — continue to the existing which-page routing. */
+  function proceedAsIncome(file: File) {
+    setAskDirection(null);
     if (pageFullyRecorded || reviewInProgress) {
       setAskWhichPage(file);
       return;
@@ -195,11 +215,13 @@ export function LedgerReview() {
             </label>
           )}
           {/* G-1 (2026-08-25): typing is a first-class way in, beside the
-              camera — same three doors as /minutes. It lands on the typing
-              grid already open (?taip=1). */}
+              camera — same three doors as /minutes.
+              B-5① (J #13): it no longer JUMPS to another page — the typing
+              grid opens right here, and "add to register" follows naturally. */}
           {!aiBusy && (
-            <Link
-              href="/money/receipts?taip=1"
+            <button
+              type="button"
+              onClick={() => setTypingOpen((v) => !v)}
               // K-4: whitespace-nowrap — at 360px the label used to break
               // inside 「自己打字」. The button row is flex-wrap, so the
               // whole button wraps as a unit instead.
@@ -211,7 +233,7 @@ export function LedgerReview() {
                 zh="没有纸张 —— 自己打字"
                 en="No paper — type it in"
               />
-            </Link>
+            </button>
           )}
           <span className="text-sm text-muted-foreground">
             {ledgerSourceLabel ? (
@@ -232,6 +254,79 @@ export function LedgerReview() {
           </span>
         </div>
 
+        {/* B-5① (J #13): the typing grid, IN PLACE. Rows land in the register
+            through the same store the receipts page reads. */}
+        {typingOpen && !aiBusy && (
+          <TypeDonations
+            onAddMany={addManualDonations}
+            defaultCollector={registerCollector}
+            defaultOpen
+          />
+        )}
+
+        {/* B-5④: income or spending? Asked BEFORE any AI action, so a
+            shopping receipt can never become somebody's donation. */}
+        {askDirection && !aiBusy && (
+          <div className="flex flex-col gap-3 rounded-xl border-2 border-amber-300 bg-amber-50 p-4 dark:bg-amber-400/10">
+            <p className="text-base font-medium text-amber-900 dark:text-amber-100">
+              <Tri
+                bm="Sebelum dibaca: halaman ini merekod WANG MASUK atau WANG KELUAR?"
+                zh="读取之前先确认：这一页记的是收入，还是开支？"
+                en="Before it is read: does this page record money IN, or money OUT?"
+              />
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                size="lg"
+                onClick={() => {
+                  const file = askDirection;
+                  if (file) proceedAsIncome(file);
+                }}
+              >
+                💰{" "}
+                <Tri
+                  bm="Wang masuk (derma / kutipan) — baca"
+                  zh="收入（捐款/收款）—— 读取"
+                  en="Money in (donations / collections) — read it"
+                />
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={() => {
+                  const file = askDirection;
+                  setAskDirection(null);
+                  if (file) handExpensePhoto(file);
+                  // The photo travels along in memory; the expenses page
+                  // offers to read it there (cost said on that button).
+                  router.push("/money/expenses");
+                }}
+              >
+                🧾{" "}
+                <Tri
+                  bm="Wang keluar (belian / bil) — ke halaman perbelanjaan"
+                  zh="开支（买东西/付账）—— 去开支页"
+                  en="Money out (purchases / bills) — to the expenses page"
+                />
+              </Button>
+              <button
+                type="button"
+                className="text-base text-muted-foreground underline underline-offset-4"
+                onClick={() => setAskDirection(null)}
+              >
+                <Tri bm="Batal" zh="先不要" en="Cancel" />
+              </button>
+            </div>
+            <p className="text-sm text-amber-900/80 dark:text-amber-100/80">
+              <Tri
+                bm="Kenapa ditanya: resit belian yang terbaca sebagai derma akan mendapat nombor resit rasmi — itu rekod yang salah."
+                zh="为什么要问：购物单如果被当成捐款读进来，会拿到正式收据号码 —— 那是错的记录。"
+                en="Why this is asked: a purchase receipt read in as a donation would get an official receipt number — a wrong record."
+              />
+            </p>
+          </div>
+        )}
+
         {/* 0-1 + I-1 (26 号报告 2-1 & §3-1): which ledger page is this photo?
             Two situations, one panel: everything already recorded (0-1) asks
             "new page or more of it"; a review mid-check (I-1) asks "retake
@@ -240,17 +335,19 @@ export function LedgerReview() {
         {askWhichPage && !aiBusy && (
           <div className="flex flex-col gap-3 rounded-xl border-2 border-amber-300 bg-amber-50 p-4 dark:bg-amber-400/10">
             <p className="text-base font-medium text-amber-900 dark:text-amber-100">
+              {/* B-5③: say it like a person would — the old wording assumed
+                  the reader knew what "the review" was. */}
               {pageFullyRecorded ? (
                 <Tri
-                  bm="Semua baris di skrin ini sudah masuk buku daftar. Gambar baharu ini —"
-                  zh="现在画面上的每一行都已经入了登记簿。这张新照片是 ——"
-                  en="Every row on screen is already in the register. This new photo is —"
+                  bm="Semua baris di skrin sudah masuk buku daftar. Gambar baharu ini halaman lejar yang BAHARU, atau sambungan halaman tadi?"
+                  zh="画面上的每一行都已经入了登记簿。这张新照片，是新的一页帐，还是刚才那页的后续？"
+                  en="Every row on screen is already in the register. Is this new photo a NEW ledger page, or more of the one you just did?"
                 />
               ) : (
                 <Tri
-                  bm="Masih ada baris dalam semakan di skrin. Gambar baharu ini —"
-                  zh="画面上还有正在核对的行。这张新照片是 ——"
-                  en="There are rows still being checked on screen. This new photo is —"
+                  bm="Anda masih ada satu halaman dalam semakan. Gambar baharu ini halaman SETERUSNYA lejar yang sama — atau anda mahu AMBIL SEMULA halaman tadi?"
+                  zh="你还有一页在核对中。这张新照片，是同一本账的下一页，还是要重拍刚才那一页？"
+                  en="You still have a page mid-check. Is this new photo the NEXT page of the same ledger — or a RETAKE of the one on screen?"
                 />
               )}
             </p>

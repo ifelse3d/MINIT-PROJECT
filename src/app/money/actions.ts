@@ -88,6 +88,47 @@ export type IssueResult =
 /** The DB column default — shared by every org that never chose its own. */
 const DEFAULT_PREFIX = "MIN";
 
+// ---------------------------------------------------------------------------
+// B-4① (J #12): choosing the receipt letters used to mean a trip to Settings,
+// where testers got lost and never came back to issue the receipt. The choice
+// now happens INSIDE the issuing flow — this action sets the active org's
+// prefix so the dialog on /money/receipts can finish the job in place.
+// Same validation as orgs/actions.ts setReceiptPrefix; same RLS door
+// (orgs_update = admins), and the DB trigger still freezes the prefix once
+// the first receipt exists — this action is a convenience, not a new power.
+// ---------------------------------------------------------------------------
+
+export type PrefixOutcome =
+  | { ok: true; prefix: string }
+  | { ok: false; reason: "invalid" | "no_org" | "not_admin" | "frozen" | "failed" };
+
+export async function chooseReceiptPrefix(raw: string): Promise<PrefixOutcome> {
+  const active = await getActiveOrg();
+  if (!active) return { ok: false, reason: "no_org" };
+
+  // Lower case is the same intent; the DB check accepts capitals only.
+  const prefix = raw.trim().toUpperCase();
+  // Same expression as orgs_receipt_prefix_check — a looser client rule would
+  // produce a DB error nobody can act on.
+  if (!/^[A-Z][A-Z0-9]{1,7}$/.test(prefix)) return { ok: false, reason: "invalid" };
+
+  const supabase = await getSupabaseServer();
+  const { data, error } = await supabase
+    .from("orgs")
+    .update({ receipt_prefix: prefix })
+    .eq("id", active.id)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    // The freeze trigger's message is English-only and never shown raw.
+    return { ok: false, reason: /frozen/i.test(error.message) ? "frozen" : "failed" };
+  }
+  // No row back = RLS refused: not an admin of this org.
+  if (!data) return { ok: false, reason: "not_admin" };
+  return { ok: true, prefix };
+}
+
 export async function issueAndSaveReceipts(
   rows: RowToIssue[],
   opts?: {

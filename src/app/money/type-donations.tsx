@@ -299,9 +299,9 @@ export function TypeDonations({
           <p className="rounded-xl border-2 border-green-400 bg-green-50 px-3 py-2 text-sm font-medium text-green-900 dark:bg-green-400/10 dark:text-green-100">
             ✓{" "}
             <Tri
-              bm={`${added} baris ditambah ke daftar. Keluarkan resitnya di bawah.`}
-              zh={`已经把 ${added} 笔加进名册了。收据在下面一次过开。`}
-              en={`${added} row(s) added to the register. Issue their receipts below.`}
+              bm={`${added} baris ditambah ke daftar. Jana resitnya sekali gus di halaman “Resit”.`}
+              zh={`已经把 ${added} 笔加进登记簿了。到「开收据」那一页一次过开收据。`}
+              en={`${added} row(s) added to the register. Issue their receipts in one go on the “Receipts” page.`}
             />
           </p>
         )}

@@ -156,6 +156,22 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
     setOpen(false);
   }
 
+  // B-9 (J #10): one page, one job. While closed, this whole card is a single
+  // quiet line — the receipts page is for issuing receipts, and a seven-field
+  // form must not compete with that.
+  if (!open) {
+    return (
+      <Button variant="outline" className="self-start" onClick={() => setOpen(true)}>
+        ＋{" "}
+        <Tri
+          bm="Tambah pendapatan secara manual (tiada kertas)"
+          zh="手动添加收入（没有纸张时用）"
+          en="Add income manually (when there is no paper)"
+        />
+      </Button>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -179,15 +195,7 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        {!open ? (
-          <Button onClick={() => setOpen(true)} variant="outline" className="self-start">
-            <Tri
-              bm="Tiada kertas — taip sendiri"
-              zh="没有纸张 —— 自己打字输入"
-              en="No paper — type it in myself"
-            />
-          </Button>
-        ) : (
+        {
           <div className="flex flex-col gap-4">
             {/* D-2: the photo path, FIRST — the eROSES law says the camera
                 beats the form whenever there IS paper. The chosen income type
@@ -445,7 +453,7 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
               </Button>
             </div>
           </div>
-        )}
+        }
       </CardContent>
     </Card>
   );
