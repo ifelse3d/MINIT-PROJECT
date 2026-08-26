@@ -1,7 +1,11 @@
+import { Fragment } from "react";
 import { notFound } from "next/navigation";
 import { getSessionUser } from "@/db/supabase-server";
 import { getSupabase } from "@/db/supabase";
 import { planById } from "@/lib/plans";
+import { formatMytDateTime } from "@/lib/history";
+import { isOperatorEmail } from "@/lib/admin-gate";
+import { Tri } from "@/components/language-provider";
 import { GrantCreditsCard } from "./grant-credits-card";
 
 // ---------------------------------------------------------------------------
@@ -17,20 +21,20 @@ import { GrantCreditsCard } from "./grant-credits-card";
 // cost × errors. That is the minimal shape of every AI company's internal ops
 // panel, and nothing more.
 //
-// Deliberately English-only: this is the OPERATOR's page (J's), not a
-// customer surface, and the operator reads the codebase's language.
+// P-4 (work order 31): trilingual via <Tri> like every other page — the
+// operator is J, and J reads Chinese first. (This overturns the earlier
+// "deliberately English-only" note.)
 // ---------------------------------------------------------------------------
 
 export const dynamic = "force-dynamic";
 
-function isAdmin(email: string | null | undefined): boolean {
-  if (!email) return false;
-  const list = (process.env.ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-  return list.includes(email.toLowerCase());
-}
+// P-4: the check moved to src/lib/admin-gate.ts so the sidebar's "Ops console"
+// row and this page read the SAME list. The 404 gate below is unchanged.
+const isAdmin = isOperatorEmail;
+
+/** P-4: one subtotal line — N calls, their summed cost (TypeScript adds;
+ *  Hard Rule 2 applies to our own books too). */
+type Subtotal = { label: string; count: number; costMicros: number };
 
 type OrgRow = {
   id: number;
@@ -44,6 +48,10 @@ type OrgRow = {
   errors30d: number;
   /** K-2: this month's usage split by member ("?" = pre-migration rows). */
   byPerson: { name: string; count: number }[];
+  /** P-4: all-time splits by provider / model / action ("?" = null). */
+  byProvider: Subtotal[];
+  byModel: Subtotal[];
+  byAction: Subtotal[];
 };
 
 async function loadRows(): Promise<OrgRow[]> {
@@ -82,6 +90,11 @@ async function loadRows(): Promise<OrgRow[]> {
     created_at: string;
     refunded_at: string | null;
     user_id?: string | null;
+    provider?: string | null;
+    model?: string | null;
+    action?: string | null;
+    input_tokens?: number | null;
+    output_tokens?: number | null;
   };
   const fetchUsage = (select: string) =>
     admin
@@ -90,7 +103,18 @@ async function loadRows(): Promise<OrgRow[]> {
       .order("created_at", { ascending: false })
       .limit(20000)
       .returns<UsageRow[]>();
-  let usage = await fetchUsage("org_id, cost_micros, created_at, refunded_at, user_id");
+  // P-4: provider/model/action/tokens now come along — the console could say
+  // "$0.03" but not WHERE it went. Progressive fallback: user_id arrived with
+  // migration 25, so an older database is retried without it (the STATE.md
+  // rule — code must outlive a database that is behind, without a blank page).
+  let usage = await fetchUsage(
+    "org_id, cost_micros, created_at, refunded_at, user_id, provider, model, action, input_tokens, output_tokens",
+  );
+  if (usage.error) {
+    usage = await fetchUsage(
+      "org_id, cost_micros, created_at, refunded_at, provider, model, action, input_tokens, output_tokens",
+    );
+  }
   if (usage.error) {
     usage = await fetchUsage("org_id, cost_micros, created_at, refunded_at");
   }
@@ -130,6 +154,23 @@ async function loadRows(): Promise<OrgRow[]> {
       const label = u.user_id ? memberName.get(`${o.id}:${u.user_id}`) ?? "?" : "?";
       perPerson.set(label, (perPerson.get(label) ?? 0) + 1);
     }
+    // P-4: all-time splits by provider / model / action, cost summed in
+    // TypeScript. "?" = the column was null (e.g. a killed call, or a row from
+    // before the columns) — printed, not hidden, because a null provider on a
+    // charged row is exactly the id=5 signature an operator needs to SEE.
+    const subtotal = (key: (u: UsageRow) => string | null | undefined): Subtotal[] => {
+      const map = new Map<string, { count: number; costMicros: number }>();
+      for (const u of mine) {
+        const label = key(u) ?? "?";
+        const cur = map.get(label) ?? { count: 0, costMicros: 0 };
+        cur.count += 1;
+        cur.costMicros += u.cost_micros ?? 0;
+        map.set(label, cur);
+      }
+      return [...map.entries()]
+        .map(([label, v]) => ({ label, ...v }))
+        .sort((a, b) => b.count - a.count);
+    };
     return {
       id: o.id,
       name: o.name,
@@ -143,12 +184,25 @@ async function loadRows(): Promise<OrgRow[]> {
       byPerson: [...perPerson.entries()]
         .map(([name, count]) => ({ name, count }))
         .sort((a, b) => b.count - a.count),
+      byProvider: subtotal((u) => u.provider),
+      byModel: subtotal((u) => u.model),
+      byAction: subtotal((u) => u.action),
     };
   });
 }
 
+// P-4: six decimals, because a single cheap call is ~$0.00004 and the old
+// toFixed(4) printed "$0.0000" for it — a REAL cost shown as zero, which is
+// the one thing an ops console must never do.
 function usd(micros: number): string {
-  return `$${(micros / 1_000_000).toFixed(4)}`;
+  return `$${(micros / 1_000_000).toFixed(6)}`;
+}
+
+/** Fixed estimate for at-a-glance reading, and it says so. Same deliberately
+ *  weak-ringgit figure as src/lib/unit-economics.ts (usdToMyr: 4.7). */
+const USD_TO_MYR_ESTIMATE = 4.7;
+function myrApprox(micros: number): string {
+  return `≈RM${((micros / 1_000_000) * USD_TO_MYR_ESTIMATE).toFixed(4)}`;
 }
 
 /** K-3: is this operator in platform_admins? Service-role read (the table has
@@ -224,10 +278,15 @@ export default async function AdminPage() {
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 pb-10">
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Ops console</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">
+          <Tri bm="Konsol operasi" zh="管理台" en="Ops console" />
+        </h1>
         <p className="mt-1 text-base text-[color:var(--v2-text-soft)]">
-          Accounts × usage × cost × errors. Aggregates only — never contents,
-          never donor data (Hard Rule 5).
+          <Tri
+            bm="Akaun × penggunaan × kos × ralat. Agregat sahaja — tiada kandungan dokumen, tiada data penderma (Peraturan 5)."
+            zh="帐号 × 用量 × 成本 × 错误。只有汇总数字——不含文件内容、不含捐款人资料（硬规则 5）。"
+            en="Accounts × usage × cost × errors. Aggregates only — never contents, never donor data (Hard Rule 5)."
+          />
         </p>
       </div>
 
@@ -235,17 +294,18 @@ export default async function AdminPage() {
         <table className="w-full text-base">
           <thead>
             <tr className="border-b border-[color:var(--v2-border)] text-left text-sm text-[color:var(--v2-text-soft)]">
-              <th className="px-4 py-3">Org</th>
-              <th className="px-4 py-3">Plan</th>
-              <th className="px-4 py-3 text-right">AI this month</th>
-              <th className="px-4 py-3 text-right">Cost (all time)</th>
-              <th className="px-4 py-3">Last activity</th>
-              <th className="px-4 py-3 text-right">Errors (30d)</th>
+              <th className="px-4 py-3"><Tri bm="Pertubuhan" zh="机构" en="Org" /></th>
+              <th className="px-4 py-3"><Tri bm="Pelan" zh="配套" en="Plan" /></th>
+              <th className="px-4 py-3 text-right"><Tri bm="AI bulan ini" zh="本月 AI" en="AI this month" /></th>
+              <th className="px-4 py-3 text-right"><Tri bm="Kos (keseluruhan)" zh="成本（累计）" en="Cost (all time)" /></th>
+              <th className="px-4 py-3"><Tri bm="Aktiviti terakhir" zh="最后活动" en="Last activity" /></th>
+              <th className="px-4 py-3 text-right"><Tri bm="Ralat (30 hari)" zh="错误（30天）" en="Errors (30d)" /></th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-[color:var(--v2-border)] last:border-b-0">
+              <Fragment key={r.id}>
+              <tr className="border-b border-[color:var(--v2-border)] last:border-b-0">
                 <td className="px-4 py-3 font-medium">
                   {r.name} <span className="text-sm text-[color:var(--v2-text-soft)]">#{r.id}</span>
                 </td>
@@ -259,19 +319,61 @@ export default async function AdminPage() {
                     </div>
                   )}
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums">{usd(r.costMicrosTotal)}</td>
+                <td className="px-4 py-3 text-right tabular-nums">
+                  {/* P-4: 6 decimals + a labelled MYR estimate — "$0.0000" for
+                      a call that really cost money is a lie this page told. */}
+                  {usd(r.costMicrosTotal)}
+                  <div className="mt-1 text-xs text-[color:var(--v2-text-soft)]">
+                    {myrApprox(r.costMicrosTotal)}
+                  </div>
+                </td>
                 <td className="px-4 py-3 text-sm tabular-nums">
-                  {r.lastActivity ? r.lastActivity.slice(0, 16).replace("T", " ") : "—"}
+                  {/* P-3: MYT, and it says so — raw UTC dressed as local time
+                      was off by 8 hours for every Malaysian reader. */}
+                  {formatMytDateTime(r.lastActivity)}
                 </td>
                 <td className={`px-4 py-3 text-right tabular-nums ${r.errors30d > 0 ? "font-semibold text-red-700" : ""}`}>
                   {r.errors30d}
                 </td>
               </tr>
+              {/* P-4: where the money went — provider / model / action, summed
+                  in TypeScript. "?" = null on the row: a charged call with a
+                  null provider is the id=5 signature, so it is SHOWN. */}
+              {r.byAction.length > 0 && (
+                <tr className="border-b border-[color:var(--v2-border)] last:border-b-0">
+                  <td colSpan={6} className="px-4 pb-3 pt-0">
+                    <details>
+                      <summary className="cursor-pointer text-xs text-[color:var(--v2-text-soft)] underline underline-offset-4">
+                        <Tri
+                          bm="Pecahan: penyedia · model · tindakan"
+                          zh="明细：供应商 · 模型 · 动作"
+                          en="Breakdown: provider · model · action"
+                        />
+                      </summary>
+                      <div className="mt-2 flex flex-col gap-1 text-xs text-[color:var(--v2-text-soft)]">
+                        {([
+                          ["provider", r.byProvider],
+                          ["model", r.byModel],
+                          ["action", r.byAction],
+                        ] as const).map(([kind, subs]) => (
+                          <p key={kind}>
+                            <span className="font-semibold">{kind}:</span>{" "}
+                            {subs
+                              .map((s) => `${s.label} ×${s.count} (${usd(s.costMicros)})`)
+                              .join(" · ")}
+                          </p>
+                        ))}
+                      </div>
+                    </details>
+                  </td>
+                </tr>
+              )}
+              </Fragment>
             ))}
             {rows.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-6 text-center text-[color:var(--v2-text-soft)]">
-                  No organisations yet.
+                  <Tri bm="Belum ada pertubuhan." zh="还没有机构。" en="No organisations yet." />
                 </td>
               </tr>
             )}
@@ -280,9 +382,11 @@ export default async function AdminPage() {
       </div>
 
       <p className="text-sm text-[color:var(--v2-text-soft)]">
-        Errors with no organisation (last 30d): {unattributedErrors}. Cost is
-        the sum of ai_usage.cost_micros (vendor-reported, USD). Plan changes:
-        run the SQL at the foot of migration 20260830000000 in the SQL Editor.
+        <Tri
+          bm={`Ralat tanpa pertubuhan (30 hari): ${unattributedErrors}. Kos = jumlah ai_usage.cost_micros (dilaporkan vendor, USD; RM ialah anggaran tetap 1 USD ≈ RM${USD_TO_MYR_ESTIMATE.toFixed(2)}). Tukar pelan: jalankan SQL di hujung migrasi 20260830000000.`}
+          zh={`没有机构归属的错误（30 天）：${unattributedErrors}。成本 = ai_usage.cost_micros 的总和（供应商报告，美元；RM 为固定估算 1 USD ≈ RM${USD_TO_MYR_ESTIMATE.toFixed(2)}）。改配套：在 SQL Editor 跑 migration 20260830000000 末尾的 SQL。`}
+          en={`Errors with no organisation (last 30d): ${unattributedErrors}. Cost is the sum of ai_usage.cost_micros (vendor-reported, USD; RM is a fixed estimate, 1 USD ≈ RM${USD_TO_MYR_ESTIMATE.toFixed(2)}). Plan changes: run the SQL at the foot of migration 20260830000000 in the SQL Editor.`}
+        />
       </p>
 
       {/* K-3: the audited grant path — only when the DATABASE lists you. */}
@@ -304,10 +408,14 @@ export default async function AdminPage() {
 
       {/* K-1: the feedback inbox. */}
       <div className="v2-glass flex flex-col gap-3 p-5">
-        <h2 className="text-xl font-semibold">Feedback (latest 50)</h2>
+        <h2 className="text-xl font-semibold">
+          <Tri bm="Maklum balas (50 terkini)" zh="反馈（最新 50 条）" en="Feedback (latest 50)" />
+        </h2>
         {feedback.length === 0 ? (
           <p className="text-sm text-[color:var(--v2-text-soft)]">
-            Nothing yet (or migration 25 not applied).
+            {/* P-4: migration 25 is applied and live — the parenthesis had
+                become a stale excuse. An empty inbox just means no feedback. */}
+            <Tri bm="Belum ada maklum balas." zh="还没有反馈。" en="No feedback yet." />
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
@@ -315,7 +423,7 @@ export default async function AdminPage() {
               <li key={f.id} className="rounded-lg border border-[color:var(--v2-border)] p-3">
                 <p className="whitespace-pre-line text-base">{f.message}</p>
                 <p className="mt-1 text-xs text-[color:var(--v2-text-soft)]">
-                  {f.orgName} · {f.page ?? "—"} · {f.createdAt.slice(0, 16).replace("T", " ")} · {f.status}
+                  {f.orgName} · {f.page ?? "—"} · {formatMytDateTime(f.createdAt)} · {f.status}
                 </p>
               </li>
             ))}

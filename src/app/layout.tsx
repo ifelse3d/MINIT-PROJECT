@@ -15,6 +15,7 @@ import { getUsage } from "@/lib/ai/usage";
 import { readNeedsEinvois } from "@/lib/einvois-server";
 import { EinvoisProvider } from "@/lib/einvois-pref";
 import { StorageScopeProvider } from "@/lib/storage-scope";
+import { isOperatorEmail } from "@/lib/admin-gate";
 import { AppShell } from "@/components/v3/shell";
 
 const inter = Inter({
@@ -94,6 +95,10 @@ export default async function RootLayout({
     getSessionUser().catch(() => null),
   ]);
   const storageScope = `${user?.id ?? "anon"}:${active?.id ?? "none"}`;
+  // P-4: ONE boolean crosses to the client — "may this session see the Ops
+  // console row?". The ADMIN_EMAILS list never leaves the server, and /admin
+  // keeps its own fail-closed 404 gate regardless of what the sidebar shows.
+  const showAdmin = isOperatorEmail(user?.email);
   // Stage R: the UI shows ONE language. The choice lives in a cookie so the
   // server can stamp <html lang> before first paint; default 中文 (J's brief).
   const cookieLang = (await cookies()).get(LANG_COOKIE)?.value;
@@ -137,6 +142,7 @@ export default async function RootLayout({
                   aiRemaining={usage?.totalRemaining ?? null}
                   aiUsedPct={usage?.usedPct ?? null}
                   aiBlocked={usage?.blocked ?? false}
+                  showAdmin={showAdmin}
                 >
                   {children}
                 </AppShell>

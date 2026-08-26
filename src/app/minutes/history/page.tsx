@@ -12,6 +12,7 @@ import { Tri } from "@/components/language-provider";
 import { getSupabaseServer } from "@/db/supabase-server";
 import { getActiveOrg } from "@/lib/active-org";
 import { isMeetingType, meetingTypeUiLabelTri } from "@/lib/meeting-types";
+import { formatMytDateTime } from "@/lib/history";
 import { isIsoDate } from "@/lib/date-input";
 import { PAGE_SIZE, pageRange, pageSummary, parsePage } from "@/lib/list-page";
 import { Pager } from "@/components/pager";
@@ -173,9 +174,9 @@ export default async function MinutesHistoryPage({
                     <CardDescription>
                       <Tri bm="Disahkan oleh" zh="确认人" en="Confirmed by" />{" "}
                       {d.confirmed_by ?? "—"}
-                      {d.confirmed_at
-                        ? ` · ${new Date(d.confirmed_at).toLocaleString("ms-MY")}`
-                        : ""}
+                      {/* P-3: fixed MYT, labelled — this line sits beside the
+                          document's audit line, where a wrong hour matters. */}
+                      {d.confirmed_at ? ` · ${formatMytDateTime(d.confirmed_at)}` : ""}
                     </CardDescription>
                   </div>
                   <Badge className="bg-green-600 text-white hover:bg-green-600">

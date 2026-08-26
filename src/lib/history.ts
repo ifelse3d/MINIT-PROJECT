@@ -97,6 +97,28 @@ export function todayIsoMalaysia(): string {
   return dayIsoMalaysia(new Date().toISOString()) as string;
 }
 
+/**
+ * P-3 (work order 31): a timestamptz printed FOR A HUMAN, in Malaysian time,
+ * saying so — "2026-08-27 14:05 MYT".
+ *
+ * Why this exists: pages were printing `created_at.slice(0, 16)` (raw UTC
+ * dressed up as local time — off by 8 hours for every Malaysian reader) and
+ * `toLocaleString("ms-MY")` with no timeZone (the SERVER's zone, which on
+ * Vercel is UTC again). Malaysia is UTC+8 with no DST, so the fixed shift is
+ * exact, deterministic and unit-testable — same reasoning as dayIsoMalaysia
+ * above. The label is printed because a bare time invites the reader to guess.
+ *
+ * Returns "—" for null/absent/unparseable input: a bad timestamp must never
+ * crash a page, and an em-dash is honest about "we do not know when".
+ */
+export function formatMytDateTime(timestamp: string | null | undefined): string {
+  if (!timestamp) return "—";
+  const ms = Date.parse(timestamp);
+  if (Number.isNaN(ms)) return "—";
+  const shifted = new Date(ms + MALAYSIA_UTC_OFFSET_HOURS * 3_600_000);
+  return `${shifted.toISOString().slice(0, 16).replace("T", " ")} MYT`;
+}
+
 // --- month math (all UTC, deterministic) --------------------------------------
 
 const MONTH_RE = /^\d{4}-\d{2}$/;

@@ -9,6 +9,7 @@ import {
 import { Tri } from "@/components/language-provider";
 import { getSupabase } from "@/db/supabase";
 import { getMemberships } from "@/lib/active-org";
+import { requiredAiKeyEnvVars } from "@/lib/ai/provider";
 
 // Re-check on every page load — never serve a cached health status.
 export const dynamic = "force-dynamic";
@@ -29,13 +30,14 @@ function sameInAll(text: string): Label {
   return { bm: text, zh: text, en: text };
 }
 
-// The AI key to require depends on the configured provider (CLAUDE.md:
-// vendor is chosen by AI_PROVIDER; current dev provider is Gemini).
+// P-2 (work order 31): the AI keys to require come from where the FOUR
+// AI_MODEL_* tasks are actually routed (the same resolveModel() the app and
+// `npm run check:ai` use) — not from the legacy AI_PROVIDER value alone. The
+// old version demanded only GEMINI_API_KEY while chat was routed to OpenAI, so
+// /health said OK on a deployment whose assistant could not answer at all.
 function requiredEnvVars(): string[] {
-  const provider = (process.env.AI_PROVIDER ?? "gemini").toLowerCase();
-  const aiKey = provider === "anthropic" ? "ANTHROPIC_API_KEY" : "GEMINI_API_KEY";
   return [
-    aiKey,
+    ...requiredAiKeyEnvVars(),
     "SUPABASE_URL",
     "SUPABASE_SERVICE_ROLE_KEY",
     // Phase 7 auth (public values — needed for login to work):

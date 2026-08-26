@@ -18,6 +18,7 @@
 // ---------------------------------------------------------------------------
 
 import Link from "next/link";
+import { Wrench } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { LanguageSwitcher, Tri } from "@/components/language-provider";
 import { FirstRunFlow } from "@/components/first-run-flow";
@@ -52,6 +53,7 @@ export function AppShell({
   aiRemaining,
   aiUsedPct,
   aiBlocked,
+  showAdmin = false,
 }: {
   children: React.ReactNode;
   showAiLauncher: boolean;
@@ -59,6 +61,10 @@ export function AppShell({
   /** Share of the monthly free quota already spent, 0–100. null = unknown. */
   aiUsedPct: number | null;
   aiBlocked: boolean;
+  /** P-4: server-decided "may this session see the Ops console row?". A
+   *  boolean only — the operator list itself never reaches the client, and
+   *  /admin keeps its own fail-closed 404 whatever this says. */
+  showAdmin?: boolean;
 }) {
   const pathname = usePathname();
   // Hooks must run on every render, including the bare /login branch below.
@@ -79,7 +85,7 @@ export function AppShell({
   return (
     <div className="v2-root v2-safe min-h-screen">
       {/* Desktop rail — fixed, full height. */}
-      <Rail pathname={pathname ?? "/"} />
+      <Rail pathname={pathname ?? "/"} showAdmin={showAdmin} />
 
       {/* The docked assistant takes real width off the right; hand it over so
           no card hides behind it. 0 on phones and when collapsed. */}
@@ -132,7 +138,7 @@ function railEntryChildren(entry: NavEntry, einvoisVisible: boolean): NavItem[] 
   return visibleGroupChildren(entry, einvoisVisible);
 }
 
-function Rail({ pathname }: { pathname: string }) {
+function Rail({ pathname, showAdmin }: { pathname: string; showAdmin: boolean }) {
   const [einvoisVisible] = useEinvoisVisible();
 
   return (
@@ -224,6 +230,26 @@ function Rail({ pathname }: { pathname: string }) {
           })}
         </ul>
       </nav>
+
+      {/* P-4: the operator's door — only rendered when the SERVER said so.
+          Not part of SIDEBAR_NAV: it is not a customer page, and the nav
+          tests rightly insist every listed page is for everyone. */}
+      {showAdmin && (
+        <div className="border-t border-[color:var(--v2-border)] px-3 py-2">
+          <Link
+            href="/admin"
+            className={cn(
+              "flex min-h-10 items-center gap-3 rounded-xl px-3 text-[0.95rem] transition-colors",
+              isActivePath(pathname, "/admin", true)
+                ? "bg-[color:var(--v2-primary-fill)] font-medium text-white"
+                : "text-[color:var(--v2-text)] hover:bg-[color:var(--v2-primary-soft)]",
+            )}
+          >
+            <Wrench className="h-4.5 w-4.5 shrink-0" strokeWidth={1.8} />
+            <Tri bm="Konsol operasi" zh="管理台" en="Ops console" />
+          </Link>
+        </div>
+      )}
 
       <div className="border-t border-[color:var(--v2-border)] p-3">
         <OrgChip />

@@ -5,6 +5,7 @@ import {
   bucketByDay,
   dayCategories,
   dayIsoMalaysia,
+  formatMytDateTime,
   todayIsoMalaysia,
   daySummary,
   feedDays,
@@ -333,5 +334,31 @@ describe("todayIsoMalaysia", () => {
     expect(dayIsoMalaysia("2026-08-23T00:30:00Z")).toBe("2026-08-23");
     expect(dayIsoMalaysia("2026-08-22T17:30:00Z")).toBe("2026-08-23");
     expect(dayIsoMalaysia("2026-08-22T15:30:00Z")).toBe("2026-08-22");
+  });
+});
+
+// P-3 (work order 31): timestamps printed for humans are Malaysian time and
+// SAY so. The bugs this pins down: /admin printed raw UTC dressed as local
+// ("slice(0,16)"), and two pages used toLocaleString with no timeZone — the
+// server's zone, which on Vercel is UTC again. Both were 8 hours off for
+// every reader in Malaysia.
+describe("formatMytDateTime", () => {
+  it("shifts UTC to UTC+8 and labels it", () => {
+    expect(formatMytDateTime("2026-08-27T06:05:00Z")).toBe("2026-08-27 14:05 MYT");
+  });
+
+  it("crosses the date line correctly (UTC evening = MYT next morning)", () => {
+    expect(formatMytDateTime("2026-08-26T18:30:00Z")).toBe("2026-08-27 02:30 MYT");
+  });
+
+  it("answers an em-dash, never a crash, for missing or bad input", () => {
+    expect(formatMytDateTime(null)).toBe("—");
+    expect(formatMytDateTime(undefined)).toBe("—");
+    expect(formatMytDateTime("not a timestamp")).toBe("—");
+  });
+
+  it("agrees with dayIsoMalaysia about which day it is", () => {
+    const ts = "2026-08-22T17:30:00Z"; // 01:30 on the 23rd in Malaysia
+    expect(formatMytDateTime(ts).slice(0, 10)).toBe(dayIsoMalaysia(ts));
   });
 });

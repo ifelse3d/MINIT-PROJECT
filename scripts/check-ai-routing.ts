@@ -42,7 +42,7 @@ import "./allow-server-only";
 // copy could drift and start reporting a routing the app does not use, which is
 // the exact bug this script exists to catch.
 /* eslint-disable @typescript-eslint/no-require-imports */
-const { resolveModel, AI_PROVIDERS, PROVIDER_KEY_ENV } =
+const { resolveModel, routedProviders, AI_PROVIDERS, PROVIDER_KEY_ENV } =
   require("../src/lib/ai/provider") as typeof import("../src/lib/ai/provider");
 const { PRICES_PER_MTOK_USD: GEMINI_PRICES } =
   require("../src/lib/ai/gemini") as typeof import("../src/lib/ai/gemini");
@@ -152,13 +152,9 @@ function main() {
 
   // --- keys: presence only, never the value --------------------------------
   console.log("\n--- API keys (presence only) ---");
-  const usedProviders = new Set(TASKS.map(({ task }) => {
-    try {
-      return resolveModel(task).provider;
-    } catch {
-      return undefined;
-    }
-  }));
+  // P-2: the SAME shared function /health uses, so the two can never disagree
+  // about which keys the current routing requires.
+  const usedProviders = routedProviders();
   // Every provider is listed, including ones nothing is routed to. An empty
   // slot is INFORMATION ("Claude is wired up, no key yet"), not a problem: a
   // key is only required when the routing above actually sends work there.

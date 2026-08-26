@@ -223,6 +223,34 @@ function isProviderName(s: string): s is AiProviderName {
   return (AI_PROVIDERS as readonly string[]).includes(s);
 }
 
+/**
+ * P-2 (work order 31): the providers the CURRENT routing actually sends work
+ * to — the one answer shared by `npm run check:ai` and /health, so the two can
+ * never drift apart (a second copy of this loop is exactly how /health kept
+ * requiring only the legacy AI_PROVIDER key while chat was routed to OpenAI).
+ *
+ * A task whose routing is INVALID is skipped here, not thrown on: check:ai
+ * reports it as its own problem line, and resolveModel() names it loudly at
+ * request time either way.
+ */
+export function routedProviders(): Set<AiProviderName> {
+  const used = new Set<AiProviderName>();
+  for (const task of Object.keys(TASK_ENV) as AiTask[]) {
+    try {
+      used.add(resolveModel(task).provider);
+    } catch {
+      // Reported by check:ai; named at request time by resolveModel itself.
+    }
+  }
+  return used;
+}
+
+/** P-2: the key env vars the current routing requires — one per provider that
+ *  actually has work routed to it, never a key for an empty slot. */
+export function requiredAiKeyEnvVars(): string[] {
+  return [...routedProviders()].map((p) => PROVIDER_KEY_ENV[p]);
+}
+
 export type ResolvedModel = { provider: AiProviderName; model: string };
 
 /**

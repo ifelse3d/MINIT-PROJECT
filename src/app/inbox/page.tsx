@@ -11,6 +11,7 @@ import {
 import { Tri } from "@/components/language-provider";
 import { getSupabaseServer } from "@/db/supabase-server";
 import { getActiveOrg } from "@/lib/active-org";
+import { formatMytDateTime } from "@/lib/history";
 
 // /inbox — "Gambar asal / 原始照片 / Original photos": every document this org
 // has photographed, newest first, with its processing status and a link to the
@@ -137,7 +138,10 @@ export default async function InboxPage() {
                       <CardTitle className="text-base">{u.filename}</CardTitle>
                       <CardDescription>
                         <Tri {...kind} /> ·{" "}
-                        {new Date(u.uploaded_at).toLocaleString("ms-MY")}
+                        {/* P-3: fixed MYT, labelled. toLocaleString with no
+                            timeZone used the SERVER's zone — UTC on Vercel,
+                            8 hours behind every reader of this page. */}
+                        {formatMytDateTime(u.uploaded_at)}
                       </CardDescription>
                     </div>
                     <div className="flex items-center gap-2">
