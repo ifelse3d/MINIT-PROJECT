@@ -11,10 +11,17 @@ import {
 // The MyInvois Portal now requires its own template ("BatchSubmission-v1.xlsx",
 // 11 sheets, ≤100 docs, ≤25MB — verified 10 Jul 2026). We do NOT try to forge
 // that template blind. This export is a PRE-FILL PACK: every value the
-// treasurer must key into the official template, one row per document, plus a
-// step-by-step instruction sheet. All totals are summed HERE in TypeScript
-// (CLAUDE.md Hard Rule 2) — never by a spreadsheet formula the user can break,
-// and never by the LLM.
+// treasurer must key into the official template, one row per document. All
+// totals are summed HERE in TypeScript (CLAUDE.md Hard Rule 2) — never by a
+// spreadsheet formula the user can break, and never by the LLM.
+//
+// D21 (拍板 37, 2026-08-27): the file must be "directly submittable" — the
+// DATA sheet ("Dokumen") comes first and is the ONLY sheet. The old
+// "Arahan - Instructions" worksheet moved OUT of the upload file and onto the
+// /money/einvois page as step cards; instructions inside an upload file are
+// exactly what makes a portal reject it. Until J supplies the official
+// template for column-by-column alignment, the sheet keeps its one-line
+// "DRAF — semak sebelum guna" verify warning (D21 says keep it).
 // ---------------------------------------------------------------------------
 
 export type EInvoisXlsxFile = {
@@ -37,36 +44,6 @@ const HEADERS = [
   "Mata Wang / Currency",
 ] as const;
 
-function addInstructionSheet(wb: ExcelJS.Workbook, pack: MonthEndPack, fileNo: number): void {
-  const ws = wb.addWorksheet("Arahan - Instructions");
-  ws.getColumn(1).width = 110;
-  const lines = [
-    `PEK PRA-ISI e-INVOIS — ${pack.month} (fail ${fileNo} dari ${pack.files.length})`,
-    "",
-    "PENTING / IMPORTANT:",
-    "1. Log masuk MyInvois Portal (myinvois.hasil.gov.my) → Batch Upload.",
-    "2. Muat turun templat rasmi semasa (BatchSubmission-v1.xlsx) dari portal.",
-    "3. Salin nilai dari helaian 'Dokumen' fail ini ke dalam templat rasmi itu.",
-    "   / Copy the values from the 'Dokumen' sheet into the official template.",
-    "4. Had portal: maksimum 100 dokumen sefail, saiz fail <= 25MB.",
-    "5. Semak setiap nilai sebelum hantar. / Verify every value before submitting.",
-    "",
-    "Nota: Kod klasifikasi 004 = e-Invois Disatukan (Consolidated), 007 = Derma (Donation). TIN 'EI00000000010' = General Public",
-    "untuk dokumen terkumpul (consolidated). Bagi dokumen INDIVIDU (derma >= RM10,000),",
-    "TIN pembeli sengaja DIBIARKAN KOSONG — bendahari mesti isi dari TIN/MyKad penderma",
-    "sebenar. Sistem tidak sekali-kali mereka-reka identiti. / For INDIVIDUAL documents",
-    "the buyer TIN is intentionally BLANK — the treasurer fills it from the donor's real",
-    "TIN/MyKad. The system never invents identity data.",
-    "",
-    "DRAF — semak sebelum guna / DRAFT — review before use.",
-  ];
-  lines.forEach((text, i) => {
-    const cell = ws.getCell(i + 1, 1);
-    cell.value = text;
-    if (i === 0) cell.font = { bold: true, size: 14 };
-  });
-}
-
 /**
  * Builds one .xlsx per ≤100-document chunk of the month-end pack.
  * Amounts are written as RM decimals computed from cents in code.
@@ -87,8 +64,8 @@ export async function buildEInvoisXlsxFiles(
 
     const wb = new ExcelJS.Workbook();
     wb.creator = "Minit";
-    addInstructionSheet(wb, pack, f + 1);
 
+    // D21: the data sheet is FIRST and ONLY. Instructions live on the page.
     const ws = wb.addWorksheet("Dokumen");
     ws.addRow([`${params.orgName} — pek e-Invois ${pack.month} (DRAF — semak sebelum guna)`]);
     ws.getRow(1).font = { bold: true, size: 12 };

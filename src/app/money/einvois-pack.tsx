@@ -8,8 +8,9 @@ import { NextStepLink, PageSection } from "@/components/page-section";
 import {
   buildMonthEndPack,
   consolidatedDeadlineIso,
-  monthEndSummary,
+  EINVOIS_MAX_DOCS_PER_FILE,
 } from "@/lib/einvois";
+import { formatRm } from "@/lib/minutes-draft";
 import { downloadFromApi } from "@/lib/download-file";
 import { todayIsoMalaysia } from "@/lib/history";
 import { useRegister } from "./register-store";
@@ -150,9 +151,114 @@ export function EInvoisPack() {
 
         {einvoisReady && einvoisPack ? (
           <div className="flex flex-col gap-3">
-            <pre className="rounded-md border bg-muted/40 p-4 text-base whitespace-pre-wrap">
-              {monthEndSummary(einvoisPack, documentOrgName)}
-            </pre>
+            {/* B-7 (拍板 37): the month at a glance — real layout, not a
+                monospace dump pretending to be a report. */}
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-xl border-2 border-[color:var(--v2-border)] bg-white/60 p-3 dark:bg-white/5">
+                <p className="text-sm text-muted-foreground">
+                  <Tri
+                    bm="Derma terkumpul (consolidated)"
+                    zh="合并申报的捐款"
+                    en="Consolidated donations"
+                  />
+                </p>
+                <p className="mt-1 text-xl font-semibold tabular-nums">
+                  {formatRm(einvoisPack.consolidatedTotalCents)}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {einvoisPack.consolidated.length}{" "}
+                  <Tri bm="resit" zh="张收据" en="receipts" />
+                </p>
+              </div>
+              <div className="rounded-xl border-2 border-[color:var(--v2-border)] bg-white/60 p-3 dark:bg-white/5">
+                <p className="text-sm text-muted-foreground">
+                  <Tri
+                    bm="Derma individu ≥ RM10,000"
+                    zh="≥ RM10,000 的单笔捐款"
+                    en="Individual donations ≥ RM10,000"
+                  />
+                </p>
+                <p className="mt-1 text-xl font-semibold tabular-nums">
+                  {einvoisPack.individual.length}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  <Tri
+                    bm="perlu identiti penderma"
+                    zh="每笔要填捐款人身份"
+                    en="each needs donor identity"
+                  />
+                </p>
+              </div>
+              <div className="rounded-xl border-2 border-[color:var(--v2-border)] bg-white/60 p-3 dark:bg-white/5">
+                <p className="text-sm text-muted-foreground">
+                  <Tri bm="Jumlah besar" zh="本月总额" en="Grand total" />
+                </p>
+                <p className="mt-1 text-xl font-semibold tabular-nums">
+                  {formatRm(einvoisPack.grandTotalCents)}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {einvoisPack.files.length}{" "}
+                  <Tri bm="fail muat naik" zh="个上传文件" en="upload file(s)" /> ·{" "}
+                  <Tri
+                    bm={`maks ${EINVOIS_MAX_DOCS_PER_FILE} dokumen sefail`}
+                    zh={`每个最多 ${EINVOIS_MAX_DOCS_PER_FILE} 份文件`}
+                    en={`max ${EINVOIS_MAX_DOCS_PER_FILE} docs each`}
+                  />
+                </p>
+              </div>
+              <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 dark:bg-amber-400/10">
+                <p className="text-sm text-amber-900/80 dark:text-amber-100/80">
+                  <Tri bm="Tarikh akhir hantar" zh="申报截止" en="Submit by" />
+                </p>
+                <p className="mt-1 text-xl font-semibold tabular-nums text-amber-900 dark:text-amber-100">
+                  {consolidatedDeadlineIso(einvoisMonth)}
+                </p>
+                <p className="text-sm text-amber-900/80 dark:text-amber-100/80">
+                  <Tri
+                    bm="7 hari selepas hujung bulan"
+                    zh="月底后 7 天内"
+                    en="7 days after month-end"
+                  />
+                </p>
+              </div>
+            </div>
+
+            {/* B-7 / D21: the steps live HERE, on the page — not inside the
+                upload file, where a sheet of prose makes portals choke. */}
+            <ol className="flex flex-col gap-2 rounded-xl border-2 border-[color:var(--v2-border)] bg-white/60 p-4 text-base dark:bg-white/5">
+              <li>
+                1️⃣{" "}
+                <Tri
+                  bm="Muat turun fail .xlsx di bawah."
+                  zh="按下面的按钮下载 .xlsx 文件。"
+                  en="Download the .xlsx file below."
+                />
+              </li>
+              <li>
+                2️⃣{" "}
+                <Tri
+                  bm="Log masuk MyInvois Portal (myinvois.hasil.gov.my) → Batch Upload, dan muat turun templat rasmi semasa."
+                  zh="登入 MyInvois Portal（myinvois.hasil.gov.my）→ Batch Upload，下载官方最新模板。"
+                  en="Sign in to the MyInvois Portal (myinvois.hasil.gov.my) → Batch Upload, and download the current official template."
+                />
+              </li>
+              <li>
+                3️⃣{" "}
+                <Tri
+                  bm="Salin nilai dari helaian “Dokumen” ke dalam templat rasmi itu. Bagi derma ≥ RM10,000, isi TIN/MyKad penderma sebenar — ruang itu sengaja kosong, sistem tidak mereka-reka identiti."
+                  zh="把「Dokumen」表里的数字抄进官方模板。≥ RM10,000 的捐款要填捐款人真实的 TIN/身份证 —— 那一格特意留空，系统不会编造身份。"
+                  en="Copy the values from the “Dokumen” sheet into the official template. For donations ≥ RM10,000 fill in the donor's real TIN/MyKad — that cell is left blank on purpose; the system never invents identity."
+                />
+              </li>
+              <li>
+                4️⃣{" "}
+                <Tri
+                  bm="Semak setiap nilai, kemudian muat naik templat rasmi itu. Minit tidak menghantarnya untuk anda."
+                  zh="逐项核对后，上传那份官方模板。Minit 不会替您送出。"
+                  en="Check every value, then upload the official template. Minit does not submit it for you."
+                />
+              </li>
+            </ol>
             <Button
               onClick={downloadEInvoisPack}
               size="lg"

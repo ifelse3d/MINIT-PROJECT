@@ -59,6 +59,39 @@ const inputClass =
   "w-full rounded-md border border-input bg-background px-3 py-2 text-base shadow-sm " +
   "focus:outline-none focus:ring-2 focus:ring-ring";
 
+/**
+ * B-8 (J #9): where a claim IS in its life, drawn as the three stops it
+ * passes — submitted → approved → paid. Words, not a state-machine enum.
+ */
+function ClaimProgress({ status }: { status: ExpenseStatus }) {
+  if (status === "recorded" || status === "rejected") return null;
+  const reached = status === "submitted" ? 0 : status === "approved" ? 1 : 2;
+  const stops = [
+    { bm: "Dihantar", zh: "交上去了", en: "Submitted" },
+    { bm: "Diluluskan", zh: "批准了", en: "Approved" },
+    { bm: "Dibayar", zh: "付款了", en: "Paid" },
+  ];
+  return (
+    <span className="mt-1 flex flex-wrap items-center gap-1 text-sm">
+      {stops.map((s, i) => (
+        <span key={i} className="inline-flex items-center gap-1">
+          {i > 0 && <span className="text-muted-foreground">→</span>}
+          <span
+            className={
+              i <= reached
+                ? "font-medium text-green-800 dark:text-green-300"
+                : "text-muted-foreground"
+            }
+          >
+            {i <= reached ? "✓ " : "○ "}
+            <Tri {...s} />
+          </span>
+        </span>
+      ))}
+    </span>
+  );
+}
+
 function newClientId(): string {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
@@ -326,19 +359,29 @@ export function ExpensesView({ role }: { role: string }) {
         >
           <div className="flex flex-col gap-4">
             {decider && (
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant={mode === "record" ? "default" : "outline"}
-                  onClick={() => setMode("record")}
-                >
-                  <Tri bm="Perbelanjaan pertubuhan" zh="社团开支" en="Society spending" />
-                </Button>
-                <Button
-                  variant={mode === "claim" ? "default" : "outline"}
-                  onClick={() => setMode("claim")}
-                >
-                  <Tri bm="Tuntutan saya sendiri" zh="我自己的报销" en="My own claim" />
-                </Button>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant={mode === "record" ? "default" : "outline"}
+                    onClick={() => setMode("record")}
+                  >
+                    <Tri bm="Perbelanjaan pertubuhan" zh="社团开支" en="Society spending" />
+                  </Button>
+                  <Button
+                    variant={mode === "claim" ? "default" : "outline"}
+                    onClick={() => setMode("claim")}
+                  >
+                    <Tri bm="Tuntutan saya sendiri" zh="我自己的报销" en="My own claim" />
+                  </Button>
+                </div>
+                {/* B-8 (J #9): the difference, in one plain sentence. */}
+                <p className="text-sm text-muted-foreground">
+                  <Tri
+                    bm="Anda keluarkan wang sendiri untuk pertubuhan dan mahu dituntut balik → “Tuntutan saya sendiri”. Pertubuhan yang bayar terus → “Perbelanjaan pertubuhan”."
+                    zh="帮社团垫了钱、要跟社团拿回来 → 用「我自己的报销」；社团直接付的 → 用「社团开支」。"
+                    en="You paid out of your own pocket and want it back → “My own claim”. The society paid directly → “Society spending”."
+                  />
+                </p>
               </div>
             )}
 
@@ -400,11 +443,21 @@ export function ExpensesView({ role }: { role: string }) {
                 />
               </label>
               <span className="text-sm text-muted-foreground">
-                <Tri
-                  bm="Atau taip sendiri di bawah — percuma, ditanda “manual”."
-                  zh="或者直接在下面打字 —— 免费，会标「手动」。"
-                  en="Or just type below — free, tagged “manual”."
-                />
+                {mode === "claim" ? (
+                  /* B-8: a claim WANTS its receipt attached — say so here,
+                     at the entrance, not in a help page. */
+                  <Tri
+                    bm="Tuntutan lebih mudah diluluskan dengan resitnya — ambil gambar di sini dan AI mengisi borang untuk anda. Atau taip sendiri di bawah (percuma, ditanda “manual”)."
+                    zh="报销附上单据更容易批 —— 在这里拍下收据，AI 会帮你把表格填好。也可以直接在下面打字（免费，会标「手动」）。"
+                    en="A claim is easier to approve with its receipt — photograph it here and the AI fills the form for you. Or just type below (free, tagged “manual”)."
+                  />
+                ) : (
+                  <Tri
+                    bm="Atau taip sendiri di bawah — percuma, ditanda “manual”."
+                    zh="或者直接在下面打字 —— 免费，会标「手动」。"
+                    en="Or just type below — free, tagged “manual”."
+                  />
+                )}
               </span>
             </div>
             {readNote && (
@@ -620,6 +673,7 @@ export function ExpensesView({ role }: { role: string }) {
                       <Tri bm="Sebab" zh="理由" en="Reason" />: {r.rejectReason}
                     </p>
                   )}
+                  <ClaimProgress status={r.status} />
                 </div>
                 <Badge variant="outline" className={STATUS_BADGE[r.status].cls}>
                   <Tri {...STATUS_BADGE[r.status]} />

@@ -37,7 +37,7 @@ async function readBack(bytes: Uint8Array): Promise<ExcelJS.Workbook> {
 }
 
 describe("buildEInvoisXlsxFiles", () => {
-  it("writes one workbook with instructions + documents, correct values", async () => {
+  it("writes one workbook: the Dokumen data sheet FIRST AND ONLY (D21)", async () => {
     const pack = buildMonthEndPack(donations, { month: "2026-06", orgName: "Pertubuhan Contoh" });
     const files = await buildEInvoisXlsxFiles(pack, { orgName: "Pertubuhan Contoh" });
 
@@ -45,7 +45,13 @@ describe("buildEInvoisXlsxFiles", () => {
     expect(files[0].filename).toBe("einvois-2026-06-fail-1-dari-1.xlsx");
 
     const wb = await readBack(files[0].bytes);
-    expect(wb.worksheets.map((w) => w.name)).toEqual(["Arahan - Instructions", "Dokumen"]);
+    // D21 (拍板 37): instructions moved OUT of the upload file — a worksheet
+    // of prose is exactly what makes a portal upload fail. Data only.
+    expect(wb.worksheets.map((w) => w.name)).toEqual(["Dokumen"]);
+    // The one-line verify warning STAYS until J's official template is
+    // aligned column-by-column (D21).
+    const title = String(wb.getWorksheet("Dokumen")!.getRow(1).getCell(1).value ?? "");
+    expect(title).toContain("DRAF");
 
     const ws = wb.getWorksheet("Dokumen")!;
     // Row 3 = header, rows 4-5 = documents (consolidated first, then individual).

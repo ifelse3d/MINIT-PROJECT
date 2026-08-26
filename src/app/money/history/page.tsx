@@ -1,4 +1,3 @@
-import { CUSTODY_STATUS_LABEL, labelFor } from "@/lib/status-labels";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -24,10 +23,12 @@ import { isIsoDate } from "@/lib/date-input";
 import { PAGE_SIZE, pageRange, pageSummary, parsePage } from "@/lib/list-page";
 import { Pager } from "@/components/pager";
 import { ReceiptFilters } from "./filters";
+import { DownloadReceiptButton } from "./row-actions";
 
 // /money/history — every receipt saved for the active org (Phase 7).
-// PDPA (Hard Rule 5): this list shows ONLY the stored donor_masked value —
-// full names stay on the receipt PDF itself, never in this list.
+// D18 (拍板 35, 2026-08-27): donor names show IN FULL here — the treasurer
+// typed them, and a record system must show whose record it is. Masking is
+// for the moments data LEAVES the app (print/share), not for this list.
 export const dynamic = "force-dynamic";
 
 const CUSTODY_STYLE: Record<string, string> = {
@@ -42,22 +43,30 @@ type ReceiptRow = {
   issued_at: string;
   donation: {
     donor_masked: string | null;
+    donor_name?: string | null;
     amount_cents: number;
     purpose: string | null;
     donated_at: string | null;
     custody_status: string;
     kind?: string | null;
     item_desc?: string | null;
+    collector_name?: string | null;
+    payment_method?: string | null;
   } | null;
 };
 
-/** D-3: with the in-kind columns; the fallback covers a pre-migration-25 DB —
- *  PostgREST fails the WHOLE query over one unknown column, and an empty
- *  history reads as "this society never issued a receipt". */
+/** B-6: newest columns first; each 42703 (that migration not applied yet)
+ *  steps down one honest rung — PostgREST fails the WHOLE query over one
+ *  unknown column, and an empty history reads as "this society never issued
+ *  a receipt". */
 const HISTORY_SELECT =
-  "id, receipt_no, issued_at, donation:donations!receipts_donation_id_fkey (donor_masked, amount_cents, purpose, donated_at, custody_status, kind, item_desc)";
+  "id, receipt_no, issued_at, donation:donations!receipts_donation_id_fkey (donor_masked, donor_name, amount_cents, purpose, donated_at, custody_status, kind, item_desc, collector_name, payment_method)";
+/** While migration 26 (payment_method) is not applied. */
+const HISTORY_SELECT_NO_PAYMENT =
+  "id, receipt_no, issued_at, donation:donations!receipts_donation_id_fkey (donor_masked, donor_name, amount_cents, purpose, donated_at, custody_status, kind, item_desc, collector_name)";
+/** While migration 25 (kind) / 20260827 (collector_name) are not applied. */
 const HISTORY_SELECT_LEGACY =
-  "id, receipt_no, issued_at, donation:donations!receipts_donation_id_fkey (donor_masked, amount_cents, purpose, donated_at, custody_status)";
+  "id, receipt_no, issued_at, donation:donations!receipts_donation_id_fkey (donor_masked, donor_name, amount_cents, purpose, donated_at, custody_status)";
 
 /** What the URL is allowed to say about which receipts to show. */
 type Query = { q?: string; from?: string; to?: string; page?: string };
@@ -130,6 +139,12 @@ export default async function MoneyHistoryPage({
   };
   let { data, count, error } = await buildQuery(HISTORY_SELECT);
   if (error) {
+    const retry = await buildQuery(HISTORY_SELECT_NO_PAYMENT);
+    data = retry.data;
+    count = retry.count;
+    error = retry.error;
+  }
+  if (error) {
     const retry = await buildQuery(HISTORY_SELECT_LEGACY);
     data = retry.data;
     count = retry.count;
@@ -162,11 +177,16 @@ export default async function MoneyHistoryPage({
           <Tri bm="Sejarah Resit" zh="收据历史" en="Receipt History" />
         </h2>
         <p className="text-sm text-muted-foreground">
+          {/* B-6: this list is INCOME only — receipts are issued for money
+              coming in. Spending lives in its own book. */}
           <Tri
-            bm="Nama penderma disorok untuk melindungi privasi mereka"
-            zh="为保护捐款人隐私，姓名已隐藏"
-            en="Donor names are hidden to protect their privacy"
-          />
+            bm="Semua resit = wang masuk. Perbelanjaan ada dalam buku sendiri:"
+            zh="这里的收据都是收入。开支记在开支簿："
+            en="Every receipt here is income. Spending lives in its own book:"
+          />{" "}
+          <Link href="/money/expenses" className="underline underline-offset-4">
+            <Tri bm="Buku perbelanjaan" zh="开支簿" en="Expense book" /> →
+          </Link>
         </p>
       </div>
 
@@ -247,21 +267,32 @@ export default async function MoneyHistoryPage({
                   <TableHead>
                     <Tri bm="No. Resit" zh="收据号" en="Receipt No." />
                   </TableHead>
+                  {/* B-6: the direction column the tester missed — a receipt
+                      is always money IN, and the column says so. */}
+                  <TableHead>
+                    <Tri bm="Arah" zh="方向" en="Direction" />
+                  </TableHead>
                   <TableHead>
                     <Tri bm="Penderma" zh="捐款人" en="Donor" />
                   </TableHead>
                   <TableHead className="text-right">
                     <Tri bm="Jumlah" zh="金额" en="Amount" />
                   </TableHead>
+                  {/* B-6: "purpose" alone read like a mystery word. */}
                   <TableHead>
-                    <Tri bm="Tujuan" zh="用途" en="Purpose" />
+                    <Tri
+                      bm="Tujuan derma / keterangan"
+                      zh="捐款用途／款项说明"
+                      en="Donation purpose / description"
+                    />
                   </TableHead>
                   <TableHead>
                     <Tri bm="Tarikh" zh="日期" en="Date" />
                   </TableHead>
                   <TableHead>
-                    <Tri bm="Kustodi" zh="保管" en="Custody" />
+                    <Tri bm="Di mana wangnya" zh="钱现在在哪" en="Where the money is" />
                   </TableHead>
+                  <TableHead />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -269,7 +300,19 @@ export default async function MoneyHistoryPage({
                   // id anchor: the activity calendar deep-links to #receipt-N
                   <TableRow key={r.id} id={`receipt-${r.id}`} className="scroll-mt-24 target:bg-amber-50">
                     <TableCell className="font-mono">{r.receipt_no}</TableCell>
-                    <TableCell>{r.donation?.donor_masked ?? "—"}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className="border-green-300 bg-green-50 text-green-800"
+                      >
+                        ↓ <Tri bm="Masuk" zh="收入" en="In" />
+                      </Badge>
+                    </TableCell>
+                    {/* D18: the full name the treasurer typed. Older rows
+                        (pre-donor_name select tiers) fall back to the mask. */}
+                    <TableCell>
+                      {r.donation?.donor_name ?? r.donation?.donor_masked ?? "—"}
+                    </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {/* D-3: goods receipts show the goods, never RM0.00. */}
                       {r.donation?.kind === "in_kind" ? (
@@ -293,21 +336,41 @@ export default async function MoneyHistoryPage({
                     </TableCell>
                     <TableCell>{r.donation?.donated_at ?? "—"}</TableCell>
                     <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={
-                          CUSTODY_STYLE[r.donation?.custody_status ?? ""] ?? ""
-                        }
-                      >
-                        {/* Was the raw enum "pending_remittance", untranslated,
-                            while /money already had good trilingual wording. */}
-                        <Tri
-                          {...labelFor(
-                            CUSTODY_STATUS_LABEL,
-                            r.donation?.custody_status,
+                      {/* B-6: plain words, not a state-machine enum. */}
+                      {r.donation?.kind === "in_kind" ? (
+                        <span className="text-muted-foreground">
+                          <Tri bm="Barangan — bukan wang" zh="实物 —— 不是钱" en="Goods — not money" />
+                        </span>
+                      ) : r.donation?.payment_method === "transfer" ? (
+                        <Badge variant="outline" className="border-sky-300 bg-sky-100 text-sky-900">
+                          🏦 <Tri bm="Pindahan — dalam akaun" zh="转账入户" en="Transfer — in the account" />
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className={CUSTODY_STYLE[r.donation?.custody_status ?? ""] ?? ""}
+                        >
+                          {r.donation?.custody_status === "collected" ? (
+                            r.donation?.collector_name ? (
+                              <Tri
+                                bm={`Tunai dengan ${r.donation.collector_name}`}
+                                zh={`现金在 ${r.donation.collector_name} 手上`}
+                                en={`Cash with ${r.donation.collector_name}`}
+                              />
+                            ) : (
+                              <Tri bm="Tunai di tangan pemungut" zh="现金在收款人手上" en="Cash with the collector" />
+                            )
+                          ) : r.donation?.custody_status === "pending_remittance" ? (
+                            <Tri bm="Diserah — tunggu HQ sahkan" zh="已交出，等总会确认" en="Handed over — awaiting HQ" />
+                          ) : (
+                            <Tri bm="Sudah diterima HQ" zh="已交总会" en="Received by HQ" />
                           )}
-                        />
-                      </Badge>
+                        </Badge>
+                      )}
+                    </TableCell>
+                    {/* B-6: the receipt itself, one tap away. */}
+                    <TableCell>
+                      <DownloadReceiptButton receiptNo={r.receipt_no} />
                     </TableCell>
                   </TableRow>
                 ))}
