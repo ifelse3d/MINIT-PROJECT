@@ -498,4 +498,36 @@ Penutup、签名栏）由 compose 层程式拼装；模型唯一多做的事是�
 
 ---
 
-*Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C) · D16 appended 2026-08-25 (Stage D) · D17 appended 2026-08-27 (work order 27, the overnight sprint)*
+### D18 — 捐款人姓名：畫面上預設顯示全名；「隱藏姓名」只在列印/分享/截圖時作為選項（2026-08-27，31 號單 §0 拍板 35）
+
+姓名是用戶自己打進去的，記錄系統要看得到是誰——列表預設打碼讓司庫自己都認不出
+自己剛記的人。**修訂 Hard Rule 5 的「donor personal data is masked in list views
+by default」那一句**（CLAUDE.md 已就地注記指到這裡）。PDPA 底線不動：AI 模型仍然
+永不收到完整姓名/電話（org-tools 不 select `donor_name`/`donor_phone`）、對外分發
+（列印、WhatsApp、截圖）才是遮蔽選項該出現的地方、donor 資料永不入 log。
+
+### D19 — 每筆收入登記時就問「現金／轉賬」；「交現金」改為保管記錄頁（2026-08-27，31 號單 §0 拍板 34）
+
+`donations.payment_method`（'cash'|'transfer'，default 'cash'）＋
+`donations.transfer_proof_path`（選填轉賬截圖，Storage 不吃 AI 額度）＝ migration 26
+（Stage B，唯一授權的一支）。現金記「在誰手上／已交總會」；轉賬單不經現金保管
+（不進交接、不算「手上」）。「交現金」頁從流程第 3 步改成**保管狀態記錄頁**
+（誰手上有多少、他交來了→打勾確認、歷史）；步驟條 1-2-3 改 1-2。
+custody 狀態機（forward-only）語義不變。
+
+### D20 — 品牌改名槓桿：顯示名集中一個常數；8/31 提交前不改名；已開收據字首鎖死（2026-08-27，31 號單 §0 拍板 38）
+
+`src/lib/brand.ts` 的 `BRAND_NAME` 是唯一的用戶可見顯示名來源（Stage E 接線）。
+MinitAI／Minity 賽後再定（D13 維持到賽後）。已開出的收據字首（MIN-2026-xxxx）
+**永不改**——連號的法律意義高於品牌一致性；改名真的發生時，只有新機構用新預設字首。
+
+### D21 — e-Invois 下載檔要「直接可交」：說明文字不入上傳檔（2026-08-27，31 號單 §0 拍板 37）
+
+MyInvois Batch Upload 的 .xlsx 只放資料表（Dokumen 表第一且唯一，或完全照官方模板
+形狀）；「Arahan - Instructions」工作表移出上傳檔，說明改成頁面上的步驟卡＋（可選）
+獨立 README 下載。等 J 提供官方模板原檔後逐欄對齊；對齊前檔上保留
+「verify against LHDN template」警語。（Stage B-7 執行。）
+
+---
+
+*Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C) · D16 appended 2026-08-25 (Stage D) · D17 appended 2026-08-27 (work order 27, the overnight sprint) · D18–D21 appended 2026-08-27 (work order 31 §0, J's post-launch rulings)*

@@ -89,8 +89,8 @@ These are built into every feature:
 1. **The AI never invents.** If a fact is not in your photo, the field is marked *missing* and left blank — the AI will not guess a name or an amount. Every extracted fact carries where it came from and a confidence level.
 2. **Money maths is code, not AI** (explained in section 2).
 3. **Receipts never imply tax-deductibility** unless your approved status is set, with a hard warning.
-4. **Privacy (PDPA).** Donor names and IC numbers are never logged; personal data is masked in lists by default; deleting an organisation removes its data.
-5. **Everything is bilingual** (BM + English) in the interface, and official documents are generated in Bahasa Malaysia.
+4. **Privacy (PDPA).** Donor names and IC numbers are never logged; the AI never receives a full donor name or phone number; a "hide names" option protects donors when you print, share or screenshot (D18, 2026-08-27 — in-app lists show the names you typed); deleting an organisation removes its data.
+5. **Everything is trilingual** (BM + Chinese + English) in the interface, and official documents are generated in Bahasa Malaysia. *(Corrected 2026-08-27 — this line said "bilingual" long after CLAUDE.md rule 9 was corrected to trilingual on 2026-08-21.)*
 6. **Humans confirm everything; the AI only drafts.** Generated documents carry a line: *"Drafted by Minit, confirmed by [name] on [date]."*
 
 ---
