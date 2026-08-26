@@ -16,10 +16,10 @@
 > **已上线**：https://minit-project.vercel.app（Vercel 专案 if-else/minit-project）。
 > push 到 main 自动重新部署——**push 是 J 的事**（push-cabang.bat）。
 > 线上资料库两个 org（15「J」、58「avocado」），migration 1–25 全部 APPLIED。
-> **本场 6 支 commit、全部未 push**：
+> **本场 commit、全部未 push（共 7 支，含 STATE.md 收尾那一支——它自己的
+> hash 写不进它自己，看 `git log` 最上面即是）**：
 > `29fd9d8`（上轮遗留两档收尾，上一手已 commit）· `1349612`（P-1）·
-> `371fb06`（P-2..P-4）· `7e44a54`（Stage R）· `8049833`（Stage A）·
-> `d60c4a8`（STATE.md 收工）。
+> `371fb06`（P-2..P-4）· `7e44a54`（Stage R）· `8049833`（Stage A）。
 > 🔴 **migration 26 还没写**——那是场次 2（Stage B）唯一授权的一支。
 
 ### 现场量到的（不是听说的）
