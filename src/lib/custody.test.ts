@@ -155,4 +155,62 @@ describe("HQ dashboard sums (deterministic)", () => {
     expect(collectorBalances(withGoods)).toEqual(collectorBalances(donations));
     expect(totalUnremittedCents(withGoods)).toBe(15000);
   });
+
+  // D19 (拍板 34): a bank transfer went straight into the account. It is not
+  // in anyone's hands, it never joins a hand-over, and HQ must not chase it.
+  it("keeps bank-transfer donations out of every cash sum", () => {
+    const withTransfer = [
+      ...donations,
+      donation({
+        id: "t1",
+        collector: "Lim",
+        amountCents: 88800,
+        paymentMethod: "transfer",
+        custodyStatus: "collected",
+      }),
+    ];
+    expect(collectorBalances(withTransfer)).toEqual(collectorBalances(donations));
+    expect(totalUnremittedCents(withTransfer)).toBe(15000);
+  });
+
+  it("keeps bank-transfer receipts out of a remittance batch", () => {
+    const rows = [
+      donation({ id: "c1", collector: "Lim", receiptNo: "MIN-2026-0001", amountCents: 5000 }),
+      donation({
+        id: "t1",
+        collector: "Lim",
+        receiptNo: "MIN-2026-0002",
+        amountCents: 7000,
+        paymentMethod: "transfer",
+      }),
+    ];
+    const { batch, donations: after } = createRemittanceBatch(rows, {
+      id: "b1",
+      collector: "Lim",
+      handedOverAtIso: "2026-08-28",
+    });
+    expect(batch.receiptNos).toEqual(["MIN-2026-0001"]);
+    expect(batch.totalCents).toBe(5000);
+    // The transfer row is untouched — it was never part of the hand-over.
+    expect(after.find((d) => d.id === "t1")?.custodyStatus).toBe("collected");
+  });
+
+  it("a collector holding ONLY transfers has nothing to hand over", () => {
+    const rows = [
+      donation({
+        id: "t1",
+        collector: "Siti",
+        receiptNo: "MIN-2026-0009",
+        amountCents: 12000,
+        paymentMethod: "transfer",
+      }),
+    ];
+    expect(() =>
+      createRemittanceBatch(rows, {
+        id: "b1",
+        collector: "Siti",
+        handedOverAtIso: "2026-08-28",
+      }),
+    ).toThrow(CustodyError);
+  });
 });

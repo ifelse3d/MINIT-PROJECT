@@ -100,11 +100,35 @@ export type RegisterDonation = {
   /** In-kind only, OPTIONAL: the human's estimated value in cents — ledger
    *  and statement ONLY. Never on the receipt, never e-Invois, never custody. */
   estValueCents?: number | null;
+  /** D19 (拍板 34): how the money arrived. Absent = 'cash'. Transfer rows
+   *  went straight into the bank account — they NEVER enter cash custody:
+   *  not in anyone's hands, never in a remittance batch. */
+  paymentMethod?: "cash" | "transfer";
+  /** Transfer only, OPTIONAL: Storage path of the transfer screenshot the
+   *  member attached. Storage, never AI. */
+  transferProofPath?: string | null;
 };
 
 /** True for a goods (Derma Barangan) row — the one question money code asks. */
 export function isInKind(d: Pick<RegisterDonation, "kind">): boolean {
   return d.kind === "in_kind";
+}
+
+/** D19: true for a bank-transfer row. Absent paymentMethod = cash — every row
+ *  recorded before migration 26 was recorded on the cash flow, so that is the
+ *  only honest default. */
+export function isTransfer(d: Pick<RegisterDonation, "paymentMethod">): boolean {
+  return d.paymentMethod === "transfer";
+}
+
+/** The one question the CASH paths ask: is this row physical money that is
+ *  (or was) in somebody's hands? Goods are not cash (D-1); transfers went
+ *  straight to the bank (D19). Both are excluded from hand-overs, from
+ *  per-collector balances and from "cash not yet at HQ". */
+export function holdsCash(
+  d: Pick<RegisterDonation, "kind" | "paymentMethod">,
+): boolean {
+  return !isInKind(d) && !isTransfer(d);
 }
 
 /**

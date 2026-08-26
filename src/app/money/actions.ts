@@ -50,6 +50,10 @@ export type RowToIssue = {
   itemDesc?: string | null;
   /** In-kind only, optional: estimated value in cents (ledger only). */
   estValueCents?: number | null;
+  /** D19 (拍板 34): how the money arrived. Absent = 'cash'. */
+  paymentMethod?: "cash" | "transfer";
+  /** Transfer only, optional: Storage path of the attached proof screenshot. */
+  transferProofPath?: string | null;
 };
 
 export type IssueResult =
@@ -73,7 +77,10 @@ export type IssueResult =
       /** db_behind — the rows include an in-kind donation but migration 25
        *  (donations.kind) has not been applied yet. Issuing would store the
        *  goods as a RM0.00 CASH receipt with no item line — a wrong legal
-       *  document — so nothing was attempted. Cash-only batches still work. */
+       *  document — so nothing was attempted. Cash-only batches still work.
+       *  Same refusal for a TRANSFER row before migration 26
+       *  (donations.payment_method): it would be stored as cash and start
+       *  being chased as "cash in somebody's hands" that never existed. */
       reason: "no_org" | "readonly" | "failed" | "needs_prefix" | "sample" | "db_behind";
     }
   | { saved: true; receiptNos: Record<string, string> };
@@ -111,6 +118,15 @@ export async function issueAndSaveReceipts(
   // when the batch actually contains goods.
   if (rows.some((r) => r.kind === "in_kind")) {
     const probe = await supabase.from("donations").select("kind").limit(1);
+    if (probe.error) return { saved: false, reason: "db_behind" };
+  }
+
+  // D19: same shape of refusal for transfer rows on a pre-migration-26
+  // database — the v5 RPC would silently store them as CASH, and the custody
+  // page would then chase "cash in somebody's hands" that never existed.
+  // Cash batches (the default) never trigger this probe.
+  if (rows.some((r) => r.paymentMethod === "transfer")) {
+    const probe = await supabase.from("donations").select("payment_method").limit(1);
     if (probe.error) return { saved: false, reason: "db_behind" };
   }
 
@@ -155,6 +171,11 @@ export async function issueAndSaveReceipts(
         r.estValueCents === null || r.estValueCents === undefined
           ? null
           : String(r.estValueCents),
+      // D19: pre-migration-26 RPC versions ignore these keys; the transfer
+      // probe above already refused in that case, so a transfer can never
+      // land recorded as cash.
+      paymentMethod: r.paymentMethod === "transfer" ? "transfer" : "cash",
+      transferProofPath: r.transferProofPath ?? null,
     })),
   });
 

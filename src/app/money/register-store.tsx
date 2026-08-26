@@ -18,6 +18,7 @@ import { mergeLedgerExtractions, mergedSourceLabel } from "@/lib/extraction-merg
 import {
   allocateReceiptNos,
   eligibleForReceipt,
+  holdsCash,
   isRegisterDonationArray,
   type RegisterDonation,
 } from "@/lib/receipts";
@@ -530,6 +531,9 @@ export function RegisterProvider({
           kind: d.kind,
           itemDesc: d.itemDesc ?? null,
           estValueCents: d.estValueCents ?? null,
+          // D19: how the money arrived rides along to the database.
+          paymentMethod: d.paymentMethod,
+          transferProofPath: d.transferProofPath ?? null,
         })),
         opts,
       );
@@ -638,7 +642,14 @@ export function RegisterProvider({
       const collectors = Array.from(
         new Set(
           current
-            .filter((d) => d.custodyStatus === "collected" && d.receiptNo !== null)
+            // holdsCash: goods (D-1) and bank transfers (D19) are never in
+            // anyone's hands, so they never make a collector "hold cash".
+            .filter(
+              (d) =>
+                d.custodyStatus === "collected" &&
+                d.receiptNo !== null &&
+                holdsCash(d),
+            )
             .map((d) => d.collector),
         ),
       );
@@ -726,7 +737,14 @@ export function RegisterProvider({
       Array.from(
         new Set(
           donations
-            .filter((d) => d.custodyStatus === "collected" && d.receiptNo !== null)
+            // Same holdsCash rule as handOver: goods and transfers are not
+            // cash in a hand.
+            .filter(
+              (d) =>
+                d.custodyStatus === "collected" &&
+                d.receiptNo !== null &&
+                holdsCash(d),
+            )
             .map((d) => d.collector),
         ),
       ),

@@ -1,4 +1,4 @@
-import { isInKind, type RegisterDonation } from "@/lib/receipts";
+import { holdsCash, type RegisterDonation } from "@/lib/receipts";
 
 // ---------------------------------------------------------------------------
 // CUSTODY — collector → HQ money tracking (Phase 3, CLAUDE.md Hard Rule 2).
@@ -65,7 +65,9 @@ export function createRemittanceBatch(
       // D-1 (拍板③): goods are not cash. An in-kind receipt in the batch's
       // receiptNos would be a paper trail claiming cash that never existed —
       // its amount is 0 by convention, but the NUMBER must not appear either.
-      !isInKind(d)
+      // D19 (拍板 34): bank transfers went straight into the account — they
+      // were never in the collector's hands, so they never join a hand-over.
+      holdsCash(d)
   );
   if (inBatch.length === 0) {
     throw new CustodyError(`No receipted, un-remitted donations for collector "${params.collector}".`);
@@ -125,7 +127,8 @@ export type CollectorBalance = {
 export function collectorBalances(donations: RegisterDonation[]): CollectorBalance[] {
   const byCollector = new Map<string, CollectorBalance>();
   // D-1: in-kind rows hold no cash — they are not in anyone's hands.
-  for (const d of donations.filter((d) => !isInKind(d))) {
+  // D19: transfer rows hold no cash either — the bank has it, not a person.
+  for (const d of donations.filter(holdsCash)) {
     const b =
       byCollector.get(d.collector) ??
       { collector: d.collector, collectedCents: 0, pendingCents: 0, settledCents: 0 };
@@ -137,9 +140,10 @@ export function collectorBalances(donations: RegisterDonation[]): CollectorBalan
   return [...byCollector.values()].sort((a, b) => a.collector.localeCompare(b.collector));
 }
 
-/** Everything not yet settled — the number HQ chases. */
+/** Everything not yet settled — the number HQ chases. Cash only: goods hold
+ *  no money (D-1) and transfers are already in the bank (D19). */
 export function totalUnremittedCents(donations: RegisterDonation[]): number {
   return donations
-    .filter((d) => d.custodyStatus !== "settled" && !isInKind(d))
+    .filter((d) => d.custodyStatus !== "settled" && holdsCash(d))
     .reduce((sum, d) => sum + d.amountCents, 0);
 }

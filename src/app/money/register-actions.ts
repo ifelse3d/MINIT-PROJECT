@@ -19,6 +19,11 @@ import { getActiveOrg } from "@/lib/active-org";
 import type { RegisterDonation } from "@/lib/receipts";
 
 const SELECT =
+  "id, client_id, donor_name, donor_phone, amount_cents, purpose, donated_at, custody_status, source, collector_name, kind, item_desc, est_value_cents, payment_method, transfer_proof_path, receipt:receipts!donations_receipt_id_fkey (receipt_no)" as const;
+/** While migration 26 (donations.payment_method) is not applied — retry
+ *  without the payment columns (rows come back as cash, which is what a
+ *  pre-26 database can only truthfully hold anyway). */
+const SELECT_NO_PAYMENT =
   "id, client_id, donor_name, donor_phone, amount_cents, purpose, donated_at, custody_status, source, collector_name, kind, item_desc, est_value_cents, receipt:receipts!donations_receipt_id_fkey (receipt_no)" as const;
 /** While migration 25 (donations.kind) is not applied — retry without the
  *  in-kind columns. */
@@ -43,6 +48,8 @@ type Row = {
   kind?: string | null;
   item_desc?: string | null;
   est_value_cents?: number | null;
+  payment_method?: string | null;
+  transfer_proof_path?: string | null;
   receipt: { receipt_no: string } | null;
 };
 
@@ -64,6 +71,11 @@ export async function loadRegisterDonations(): Promise<RegisterDonation[]> {
       .order("donated_at", { ascending: true });
 
   let { data, error } = await query(SELECT).returns<Row[]>();
+  if (error) {
+    const retry = await query(SELECT_NO_PAYMENT).returns<Row[]>();
+    data = retry.data;
+    error = retry.error;
+  }
   if (error) {
     const retry = await query(SELECT_NO_KIND).returns<Row[]>();
     data = retry.data;
@@ -94,5 +106,9 @@ export async function loadRegisterDonations(): Promise<RegisterDonation[]> {
     kind: d.kind === "in_kind" ? ("in_kind" as const) : ("cash" as const),
     itemDesc: d.item_desc ?? null,
     estValueCents: d.est_value_cents ?? null,
+    // D19: transfer rows come back as transfer rows (pre-26 DB = all cash).
+    paymentMethod:
+      d.payment_method === "transfer" ? ("transfer" as const) : ("cash" as const),
+    transferProofPath: d.transfer_proof_path ?? null,
   }));
 }

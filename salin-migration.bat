@@ -78,6 +78,8 @@ echo    25.  20260903000000  FINAL SPRINT - derma barangan + claim + feedback
 echo         + ai_usage.user_id + platform_admins (semua dalam SATU fail)
 echo         in-kind donations + claims + feedback + per-user usage
 echo         + platform admins (all in ONE file)
+echo    26.  20260904000000  cara bayaran tunai/pindahan + bukti pindahan
+echo         payment method cash/transfer + transfer proof column
 echo.
 echo     0.  Keluar / Quit
 echo.
@@ -109,6 +111,7 @@ if "%pick%"=="22" set f=20260831000000_app_errors.sql& goto copy
 if "%pick%"=="23" set f=20260901000000_trial_quota_15.sql& goto copy
 if "%pick%"=="24" set f=20260902000000_invites_and_org_type.sql& goto copy
 if "%pick%"=="25" set f=20260903000000_final_sprint.sql& goto copy
+if "%pick%"=="26" set f=20260904000000_payment_method.sql& goto copy
 
 echo.
 echo    Nombor tak sah / not a valid number.

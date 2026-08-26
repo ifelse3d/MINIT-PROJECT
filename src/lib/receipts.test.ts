@@ -5,7 +5,9 @@ import {
   eligibleForReceipt,
   findDuplicateDonations,
   findSequenceGaps,
+  holdsCash,
   isRegisterDonationArray,
+  isTransfer,
   ledgerPageFullyRecorded,
   formatReceiptNo,
   normalizeMyPhone,
@@ -245,5 +247,27 @@ describe("isRegisterDonationArray (localStorage shape guard)", () => {
 
   it("rejects when ONE row in a long register is bad", () => {
     expect(isRegisterDonationArray([good, good, { ...good, donorName: 42 }])).toBe(false);
+  });
+});
+
+// D19 (拍板 34): the one question every cash path asks.
+describe("holdsCash / isTransfer", () => {
+  it("absent paymentMethod means cash — the only honest pre-migration default", () => {
+    expect(isTransfer({})).toBe(false);
+    expect(holdsCash({})).toBe(true);
+  });
+
+  it("a transfer row holds no cash", () => {
+    expect(isTransfer({ paymentMethod: "transfer" })).toBe(true);
+    expect(holdsCash({ paymentMethod: "transfer" })).toBe(false);
+  });
+
+  it("goods hold no cash either, whatever the payment method says", () => {
+    expect(holdsCash({ kind: "in_kind" })).toBe(false);
+    expect(holdsCash({ kind: "in_kind", paymentMethod: "cash" })).toBe(false);
+  });
+
+  it("an explicit cash row holds cash", () => {
+    expect(holdsCash({ paymentMethod: "cash" })).toBe(true);
   });
 });
