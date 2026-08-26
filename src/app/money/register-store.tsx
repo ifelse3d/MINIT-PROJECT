@@ -103,6 +103,14 @@ export type RegisterStore = {
   aiBusy: boolean;
   aiError: string | null;
   addedRows: Set<number>;
+  /** D19: the reviewer's cash/transfer answer per ledger row (by row index).
+   *  Absent = cash — the AI never decides how money arrived. Owned here so a
+   *  trip to another /money page cannot silently reset a "transfer" answer. */
+  ledgerPayments: Record<number, "cash" | "transfer">;
+  setLedgerPayment: (rowIndex: number, method: "cash" | "transfer") => void;
+  /** D19 (B-5③): the pages already read this review, as thumbnails —
+   *  name + data URL, in upload order. A draft, so never persisted. */
+  ledgerPages: { name: string; dataUrl: string }[];
   onLedgerPicked: (
     file: File | null,
     /** 0-1: "fresh" = the person said this photo starts a NEW ledger page. */
@@ -151,7 +159,9 @@ export type RegisterStore = {
   issueNotice: IssueNotice | null;
   setIssueNotice: Dispatch<SetStateAction<IssueNotice | null>>;
   handOver: () => void;
-  hqConfirm: () => void;
+  /** B-3: HQ ticks off ONE hand-over ("he brought it → confirm"). No id =
+   *  confirm every pending batch (the old bulk behaviour). */
+  hqConfirm: (batchId?: string) => void;
   deleteEverything: () => void;
   /**
    * True when a hand-over could not be written to the organisation's records,
@@ -248,6 +258,14 @@ export function RegisterProvider({
   // Ledger rows already pushed into the register (by row index), so the same
   // row cannot be added twice.
   const [addedRows, setAddedRows] = useState<Set<number>>(new Set());
+  // D19: the reviewer's cash/transfer answer per row index. {} = all cash.
+  const [ledgerPayments, setLedgerPayments] = useState<
+    Record<number, "cash" | "transfer">
+  >({});
+  // B-5③: thumbnails of every page read into this review, upload order.
+  const [ledgerPages, setLedgerPages] = useState<
+    { name: string; dataUrl: string }[]
+  >([]);
 
   const [error, setError] = useState<string | null>(null);
   const [custodyLocalOnly, setCustodyLocalOnly] = useState(false);
@@ -283,8 +301,17 @@ export function RegisterProvider({
     setLedgerSourceLabel(null);
     setShowSample(false);
     setAddedRows(new Set());
+    setLedgerPayments({});
+    setLedgerPages([]);
     setAiError(null);
   }, []);
+
+  const setLedgerPayment = useCallback(
+    (rowIndex: number, method: "cash" | "transfer") => {
+      setLedgerPayments((prev) => ({ ...prev, [rowIndex]: method }));
+    },
+    [],
+  );
 
   /** The opt-in worked example. The rows come from the page, so this file does
    *  not have to import the sample ledger just to hand it straight back. */
@@ -292,6 +319,8 @@ export function RegisterProvider({
     setLedger(extraction);
     setShowSample(true);
     setAddedRows(new Set());
+    setLedgerPayments({});
+    setLedgerPages([]);
     setAiError(null);
   }, []);
 
@@ -372,7 +401,24 @@ export function RegisterProvider({
       setLedgerSourceLabel((prev) =>
         continuing ? mergedSourceLabel(prev, file.name) : file.name,
       );
-      if (!continuing) setAddedRows(new Set());
+      if (!continuing) {
+        setAddedRows(new Set());
+        setLedgerPayments({});
+      }
+      // B-5③: keep a thumbnail of every page in this review, so a multi-page
+      // upload can be looked back at. Images only — a PDF gets a name tile.
+      const dataUrl = file.type.startsWith("image/")
+        ? await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () =>
+              resolve(typeof reader.result === "string" ? reader.result : "");
+            reader.onerror = () => resolve("");
+            reader.readAsDataURL(file);
+          })
+        : "";
+      setLedgerPages((prev) =>
+        continuing ? [...prev, { name: file.name, dataUrl }] : [{ name: file.name, dataUrl }],
+      );
       return true;
     } catch (e) {
       setAiError(e instanceof Error ? e.message : String(e));
@@ -436,6 +482,8 @@ export function RegisterProvider({
     setLedger(handed.extraction as LedgerExtraction);
     setLedgerSourceLabel(handed.fileName);
     setAddedRows(new Set());
+    setLedgerPayments({});
+    setLedgerPages([]);
   }, []);
 
   // Confirmed ledger rows → register (explicit human action; deterministic
@@ -465,6 +513,9 @@ export function RegisterProvider({
         collector: registerCollector,
         receiptNo: null,
         custodyStatus: "collected" as const,
+        // D19: the reviewer's answer, default cash. The AI never decides how
+        // the money arrived.
+        paymentMethod: ledgerPayments[i] ?? ("cash" as const),
       })),
     ]);
     setAddedRows((prev) => {
@@ -472,7 +523,7 @@ export function RegisterProvider({
       eligible.forEach(({ i }) => next.add(i));
       return next;
     });
-  }, [isSampleLedger, ledger, addedRows, registerCollector, setDonations]);
+  }, [isSampleLedger, ledger, addedRows, registerCollector, ledgerPayments, setDonations]);
 
   // --- Editing a register row BEFORE its receipt is issued ------------------
   const saveDonation = useCallback(
@@ -676,14 +727,21 @@ export function RegisterProvider({
     }
   }, [commitCustody]);
 
-  const hqConfirm = useCallback(() => {
+  const hqConfirm = useCallback((batchId?: string) => {
     setError(null);
     try {
       let current = donationsRef.current;
       let changed = false;
+      // B-3: the confirmer on the audit trail is the REAL signed-in person.
+      // "HQ Admin (Demo)" was a leftover from the demo era and must never
+      // appear in a real organisation's records again.
+      const confirmedBy =
+        signerName ?? t("(tidak dinyatakan)", "（未记录）", "(not recorded)");
       const updated = batchesRef.current.map((b) => {
         if (b.status === "settled") return b;
-        const result = confirmRemittanceBatch(b, current, { confirmedBy: "HQ Admin (Demo)" });
+        // B-3: ticking ONE hand-over off confirms only that hand-over.
+        if (batchId !== undefined && b.id !== batchId) return b;
+        const result = confirmRemittanceBatch(b, current, { confirmedBy });
         current = result.donations;
         changed = true;
         return result.batch;
@@ -701,7 +759,7 @@ export function RegisterProvider({
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
-  }, [commitCustody]);
+  }, [commitCustody, signerName, t]);
 
   /**
    * Wipes the register on this device. Confirmation is the caller's job.
@@ -779,6 +837,9 @@ export function RegisterProvider({
         aiBusy,
         aiError,
         addedRows,
+        ledgerPayments,
+        setLedgerPayment,
+        ledgerPages,
         onLedgerPicked,
         showLedgerSample,
         ledgerBackToEmpty,

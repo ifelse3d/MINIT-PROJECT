@@ -1,6 +1,7 @@
 import { CashCustody } from "../cash-custody";
 
-// Step 3 of the /money flow: cash from the collector to HQ.
+// The cash custody RECORD (B-3, D19): who is holding how much, tick off what
+// arrived. Not a step of the money flow any more.
 export default function MoneyCustodyPage() {
   return <CashCustody />;
 }

@@ -21,17 +21,36 @@ import { useRegister } from "./register-store";
 // it.
 // ---------------------------------------------------------------------------
 
+// B-3 (拍板 34, D19): the JOB is two steps — read the ledger, issue receipts.
+// Handing cash to HQ is not step 3 of anybody's afternoon: it is a RECORD page
+// (who is holding how much, tick off what arrived), so it moved out of the
+// numbered chain and lives beside History. The tax file was never a step
+// either — a once-a-month errand.
 const MONEY_TABS = [
   // G-4 (2026-08-25, J #19): the BM official term rides along in zh/EN — it
   // is the word on the ledger book, the bank slip and the auditor's mouth.
   { href: "/money", labelBm: "Baca lejar", labelZh: "读账页 · Lejar", labelEn: "Read the ledger · Lejar" },
   { href: "/money/receipts", labelBm: "Resit", labelZh: "开收据 · Resit", labelEn: "Receipts · Resit" },
-  { href: "/money/custody", labelBm: "Serah wang", labelZh: "交现金 · Serah Wang", labelEn: "Hand over cash · Serah Wang" },
-  // R-6 (2026-08-25): e-Invois is OPTIONAL (J 2026-08-24) — its tab appears
-  // only when the organisation has switched it on (Settings). The route
-  // itself always works.
-  { href: "/money/einvois", labelBm: "Fail cukai", labelZh: "税务文件", labelEn: "Tax file" },
 ] as const;
+
+const MONEY_CUSTODY = {
+  href: "/money/custody",
+  labelBm: "Simpanan tunai",
+  labelZh: "现金保管",
+  labelEn: "Cash custody",
+  iconEmoji: "💰",
+} as const;
+
+// R-6 (2026-08-25): e-Invois is OPTIONAL (J 2026-08-24) — its entry appears
+// only when the organisation has switched it on (Settings). The route itself
+// always works.
+const MONEY_EINVOIS = {
+  href: "/money/einvois",
+  labelBm: "Fail cukai",
+  labelZh: "税务文件",
+  labelEn: "Tax file",
+  iconEmoji: "🗂",
+} as const;
 
 // E-1 (2026-08-25): receipt history is the section's RECORDS, not the last
 // numbered step. Rendered apart from the chain — no number, never locked.
@@ -56,8 +75,6 @@ export function MoneyChrome({ children }: { children: ReactNode }) {
     ledgerRowsToCheck,
     rowsReadyToAdd,
     unreceipted,
-    cashInHandCents,
-    availableMonths,
     error,
     setError,
   } = useRegister();
@@ -80,25 +97,15 @@ export function MoneyChrome({ children }: { children: ReactNode }) {
       status: donations.length === 0 ? "locked" : receiptsIssued ? "done" : "needs-you",
       count: unreceipted,
     },
-    {
-      ...MONEY_TABS[2],
-      status: !receiptsIssued ? "locked" : cashInHandCents > 0 ? "needs-you" : "done",
-    },
-    // The tax file only becomes real once a month with receipts exists. It is
-    // a once-a-month errand, never "the next thing to do", so it never claims
-    // the amber "needs you" colour. Hidden entirely while the organisation
-    // says it does not need e-Invois (R-6) — unless someone is standing on the
-    // page itself, in which case hiding its own tab would be disorienting.
-    ...(einvoisVisible || pathname === "/money/einvois"
-      ? [
-          {
-            ...MONEY_TABS[3],
-            status: (availableMonths.length > 0 && receiptsIssued
-              ? "neutral"
-              : "locked") as SectionTab["status"],
-          },
-        ]
-      : []),
+  ];
+
+  // B-3: the record pages, apart from the numbered steps. The tax entry is
+  // hidden while the organisation says it does not need e-Invois (R-6) —
+  // unless someone is standing on the page itself, in which case hiding its
+  // own entry would be disorienting.
+  const extras = [
+    MONEY_CUSTODY,
+    ...(einvoisVisible || pathname === "/money/einvois" ? [MONEY_EINVOIS] : []),
   ];
 
   return (
@@ -162,8 +169,9 @@ export function MoneyChrome({ children }: { children: ReactNode }) {
         </div>
       )}
 
-      {/* Where am I? One rail: the steps, and the records apart from them. */}
-      <SectionTabs tabs={tabs} records={MONEY_RECORDS} />
+      {/* Where am I? One rail: the two steps, and the record pages apart
+          from them (custody, tax file, history — none of them is a step). */}
+      <SectionTabs tabs={tabs} extras={extras} records={MONEY_RECORDS} />
 
       {/* /money/history is a plain server page with its own heading; the rail
           above is all the frame it needs. */}

@@ -1,11 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Tri, useTriText } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import { VoiceButton } from "@/components/voice-input";
 import { parseRmToCents, type RegisterDonation } from "@/lib/receipts";
 import { dayIsoMalaysia } from "@/lib/history";
+import { usePersistentState } from "@/lib/use-persistent-state";
+import { useScopedKey } from "@/lib/storage-scope";
+import { PaymentMethodToggle } from "./payment-method-toggle";
 
 // ---------------------------------------------------------------------------
 // TYPE A WHOLE COLLECTION IN ONE GO (2026-08-22)
@@ -52,7 +55,28 @@ type Draft = {
   item: string;
   /** In-kind only, OPTIONAL: estimated value (RM string; ledger only). */
   estValue: string;
+  /** D19 (拍板 34): cash in a hand, or straight into the bank. Older saved
+   *  drafts have no value — treated as cash. */
+  method?: "cash" | "transfer";
 };
+
+/** Shape guard for a draft read back out of localStorage (B-5②): a wrong-
+ *  shaped blob must fall back to a fresh grid, never crash the typing. */
+function isDraftArray(parsed: unknown): boolean {
+  if (!Array.isArray(parsed)) return false;
+  return parsed.every((r) => {
+    if (typeof r !== "object" || r === null) return false;
+    const d = r as Record<string, unknown>;
+    return (
+      typeof d.key === "number" &&
+      typeof d.name === "string" &&
+      typeof d.amount === "string" &&
+      typeof d.purpose === "string" &&
+      typeof d.date === "string" &&
+      typeof d.inKind === "boolean"
+    );
+  });
+}
 
 /** What a row is missing, or null when it is ready. Never blocks typing — a
  *  half-typed row is normal; it only decides what "add them all" takes. */
@@ -101,6 +125,7 @@ function blankRow(purpose: string, date: string): Draft {
     inKind: false,
     item: "",
     estValue: "",
+    method: "cash",
   };
 }
 
@@ -125,7 +150,12 @@ export function TypeDonations({
 }) {
   const t = useTriText();
   const today = dayIsoMalaysia(new Date().toISOString())!;
-  const [open, setOpen] = useState(defaultOpen);
+  // null = the person has not chosen yet. The grid then opens BY ITSELF when
+  // a saved draft with real content comes back (B-5②) — an invisible saved
+  // draft is as good as a lost one. Derived, not set in an effect.
+  const [openChoice, setOpenChoice] = useState<boolean | null>(
+    defaultOpen ? true : null,
+  );
   const [collector, setCollector] = useState(defaultCollector);
   const [error, setError] = useState<string | null>(null);
   const [added, setAdded] = useState<number | null>(null);
@@ -135,7 +165,22 @@ export function TypeDonations({
     blankRow(defaultPurpose, today),
     blankRow(defaultPurpose, today),
   ];
-  const [rows, setRows] = useState<Draft[]>(freshRows);
+  // B-5② (J #13): the half-typed grid AUTO-SAVES, scoped per user+org — forty
+  // rows typed at a festival table must survive a page hop or a closed tab.
+  // Same mechanism as the meeting-notes draft.
+  const draftKey = useScopedKey("money:typed-draft:v1");
+  const [rows, setRows, draftStore] = usePersistentState<Draft[]>(
+    draftKey,
+    freshRows(),
+    isDraftArray,
+  );
+  // Restored rows carry keys from an earlier session; the module counter must
+  // never hand those keys out again (React keys + the update() patcher).
+  useEffect(() => {
+    for (const r of rows) if (r.key > keySeq) keySeq = r.key;
+  }, [rows]);
+  const draftHasContent = rows.some((r) => problemWith(r) !== "empty");
+  const open = openChoice ?? (draftStore.loaded && draftHasContent);
 
   const ready = useMemo(() => rows.filter((r) => problemWith(r) === null), [rows]);
   const totalCents = useMemo(
@@ -223,6 +268,11 @@ export function TypeDonations({
         receiptNo: null,
         custodyStatus: "collected" as const,
         source: "manual" as const,
+        // D19: the typed answer rides along; goods have no payment method.
+        paymentMethod:
+          !r.inKind && r.method === "transfer"
+            ? ("transfer" as const)
+            : ("cash" as const),
         kind: r.inKind ? ("in_kind" as const) : ("cash" as const),
         itemDesc: r.inKind ? r.item.trim() : null,
         estValueCents:
@@ -238,7 +288,7 @@ export function TypeDonations({
   if (!open) {
     return (
       <div className="flex flex-col items-start gap-2">
-        <Button variant="outline" onClick={() => setOpen(true)}>
+        <Button variant="outline" onClick={() => setOpenChoice(true)}>
           <Tri
             bm="Ramai penderma, tiada kertas — taip senarai"
             zh="很多人捐款、没有账页 —— 打字输入整份名单"
@@ -419,6 +469,16 @@ export function TypeDonations({
                         )}
                       />
                     )}
+                    {/* D19: cash or bank transfer — one tap, per row. */}
+                    {!row.inKind && (
+                      <div className="mt-1">
+                        <PaymentMethodToggle
+                          compact
+                          value={row.method === "transfer" ? "transfer" : "cash"}
+                          onChange={(m) => update(row.key, { method: m })}
+                        />
+                      </div>
+                    )}
                     <label className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
                       <input
                         type="checkbox"
@@ -475,6 +535,34 @@ export function TypeDonations({
         </table>
       </div>
 
+      {/* B-5②: the auto-add mechanism stays, but a VISIBLE button says so —
+          "a new line appears by itself" in the intro was the only clue. */}
+      <div className="flex flex-wrap items-center gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            setRows((current) => {
+              const last = current[current.length - 1];
+              return [
+                ...current,
+                blankRow(last?.purpose ?? defaultPurpose, last?.date ?? today),
+              ];
+            });
+          }}
+        >
+          ＋ <Tri bm="Tambah satu baris" zh="自己加一行" en="Add a row" />
+        </Button>
+        <span className="text-sm text-muted-foreground">
+          💾{" "}
+          <Tri
+            bm="Draf disimpan sendiri pada peranti ini — tutup atau tukar halaman pun tidak hilang."
+            zh="草稿会自动保存在这台设备上 —— 关掉或跳页都不会不见。"
+            en="The draft saves itself on this device — closing or changing pages loses nothing."
+          />
+        </span>
+      </div>
+
       {/* The running total is the check a treasurer actually does: it has to
           match the cash in the tin before anything is added. Summed in
           TypeScript, never by a model (Hard Rule 2). */}
@@ -500,17 +588,42 @@ export function TypeDonations({
             en={`Add ${ready.length} row(s) to the register`}
           />
         </Button>
+        {/* B-5②: closing KEEPS the draft (it is auto-saved); discarding it is
+            its own, clearly-worded button. The old Close wiped 40 rows. */}
         <Button
           type="button"
           variant="outline"
           onClick={() => {
-            setRows(freshRows());
             setError(null);
-            setOpen(false);
+            setOpenChoice(false);
           }}
         >
-          <Tri bm="Tutup" zh="关闭" en="Close" />
+          <Tri bm="Tutup (draf disimpan)" zh="收起（草稿保留）" en="Close (draft kept)" />
         </Button>
+        {rows.some((r) => problemWith(r) !== "empty") && (
+          <Button
+            type="button"
+            variant="ghost"
+            className="text-red-700"
+            onClick={() => {
+              if (
+                !window.confirm(
+                  t(
+                    "Buang draf yang ditaip ini? Tidak boleh dibatalkan.",
+                    "要把打了一半的草稿整份删掉吗？删了无法复原。",
+                    "Discard this typed draft? This cannot be undone.",
+                  ),
+                )
+              ) {
+                return;
+              }
+              setRows(freshRows());
+              setError(null);
+            }}
+          >
+            🗑 <Tri bm="Buang draf" zh="清空草稿" en="Discard draft" />
+          </Button>
+        )}
       </div>
     </div>
   );

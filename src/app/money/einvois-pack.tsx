@@ -93,7 +93,6 @@ export function EInvoisPack() {
 
   return (
     <PageSection
-      step={4}
       titleBm="Fail cukai hujung bulan (e-Invois)"
       titleZh="月底税务文件（电子发票 e-Invois）"
       titleEn="Month-end tax file (e-Invois)"

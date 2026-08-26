@@ -2,18 +2,23 @@
 
 import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
-import { NextStepLink, PageSection } from "@/components/page-section";
+import { PageSection } from "@/components/page-section";
 import { totalUnremittedCents } from "@/lib/custody";
 import { formatRm } from "@/lib/minutes-draft";
 import { useRegister } from "./register-store";
 
 // ---------------------------------------------------------------------------
-// /money/custody — STEP 3: cash leaves the collector's hands and reaches HQ.
+// /money/custody — the CASH CUSTODY RECORD (B-3, 拍板 34 / D19).
 //
-// This is the screen a branch treasurer and an HQ admin look at TOGETHER, at a
-// hand-over, usually on a phone on a table. Before the 2026-08-23 split it was
-// the third of four cards on a page that also held the ledger camera and the
-// month-end tax file — a lot of scrolling to do with somebody waiting.
+// This page used to be "step 3" of the money flow. It is not a step of
+// anybody's afternoon: it is the record of where the physical cash IS — who is
+// holding how much, which hand-overs are waiting for HQ's tick, and what has
+// already been counted and confirmed. The two-step job (read the ledger →
+// issue receipts) ends on the receipts page; this page is where a treasurer
+// or HQ admin comes to keep the cash honest.
+//
+// Bank transfers never appear here (D19): the account has that money, not a
+// person. Goods (Derma Barangan) never appear either (D-1).
 // ---------------------------------------------------------------------------
 
 export function CashCustody() {
@@ -23,48 +28,43 @@ export function CashCustody() {
     batches,
     balances,
     collectorsWithCashInHand,
-    hasPendingBatch,
     handOver,
     hqConfirm,
     receiptsIssued,
     cashInHandCents,
-    availableMonths,
     custodyLocalOnly,
   } = useRegister();
 
+  const pending = batches.filter((b) => b.status === "pending");
+  const settled = batches.filter((b) => b.status === "settled");
+
   return (
     <PageSection
-      step={3}
-      titleBm="Serahan wang tunai kepada HQ"
-      titleZh="把现金交给总会"
-      titleEn="Handing the cash over to HQ"
+      titleBm="Rekod simpanan tunai"
+      titleZh="现金保管记录"
+      titleEn="Cash custody record"
       summary={
         cashInHandCents > 0 ? (
           <Tri
-            bm={`${formatRm(cashInHandCents)} masih belum sampai ke HQ.`}
-            zh={`还有 ${formatRm(cashInHandCents)} 没交到总会。`}
-            en={`${formatRm(cashInHandCents)} has not reached HQ yet.`}
+            bm={`${formatRm(cashInHandCents)} tunai masih belum disahkan diterima oleh HQ.`}
+            zh={`还有 ${formatRm(cashInHandCents)} 现金没被总会确认收到。`}
+            en={`${formatRm(cashInHandCents)} in cash has not been confirmed received by HQ.`}
           />
         ) : (
           <Tri
-            bm="Mengesan tunai daripada pemungut sampai ke HQ, supaya tiada wang hilang di tengah jalan."
-            zh="追踪现金从收款人手上交到总会的过程，避免中间不见钱。"
-            en="Tracks cash from the collector to HQ, so no money goes missing in between."
+            bm="Siapa memegang berapa tunai, serahan mana menunggu pengesahan HQ — supaya tiada wang hilang di tengah jalan. Pindahan bank tidak melalui halaman ini."
+            zh="谁手上有多少现金、哪笔交接还在等总会确认 —— 避免中间不见钱。转账不经过这一页。"
+            en="Who is holding how much cash, and which hand-overs await HQ's confirmation — so no money goes missing in between. Bank transfers never pass through this page."
           />
         )
       }
     >
-      {!receiptsIssued && (
-        /* The card version of this refused to open and showed this sentence
-           INSTEAD of its contents. As a page it stays readable — the balances
-           and past hand-overs are worth seeing either way — but the two buttons
-           below are disabled for exactly this reason, so the explanation sits
-           above them rather than in place of everything. */
+      {!receiptsIssued && donations.length > 0 && (
         <p className="rounded-xl border-2 border-dashed p-4 text-base text-muted-foreground">
           <Tri
-            bm="Jana resit di langkah 2 dahulu — wang hanya boleh diserahkan selepas setiap derma ada nombor resit, kalau tidak tiada apa-apa untuk diikat pada serahan itu."
-            zh="请先在第 2 步开收据 —— 只有每笔捐款都有收据号码之后才能交接，否则交出去的钱没有凭据可以对。"
-            en="Issue the receipts in step 2 first — cash can only be handed over once every donation has a receipt number, otherwise there is nothing to tie the hand-over to."
+            bm="Jana resit dahulu — tunai hanya boleh diserahkan selepas setiap derma ada nombor resit, kalau tidak tiada apa-apa untuk diikat pada serahan itu."
+            zh="请先开收据 —— 只有每笔捐款都有收据号码之后才能交接，否则交出去的钱没有凭据可以对。"
+            en="Issue the receipts first — cash can only be handed over once every donation has a receipt number, otherwise there is nothing to tie the hand-over to."
           />
         </p>
       )}
@@ -83,65 +83,128 @@ export function CashCustody() {
       )}
 
       <div className="flex flex-col gap-5">
-        {/* The three custody states, as a compact status strip */}
+        {/* How cash moves — a legend, not steps of a form. */}
         <div className="flex flex-col gap-2 rounded-lg border bg-muted/30 p-4 sm:flex-row sm:items-center sm:gap-3">
           <span className="rounded-md bg-amber-100 px-3 py-1 text-sm font-medium text-amber-900">
-            1 · <Tri bm="Wang di tangan pemungut" zh="钱在收款人手上" en="Cash with collector" />
+            <Tri bm="Tunai di tangan pemungut" zh="钱在收款人手上" en="Cash with collector" />
           </span>
           <span className="hidden text-muted-foreground sm:inline">→</span>
           <span className="rounded-md bg-blue-100 px-3 py-1 text-sm font-medium text-blue-900">
-            2 · <Tri bm="Diserah, tunggu HQ" zh="已交出，等待总会" en="Handed over, waiting for HQ" />
+            <Tri bm="Diserah, tunggu HQ" zh="已交出，等待总会" en="Handed over, waiting for HQ" />
           </span>
           <span className="hidden text-muted-foreground sm:inline">→</span>
           <span className="rounded-md bg-green-100 px-3 py-1 text-sm font-medium text-green-800">
-            3 · <Tri bm="Disahkan HQ" zh="总会已确认" en="Confirmed by HQ" />
+            <Tri bm="Disahkan HQ" zh="总会已确认" en="Confirmed by HQ" />
           </span>
         </div>
 
-        {/* Two clearly-labelled actions */}
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="flex flex-col gap-2 rounded-lg border p-4">
-            <p className="text-sm font-medium text-muted-foreground">
-              <Tri bm="Langkah 1 · Pemungut" zh="第一步 · 收款人" en="Step 1 · Collector" />
-            </p>
-            <Button
-              onClick={handOver}
-              disabled={collectorsWithCashInHand.length === 0}
-              size="lg"
-              className="text-base"
-            >
-              <Tri bm="Serah wang ke HQ" zh="交钱给总会" en="Hand over to HQ" />
-            </Button>
+        {/* WHO IS HOLDING HOW MUCH — the record this page exists for. */}
+        {balances.length > 0 && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {balances.map((b) => (
+              <div key={b.collector} className="rounded-lg border p-4">
+                <p className="font-medium">{b.collector}</p>
+                <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                  <div className="rounded-md bg-amber-50 p-2">
+                    <div className="text-sm text-muted-foreground">
+                      <Tri bm="Di tangan" zh="手上" en="In hand" />
+                    </div>
+                    <div className="font-semibold tabular-nums">{formatRm(b.collectedCents)}</div>
+                  </div>
+                  <div className="rounded-md bg-blue-50 p-2">
+                    <div className="text-sm text-muted-foreground">
+                      <Tri bm="Tunggu HQ" zh="等待总会" en="Waiting HQ" />
+                    </div>
+                    <div className="font-semibold tabular-nums">{formatRm(b.pendingCents)}</div>
+                  </div>
+                  <div className="rounded-md bg-green-50 p-2">
+                    <div className="text-sm text-muted-foreground">
+                      <Tri bm="Selesai" zh="已完成" en="Done" />
+                    </div>
+                    <div className="font-semibold tabular-nums">{formatRm(b.settledCents)}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-          <div className="flex flex-col gap-2 rounded-lg border p-4">
-            <p className="text-sm font-medium text-muted-foreground">
-              <Tri bm="Langkah 2 · HQ" zh="第二步 · 总会" en="Step 2 · HQ" />
+        )}
+        {balances.length === 0 && (
+          <p className="rounded-xl border-2 border-dashed p-4 text-base text-muted-foreground">
+            <Tri
+              bm="Tiada tunai dalam rekod lagi. Derma tunai yang diresitkan akan muncul di sini dengan nama pemegangnya."
+              zh="记录里还没有现金。开了收据的现金捐款会出现在这里，写明在谁手上。"
+              en="No cash on record yet. Receipted cash donations appear here, with who is holding them."
+            />
+          </p>
+        )}
+
+        {/* THE COLLECTOR'S ACTION: record a hand-over. */}
+        <div className="flex flex-col gap-2 rounded-lg border p-4">
+          <p className="text-sm font-medium text-muted-foreground">
+            <Tri
+              bm="Pemungut menyerahkan tunai kepada HQ"
+              zh="收款人把现金交给总会"
+              en="Collector hands the cash to HQ"
+            />
+          </p>
+          <Button
+            onClick={handOver}
+            disabled={collectorsWithCashInHand.length === 0}
+            size="lg"
+            className="self-start text-base"
+          >
+            <Tri bm="Rekod serahan tunai" zh="记录这次交接" en="Record the hand-over" />
+          </Button>
+          {collectorsWithCashInHand.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              <Tri
+                bm="Tiada tunai bercecir di tangan sesiapa buat masa ini."
+                zh="现在没有现金停在任何人手上。"
+                en="No cash is sitting in anyone's hands right now."
+              />
             </p>
-            <Button
-              onClick={hqConfirm}
-              disabled={!hasPendingBatch}
-              size="lg"
-              variant="outline"
-              className="text-base"
-            >
-              <Tri bm="Sahkan wang diterima" zh="确认收到钱" en="Confirm money received" />
-            </Button>
-          </div>
+          )}
         </div>
-        {batches.map((batch) => (
+
+        {/* WAITING FOR HQ: one tick per hand-over — "he brought it → confirm".
+            The confirmer recorded is the REAL signed-in person (B-3): the
+            "HQ Admin (Demo)" stamp is gone for good. */}
+        {pending.map((batch) => (
           <div
             key={batch.id}
-            className={`rounded-lg border p-4 text-base ${
-              batch.status === "settled"
-                ? "border-green-300 bg-green-50"
-                : "border-blue-300 bg-blue-50"
-            }`}
+            className="rounded-lg border border-blue-300 bg-blue-50 p-4 text-base"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="font-medium">
+                  ⏳ {t("Menunggu HQ sahkan", "等待总会确认", "Waiting for HQ to confirm")}
+                </div>
+                <div className="mt-1 text-sm text-muted-foreground">
+                  {batch.collector} · {batch.handedOverAtIso} ·{" "}
+                  {t("jumlah", "金额", "total")} {formatRm(batch.totalCents)} ·{" "}
+                  {t("resit", "收据", "receipts")} {batch.receiptNos.join(", ")}
+                </div>
+              </div>
+              <Button size="lg" className="text-base" onClick={() => hqConfirm(batch.id)}>
+                ✓{" "}
+                <Tri
+                  bm="Wang sampai — sahkan"
+                  zh="钱到了 —— 确认"
+                  en="Money arrived — confirm"
+                />
+              </Button>
+            </div>
+          </div>
+        ))}
+
+        {/* THE HISTORY: hand-overs already counted and confirmed. */}
+        {settled.map((batch) => (
+          <div
+            key={batch.id}
+            className="rounded-lg border border-green-300 bg-green-50 p-4 text-base"
           >
             <div className="font-medium">
-              {batch.status === "settled" ? "✅ " : "⏳ "}
-              {batch.status === "settled"
-                ? t("HQ sudah sahkan wang ini", "总会已确认这笔钱", "HQ has confirmed this money")
-                : t("Menunggu HQ sahkan", "等待总会确认", "Waiting for HQ to confirm")}
+              ✅ {t("HQ sudah sahkan wang ini", "总会已确认这笔钱", "HQ has confirmed this money")}
             </div>
             <div className="mt-1 text-sm text-muted-foreground">
               {batch.collector} · {batch.handedOverAtIso} ·{" "}
@@ -154,40 +217,11 @@ export function CashCustody() {
           </div>
         ))}
 
-        {/* Per-collector cards instead of a wide table — no sideways scroll */}
-        <div className="grid gap-3 sm:grid-cols-2">
-          {balances.map((b) => (
-            <div key={b.collector} className="rounded-lg border p-4">
-              <p className="font-medium">{b.collector}</p>
-              <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-                <div className="rounded-md bg-amber-50 p-2">
-                  <div className="text-sm text-muted-foreground">
-                    <Tri bm="Di tangan" zh="手上" en="In hand" />
-                  </div>
-                  <div className="font-semibold tabular-nums">{formatRm(b.collectedCents)}</div>
-                </div>
-                <div className="rounded-md bg-blue-50 p-2">
-                  <div className="text-sm text-muted-foreground">
-                    <Tri bm="Tunggu HQ" zh="等待总会" en="Waiting HQ" />
-                  </div>
-                  <div className="font-semibold tabular-nums">{formatRm(b.pendingCents)}</div>
-                </div>
-                <div className="rounded-md bg-green-50 p-2">
-                  <div className="text-sm text-muted-foreground">
-                    <Tri bm="Selesai" zh="已完成" en="Done" />
-                  </div>
-                  <div className="font-semibold tabular-nums">{formatRm(b.settledCents)}</div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
         <p className="rounded-md bg-muted/40 p-3 text-base">
           <Tri
-            bm="Jumlah wang tunai yang masih belum sampai ke HQ"
-            zh="仍未交到总会的现金总额"
-            en="Total cash not yet reached HQ"
+            bm="Jumlah tunai yang masih belum disahkan oleh HQ"
+            zh="仍未被总会确认的现金总额"
+            en="Total cash not yet confirmed by HQ"
           />
           :{" "}
           <span className="font-semibold text-foreground">
@@ -195,22 +229,6 @@ export function CashCustody() {
           </span>
         </p>
       </div>
-
-      <NextStepLink
-        href="/money/einvois"
-        labelBm="Ke fail cukai hujung bulan"
-        labelZh="去月底税务文件"
-        labelEn="On to the month-end tax file"
-        blockedReason={
-          availableMonths.length === 0 || !receiptsIssued ? (
-            <Tri
-              bm="Belum ada resit untuk difailkan. Fail cukai dibuat daripada resit, jadi tiada resit bermakna tiada apa-apa untuk difailkan."
-              zh="还没有可以申报的收据。税务文件是根据收据做的，没有收据就没有东西可以报。"
-              en="No receipts to file yet. The tax file is built from receipts, so no receipts means nothing to file."
-            />
-          ) : undefined
-        }
-      />
     </PageSection>
   );
 }

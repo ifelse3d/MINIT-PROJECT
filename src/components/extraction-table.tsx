@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -61,6 +61,10 @@ export type ExtractionRow = {
   status: Confidence;
   /** Optional row warning (e.g. "not eligible for a receipt yet"). */
   warning?: ReactNode;
+  /** Optional row-level control rendered under the cells (card view) or in a
+   *  slim row of its own (table view) — e.g. the cash/transfer choice on a
+   *  ledger row (D19). Not a cell: it is the reviewer's input, not the AI's. */
+  extra?: ReactNode;
 };
 
 const DOT_CLASS: Record<Confidence, string> = {
@@ -262,6 +266,7 @@ export function ExtractionTable({
                 />
               ))}
             </div>
+            {row.extra && <div className="mt-3">{row.extra}</div>}
             {/* Always visible, never a hover card. */}
             {row.warning && (
               <p className="mt-3 rounded-lg bg-amber-100 p-2.5 font-medium text-amber-900">
@@ -290,27 +295,38 @@ export function ExtractionTable({
           </TableHeader>
           <TableBody>
             {rows.map((row, i) => (
-              <TableRow
-                key={i}
-                className={row.warning ? "bg-amber-50 dark:bg-amber-400/10" : undefined}
-              >
-                <TableCell className="text-muted-foreground">{i + 1}</TableCell>
-                {row.cells.map((cell, j) => (
-                  <TableCell key={j} className="align-top">
-                    <EditableCell cell={cell} />
+              <Fragment key={i}>
+                <TableRow
+                  className={row.warning ? "bg-amber-50 dark:bg-amber-400/10" : undefined}
+                >
+                  <TableCell className="text-muted-foreground">{i + 1}</TableCell>
+                  {row.cells.map((cell, j) => (
+                    <TableCell key={j} className="align-top">
+                      <EditableCell cell={cell} />
+                    </TableCell>
+                  ))}
+                  <TableCell className="align-top">
+                    <ConfidenceBadge level={row.status} />
+                    {/* The reason a row is blocked is printed, not hidden behind
+                        a hover card that touch devices cannot open. */}
+                    {row.warning && (
+                      <p className="mt-1 max-w-56 font-medium text-amber-900 dark:text-amber-200">
+                        ⚠ {row.warning}
+                      </p>
+                    )}
                   </TableCell>
-                ))}
-                <TableCell className="align-top">
-                  <ConfidenceBadge level={row.status} />
-                  {/* The reason a row is blocked is printed, not hidden behind
-                      a hover card that touch devices cannot open. */}
-                  {row.warning && (
-                    <p className="mt-1 max-w-56 font-medium text-amber-900 dark:text-amber-200">
-                      ⚠ {row.warning}
-                    </p>
-                  )}
-                </TableCell>
-              </TableRow>
+                </TableRow>
+                {row.extra && (
+                  <TableRow
+                    className={row.warning ? "bg-amber-50 dark:bg-amber-400/10" : undefined}
+                  >
+                    <TableCell />
+                    <TableCell colSpan={row.cells.length + 1} className="py-2">
+                      {row.extra}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </Fragment>
             ))}
           </TableBody>
         </Table>

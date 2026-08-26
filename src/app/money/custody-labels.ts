@@ -18,3 +18,14 @@ export const CUSTODY_STYLE: Record<RegisterDonation["custodyStatus"], string> = 
   pending_remittance: "border-blue-300 bg-blue-100 text-blue-900",
   settled: "border-green-300 bg-green-100 text-green-800",
 };
+
+/** D19: a bank-transfer row wears THIS instead of a custody badge — the money
+ *  is in the account, not in a hand, so "with collector" would be a lie. */
+export const TRANSFER_LABEL = {
+  bm: "Pindahan bank — dalam akaun",
+  zh: "转账入户",
+  en: "Bank transfer — in the account",
+} as const;
+
+export const TRANSFER_STYLE =
+  "border-sky-300 bg-sky-100 text-sky-900" as const;

@@ -20,7 +20,12 @@ import { downloadFromApi } from "@/lib/download-file";
 import { DonationEditor } from "./donation-editor";
 import { ManualIncomeForm } from "./manual-income";
 import { TypeDonations } from "./type-donations";
-import { CUSTODY_LABEL, CUSTODY_STYLE } from "./custody-labels";
+import {
+  CUSTODY_LABEL,
+  CUSTODY_STYLE,
+  TRANSFER_LABEL,
+  TRANSFER_STYLE,
+} from "./custody-labels";
 import { useRegister } from "./register-store";
 
 // ---------------------------------------------------------------------------
@@ -427,10 +432,23 @@ export function RegisterAndReceipts() {
                     <span className="font-semibold tabular-nums">{formatRm(d.amountCents)}</span>
                   )}
                 </div>
-                <div className="mt-2">
-                  <Badge variant="outline" className={CUSTODY_STYLE[d.custodyStatus]}>
-                    <Tri {...CUSTODY_LABEL[d.custodyStatus]} />
-                  </Badge>
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  {/* D19: a transfer is in the bank, not in a hand — it wears
+                      its own badge, never a custody one. */}
+                  {d.paymentMethod === "transfer" ? (
+                    <Badge variant="outline" className={TRANSFER_STYLE}>
+                      🏦 <Tri {...TRANSFER_LABEL} />
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className={CUSTODY_STYLE[d.custodyStatus]}>
+                      <Tri {...CUSTODY_LABEL[d.custodyStatus]} />
+                    </Badge>
+                  )}
+                  {d.transferProofPath && (
+                    <span className="text-sm text-muted-foreground">
+                      📎 <Tri bm="bukti dilampirkan" zh="已附截图" en="proof attached" />
+                    </span>
+                  )}
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {!d.receiptNo && editingId !== d.id && (
@@ -556,23 +574,25 @@ No receipt has been issued, so no number is lost. This cannot be undone.`,
         />
       </div>
 
+      {/* B-3: custody is a RECORD page now, not step 3 — this link is the
+          "what happens to the cash next" guidance, not a step in a chain. */}
       <NextStepLink
         href="/money/custody"
-        labelBm="Ke serahan wang tunai"
-        labelZh="去交现金给总会"
-        labelEn="On to handing over the cash"
+        labelBm="Ke rekod simpanan tunai"
+        labelZh="去记现金保管"
+        labelEn="On to the cash custody record"
         blockedReason={
           !receiptsIssued ? (
             <Tri
-              bm="Jana resit dahulu — wang hanya boleh diserahkan selepas setiap derma ada nombor resit, kalau tidak tiada apa-apa untuk diikat pada serahan itu."
+              bm="Jana resit dahulu — tunai hanya boleh diserahkan selepas setiap derma ada nombor resit, kalau tidak tiada apa-apa untuk diikat pada serahan itu."
               zh="请先开收据 —— 只有每笔捐款都有收据号码之后才能交接，否则交出去的钱没有凭据可以对。"
               en="Issue the receipts first — cash can only be handed over once every donation has a receipt number, otherwise there is nothing to tie the hand-over to."
             />
           ) : cashInHandCents === 0 ? (
             <Tri
-              bm="Tiada wang tunai yang tertunggak. Hujung bulan, muat turun fail cukai."
-              zh="没有还没交出去的现金。到月底再下载税务文件就好。"
-              en="No cash outstanding. At month end, download the tax file."
+              bm="Tiada tunai yang tertunggak — pindahan bank tidak melalui simpanan tunai. Hujung bulan, muat turun fail cukai."
+              zh="没有还没交的现金 —— 转账不经过现金保管。到月底再下载税务文件就好。"
+              en="No cash outstanding — bank transfers never enter cash custody. At month end, download the tax file."
             />
           ) : undefined
         }
@@ -747,9 +767,16 @@ function ListRegister({
                     )}
                   </td>
                   <td className="px-3 py-2">
-                    <Badge variant="outline" className={CUSTODY_STYLE[d.custodyStatus]}>
-                      <Tri {...CUSTODY_LABEL[d.custodyStatus]} />
-                    </Badge>
+                    {/* D19: transfers wear their own badge, never a custody one. */}
+                    {d.paymentMethod === "transfer" ? (
+                      <Badge variant="outline" className={TRANSFER_STYLE}>
+                        🏦 <Tri {...TRANSFER_LABEL} />
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className={CUSTODY_STYLE[d.custodyStatus]}>
+                        <Tri {...CUSTODY_LABEL[d.custodyStatus]} />
+                      </Badge>
+                    )}
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex justify-end gap-1.5">

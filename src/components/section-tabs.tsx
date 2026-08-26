@@ -44,11 +44,14 @@ export type SectionRecords = {
   labelBm: string;
   labelZh: string;
   labelEn: string;
+  /** Optional emoji in place of the History icon (extras use this). */
+  iconEmoji?: string;
 };
 
 export function SectionTabs({
   tabs,
   records,
+  extras = [],
   ariaLabelBm = "Langkah",
   ariaLabelZh = "步骤",
   ariaLabelEn = "Steps",
@@ -56,6 +59,12 @@ export function SectionTabs({
   tabs: SectionTab[];
   /** The section's records page — rendered apart from the numbered steps. */
   records?: SectionRecords;
+  /**
+   * B-3 (D19): pages that belong to the section but are NOT steps of the job —
+   * the cash-custody record, the month-end tax file. Rendered like `records`
+   * (no number, no connector, never locked), before it.
+   */
+  extras?: SectionRecords[];
   ariaLabelBm?: string;
   ariaLabelZh?: string;
   ariaLabelEn?: string;
@@ -116,22 +125,29 @@ export function SectionTabs({
             </li>
           );
         })}
-        {records && (
-          <li className="ml-auto flex shrink-0 items-center pl-2">
+        {[...extras, ...(records ? [records] : [])].map((entry, i) => (
+          <li
+            key={entry.href}
+            className={`flex shrink-0 items-center ${i === 0 ? "ml-auto pl-2" : "pl-1"}`}
+          >
             <Link
-              href={records.href}
-              aria-current={pathname === records.href ? "page" : undefined}
+              href={entry.href}
+              aria-current={pathname === entry.href ? "page" : undefined}
               className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border-2 border-dashed border-slate-300 px-3 text-base font-medium text-slate-600 dark:border-slate-500 dark:text-slate-300 ${
-                pathname === records.href
+                pathname === entry.href
                   ? "ring-2 ring-slate-900/70 ring-offset-1 dark:ring-white/80"
                   : "hover:brightness-95 active:scale-95"
               }`}
             >
-              <History aria-hidden className="size-4 shrink-0" strokeWidth={2.2} />
-              <Tri bm={records.labelBm} zh={records.labelZh} en={records.labelEn} />
+              {entry.iconEmoji ? (
+                <span aria-hidden>{entry.iconEmoji}</span>
+              ) : (
+                <History aria-hidden className="size-4 shrink-0" strokeWidth={2.2} />
+              )}
+              <Tri bm={entry.labelBm} zh={entry.labelZh} en={entry.labelEn} />
             </Link>
           </li>
-        )}
+        ))}
       </ol>
     </nav>
   );

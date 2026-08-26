@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
 import { parseRmToCents, type RegisterDonation } from "@/lib/receipts";
+import { PaymentMethodToggle, type PaymentMethod } from "./payment-method-toggle";
 
 /** Inline editor for a register row, shown only BEFORE a receipt is issued.
  *  Amount is parsed by deterministic TS (parseRmToCents) — never the AI. */
@@ -22,6 +23,10 @@ export function DonationEditor({
   const [dateIso, setDateIso] = useState(donation.donatedAtIso);
   const [purpose, setPurpose] = useState(donation.purpose);
   const [phone, setPhone] = useState(donation.donorPhone ?? "");
+  /** D19: cash/transfer stays editable until the receipt locks the row. */
+  const [method, setMethod] = useState<PaymentMethod>(
+    donation.paymentMethod === "transfer" ? "transfer" : "cash",
+  );
   const [error, setError] = useState<string | null>(null);
 
   function save() {
@@ -41,6 +46,10 @@ export function DonationEditor({
       donatedAtIso: dateIso,
       purpose: purpose.trim(),
       donorPhone: phone.trim() === "" ? null : phone.trim(),
+      paymentMethod: method,
+      // A row corrected back to CASH cannot keep claiming a transfer proof.
+      transferProofPath:
+        method === "transfer" ? donation.transferProofPath ?? null : null,
     });
   }
 
@@ -67,6 +76,13 @@ export function DonationEditor({
         <Tri bm="Telefon (untuk WhatsApp)" zh="电话（用于 WhatsApp）" en="Phone (for WhatsApp)" />
         <input className={inputClass} inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
       </label>
+      {/* D19: only cash rows go on to custody; goods have no payment method. */}
+      {donation.kind !== "in_kind" && (
+        <div className="flex flex-col gap-1 text-sm font-medium text-muted-foreground">
+          <Tri bm="Cara terima" zh="收款方式" en="Received as" />
+          <PaymentMethodToggle compact value={method} onChange={setMethod} />
+        </div>
+      )}
       {error && <p className="text-sm font-medium text-red-700">{error}</p>}
       <div className="flex gap-2">
         <Button size="sm" onClick={save}>

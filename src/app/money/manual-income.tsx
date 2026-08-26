@@ -13,6 +13,8 @@ import {
 import { VoiceButton } from "@/components/voice-input";
 import { parseRmToCents, type RegisterDonation } from "@/lib/receipts";
 import { dayIsoMalaysia } from "@/lib/history";
+import { PaymentMethodToggle, type PaymentMethod } from "./payment-method-toggle";
+import { uploadTransferProof } from "./transfer-proof-actions";
 
 // ---------------------------------------------------------------------------
 // MANUAL INCOME ENTRY — the deliberate, clearly-labelled exception to the
@@ -70,6 +72,11 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
   const [error, setError] = useState<string | null>(null);
   /** D-2: the slip photo was read and now waits in the step-1 review. */
   const [slipDone, setSlipDone] = useState(false);
+  /** D19 (拍板 34): cash in a hand, or straight into the bank account. */
+  const [method, setMethod] = useState<PaymentMethod>("cash");
+  /** Transfer only, optional: the screenshot to attach (Storage, no AI). */
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
 
   function reset() {
     setCategory(INCOME_CATEGORIES[0].value);
@@ -79,10 +86,12 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
     setAmount("");
     setDate(today);
     setCollector(defaultCollector);
+    setMethod("cash");
+    setProofFile(null);
     setError(null);
   }
 
-  function submit() {
+  async function submit() {
     setError(null);
     const cents = parseRmToCents(amount);
     if (cents === null) {
@@ -102,6 +111,33 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
       return;
     }
     const purpose = note.trim() ? `${category} — ${note.trim()}` : category;
+
+    // D19: the optional transfer screenshot goes to Storage FIRST, so the
+    // register row can carry its path. A failed upload stops here and says so
+    // — the person can retry, or remove the file and record without it.
+    let transferProofPath: string | null = null;
+    if (method === "transfer" && proofFile) {
+      setSaving(true);
+      try {
+        const form = new FormData();
+        form.append("proof", proofFile);
+        const result = await uploadTransferProof(form);
+        if (!result.ok) {
+          setError(
+            t(
+              "Gambar bukti pindahan tidak dapat dimuat naik. Cuba lagi — atau buang fail itu untuk merekod tanpa bukti.",
+              "转账截图没能上传。请再试一次 —— 或者把文件移除，先记录（不带截图）。",
+              "The transfer screenshot could not be uploaded. Try again — or remove the file to record without it.",
+            ),
+          );
+          return;
+        }
+        transferProofPath = result.path;
+      } finally {
+        setSaving(false);
+      }
+    }
+
     onAdd({
       id: `man-${Date.now()}`,
       donorName: payer.trim(),
@@ -113,6 +149,8 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
       receiptNo: null,
       custodyStatus: "collected",
       source: "manual",
+      paymentMethod: method,
+      transferProofPath,
     });
     reset();
     setOpen(false);
@@ -229,6 +267,80 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
                   onChange={(e) => setAmount(e.target.value)}
                 />
               </label>
+              {/* D19 (拍板 34): asked AT registration, not discovered later.
+                  Cash goes on to custody ("in whose hands"); a transfer went
+                  straight to the bank and never will. */}
+              <div className="flex flex-col gap-1 sm:col-span-2">
+                <span className="text-base font-semibold">
+                  <Tri
+                    bm="Bagaimana wang ini diterima?"
+                    zh="这笔钱是怎么收的？"
+                    en="How did the money arrive?"
+                  />
+                </span>
+                <PaymentMethodToggle value={method} onChange={setMethod} />
+                {method === "cash" ? (
+                  <span className="text-sm text-muted-foreground">
+                    <Tri
+                      bm="Tunai direkod sebagai “dalam tangan pemungut” sehingga diserahkan kepada HQ."
+                      zh="现金会记成「在收款人手上」，直到交给总会。"
+                      en="Cash is recorded as “in the collector's hands” until it is handed to HQ."
+                    />
+                  </span>
+                ) : (
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-sm text-muted-foreground">
+                      <Tri
+                        bm="Pindahan terus masuk akaun bank — ia tidak melalui simpanan tunai."
+                        zh="转账直接进银行账户 —— 不经过现金保管。"
+                        en="A transfer goes straight into the bank account — it never enters cash custody."
+                      />
+                    </span>
+                    <label className="flex flex-wrap items-center gap-2 text-sm">
+                      <span className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border-2 border-[color:var(--v2-outline-border)] px-3 py-1.5 font-medium hover:bg-accent">
+                        📎{" "}
+                        {proofFile ? (
+                          <Tri bm="Tukar gambar bukti" zh="换一张截图" en="Change the screenshot" />
+                        ) : (
+                          <Tri
+                            bm="Lampirkan gambar bukti pindahan (pilihan)"
+                            zh="附上转账截图（可不附）"
+                            en="Attach the transfer screenshot (optional)"
+                          />
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*,application/pdf"
+                          className="hidden"
+                          onChange={(e) => {
+                            setProofFile(e.target.files?.[0] ?? null);
+                            e.target.value = "";
+                          }}
+                        />
+                      </span>
+                      {proofFile && (
+                        <span className="inline-flex items-center gap-2 text-muted-foreground">
+                          <span className="max-w-48 truncate">{proofFile.name}</span>
+                          <button
+                            type="button"
+                            className="underline underline-offset-4"
+                            onClick={() => setProofFile(null)}
+                          >
+                            <Tri bm="Buang" zh="移除" en="Remove" />
+                          </button>
+                        </span>
+                      )}
+                      <span className="text-muted-foreground">
+                        <Tri
+                          bm="Disimpan sahaja — tidak dibaca oleh AI, tidak guna kuota."
+                          zh="只存档 —— 不经过 AI，不用 AI 额度。"
+                          en="Stored only — no AI reads it, no AI quota used."
+                        />
+                      </span>
+                    </label>
+                  </div>
+                )}
+              </div>
               <label className="flex flex-col gap-1">
                 <span className="text-base font-semibold">
                   <Tri bm="Penderma / Pembayar" zh="捐款人 / 付款人" en="Donor / Payer" />
@@ -308,8 +420,17 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
             )}
 
             <div className="flex flex-wrap gap-2">
-              <Button onClick={submit} size="lg" className="text-base">
-                <Tri bm="Tambah ke daftar" zh="加入登记" en="Add to register" />
+              <Button
+                onClick={() => void submit()}
+                size="lg"
+                className="text-base"
+                disabled={saving}
+              >
+                {saving ? (
+                  <Tri bm="Menyimpan…" zh="保存中…" en="Saving…" />
+                ) : (
+                  <Tri bm="Tambah ke daftar" zh="加入登记" en="Add to register" />
+                )}
               </Button>
               <Button
                 onClick={() => {
