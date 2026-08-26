@@ -24,6 +24,8 @@ import { runToolConversation } from "@/lib/ai/tool-runner";
 import { ASK_ROUTES, type AskRouteKey } from "@/lib/ask-routes";
 import { chatPrompt, type ChatTurn } from "@/prompts/chat";
 import { dayIsoMalaysia } from "@/lib/history";
+import { ROUTE_AI_DEADLINE_MS } from "@/lib/ai/http";
+import { vendorFailureResponse } from "@/lib/ai/vendor-failure";
 
 // ---------------------------------------------------------------------------
 // THE MINIT ASSISTANT — a real conversation, with hard limits.
@@ -216,6 +218,12 @@ export async function POST(req: Request) {
     // Short text Q&A — no image, no handwriting. The cheap tier is enough.
     const provider = getVisionProvider("chat");
 
+    // P-1: ONE vendor-time budget shared by every call this answer makes —
+    // the tool loop (up to 4 metered calls), the plain path and the rule-7
+    // retry. Without it the loop can outlive Vercel's 60s maxDuration, and a
+    // killed function runs no refund and writes no app_errors row.
+    const deadlineAt = Date.now() + ROUTE_AI_DEADLINE_MS;
+
     // 2026-08-18: attach what the vendor actually charged to the ai_usage row
     // that paid for it — the pattern extract-ledger has had since 2026-08-03.
     const recordUsage = createUsageRecorder(org.id, charge);
@@ -311,6 +319,7 @@ export async function POST(req: Request) {
           tools: ORG_TOOL_SPECS,
           run: (name, args) => runOrgTool(name, args, { orgId: org.id, todayIso }),
           onUsage,
+          deadlineAt,
         });
         lookups = [...new Set(run.used.map((u) => u.name))];
         // The final round is asked with the tools withheld, so this should be
@@ -318,15 +327,19 @@ export async function POST(req: Request) {
         // plain path rather than failing the question — one extra call, only
         // in the case where something already went wrong.
         raw = parseModelJson(run.text);
-      } catch {
+      } catch (e) {
+        // Falling back to the plain path is fine; doing it UNRECORDED is not
+        // (P-1: an unlogged failure can only be re-experienced, never
+        // investigated — the ai_usage id=5 lesson).
+        void captureAppError("/api/chat", e, { orgId: org.id, code: "tool_loop" });
         raw = undefined;
         lookups = [];
       }
     }
 
     try {
-      if (raw === undefined) raw = await provider.extractJson({ prompt, onUsage });
-    } catch {
+      if (raw === undefined) raw = await provider.extractJson({ prompt, onUsage, deadlineAt });
+    } catch (e) {
       // 2026-08-21: THIS is what a refund is for now. The throw means we never
       // reached the vendor at all — no tokens, no invoice — so charging for it
       // would be charging for something we did not do. (The other half of the
@@ -338,7 +351,14 @@ export async function POST(req: Request) {
       // 2026-08-23: guarded by reachedVendor, because the tool loop may already
       // have made a call that SUCCEEDED and was paid for before this one failed.
       // Refunding then would be giving back money we really did spend.
-      if (!reachedVendor) await refundUsage(org.id, charge);
+      // P-1: the failure is also recorded now (app_errors) — see id=5. The
+      // timeout message promises a refund, so it is only sent when one really
+      // happened; a paid-for-then-failed answer keeps the generic message.
+      if (!reachedVendor) {
+        await refundUsage(org.id, charge);
+        return vendorFailureResponse("/api/chat", e, org.id);
+      }
+      void captureAppError("/api/chat", e, { orgId: org.id });
       return NextResponse.json(
         { error: joinUserError(USER_ERRORS.aiUnavailable) },
         { status: 502 },
@@ -354,10 +374,12 @@ export async function POST(req: Request) {
 
 YOUR PREVIOUS ATTEMPT WAS NOT VALID JSON in the required shape. Respond with ONLY the JSON object described above.`,
           onUsage,
+          deadlineAt,
         });
         parsed = replySchema.safeParse(raw);
-      } catch {
-        // fall through
+      } catch (e) {
+        // P-1: recorded, then fall through to the honest 422 below.
+        void captureAppError("/api/chat", e, { orgId: org.id });
       }
     }
     if (!parsed.success) {

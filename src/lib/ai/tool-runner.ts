@@ -59,6 +59,10 @@ export async function runToolConversation(input: {
   maxOutputTokens?: number;
   temperature?: number;
   onUsage?: (usage: TokenUsage) => void;
+  /** P-1: the calling route's shared vendor-time budget (epoch ms). Threaded
+   *  to every round — a loop of metered calls is exactly the code most able
+   *  to outlive a serverless function's maxDuration. */
+  deadlineAt?: number;
 }): Promise<ToolRunResult> {
   const messages: ToolMessage[] = [...input.messages];
   const used: ToolRunResult["used"] = [];
@@ -83,6 +87,7 @@ export async function runToolConversation(input: {
       maxOutputTokens: input.maxOutputTokens,
       temperature: input.temperature,
       onUsage: input.onUsage,
+      deadlineAt: input.deadlineAt,
     });
     vendorCalls++;
 

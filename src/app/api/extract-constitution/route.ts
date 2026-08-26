@@ -11,6 +11,8 @@ import { parseConstitutionExtraction } from "@/lib/extraction";
 import { extractConstitutionPrompt } from "@/prompts/extract-constitution";
 import { recordUpload } from "@/lib/record-upload";
 import { checkPageLimit } from "@/lib/pdf-pages";
+import { ROUTE_AI_DEADLINE_MS, VendorTimeoutError } from "@/lib/ai/http";
+import { vendorFailureResponse } from "@/lib/ai/vendor-failure";
 
 // ---------------------------------------------------------------------------
 // PHOTO / SCAN OF THE SOCIETY CONSTITUTION → validated clause JSON.
@@ -53,6 +55,10 @@ const ALLOWED_MIME = new Set([
 
 export async function POST(req: Request) {
   try {
+    // P-1: ONE deadline for every vendor call in this request — a constitution
+    // is the longest read in the app, so this route is the likeliest to blow
+    // past Vercel's 60s kill, after which NO refund and NO app_errors row runs.
+    const deadlineAt = Date.now() + ROUTE_AI_DEADLINE_MS;
     const form = await req.formData();
     const file = form.get("photo");
     if (!(file instanceof File)) {
@@ -116,16 +122,15 @@ export async function POST(req: Request) {
         imageBase64,
         mimeType: file.type,
         onUsage,
+        deadlineAt,
       });
-    } catch {
+    } catch (e) {
       // A refusal must never eat someone's quota (CLAUDE.md rule 10). A
       // constitution is the single most expensive job in the app, so charging
       // for a failed read hurt most exactly here.
+      // P-1: the failure is also recorded now (app_errors) — see id=5.
       await refundUsage(gate.org.id, gate.charges[0]);
-      return NextResponse.json(
-        { error: joinUserError(USER_ERRORS.aiUnavailable) },
-        { status: 502 },
-      );
+      return vendorFailureResponse("/api/extract-constitution", e, gate.org.id);
     }
 
     let parsed = parseConstitutionExtraction(raw);
@@ -145,9 +150,16 @@ ${issues}`;
           imageBase64,
           mimeType: file.type,
           onUsage,
+          deadlineAt,
         });
         parsed = parseConstitutionExtraction(raw);
-      } catch {
+      } catch (e) {
+        // P-1: a timeout is a timeout — not "retake the photo". Both refund.
+        if (e instanceof VendorTimeoutError) {
+          await refundUsage(gate.org.id, gate.charges[0]);
+          return vendorFailureResponse("/api/extract-constitution", e, gate.org.id);
+        }
+        void captureAppError("/api/extract-constitution", e, { orgId: gate.org.id });
         // fall through to the failure response below
       }
     }

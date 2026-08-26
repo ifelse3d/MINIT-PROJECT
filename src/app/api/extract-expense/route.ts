@@ -12,6 +12,8 @@ import { extractExpensePrompt } from "@/prompts/extract-expense";
 import { dayIsoMalaysia } from "@/lib/history";
 import { recordUpload } from "@/lib/record-upload";
 import { checkPageLimit } from "@/lib/pdf-pages";
+import { ROUTE_AI_DEADLINE_MS, VendorTimeoutError } from "@/lib/ai/http";
+import { vendorFailureResponse } from "@/lib/ai/vendor-failure";
 
 // ---------------------------------------------------------------------------
 // Expense receipt/invoice photo → validated {vendor, description, amount,
@@ -40,6 +42,9 @@ const EXPENSE_MAX_PAGES = 5;
 
 export async function POST(req: Request) {
   try {
+    // P-1: one deadline for every vendor call in this request — refund,
+    // app_errors and the honest message must all run before Vercel's 60s kill.
+    const deadlineAt = Date.now() + ROUTE_AI_DEADLINE_MS;
     const form = await req.formData();
     const photo = form.get("photo");
     if (!(photo instanceof File)) {
@@ -90,14 +95,12 @@ export async function POST(req: Request) {
     // Attempt 1
     let raw: unknown;
     try {
-      raw = await provider.extractJson({ prompt, imageBase64, mimeType: photo.type, onUsage });
-    } catch {
+      raw = await provider.extractJson({ prompt, imageBase64, mimeType: photo.type, onUsage, deadlineAt });
+    } catch (e) {
       // The vendor was never usefully reached — the action is refunded.
+      // P-1: the failure is also recorded now (app_errors) — see id=5.
       await refundUsage(gate.org.id, gate.charges[0]);
-      return NextResponse.json(
-        { error: joinUserError(USER_ERRORS.aiUnavailable) },
-        { status: 502 }
-      );
+      return vendorFailureResponse("/api/extract-expense", e, gate.org.id);
     }
 
     let parsed = parseExpenseExtraction(raw);
@@ -112,9 +115,15 @@ export async function POST(req: Request) {
 YOUR PREVIOUS ATTEMPT FAILED VALIDATION with these errors — fix them and respond with ONLY the corrected JSON:
 ${issues}`;
       try {
-        raw = await provider.extractJson({ prompt: retryPrompt, imageBase64, mimeType: photo.type, onUsage });
+        raw = await provider.extractJson({ prompt: retryPrompt, imageBase64, mimeType: photo.type, onUsage, deadlineAt });
         parsed = parseExpenseExtraction(raw);
-      } catch {
+      } catch (e) {
+        // P-1: a timeout is a timeout — not "retake the photo". Both refund.
+        if (e instanceof VendorTimeoutError) {
+          await refundUsage(gate.org.id, gate.charges[0]);
+          return vendorFailureResponse("/api/extract-expense", e, gate.org.id);
+        }
+        void captureAppError("/api/extract-expense", e, { orgId: gate.org.id });
         // fall through to the failure response below
       }
     }

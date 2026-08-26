@@ -144,7 +144,24 @@ export function AskBox({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: q, history }),
       });
-      const body = (await res.json()) as ChatOk & { error?: string };
+      // P-1: a response we RECEIVED but cannot read is not "the internet
+      // dropped" — the network was fine; the server never gave an answer
+      // (e.g. the platform killed it). Two different failures, two messages.
+      let body: ChatOk & { error?: string };
+      try {
+        body = (await res.json()) as ChatOk & { error?: string };
+      } catch {
+        if (seq !== sendSeq.current) return;
+        setTurns((prev) => prev.slice(0, -1));
+        setError(
+          t(
+            "Pelayan tidak membalas kali ini. Ini bukan salah anda. Tunggu seminit, lihat baki kuota AI anda, kemudian tanya sekali lagi.",
+            "伺服器这次没有回应。这不是您的问题。请等一分钟，看一下 AI 用量的余额，再问一次。",
+            "The server did not reply this time. This is not your fault. Wait a minute, check your remaining AI quota, then ask again.",
+          ),
+        );
+        return;
+      }
       if (seq !== sendSeq.current) return;
       if (!res.ok) {
         // Always a message: `?? null` here meant that a response without an
@@ -220,7 +237,23 @@ export function AskBox({
       if (context.trim() !== "") form.append("context", context.trim());
       if (forcedKind) form.append("kind", forcedKind);
       const res = await fetch("/api/intake", { method: "POST", body: form });
-      const body = (await res.json()) as IntakeOk;
+      // P-1 (the "connection dropped" incident): the old code read ANY failure
+      // here as a dropped connection — including the server being killed
+      // mid-read, which is precisely when the quota may have been eaten with
+      // nothing to show. If a response arrived but is unreadable, say THAT.
+      let body: IntakeOk;
+      try {
+        body = (await res.json()) as IntakeOk;
+      } catch {
+        setError(
+          t(
+            "Pelayan tidak membalas semasa membaca fail itu. Ini bukan salah anda. Tunggu seminit, lihat baki kuota AI anda, kemudian cuba sekali lagi.",
+            "读取文件的时候，伺服器没有回应。这不是您的问题。请等一分钟，看一下 AI 用量的余额，再试一次。",
+            "The server did not reply while reading that file. This is not your fault. Wait a minute, check your remaining AI quota, then try again.",
+          ),
+        );
+        return;
+      }
       if (body.kind === "unknown") {
         // Minit could not place the page — ASK, don't give up (A-2). The file
         // stays staged; the person answers with one tap and only the read is

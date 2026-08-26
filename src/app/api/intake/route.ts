@@ -31,6 +31,8 @@ import { extractConstitutionPrompt } from "@/prompts/extract-constitution";
 import { dayIsoMalaysia } from "@/lib/history";
 import { recordUpload } from "@/lib/record-upload";
 import { checkPageLimit } from "@/lib/pdf-pages";
+import { ROUTE_AI_DEADLINE_MS, VendorTimeoutError } from "@/lib/ai/http";
+import { vendorFailureResponse } from "@/lib/ai/vendor-failure";
 
 // ---------------------------------------------------------------------------
 // ONE DOOR: drop any page of society paperwork here and Minit works out what it
@@ -87,6 +89,12 @@ function isHandled(kind: string): kind is Handled {
 
 export async function POST(req: Request) {
   try {
+    // P-1: ONE deadline shared by the classify call, the extract call and the
+    // rule-7 retry, so this route's own refund + app_errors + honest message
+    // always run before Vercel's 60s kill would erase all three. This is the
+    // route the "ai_usage id=5" incident came through: charged, all-null,
+    // unrefunded, unlogged — the signature of a function killed mid-flight.
+    const deadlineAt = Date.now() + ROUTE_AI_DEADLINE_MS;
     const form = await req.formData();
     const file = form.get("file");
     if (!(file instanceof File)) {
@@ -184,14 +192,17 @@ export async function POST(req: Request) {
           imageBase64,
           mimeType: file.type,
           onUsage: onClassifyUsage,
+          deadlineAt,
         });
         const parsed = classificationSchema.safeParse(raw);
         if (parsed.success) classification = parsed.data;
-      } catch {
-        return NextResponse.json(
-          { error: joinUserError(USER_ERRORS.aiUnavailable) },
-          { status: 502 },
-        );
+      } catch (e) {
+        // P-1: the classifier never delivered — the person got NOTHING for
+        // this charge, so it is refunded (CLAUDE.md rule 10: a throw before /
+        // instead of an answer is the one thing a refund means). Until tonight
+        // this path both kept the charge and swallowed the error.
+        await refundUsage(gate.org.id, gate.charges[0]);
+        return vendorFailureResponse("/api/intake", e, gate.org.id);
       }
 
       if (!classification || !isHandled(classification.kind)) {
@@ -319,16 +330,16 @@ export async function POST(req: Request) {
         imageBase64,
         mimeType: file.type,
         onUsage: onExtractUsage,
+        deadlineAt,
       });
-    } catch {
+    } catch (e) {
       // F-2 parity with /api/extract-minutes: the vendor was never reached (or
       // threw) — the extract action is refunded (CLAUDE.md rule 10). Until
       // tonight this was the ONE reading path that charged for a failure.
+      // P-1: and the failure is recorded — `catch {}` is how app_errors stayed
+      // at 0 rows through the id=5 incident.
       await refundUsage(gate.org.id, extractCharge);
-      return NextResponse.json(
-        { error: joinUserError(USER_ERRORS.aiUnavailable) },
-        { status: 502 },
-      );
+      return vendorFailureResponse("/api/intake", e, gate.org.id);
     }
 
     let parsed = validate(raw);
@@ -347,9 +358,18 @@ ${issues}`,
           imageBase64,
           mimeType: file.type,
           onUsage: onExtractUsage,
+          deadlineAt,
         });
         parsed = validate(raw);
-      } catch {
+      } catch (e) {
+        // P-1: a timeout on the retry is reported as a timeout — camera advice
+        // for a slow vendor sends the person chasing the wrong fix. Anything
+        // else still falls through to "could not read"; both paths refund.
+        if (e instanceof VendorTimeoutError) {
+          await refundUsage(gate.org.id, extractCharge);
+          return vendorFailureResponse("/api/intake", e, gate.org.id);
+        }
+        void captureAppError("/api/intake", e, { orgId: gate.org.id });
         // fall through
       }
     }

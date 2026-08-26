@@ -18,6 +18,8 @@ import { dayIsoMalaysia } from "@/lib/history";
 import { glossaryAllowedRuns, glossaryPromptBlockForWriting } from "@/lib/glossary";
 import { loadGlossary } from "@/lib/glossary-server";
 import { isMinutesLang, writesInChinese, type MinutesLang } from "@/lib/minutes-lang";
+import { ROUTE_AI_DEADLINE_MS } from "@/lib/ai/http";
+import { vendorFailureResponse } from "@/lib/ai/vendor-failure";
 
 // ---------------------------------------------------------------------------
 // STEP 3 OF THE PIPELINE — the confirmed extraction becomes a real minit
@@ -109,6 +111,10 @@ export async function POST(req: Request) {
     const provider = getVisionProvider("long_doc");
     const onUsage = createUsageRecorder(gate.org.id, gate.charges[0]);
 
+    // P-1: one deadline shared by both attempts of the loop below, so the
+    // refund + app_errors + honest message run before Vercel's 60s kill.
+    const deadlineAt = Date.now() + ROUTE_AI_DEADLINE_MS;
+
     // Ask, check the arrangement covers every item, and on a miss send the
     // exact indices back once (CLAUDE.md rule 7). The retry is not charged.
     let plan: MinutesPlan | null = null;
@@ -119,13 +125,12 @@ export async function POST(req: Request) {
         raw = await provider.extractJson({
           prompt: draftMinutesPrompt({ resolutionTexts, lang, glossaryBlock, repair }),
           onUsage,
+          deadlineAt,
         });
-      } catch {
+      } catch (e) {
+        // P-1: the failure is also recorded now (app_errors) — see id=5.
         await refundUsage(gate.org.id, gate.charges[0]);
-        return NextResponse.json(
-          { error: joinUserError(USER_ERRORS.aiUnavailable) },
-          { status: 502 },
-        );
+        return vendorFailureResponse("/api/draft-minutes", e, gate.org.id);
       }
 
       const parsedPlan = minutesPlanSchema.safeParse(raw);

@@ -27,6 +27,44 @@ import "server-only";
 /** Give up on one attempt after this long. Route maxDuration is 60s, which
  *  leaves room for one retry plus the response. */
 export const REQUEST_TIMEOUT_MS = 20_000;
+
+/**
+ * P-1 (2026-08-27, work order 31): the overall time budget an AI route gives
+ * its vendor calls, measured from the top of the route.
+ *
+ * WHY THIS EXISTS — the "ai_usage id=5" incident. The per-attempt timeout above
+ * bounds ONE attempt, but a route makes up to SIX (3 transient attempts × the
+ * rule-7 validation retry), plus a classify step on the intake path, plus
+ * database round trips. Worst case that is comfortably past Vercel's
+ * maxDuration = 60s — and when Vercel kills the function, NO code runs after
+ * the kill: no refund, no app_errors row, no token recording. The person saw
+ * "the connection dropped", the charge stayed, and nothing anywhere said why.
+ *
+ * 50s leaves ~10s of the 60 for the refund write, the app_errors insert and
+ * the response itself. Routes create `Date.now() + ROUTE_AI_DEADLINE_MS` once
+ * at the top and pass it to every extractJson call, so it is the TOTAL budget
+ * across all of a route's vendor calls, not a per-call one.
+ */
+export const ROUTE_AI_DEADLINE_MS = 50_000;
+
+/** Under this much remaining budget, starting another vendor attempt is
+ *  pointless — it could not finish. Give up honestly instead. */
+const MIN_ATTEMPT_BUDGET_MS = 2_000;
+
+/**
+ * The vendor did not answer in time — either one attempt hit its own timeout
+ * and the retries ran out, or the route's overall deadline left no room for
+ * another attempt. Distinct from other failures so routes can say, honestly,
+ * "Minit stopped waiting — your quota was returned" instead of a generic
+ * "could not be reached". The vendor never delivered an answer, so the refund
+ * rule (CLAUDE.md rule 10) applies exactly as for an unreached vendor.
+ */
+export class VendorTimeoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "VendorTimeoutError";
+  }
+}
 /** Attempts for TRANSIENT failures only. Bad JSON is rule 7's separate retry,
  *  one level up, and is not this function's business. */
 export const MAX_ATTEMPTS = 3;
@@ -59,6 +97,15 @@ export type VendorHttpInput = {
   timeoutMs?: number;
   /** Defaults to DEFAULT_BACKOFF_MS. */
   backoffMs?: readonly number[];
+  /**
+   * Epoch-ms moment the CALLING ROUTE must be done with vendors, shared across
+   * all its calls (see ROUTE_AI_DEADLINE_MS). Attempts are capped to the
+   * remaining budget, and when too little remains for another attempt the call
+   * fails with VendorTimeoutError instead of letting Vercel kill the function
+   * mid-flight — a kill runs no refund, writes no app_errors row, and leaves
+   * the user's quota silently eaten (the ai_usage id=5 incident).
+   */
+  deadlineAt?: number;
 };
 
 /**
@@ -74,18 +121,34 @@ export async function postVendorJson({
   vendor,
   timeoutMs = REQUEST_TIMEOUT_MS,
   backoffMs = DEFAULT_BACKOFF_MS,
+  deadlineAt,
 }: VendorHttpInput): Promise<unknown> {
   const payload = JSON.stringify(body);
   let lastError: Error = new Error(`${vendor}: no attempt was made.`);
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    // The deadline is checked BEFORE the backoff sleep, projecting the sleep
+    // in: waiting 2.6s to then discover there is no time left is time the
+    // route needed for its refund write.
+    let attemptTimeout = timeoutMs;
+    if (deadlineAt !== undefined) {
+      const remaining = deadlineAt - Date.now() - (backoffMs[attempt] ?? 0);
+      if (remaining < MIN_ATTEMPT_BUDGET_MS) {
+        throw lastError instanceof VendorTimeoutError
+          ? lastError
+          : new VendorTimeoutError(
+              `${vendor} ran out of the route's time budget before answering.`,
+            );
+      }
+      attemptTimeout = Math.min(timeoutMs, remaining);
+    }
     if (backoffMs[attempt]) await sleep(backoffMs[attempt]);
 
     // AbortController, not a Promise.race: this actually cancels the socket, so
     // a hung vendor call stops occupying the serverless function rather than
     // merely being ignored by us while it keeps the process alive.
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const timer = setTimeout(() => controller.abort(), attemptTimeout);
 
     try {
       const res = await fetch(url, {
@@ -111,10 +174,14 @@ export async function postVendorJson({
       const worthRetrying =
         isAbort || err.message.includes("fetch failed") || err.message.includes("ECONN");
       if (worthRetrying && attempt < MAX_ATTEMPTS - 1) {
-        lastError = isAbort ? new Error(`${vendor} timed out after ${timeoutMs}ms`) : err;
+        lastError = isAbort
+          ? new VendorTimeoutError(`${vendor} timed out after ${attemptTimeout}ms`)
+          : err;
         continue;
       }
-      throw isAbort ? new Error(`${vendor} timed out after ${timeoutMs}ms`) : err;
+      throw isAbort
+        ? new VendorTimeoutError(`${vendor} timed out after ${attemptTimeout}ms`)
+        : err;
     } finally {
       clearTimeout(timer);
     }

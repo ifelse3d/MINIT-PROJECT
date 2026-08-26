@@ -83,6 +83,7 @@ export function createGeminiProvider(model: string): VisionJsonProvider {
       maxOutputTokens,
       temperature,
       onUsage,
+      deadlineAt,
     }: VisionJsonRequest): Promise<unknown> {
       const key = process.env.GEMINI_API_KEY;
       if (!key) {
@@ -105,6 +106,7 @@ export function createGeminiProvider(model: string): VisionJsonProvider {
         vendor: "Gemini",
         url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
         headers: { "x-goog-api-key": key },
+        deadlineAt,
         body: {
           contents: [{ parts }],
           generationConfig: {
@@ -191,6 +193,7 @@ export function createGeminiToolProvider(model: string): ToolChatProvider {
         vendor: "Gemini",
         url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
         headers: { "x-goog-api-key": key },
+        deadlineAt: req.deadlineAt,
         body: geminiToolBody({
           system: req.system,
           messages: req.messages,

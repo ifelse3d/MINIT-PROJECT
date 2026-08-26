@@ -82,6 +82,19 @@ export const USER_ERRORS = {
   },
 
   /**
+   * P-1 (2026-08-27): the vendor took too long and Minit stopped waiting —
+   * before Vercel could kill the function mid-flight. Says out loud that the
+   * quota was returned, because "The connection dropped" with a silently eaten
+   * action is exactly the incident this message exists to prevent. Only use it
+   * on a path that really did refund.
+   */
+  aiTimeout: {
+    bm: "AI mengambil masa terlalu lama, jadi Minit berhenti menunggu. Tindakan ini TIDAK ditolak daripada kuota anda — ia sudah dipulangkan. Tunggu seminit dan cuba sekali lagi.",
+    zh: "AI 这次用的时间太长，Minit 停止了等待。这一次不算进您的用量——已经自动退回。请等一分钟再试一次。",
+    en: "The AI took too long, so Minit stopped waiting. This attempt was NOT taken from your quota — it has been returned. Wait a minute and try again.",
+  },
+
+  /**
    * The model answered twice and both answers failed validation. Concrete photo
    * advice instead of "try a clearer photo".
    */

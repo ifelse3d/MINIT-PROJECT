@@ -8,6 +8,8 @@ vi.mock("server-only", () => ({}));
 import {
   DEFAULT_BACKOFF_MS,
   MAX_ATTEMPTS,
+  ROUTE_AI_DEADLINE_MS,
+  VendorTimeoutError,
   isTransient,
   postVendorJson,
 } from "@/lib/ai/http";
@@ -201,6 +203,65 @@ describe("postVendorJson", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
     await expect(call()).rejects.toThrow(/Invalid URL/);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// P-1 (work order 31, 2026-08-27) — the route deadline. The "ai_usage id=5"
+// incident: retries outlived Vercel's 60s maxDuration, the platform killed the
+// function, and NO code ran afterwards — no refund, no app_errors row. The
+// deadline exists so the loop gives up while the route can still do all three.
+// ---------------------------------------------------------------------------
+describe("the route deadline (P-1)", () => {
+  it("leaves refund/app_errors headroom inside the 60s maxDuration", () => {
+    expect(ROUTE_AI_DEADLINE_MS).toBeLessThanOrEqual(55_000);
+  });
+
+  it("gives up with VendorTimeoutError without calling the vendor when the budget is spent", async () => {
+    const fetchMock = vi.fn(async () => okResponse({ never: "reached" }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(call({ deadlineAt: Date.now() - 1 })).rejects.toBeInstanceOf(
+      VendorTimeoutError,
+    );
+    // The whole point: the failure happens BEFORE money is spent and while
+    // the route still has time to refund and record.
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("stops retrying when the remaining budget cannot fit another attempt", async () => {
+    const fetchMock = vi.fn(async () => errResponse(503, "upstream down"));
+    vi.stubGlobal("fetch", fetchMock);
+    // The projected backoff wait (1s) would leave under MIN_ATTEMPT_BUDGET_MS
+    // of the 2.5s budget for attempt 2 — so only attempt 1 runs, and the loop
+    // gives up as a timeout instead of sleeping into Vercel's kill.
+    await expect(
+      call({ deadlineAt: Date.now() + 2_500, backoffMs: [0, 1_000, 1_000] }),
+    ).rejects.toBeInstanceOf(VendorTimeoutError);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports a per-attempt abort as a VendorTimeoutError", async () => {
+    const fetchMock = vi.fn(
+      (_url: string, init: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init.signal?.addEventListener("abort", () => {
+            const err = new Error("aborted");
+            err.name = "AbortError";
+            reject(err);
+          });
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(call({ timeoutMs: 20 })).rejects.toBeInstanceOf(VendorTimeoutError);
+  });
+
+  it("a deadline with plenty of room changes nothing", async () => {
+    const fetchMock = vi.fn(async () => okResponse({ answer: 42 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(
+      call({ deadlineAt: Date.now() + ROUTE_AI_DEADLINE_MS }),
+    ).resolves.toEqual({ answer: 42 });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

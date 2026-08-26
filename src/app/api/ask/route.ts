@@ -31,6 +31,8 @@ import { dayIsoMalaysia } from "@/lib/history";
 import { getSupabaseServer } from "@/db/supabase-server";
 import { askIntentPrompt } from "@/prompts/ask-intent";
 import { askSummarisePrompt } from "@/prompts/ask-summarise";
+import { ROUTE_AI_DEADLINE_MS } from "@/lib/ai/http";
+import { vendorFailureResponse } from "@/lib/ai/vendor-failure";
 
 // ---------------------------------------------------------------------------
 // "TANYA MINIT" (Phase 7.5b) — one-shot AI search. NOT a chatbot (Hard Rule
@@ -110,8 +112,13 @@ export async function POST(req: Request) {
     // Intent classification + a short summary — text only, cheap tier.
     const provider = getVisionProvider("chat");
 
+    // P-1: one vendor-time budget for the whole answer (classify + summarise
+    // + rule-7 retries), so the refund + app_errors + honest message run
+    // before Vercel's 60s kill.
+    const deadlineAt = Date.now() + ROUTE_AI_DEADLINE_MS;
+
     // --- step 1: classify (zod-validated, retry once — rule 7) -------------
-    const classification = await callWithRetry(
+    const classifyResult = await callWithRetry(
       () => askIntentPrompt({ question, todayIso }),
       (raw) => parseAskClassification(raw),
       provider,
@@ -119,7 +126,16 @@ export async function POST(req: Request) {
       // most-used AI action there is. Unmeasured, it was the biggest hole in
       // the cost picture.
       createUsageRecorder(org.id, classifyCharge),
+      deadlineAt,
     );
+    if (classifyResult.vendorError !== undefined) {
+      // P-1: the vendor never delivered for this charge — refunded (rule 10),
+      // recorded (app_errors) and answered honestly. Until tonight this path
+      // kept the charge and said "could not understand your question".
+      await refundUsage(org.id, classifyCharge);
+      return vendorFailureResponse("/api/ask", classifyResult.vendorError, org.id);
+    }
+    const classification = classifyResult.data;
     if (!classification) {
       return NextResponse.json(
         {
@@ -213,7 +229,7 @@ export async function POST(req: Request) {
       });
     }
 
-    const summary = await callWithRetry(
+    const summaryResult = await callWithRetry(
       () =>
         askSummarisePrompt({
           question,
@@ -224,7 +240,15 @@ export async function POST(req: Request) {
       (raw) => parseAskSummary(raw),
       provider,
       createUsageRecorder(org.id, summariseCharge),
+      deadlineAt,
     );
+    if (summaryResult.vendorError !== undefined) {
+      // P-1: same as the classify step — no answer was delivered for the
+      // summarise charge, so it is refunded, recorded and reported honestly.
+      await refundUsage(org.id, summariseCharge);
+      return vendorFailureResponse("/api/ask", summaryResult.vendorError, org.id);
+    }
+    const summary = summaryResult.data;
     if (!summary) {
       return NextResponse.json(
         {
@@ -249,8 +273,9 @@ export async function POST(req: Request) {
       button: searchButton(classification),
       ...(await usageFields(org.id)),
     });
-  } catch {
-    // No contents in logs (PDPA).
+  } catch (e) {
+    // P-1: count the failure for the ops console — never its contents (PDPA).
+    void captureAppError("/api/ask", e);
     return NextResponse.json(
       { error: joinUserError(USER_ERRORS.serverError) },
       { status: 500 },
@@ -311,7 +336,15 @@ function quotaOrServerError(e: unknown) {
 }
 
 /** Call the model, zod-validate; on failure retry ONCE with the errors
- *  appended (CLAUDE.md rule 7). Returns null after the second failure. */
+ *  appended (CLAUDE.md rule 7).
+ *
+ *  P-1 (2026-08-27): the two ways this can fail are DIFFERENT bills. When the
+ *  FIRST call throws, the vendor never delivered anything for this charge, so
+ *  the caller must refund it (rule 10) — that throw comes back in
+ *  `vendorError` so the caller can refund + record + answer honestly. When the
+ *  vendor answered but the answer would not validate (including a throw on the
+ *  unpaid rule-7 retry), the call was paid for; `data: null` with no
+ *  vendorError keeps the old "could not understand" behaviour. */
 async function callWithRetry<T>(
   buildPrompt: () => string,
   parse: (
@@ -321,19 +354,21 @@ async function callWithRetry<T>(
     extractJson(req: {
       prompt: string;
       onUsage?: (usage: TokenUsage) => void;
+      deadlineAt?: number;
     }): Promise<unknown>;
   },
   onUsage?: (usage: TokenUsage) => void,
-): Promise<T | null> {
+  deadlineAt?: number,
+): Promise<{ data: T | null; vendorError?: unknown }> {
   const prompt = buildPrompt();
   let raw: unknown;
   try {
-    raw = await provider.extractJson({ prompt, onUsage });
-  } catch {
-    return null;
+    raw = await provider.extractJson({ prompt, onUsage, deadlineAt });
+  } catch (e) {
+    return { data: null, vendorError: e };
   }
   let parsed = parse(raw);
-  if (parsed.success) return parsed.data;
+  if (parsed.success) return { data: parsed.data };
 
   const issues = parsed.error.issues
     .slice(0, 10)
@@ -346,14 +381,17 @@ async function callWithRetry<T>(
 YOUR PREVIOUS ATTEMPT FAILED VALIDATION with these errors — fix them and respond with ONLY the corrected JSON:
 ${issues}`,
       onUsage,
+      deadlineAt,
     });
   } catch (e) {
     // S-7: count the failure for the ops console — never its contents (PDPA).
+    // The FIRST call was answered and paid for, so this is not refundable —
+    // recorded here, null returned, the caller's 422 stands.
     void captureAppError("/api/ask", e);
-    return null;
+    return { data: null };
   }
   parsed = parse(raw);
-  return parsed.success ? parsed.data : null;
+  return { data: parsed.success ? parsed.data : null };
 }
 
 function searchButton(c: AskClassification) {

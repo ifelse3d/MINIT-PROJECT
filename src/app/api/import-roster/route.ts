@@ -10,6 +10,8 @@ import { getVisionProvider } from "@/lib/ai/provider";
 import { createUsageRecorder, refundUsage, requireAiQuota } from "@/lib/ai/usage";
 import { readRosterPrompt } from "@/prompts/read-roster";
 import { checkPageLimit } from "@/lib/pdf-pages";
+import { ROUTE_AI_DEADLINE_MS } from "@/lib/ai/http";
+import { vendorFailureResponse } from "@/lib/ai/vendor-failure";
 
 // A PHOTO, A PDF, OR A PASTE THE PARSER REFUSED → the text of the paste box.
 //
@@ -129,13 +131,14 @@ export async function POST(req: Request) {
         prompt: readRosterPrompt(gate.org.name, image ? undefined : pastedText),
         ...(image ?? {}),
         onUsage,
+        // P-1: bounded so the refund + app_errors + honest message run before
+        // Vercel's 60s kill (single call — no shared budget needed here).
+        deadlineAt: Date.now() + ROUTE_AI_DEADLINE_MS,
       });
-    } catch {
+    } catch (e) {
+      // P-1: the failure is also recorded now (app_errors) — see id=5.
       await refundUsage(gate.org.id, gate.charges[0]);
-      return NextResponse.json(
-        { error: joinUserError(USER_ERRORS.aiUnavailable) },
-        { status: 502 },
-      );
+      return vendorFailureResponse("/api/import-roster", e, gate.org.id);
     }
 
     const parsed = rosterSchema.safeParse(raw);

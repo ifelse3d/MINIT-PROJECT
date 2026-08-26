@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { captureAppError } from "@/lib/app-errors";
 import { joinUserError, tooManyPagesError, USER_ERRORS } from "@/lib/user-errors";
 import { getVisionProvider } from "@/lib/ai/provider";
+import { ROUTE_AI_DEADLINE_MS, VendorTimeoutError } from "@/lib/ai/http";
+import { vendorFailureResponse } from "@/lib/ai/vendor-failure";
 import { createUsageRecorder, refundUsage, requireAiQuota } from "@/lib/ai/usage";
 import { parseMeetingNotesExtraction } from "@/lib/extraction";
 import { extractMeetingNotesPrompt } from "@/prompts/extract-meeting-notes";
@@ -40,6 +42,10 @@ const ALLOWED_MIME = new Set([
 
 export async function POST(req: Request) {
   try {
+    // P-1: ONE deadline for every vendor call this request makes, so the
+    // route's own error handling — refund, app_errors, an honest message —
+    // always runs before Vercel's 60s kill would erase all three.
+    const deadlineAt = Date.now() + ROUTE_AI_DEADLINE_MS;
     const form = await req.formData();
     const photo = form.get("photo");
     if (!(photo instanceof File)) {
@@ -127,16 +133,15 @@ export async function POST(req: Request) {
     // Attempt 1
     let raw: unknown;
     try {
-      raw = await provider.extractJson({ prompt, imageBase64, mimeType: photo.type, onUsage });
-    } catch {
+      raw = await provider.extractJson({ prompt, imageBase64, mimeType: photo.type, onUsage, deadlineAt });
+    } catch (e) {
       // A refusal must never eat someone's quota (CLAUDE.md rule 10). Reading a
       // photo is the most expensive action and the one most likely to fail, and
       // until 2026-08-20 it was the only one that charged for failing.
+      // P-1: the failure is also RECORDED now — `catch {}` here is how the
+      // ai_usage id=5 incident left app_errors at 0 rows.
       await refundUsage(gate.org.id, gate.charges[0]);
-      return NextResponse.json(
-        { error: joinUserError(USER_ERRORS.aiUnavailable) },
-        { status: 502 }
-      );
+      return vendorFailureResponse("/api/extract-minutes", e, gate.org.id);
     }
 
     let parsed = parseMeetingNotesExtraction(raw);
@@ -151,9 +156,17 @@ export async function POST(req: Request) {
 YOUR PREVIOUS ATTEMPT FAILED VALIDATION with these errors — fix them and respond with ONLY the corrected JSON:
 ${issues}`;
       try {
-        raw = await provider.extractJson({ prompt: retryPrompt, imageBase64, mimeType: photo.type, onUsage });
+        raw = await provider.extractJson({ prompt: retryPrompt, imageBase64, mimeType: photo.type, onUsage, deadlineAt });
         parsed = parseMeetingNotesExtraction(raw);
-      } catch {
+      } catch (e) {
+        // P-1: a timeout on the retry is reported as a timeout — camera advice
+        // for a slow vendor sends the person chasing the wrong fix. Anything
+        // else still falls through to "could not read"; both paths refund.
+        if (e instanceof VendorTimeoutError) {
+          await refundUsage(gate.org.id, gate.charges[0]);
+          return vendorFailureResponse("/api/extract-minutes", e, gate.org.id);
+        }
+        void captureAppError("/api/extract-minutes", e, { orgId: gate.org.id });
         // fall through to the failure response below
       }
     }

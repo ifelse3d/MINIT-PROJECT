@@ -9,6 +9,8 @@ import { parseEventsExtraction } from "@/lib/extraction";
 import { extractEventsPrompt } from "@/prompts/extract-events";
 import { SAMPLE_ORG_NAME } from "@/lib/sample-data";
 import { dayIsoMalaysia } from "@/lib/history";
+import { ROUTE_AI_DEADLINE_MS, VendorTimeoutError } from "@/lib/ai/http";
+import { vendorFailureResponse } from "@/lib/ai/vendor-failure";
 
 // ---------------------------------------------------------------------------
 // AI event intake: pasted text, a PHOTO (paper plan / whiteboard), or a
@@ -44,6 +46,9 @@ async function xlsxToText(buf: Buffer): Promise<string> {
 
 export async function POST(req: Request) {
   try {
+    // P-1: one deadline for every vendor call in this request — refund,
+    // app_errors and the honest message must all run before Vercel's 60s kill.
+    const deadlineAt = Date.now() + ROUTE_AI_DEADLINE_MS;
     let text = "";
     let imageBase64: string | undefined;
     let mimeType: string | undefined;
@@ -113,14 +118,12 @@ export async function POST(req: Request) {
 
     let raw: unknown;
     try {
-      raw = await provider.extractJson({ prompt, imageBase64, mimeType, onUsage });
-    } catch {
+      raw = await provider.extractJson({ prompt, imageBase64, mimeType, onUsage, deadlineAt });
+    } catch (e) {
       // A refusal must never eat someone's quota (CLAUDE.md rule 10).
+      // P-1: the failure is also recorded now (app_errors) — see id=5.
       await refundUsage(gate.org.id, gate.charges[0]);
-      return NextResponse.json(
-        { error: joinUserError(USER_ERRORS.aiUnavailable) },
-        { status: 502 }
-      );
+      return vendorFailureResponse("/api/extract-events", e, gate.org.id);
     }
 
     let parsed = parseEventsExtraction(raw);
@@ -134,9 +137,15 @@ export async function POST(req: Request) {
 YOUR PREVIOUS ATTEMPT FAILED VALIDATION with these errors — fix them and respond with ONLY the corrected JSON:
 ${issues}`;
       try {
-        raw = await provider.extractJson({ prompt: retryPrompt, imageBase64, mimeType, onUsage });
+        raw = await provider.extractJson({ prompt: retryPrompt, imageBase64, mimeType, onUsage, deadlineAt });
         parsed = parseEventsExtraction(raw);
-      } catch {
+      } catch (e) {
+        // P-1: a timeout is a timeout — not "rewrite the plan". Both refund.
+        if (e instanceof VendorTimeoutError) {
+          await refundUsage(gate.org.id, gate.charges[0]);
+          return vendorFailureResponse("/api/extract-events", e, gate.org.id);
+        }
+        void captureAppError("/api/extract-events", e, { orgId: gate.org.id });
         // fall through
       }
     }

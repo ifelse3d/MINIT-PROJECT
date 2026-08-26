@@ -67,6 +67,15 @@ export type VisionJsonRequest = {
    * says a particular task is better with variation.
    */
   temperature?: number;
+  /**
+   * P-1 (2026-08-27): epoch-ms moment the calling route must be done with
+   * vendor calls — `Date.now() + ROUTE_AI_DEADLINE_MS` computed ONCE at the top
+   * of the route and shared by all its calls. Without it, retries can outlive
+   * Vercel's maxDuration and the kill runs no refund and logs nothing (the
+   * ai_usage id=5 incident). Honoured by the gemini and openai providers (the
+   * two with keys); optional so the rest keep compiling unchanged.
+   */
+  deadlineAt?: number;
 };
 
 /**
@@ -129,6 +138,9 @@ export type ToolChatRequest = {
   maxOutputTokens?: number;
   temperature?: number;
   onUsage?: (usage: TokenUsage) => void;
+  /** P-1: same contract as VisionJsonRequest.deadlineAt — the route's shared
+   *  budget across every round of a tool conversation. */
+  deadlineAt?: number;
 };
 
 export interface ToolChatProvider {
