@@ -25,7 +25,8 @@
     "e2e:money": "node scripts/e2e-money.mjs",
     "e2e:minutes": "node scripts/e2e-minutes.mjs",
     "e2e:roles": "node scripts/e2e-roles.mjs",
-    "shots": "node scripts/screenshots.mjs"
+    "shots": "node scripts/screenshots.mjs",
+    "contoh:constitution": "node scripts/make-contoh-constitution.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.0.0",
