@@ -97,9 +97,52 @@ export type VisionJsonRequest = {
  */
 export const DEFAULT_TEMPERATURE = 0;
 
-/** Default ceiling on generated tokens. Generous enough for a 30-clause
- *  constitution extraction, small enough that a runaway generation stops. */
+/** Default ceiling on generated tokens. Fine for classify/chat/small
+ *  extractions; a runaway generation stops. Document-reading routes pass an
+ *  explicit ceiling from EXTRACT_OUTPUT_CEILING instead — 8192 was the number
+ *  that made an 8-page constitution die at output token 8188 (J's new-user
+ *  test, 2026-08-28: billed twice, failed twice, told to "try again"). */
 export const DEFAULT_MAX_OUTPUT_TOKENS = 8192;
+
+/**
+ * Output ceilings for the document-reading jobs, sized to their PAGE CAPS
+ * (src/lib/pdf-pages.ts) — a ceiling that cannot fit the largest document the
+ * page cap admits is a bug, not a guard. Word-for-word extraction produces
+ * roughly 1–2k output tokens per page, JSON overhead included:
+ *
+ *   minutes       5 pages  → 16k has slack
+ *   ledger       20 pages  → rows are dense; 32k
+ *   constitution 50 pages  → THE long job; 64k (current Gemini/OpenAI flash
+ *                            tiers all take ≥64k output; if a future model
+ *                            caps lower, the typed truncation error below
+ *                            tells the person to split the file — honestly)
+ *
+ * Output is the expensive side of a vendor bill, but these are ceilings, not
+ * targets: the vendor bills what it GENERATES, and a document that needs the
+ * tokens needs them — a cheaper ceiling just burns the input cost twice.
+ */
+export const EXTRACT_OUTPUT_CEILING = {
+  minutes: 16384,
+  ledger: 32768,
+  constitution: 65536,
+} as const;
+
+/**
+ * The vendor answered and billed, but OUR output ceiling (or the model's own
+ * hard cap) cut the generation short — the JSON is truncated and a RETRY WILL
+ * FAIL IDENTICALLY. Typed so routes can tell the person the true, actionable
+ * thing ("split the document") instead of the generic "AI could not be
+ * reached, wait a minute and tap again" — which is what J was told, twice,
+ * at RM0.10 a tap (2026-08-28 review).
+ */
+export class VendorOutputTruncatedError extends Error {
+  constructor(vendor: string) {
+    super(
+      `${vendor} stopped at the output-token ceiling — the document is too large for one pass. Split it into smaller parts.`,
+    );
+    this.name = "VendorOutputTruncatedError";
+  }
+}
 
 export interface VisionJsonProvider {
   name: string;

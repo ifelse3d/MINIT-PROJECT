@@ -4,7 +4,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Tri, useTriText } from "@/components/language-provider";
+import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
 import { writeIntake } from "@/lib/intake-handoff";
 import { createOrg, type OrgActionState } from "./actions";
 
@@ -40,6 +40,10 @@ export function CreateOrgForm({
   const [state, formAction, pending] = useActionState(createOrg, INITIAL);
   const router = useRouter();
   const t = useTriText();
+  // J's new-user test (2026-08-28): server errors travel as bm\nzh\nen and
+  // were printed as a three-language wall ("why here suddenly have 3
+  // language"). Pick the reader's line.
+  const localizeError = useLocalizedError();
 
   // ---------------------------------------------------------------------
   // THE CONSTITUTION, ATTACHED HERE AND READ THE MOMENT THE ORG EXISTS.
@@ -534,7 +538,7 @@ export function CreateOrgForm({
 
       {state.error && (
         <p className="rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900">
-          {state.error}
+          {localizeError(state.error)}
         </p>
       )}
 
@@ -573,7 +577,9 @@ export function CreateOrgForm({
             // The organisation exists; only the reading failed. Do not throw
             // the person out of the flow — tell them, and let them go on.
             <div className="flex flex-col gap-2">
-              <p className="text-base font-medium text-red-800">{readFailed}</p>
+              <p className="text-base font-medium text-red-800">
+                {localizeError(readFailed)}
+              </p>
               <p className="text-base text-green-900">
                 <Tri
                   bm="Pertubuhan anda tetap sudah dicipta. Anda boleh cuba muat naik perlembagaan sekali lagi di halaman seterusnya."

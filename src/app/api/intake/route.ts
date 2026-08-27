@@ -5,7 +5,11 @@ import {
   tooManyPagesError,
   USER_ERRORS,
 } from "@/lib/user-errors";
-import { getVisionProvider } from "@/lib/ai/provider";
+import {
+  EXTRACT_OUTPUT_CEILING,
+  getVisionProvider,
+  VendorOutputTruncatedError,
+} from "@/lib/ai/provider";
 import {
   checkAndRecordUsage,
   createUsageRecorder,
@@ -373,11 +377,21 @@ export async function POST(req: Request) {
           ? parseLedgerExtraction
           : parseConstitutionExtraction;
 
+    // Output ceiling sized to what this kind of document actually produces —
+    // the 8192 default is what killed the 8-page constitution (2026-08-28).
+    const maxOutputTokens =
+      kind === "meeting_notes"
+        ? EXTRACT_OUTPUT_CEILING.minutes
+        : kind === "ledger_page"
+          ? EXTRACT_OUTPUT_CEILING.ledger
+          : EXTRACT_OUTPUT_CEILING.constitution;
+
     let raw: unknown;
     try {
       raw = await provider.extractJson({
         prompt,
         ...media,
+        maxOutputTokens,
         onUsage: onExtractUsage,
         deadlineAt,
       });
@@ -405,15 +419,17 @@ export async function POST(req: Request) {
 YOUR PREVIOUS ATTEMPT FAILED VALIDATION with these errors — fix them and respond with ONLY the corrected JSON:
 ${issues}`,
           ...media,
+          maxOutputTokens,
           onUsage: onExtractUsage,
           deadlineAt,
         });
         parsed = validate(raw);
       } catch (e) {
         // P-1: a timeout on the retry is reported as a timeout — camera advice
-        // for a slow vendor sends the person chasing the wrong fix. Anything
-        // else still falls through to "could not read"; both paths refund.
-        if (e instanceof VendorTimeoutError) {
+        // for a slow vendor sends the person chasing the wrong fix. A
+        // truncation means "split the file". Anything else still falls
+        // through to "could not read"; every path refunds.
+        if (e instanceof VendorTimeoutError || e instanceof VendorOutputTruncatedError) {
           await refundUsage(gate.org.id, extractCharge);
           return vendorFailureResponse("/api/intake", e, gate.org.id);
         }

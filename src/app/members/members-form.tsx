@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Tri } from "@/components/language-provider";
+import { Tri, useLocalizedError } from "@/components/language-provider";
 import { toIsoDate } from "@/lib/date-input";
 import {
   addCommitteeMember,
@@ -59,6 +59,7 @@ const SUGGESTED = [
  *  with two lists ended up looking like a page with four. */
 export function AddCommitteeRow() {
   const [state, formAction, pending] = useActionState(addCommitteeMember, INITIAL);
+  const localizeError = useLocalizedError();
 
   return (
     <form action={formAction} className="flex flex-col gap-3">
@@ -135,7 +136,7 @@ export function AddCommitteeRow() {
           ✓ <Tri bm="Ditambah" zh="加好了" en="Added" />
         </p>
       )}
-      {state.error && <p className={errorCls}>{state.error}</p>}
+      {state.error && <p className={errorCls}>{localizeError(state.error)}</p>}
     </form>
   );
 }
@@ -163,6 +164,7 @@ export function AddCommitteeRow() {
  */
 export function ImportCommittee() {
   const [state, formAction, pending] = useActionState(importCommittee, INITIAL);
+  const localizeError = useLocalizedError();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"file" | "ai">("file");
   const [text, setText] = useState("");
@@ -348,7 +350,7 @@ Setiausaha, 林小美
                   en="MinitAI types what it sees into the box below. It saves nothing by itself — read it, fix it, then press Import."
                 />
               </p>
-              {aiError && <p className={errorCls}>{aiError}</p>}
+              {aiError && <p className={errorCls}>{localizeError(aiError)}</p>}
             </div>
           )}
 
@@ -403,7 +405,7 @@ Setiausaha, 林小美
             )}
             {state.error && (
               <div className="flex flex-col gap-2">
-                <p className={errorCls}>{state.error}</p>
+                <p className={errorCls}>{localizeError(state.error)}</p>
                 {/* The escape hatch, at the only place it is any use. The price
                     is on the button, not in a footnote: nobody should spend a
                     credit without having read the word "credit" first. */}
@@ -439,7 +441,7 @@ Setiausaha, 林小美
                     </p>
                   </>
                 )}
-                {aiError && <p className={errorCls}>{aiError}</p>}
+                {aiError && <p className={errorCls}>{localizeError(aiError)}</p>}
               </div>
             )}
           </form>

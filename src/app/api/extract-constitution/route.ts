@@ -5,7 +5,11 @@ import {
   tooManyPagesError,
   USER_ERRORS,
 } from "@/lib/user-errors";
-import { getVisionProvider } from "@/lib/ai/provider";
+import {
+  EXTRACT_OUTPUT_CEILING,
+  getVisionProvider,
+  VendorOutputTruncatedError,
+} from "@/lib/ai/provider";
 import { createUsageRecorder, refundUsage, requireAiQuota } from "@/lib/ai/usage";
 import { parseConstitutionExtraction } from "@/lib/extraction";
 import { extractConstitutionPrompt } from "@/prompts/extract-constitution";
@@ -114,13 +118,17 @@ export async function POST(req: Request) {
     // that paid for it — the pattern extract-ledger has had since 2026-08-03.
     const onUsage = createUsageRecorder(gate.org.id, gate.charges[0]);
 
-    // Attempt 1
+    // Attempt 1. The explicit ceiling is the fix for J's new-user test
+    // (2026-08-28): an 8-page constitution died at output token 8188 under
+    // the 8192 default — billed, failed, and told to "try again". The ceiling
+    // now fits the 50-page cap this route itself admits.
     let raw: unknown;
     try {
       raw = await provider.extractJson({
         prompt,
         imageBase64,
         mimeType: file.type,
+        maxOutputTokens: EXTRACT_OUTPUT_CEILING.constitution,
         onUsage,
         deadlineAt,
       });
@@ -149,13 +157,15 @@ ${issues}`;
           prompt: retryPrompt,
           imageBase64,
           mimeType: file.type,
+          maxOutputTokens: EXTRACT_OUTPUT_CEILING.constitution,
           onUsage,
           deadlineAt,
         });
         parsed = parseConstitutionExtraction(raw);
       } catch (e) {
-        // P-1: a timeout is a timeout — not "retake the photo". Both refund.
-        if (e instanceof VendorTimeoutError) {
+        // P-1: a timeout is a timeout — not "retake the photo"; a truncation
+        // means "split the file", not "retake the photo". Both refund.
+        if (e instanceof VendorTimeoutError || e instanceof VendorOutputTruncatedError) {
           await refundUsage(gate.org.id, gate.charges[0]);
           return vendorFailureResponse("/api/extract-constitution", e, gate.org.id);
         }

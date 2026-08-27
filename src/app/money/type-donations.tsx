@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Tri, useTriText } from "@/components/language-provider";
+import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import { VoiceButton } from "@/components/voice-input";
 import { Req } from "@/components/required-mark";
@@ -151,6 +151,7 @@ export function TypeDonations({
   defaultOpen?: boolean;
 }) {
   const t = useTriText();
+  const localizeError = useLocalizedError();
   const today = dayIsoMalaysia(new Date().toISOString())!;
   // null = the person has not chosen yet. The grid then opens BY ITSELF when
   // a saved draft with real content comes back (B-5②) — an invisible saved
@@ -611,7 +612,7 @@ export function TypeDonations({
 
       {error && (
         <p className="rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900 dark:bg-red-400/10 dark:text-red-100">
-          {error}
+          {localizeError(error)}
         </p>
       )}
 

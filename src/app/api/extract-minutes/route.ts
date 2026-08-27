@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { captureAppError } from "@/lib/app-errors";
 import { joinUserError, tooManyPagesError, USER_ERRORS } from "@/lib/user-errors";
-import { getVisionProvider } from "@/lib/ai/provider";
+import {
+  EXTRACT_OUTPUT_CEILING,
+  getVisionProvider,
+  VendorOutputTruncatedError,
+} from "@/lib/ai/provider";
 import { ROUTE_AI_DEADLINE_MS, VendorTimeoutError } from "@/lib/ai/http";
 import { vendorFailureResponse } from "@/lib/ai/vendor-failure";
 import { createUsageRecorder, refundUsage, requireAiQuota } from "@/lib/ai/usage";
@@ -133,7 +137,14 @@ export async function POST(req: Request) {
     // Attempt 1
     let raw: unknown;
     try {
-      raw = await provider.extractJson({ prompt, imageBase64, mimeType: photo.type, onUsage, deadlineAt });
+      raw = await provider.extractJson({
+        prompt,
+        imageBase64,
+        mimeType: photo.type,
+        maxOutputTokens: EXTRACT_OUTPUT_CEILING.minutes,
+        onUsage,
+        deadlineAt,
+      });
     } catch (e) {
       // A refusal must never eat someone's quota (CLAUDE.md rule 10). Reading a
       // photo is the most expensive action and the one most likely to fail, and
@@ -156,13 +167,21 @@ export async function POST(req: Request) {
 YOUR PREVIOUS ATTEMPT FAILED VALIDATION with these errors — fix them and respond with ONLY the corrected JSON:
 ${issues}`;
       try {
-        raw = await provider.extractJson({ prompt: retryPrompt, imageBase64, mimeType: photo.type, onUsage, deadlineAt });
+        raw = await provider.extractJson({
+          prompt: retryPrompt,
+          imageBase64,
+          mimeType: photo.type,
+          maxOutputTokens: EXTRACT_OUTPUT_CEILING.minutes,
+          onUsage,
+          deadlineAt,
+        });
         parsed = parseMeetingNotesExtraction(raw);
       } catch (e) {
         // P-1: a timeout on the retry is reported as a timeout — camera advice
-        // for a slow vendor sends the person chasing the wrong fix. Anything
-        // else still falls through to "could not read"; both paths refund.
-        if (e instanceof VendorTimeoutError) {
+        // for a slow vendor sends the person chasing the wrong fix. A
+        // truncation means "split the file". Anything else still falls
+        // through to "could not read"; every path refunds.
+        if (e instanceof VendorTimeoutError || e instanceof VendorOutputTruncatedError) {
           await refundUsage(gate.org.id, gate.charges[0]);
           return vendorFailureResponse("/api/extract-minutes", e, gate.org.id);
         }

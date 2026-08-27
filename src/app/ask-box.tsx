@@ -28,7 +28,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowUp, Camera, Paperclip, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tri, useTriText } from "@/components/language-provider";
+import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
 import { PdpaNote } from "@/components/pdpa-note";
 import { VoiceButton } from "@/components/voice-input";
 import { writeIntake, type IntakeKind } from "@/lib/intake-handoff";
@@ -103,6 +103,7 @@ export function AskBox({
   initialUsedPct: number | null;
 }) {
   const t = useTriText();
+  const localizeError = useLocalizedError();
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement | null>(null);
   const cameraInput = useRef<HTMLInputElement | null>(null);
@@ -579,7 +580,7 @@ export function AskBox({
 
       {error && (
         <p className="mt-4 rounded-md border-2 border-red-300 bg-red-50 p-4 text-base font-medium whitespace-pre-line text-red-900 dark:bg-red-400/10 dark:text-red-100">
-          {error}
+          {localizeError(error)}
         </p>
       )}
 

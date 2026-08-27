@@ -36,7 +36,12 @@ import type {
   VisionJsonProvider,
   VisionJsonRequest,
 } from "./provider";
-import { DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_TEMPERATURE, parseModelJson } from "./provider";
+import {
+  DEFAULT_MAX_OUTPUT_TOKENS,
+  DEFAULT_TEMPERATURE,
+  parseModelJson,
+  VendorOutputTruncatedError,
+} from "./provider";
 import type { ToolTurn } from "./tool-core";
 import { geminiToolBody, readGeminiTurn } from "./tool-wire";
 import { postVendorJson } from "./http";
@@ -148,13 +153,11 @@ export function createGeminiProvider(model: string): VisionJsonProvider {
         }
       }
 
-      // MAX_TOKENS means our ceiling cut the JSON in half. Say so plainly:
-      // otherwise it surfaces as an unexplained "AI could not read this".
+      // MAX_TOKENS means our ceiling cut the JSON in half. Typed, so the route
+      // can say the true thing ("split the document") instead of "could not be
+      // reached, try again" — a retry fails identically and bills again.
       if (candidate?.finishReason === "MAX_TOKENS") {
-        throw new Error(
-          "Gemini stopped at maxOutputTokens — the document is too large for one pass. " +
-            "Split it into smaller parts."
-        );
+        throw new VendorOutputTruncatedError("Gemini");
       }
 
       const text = (candidate?.content?.parts ?? []).map((p) => p.text ?? "").join("");

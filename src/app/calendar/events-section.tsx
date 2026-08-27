@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tri, useTriText } from "@/components/language-provider";
+import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
 import type { EventExtraction } from "@/lib/extraction";
 import type { SimpleEvent } from "@/lib/local-events";
 import { parseLunarRecurring, type LunarRecurringRule } from "@/lib/lunar-parse";
@@ -51,6 +51,7 @@ function toRow(e: EventExtraction): ProposedRow {
 
 export function EventsSection({ onAdd }: { onAdd: (ev: SimpleEvent) => void }) {
   const t = useTriText();
+  const localizeError = useLocalizedError();
 
   // AI paste-box state
   const [pasteText, setPasteText] = useState("");
@@ -317,7 +318,7 @@ export function EventsSection({ onAdd }: { onAdd: (ev: SimpleEvent) => void }) {
           )}
           {aiError && (
             <div className="mt-3 rounded-md border border-red-300 bg-red-50 p-3 text-red-900">
-              {aiError}
+              {localizeError(aiError)}
             </div>
           )}
           {proposed && proposed.length === 0 && (

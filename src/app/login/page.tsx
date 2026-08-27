@@ -63,7 +63,16 @@ export default function LoginPage() {
     const timer = setTimeout(() => {
       try {
         const params = new URLSearchParams(window.location.search);
-        if (params.get("registered") === "1") setJustRegistered(true);
+        if (params.get("registered") === "1") {
+          setJustRegistered(true);
+          // 28#1 (J, asked twice — 8/27 and 8/28): arriving here from the
+          // EMAIL CONFIRMATION link carries tokens in the URL hash, and
+          // supabase-js quietly turns them into a live session — walking the
+          // person into the app without ever typing their password, which is
+          // exactly what C-3 exists to prevent. Whatever session exists on
+          // this page is discarded; the person signs in themselves.
+          void getSupabaseBrowser().auth.signOut();
+        }
       } catch {
         // No URL to read — nothing to show.
       }
@@ -198,6 +207,11 @@ export default function LoginPage() {
           // which text — no document content, no personal data beyond the
           // account that is being created anyway.
           options: {
+            // 28#1: the email confirmation link must ALSO end on this page,
+            // signed out, "now sign in" — not walk the person into the app.
+            // The signOut for any session the link's tokens create happens in
+            // the ?registered=1 effect above.
+            emailRedirectTo: `${window.location.origin}/login?registered=1`,
             data: {
               terms_accepted_at: new Date().toISOString(),
               terms_version: LEGAL_VERSIONS.terms,

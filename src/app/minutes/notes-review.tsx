@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Tri, useTriText } from "@/components/language-provider";
+import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
 import { StepGroup } from "@/components/step-card";
 import { NextStepLink, PageSection } from "@/components/page-section";
 import { PageThumbs } from "@/components/page-thumbs";
@@ -32,6 +32,7 @@ import { useMinutes, type TextLikeField } from "./minutes-store";
 
 export function NotesReview() {
   const t = useTriText();
+  const localizeError = useLocalizedError();
   /**
    * The file somebody has chosen but not yet sent.
    *
@@ -473,7 +474,7 @@ export function NotesReview() {
         )}
         {aiError && (
           <div className="rounded-md border border-red-300 bg-red-50 p-4 text-base text-red-900">
-            {aiError}
+            {localizeError(aiError)}
           </div>
         )}
         {/* D-3 (work order 31, J #8): the same look-back the money review has —

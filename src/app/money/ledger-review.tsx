@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Tri, useTriText } from "@/components/language-provider";
+import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
 import { ExtractionTable } from "@/components/extraction-table";
 import { NextStepLink, PageSection } from "@/components/page-section";
 import { PageThumbs } from "@/components/page-thumbs";
@@ -33,6 +33,7 @@ import { useRegister } from "./register-store";
 
 export function LedgerReview() {
   const t = useTriText();
+  const localizeError = useLocalizedError();
   const {
     ledger,
     ledgerSourceLabel,
@@ -442,7 +443,7 @@ export function LedgerReview() {
         )}
         {aiError && (
           <div className="rounded-md border border-red-300 bg-red-50 p-4 text-base text-red-900">
-            {aiError}
+            {localizeError(aiError)}
           </div>
         )}
         {isSampleLedger && (

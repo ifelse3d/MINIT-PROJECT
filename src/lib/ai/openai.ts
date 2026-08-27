@@ -30,7 +30,12 @@ import type {
   VisionJsonProvider,
   VisionJsonRequest,
 } from "./provider";
-import { DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_TEMPERATURE, parseModelJson } from "./provider";
+import {
+  DEFAULT_MAX_OUTPUT_TOKENS,
+  DEFAULT_TEMPERATURE,
+  parseModelJson,
+  VendorOutputTruncatedError,
+} from "./provider";
 import type { ToolTurn } from "./tool-core";
 import { openAiToolBody, readOpenAiTurn } from "./tool-wire";
 import { postVendorJson } from "./http";
@@ -182,10 +187,7 @@ export function createOpenAiProvider(model: string): VisionJsonProvider {
       }
 
       if (reply.incomplete_details?.reason === "max_output_tokens") {
-        throw new Error(
-          "OpenAI stopped at max_output_tokens — the document is too large for one pass. " +
-            "Split it into smaller parts."
-        );
+        throw new VendorOutputTruncatedError("OpenAI");
       }
 
       const text = outputTextOf(reply);

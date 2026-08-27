@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Tri, useTriText } from "@/components/language-provider";
+import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -61,6 +61,7 @@ type Props = {
 
 export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBusy }: Props) {
   const t = useTriText();
+  const localizeError = useLocalizedError();
   const today = dayIsoMalaysia(new Date().toISOString())!;
 
   const [open, setOpen] = useState(false);
@@ -473,7 +474,7 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
 
             {error && (
               <div className="rounded-md border border-red-300 bg-red-50 p-3 text-base text-red-900">
-                {error}
+                {localizeError(error)}
               </div>
             )}
 

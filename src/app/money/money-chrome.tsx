@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { type ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tri } from "@/components/language-provider";
+import { Tri, useLocalizedError } from "@/components/language-provider";
 import { SectionTabs, type SectionTab } from "@/components/section-tabs";
 import { useEinvoisVisible } from "@/lib/einvois-pref";
 import { useRegister } from "./register-store";
@@ -74,6 +74,7 @@ const MONEY_RECORDS = {
 
 export function MoneyChrome({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const localizeError = useLocalizedError();
   const {
     documentOrgName,
     ledgerSourceLabel,
@@ -192,7 +193,7 @@ export function MoneyChrome({ children }: { children: ReactNode }) {
       )}
       {error && (
         <div className="flex flex-wrap items-start gap-3 rounded-md border border-red-300 bg-red-50 p-4 text-base text-red-900">
-          <span className="min-w-56 flex-1">{error}</span>
+          <span className="min-w-56 flex-1">{localizeError(error)}</span>
           <Button size="sm" variant="outline" onClick={() => setError(null)}>
             <Tri bm="Tutup" zh="关掉" en="Dismiss" />
           </Button>

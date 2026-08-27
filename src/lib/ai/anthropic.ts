@@ -37,7 +37,12 @@
 import "server-only";
 
 import type { TokenUsage, VisionJsonProvider, VisionJsonRequest } from "./provider";
-import { DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_TEMPERATURE, parseModelJson } from "./provider";
+import {
+  DEFAULT_MAX_OUTPUT_TOKENS,
+  DEFAULT_TEMPERATURE,
+  parseModelJson,
+  VendorOutputTruncatedError,
+} from "./provider";
 
 /** 45s, not 20s. See note 2 in the header — this is a fairness setting. */
 const REQUEST_TIMEOUT_MS = 45_000;
@@ -188,10 +193,7 @@ export function createAnthropicProvider(model: string): VisionJsonProvider {
           }
 
           if (json.stop_reason === "max_tokens") {
-            throw new Error(
-              "Anthropic stopped at max_tokens — the document is too large for one pass. " +
-                "Split it into smaller parts."
-            );
+            throw new VendorOutputTruncatedError("Anthropic");
           }
 
           // A safety decline arrives as HTTP 200. Without this branch it would

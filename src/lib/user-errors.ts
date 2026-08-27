@@ -95,6 +95,19 @@ export const USER_ERRORS = {
   },
 
   /**
+   * D32-adjacent fix (2026-08-28, J's new-user test): the vendor answered and
+   * billed, but the document needs more output tokens than one pass allows —
+   * the JSON came back cut off. A RETRY FAILS IDENTICALLY, so this message
+   * must never say "try again"; the only fix in the person's hands is a
+   * smaller document. The quota for the attempt is returned by the route.
+   */
+  documentTooLong: {
+    bm: "Dokumen ini terlalu panjang untuk dibaca sekali gus. Bahagikan PDF kepada beberapa fail kecil (contohnya 10 muka surat satu fail) atau ambil gambar satu muka demi satu, kemudian muat naik bahagian demi bahagian. Menghantar fail yang sama semula TIDAK akan berjaya. Kuota anda telah dipulangkan.",
+    zh: "这份文件太长，AI 一次读不完。请把 PDF 分成几份小的（例如每 10 页一份），或者一页一页拍照，然后一份一份上传。原样重传同一份文件是不会成功的。这一次的用量已经退回。",
+    en: "This document is too long to read in one pass. Split the PDF into smaller files (for example 10 pages each), or photograph it page by page, then upload the parts one at a time. Sending the same file again will NOT work. Your quota for this attempt has been returned.",
+  },
+
+  /**
    * The model answered twice and both answers failed validation. Concrete photo
    * advice instead of "try a clearer photo".
    */

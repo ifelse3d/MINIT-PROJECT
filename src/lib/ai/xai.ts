@@ -27,7 +27,12 @@
 import "server-only";
 
 import type { TokenUsage, VisionJsonProvider, VisionJsonRequest } from "./provider";
-import { DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_TEMPERATURE, parseModelJson } from "./provider";
+import {
+  DEFAULT_MAX_OUTPUT_TOKENS,
+  DEFAULT_TEMPERATURE,
+  parseModelJson,
+  VendorOutputTruncatedError,
+} from "./provider";
 
 const REQUEST_TIMEOUT_MS = 30_000;
 const MAX_ATTEMPTS = 3;
@@ -175,10 +180,7 @@ export function createXaiProvider(model: string): VisionJsonProvider {
 
           const choice = json.choices?.[0];
           if (choice?.finish_reason === "length") {
-            throw new Error(
-              "xAI stopped at max_tokens — the document is too large for one pass. " +
-                "Split it into smaller parts."
-            );
+            throw new VendorOutputTruncatedError("xAI");
           }
 
           const text = choice?.message?.content;

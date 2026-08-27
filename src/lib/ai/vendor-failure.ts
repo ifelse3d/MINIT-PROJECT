@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { captureAppError } from "@/lib/app-errors";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
 import { VendorTimeoutError } from "./http";
+import { VendorOutputTruncatedError } from "./provider";
 
 // ---------------------------------------------------------------------------
 // ONE ANSWER TO "the vendor call threw" — P-1 (2026-08-27, work order 31).
@@ -26,9 +27,13 @@ import { VendorTimeoutError } from "./http";
 /**
  * Record a failed vendor call and build the honest response for it.
  *
- *   - VendorTimeoutError → 504, "Minit stopped waiting — your quota was
- *     returned". Only send this on a path that really did refund.
- *   - anything else      → 502, "the AI could not be reached".
+ *   - VendorTimeoutError         → 504, "Minit stopped waiting — your quota
+ *     was returned". Only send this on a path that really did refund.
+ *   - VendorOutputTruncatedError → 413, "the document is too long — split
+ *     it". A retry fails identically, so "try again" would be a lie that
+ *     bills the member again (that lie ran twice on J's new-user test,
+ *     2026-08-28, at RM0.10 a tap).
+ *   - anything else              → 502, "the AI could not be reached".
  */
 export function vendorFailureResponse(
   route: string,
@@ -42,6 +47,12 @@ export function vendorFailureResponse(
     return NextResponse.json(
       { error: joinUserError(USER_ERRORS.aiTimeout) },
       { status: 504 },
+    );
+  }
+  if (err instanceof VendorOutputTruncatedError) {
+    return NextResponse.json(
+      { error: joinUserError(USER_ERRORS.documentTooLong) },
+      { status: 413 },
     );
   }
   return NextResponse.json(

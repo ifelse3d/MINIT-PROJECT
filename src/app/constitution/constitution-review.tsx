@@ -4,7 +4,7 @@ import Link from "next/link";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Tri, useTriText } from "@/components/language-provider";
+import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
 import { PdpaNote } from "@/components/pdpa-note";
 import { Button } from "@/components/ui/button";
 import {
@@ -146,6 +146,9 @@ export function ConstitutionReview({
   const [question, setQuestion] = useState(initialQuestion);
   const [result, setResult] = useState<AskResult | null>(null);
   const t = useTriText();
+  // Server errors travel as bm\nzh\nen — show the reader's line only
+  // (J's new-user test, 2026-08-28: "why here suddenly have 3 language").
+  const localizeError = useLocalizedError();
 
   const [stored, setStored, storeMeta] = usePersistentState<StoredConstitution | null>(
     // S0-4: scoped per user+org — a shared laptop must not show one
@@ -421,9 +424,9 @@ export function ConstitutionReview({
         ) : (
           <p className="text-base text-muted-foreground">
             <Tri
-              bm="MinitAI belum membaca perlembagaan anda. Ambil gambar setiap halaman di bawah — selepas itu setiap jawapan akan memetik fasal anda sendiri."
-              zh="MinitAI 还没读过您的章程。请在下面把每一页拍下来 —— 之后每个答案都会引用您自己的条文。"
-              en="MinitAI has not read your constitution yet. Photograph each page below — after that, every answer quotes your own clauses."
+              bm="MinitAI belum membaca perlembagaan anda. Pilih fail PDF atau ambil gambar setiap halaman di bawah — selepas itu setiap jawapan akan memetik fasal anda sendiri."
+              zh="MinitAI 还没读过您的章程。在下面选一份 PDF，或把每一页拍下来 —— 之后每个答案都会引用您自己的条文。"
+              en="MinitAI has not read your constitution yet. Choose a PDF or photograph each page below — after that, every answer quotes your own clauses."
             />
           </p>
         )}
@@ -456,17 +459,19 @@ export function ConstitutionReview({
         <CardHeader>
           <CardTitle className="text-xl">
             📷{" "}
+            {/* 28#5 (J, 2026-08-28): PDFs were always accepted here, but the
+                copy only said "photo" — say both. */}
             <Tri
-              bm="Ambil gambar perlembagaan anda"
-              zh="拍下您的章程"
-              en="Take a photo of your constitution"
+              bm="Perlembagaan anda: PDF atau gambar"
+              zh="您的章程：PDF 或拍照"
+              en="Your constitution: PDF or photos"
             />
           </CardTitle>
           <CardDescription>
             <Tri
-              bm="Satu gambar untuk setiap halaman. Ambil gambar halaman pertama, tunggu MinitAI membacanya, kemudian ambil halaman berikutnya — halaman baharu ditambah, tidak menggantikan yang lama. MinitAI menyalin setiap fasal perkataan demi perkataan; ia tidak meringkaskan dan tidak mengarang."
-              zh="一页拍一张。先拍第一页，等 MinitAI 读完，再拍下一页 —— 新的页会加上去，不会盖掉之前的。MinitAI 会逐字抄下每一条条文，不会自己总结，也不会自己编。"
-              en="One photo per page. Take the first page, wait for MinitAI to read it, then take the next — new pages are added, not replaced. MinitAI copies each clause word for word; it does not summarise and it does not invent."
+              bm="Satu fail PDF, atau satu gambar untuk setiap halaman. Tunggu MinitAI selesai membaca sebelum menghantar yang berikutnya — halaman baharu ditambah, tidak menggantikan yang lama. MinitAI menyalin setiap fasal perkataan demi perkataan; ia tidak meringkaskan dan tidak mengarang."
+              zh="可以整份 PDF，也可以一页拍一张。等 MinitAI 读完再传下一份 —— 新的页会加上去，不会盖掉之前的。MinitAI 会逐字抄下每一条条文，不会自己总结，也不会自己编。"
+              en="One PDF, or one photo per page. Wait for MinitAI to finish reading before sending the next — new pages are added, not replaced. MinitAI copies each clause word for word; it does not summarise and it does not invent."
             />
           </CardDescription>
         </CardHeader>
@@ -492,9 +497,9 @@ export function ConstitutionReview({
                 <>
                   📷{" "}
                   <Tri
-                    bm="Pilih / ambil gambar halaman"
-                    zh="选择或拍下一页"
-                    en="Choose / take a photo of a page"
+                    bm="Pilih fail (PDF atau gambar)"
+                    zh="选一个档案（PDF 或照片）"
+                    en="Choose a file (PDF or photo)"
                   />
                 </>
               )}
@@ -536,7 +541,7 @@ export function ConstitutionReview({
           <PdpaNote />
           {aiError && (
             <div className="rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium whitespace-pre-line text-red-900">
-              {aiError}
+              {localizeError(aiError)}
             </div>
           )}
           {storeMeta.quotaFull && (
