@@ -272,6 +272,39 @@
   }
 }
 
+/* --- Icon rail collapse (§3.1) ------------------------------------------ */
+/* The boot script in layout.tsx sets .minit-rail-expanded on <html> BEFORE
+   first paint (localStorage wins; default expanded ≥1440px). CSS owns the
+   label visibility so the first paint is never wrong and React never has a
+   hydration mismatch over it. */
+.minit-rail-expanded .v2-root {
+  --rail-w: 248px;
+}
+/* Collapse affects ONLY the fixed rail (.rail-collapsible) — the <1024px
+   drawer reuses the same markup and is always label-visible (§3.4). */
+html:not(.minit-rail-expanded) .rail-collapsible .rail-label,
+html:not(.minit-rail-expanded) .rail-collapsible .rail-group-label {
+  display: none;
+}
+.rail-group-divider {
+  display: none;
+}
+html:not(.minit-rail-expanded) .rail-collapsible .rail-group-divider {
+  display: block;
+}
+html:not(.minit-rail-expanded) .rail-collapsible .rail-item {
+  justify-content: center;
+}
+.rail-anim {
+  transition: width 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    margin-left 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .rail-anim {
+    transition: none;
+  }
+}
+
 .dark .v2-root {
   /* TWO tokens on purpose (spec §2.2 dark table): #7029E5 on a dark card is
      unreadable as TEXT, so the text violet brightens to #C084FC (7.02:1 on

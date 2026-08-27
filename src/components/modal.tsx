@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
+import { Button } from "@/components/ui/button";
+import { Tri } from "@/components/language-provider";
 
 // ---------------------------------------------------------------------------
-// A small confirmation modal (work order 32: the P3 hand-over dialog and the
-// P5 logout confirm both need one, and the repo had none — sheet.tsx is a
-// side drawer). Deliberately minimal: fixed overlay, solid card, Escape and
-// overlay-click close, focus moved in on open. No portal library, no
-// animation dependency.
+// The confirmation modal (violet redesign spec §8) — ONE reusable pattern:
+// logout, discard-unsaved-changes, danger-zone deletes, the hand-over
+// dialog. 420px default (wide for itemised lists), 12px radius, backdrop
+// rgba(21,18,31,.45) + 2px blur, Escape / backdrop / Cancel all dismiss.
+// §8 behaviour: initial focus goes to the SAFE control — callers put
+// `autoFocus` on their cancel button; the card itself is the fallback.
 // ---------------------------------------------------------------------------
 
 export function Modal({
@@ -22,7 +25,7 @@ export function Modal({
   /** id of the heading element inside, for aria-labelledby. */
   labelledBy: string;
   children: ReactNode;
-  /** true = max-w-2xl (itemised lists); default max-w-md. */
+  /** true = max-w-2xl (itemised lists); default 420px per §8. */
   wide?: boolean;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
@@ -33,15 +36,19 @@ export function Modal({
       if (e.key === "Escape") onClose();
     };
     document.addEventListener("keydown", onKey);
-    // Move focus into the dialog so keyboard users are not left behind it.
-    cardRef.current?.focus();
+    // Move focus INTO the dialog. A caller's autoFocus (on its safe button)
+    // wins because the browser applies it on mount, before this runs on an
+    // element that is no longer document.activeElement's owner.
+    if (!cardRef.current?.contains(document.activeElement)) {
+      cardRef.current?.focus();
+    }
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
   if (!open) return null;
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(21,18,31,0.45)] p-4 backdrop-blur-[2px] sm:items-center"
       onClick={onClose}
     >
       <div
@@ -50,13 +57,69 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={labelledBy}
         tabIndex={-1}
-        className={`max-h-[90vh] w-full overflow-y-auto rounded-md bg-[color:var(--v2-card)] p-5 shadow-xl outline-none ${
-          wide ? "max-w-2xl" : "max-w-md"
+        className={`max-h-[90vh] w-full overflow-y-auto rounded-lg border border-[color:var(--v2-border)] bg-[color:var(--v2-card-raised)] p-6 shadow-[var(--v2-shadow-lg)] outline-none ${
+          wide ? "max-w-2xl" : "max-w-[420px]"
         }`}
         onClick={(e) => e.stopPropagation()}
       >
         {children}
       </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// §8: the one confirm dialog. `confirmPhrase` (danger zone, §7.5) keeps the
+// confirm button disabled until the typed value matches exactly.
+// ---------------------------------------------------------------------------
+
+export function ConfirmDialog({
+  open,
+  onClose,
+  onConfirm,
+  body,
+  confirmLabel,
+  destructive,
+  busy,
+  children,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  /** One line of copy — §8 has no separate title bar. */
+  body: ReactNode;
+  confirmLabel: ReactNode;
+  destructive?: boolean;
+  /** While the action is in flight both buttons disable. */
+  busy?: boolean;
+  /** Optional extra content (e.g. the confirmPhrase input) above the buttons. */
+  children?: ReactNode;
+}) {
+  return (
+    <Modal open={open} onClose={onClose} labelledBy="confirm-body">
+      <div className="flex flex-col gap-4">
+        <p id="confirm-body" className="text-base">
+          {body}
+        </p>
+        {children}
+        <div className="flex flex-wrap justify-end gap-2.5">
+          {/* §8: initial focus on the SAFE option — Enter never destroys. */}
+          <Button variant="outline" onClick={onClose} disabled={busy} autoFocus>
+            <Tri bm="Batal" zh="取消" en="Cancel" />
+          </Button>
+          <Button
+            onClick={onConfirm}
+            disabled={busy}
+            className={
+              destructive
+                ? "bg-[#dc2626] text-white shadow-none hover:bg-[#b91c1c]"
+                : undefined
+            }
+          >
+            {busy ? "…" : confirmLabel}
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }

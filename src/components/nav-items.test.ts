@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   NAV_ITEMS,
   PRIMARY_NAV,
+  SETTINGS_NAV,
   SIDEBAR_NAV,
   groupHasActiveChild,
   isActivePath,
@@ -30,12 +31,11 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
     expect(PRIMARY_NAV.filter((e) => e.kind === "group")).toHaveLength(3);
   });
 
-  // SEVEN desktop entries (B-1, J 8/26 #3; §1-9 of work order 32 on 8/27
-  // overturned 拍板 30's lone calendar row): Home + six collapsible groups,
-  // the calendar back inside 申报 — a deadline is a filing date, and a lone
-  // top-level row sat oddly against a column of groups.
-  it("keeps the desktop sidebar to Home + six groups, as J listed them", () => {
-    expect(SIDEBAR_NAV).toHaveLength(7);
+  // SIX rail entries (violet redesign §3.2, 8/27 下午): Home + five groups.
+  // The settings family left the scrolling rail — the rail pins ONE Settings
+  // entry at its bottom and SETTINGS_NAV owns those pages (asserted below).
+  it("keeps the desktop rail to Home + five groups, as J listed them", () => {
+    expect(SIDEBAR_NAV).toHaveLength(6);
     expect(SIDEBAR_NAV[0].kind).toBe("item");
     const items = SIDEBAR_NAV.flatMap((e) => (e.kind === "item" ? [e.item.href] : []));
     expect(items).toEqual(["/"]);
@@ -46,7 +46,6 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
       "filings",
       "organisation",
       "records",
-      "settings",
     ]);
   });
 
@@ -87,11 +86,11 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
       "/history",
       "/inbox",
     ]);
-    // 设置 (§1-13, work order 32): 机构与收据 · 方案与用量 · 账号与显示 · 反馈.
-    expect(byId("settings").children.map((c) => c.href)).toEqual([
+    // 设置家族 (violet redesign §7): lives in SETTINGS_NAV, not the rail.
+    expect(SETTINGS_NAV.map((c) => c.href)).toEqual([
+      "/settings",
       "/settings/org",
       "/settings/plan",
-      "/settings",
       "/settings/feedback",
     ]);
   });

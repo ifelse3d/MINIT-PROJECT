@@ -1,30 +1,41 @@
 "use client";
 
 // ---------------------------------------------------------------------------
-// v3 APP SHELL (Stage R, 2026-08-25) — "clean ledger".
+// v3 APP SHELL — violet redesign (J 8/27 下午: 「design 換差不多這樣，但功能
+// 還是用我們自己的」). Meta-style ICON RAIL + sticky glass top bar.
 //
-// Desktop (md+): a FIXED left rail with the four primary entries (Home /
-// Minutes / Money / More), the active flow's steps listed under its group,
-// the organisation you are recording for at the bottom. Content sits in a
-// centred, width-limited column.
+// ≥1024px: a fixed left rail — 68px collapsed (icons + tooltips), 248px
+//   expanded (icons + labels + uppercase group headings). State lives in
+//   localStorage ("minit.rail.collapsed"); a boot script in layout.tsx sets
+//   the .minit-rail-expanded class on <html> BEFORE first paint, and CSS
+//   owns label visibility, so the first paint is never wrong. `[` toggles.
+// <1024px: the rail hides; the top bar grows a hamburger that opens the
+//   same nav as an overlay drawer (always label-visible — that is how touch
+//   users get what hover gives mouse users). The phone keeps its four-tab
+//   bottom bar (<768px) untouched — J's 拍板④.
 //
-// Phone: a bottom tab bar with the SAME four entries (More is its own page,
-// /more) and a slim top bar naming the app and the organisation. One column.
+// The nav CONTENT stays OURS (拍板④'s groups, amended §1-9): the spec
+// restyles the shell, it does not re-decide J's grouping. Settings pins to
+// the rail bottom (§3.2); the settings pages live in SETTINGS_NAV (§7).
 //
-// /login renders bare: no nav to pages you cannot reach, just the language
-// chips.
-//
-// J's brief (2026-08-24): 手机 19 格砍成 4；桌面主力，手机第二，两个都要能用.
+// /login and the legal pages render bare: just the language chips.
 // ---------------------------------------------------------------------------
 
 import Link from "next/link";
-import { ChevronDown, Wrench } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  PanelLeftClose,
+  PanelLeftOpen,
+  Settings as SettingsIcon,
+  Wrench,
+  X,
+} from "lucide-react";
 import { usePathname } from "next/navigation";
-import { LanguageSwitcher, Tri } from "@/components/language-provider";
+import { LanguageSwitcher, Tri, useTriText } from "@/components/language-provider";
 import { FirstRunFlow } from "@/components/first-run-flow";
-import { usePersistentState } from "@/lib/use-persistent-state";
 import { BrandLogo } from "@/components/brand-logo";
 import { BRAND_NAME } from "@/lib/brand";
+import { AppTooltipProvider, IconTip } from "@/components/ui/tooltip";
 import {
   PRIMARY_NAV,
   SIDEBAR_NAV,
@@ -36,8 +47,7 @@ import {
 } from "@/components/nav-items";
 import { useEinvoisVisible } from "@/lib/einvois-pref";
 import { cn } from "./surfaces";
-import { OrgChip, useActiveOrg } from "./org-chip";
-import { TopSearch } from "./top-search";
+import { TopBar } from "./top-bar";
 import { AIDock, useAIDock } from "./ai-dock";
 
 /** Routes rendered without nav/search/theme chrome. C-7 (work order 31, 客①):
@@ -52,6 +62,8 @@ function isBareRoute(pathname: string | null): boolean {
     (route) => pathname === route || pathname.startsWith(`${route}/`),
   );
 }
+
+const RAIL_KEY = "minit.rail.collapsed";
 
 export function AppShell({
   children,
@@ -75,6 +87,14 @@ export function AppShell({
   const pathname = usePathname();
   // Hooks must run on every render, including the bare /login branch below.
   const dock = useAIDock();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // The drawer closes on route change (§3.4). setTimeout(0): the eslint
+  // baseline forbids synchronous setState in an effect (STATE §6).
+  useEffect(() => {
+    const id = setTimeout(() => setDrawerOpen(false), 0);
+    return () => clearTimeout(id);
+  }, [pathname]);
 
   if (isBareRoute(pathname)) {
     return (
@@ -89,247 +109,390 @@ export function AppShell({
   }
 
   return (
-    <div className="v2-root v2-safe min-h-screen">
-      {/* Desktop rail — fixed, full height. */}
-      <Rail pathname={pathname ?? "/"} showAdmin={showAdmin} />
+    <AppTooltipProvider>
+      <div className="v2-root v2-safe min-h-screen">
+        {/* Desktop icon rail — fixed, full height, ≥1024px. */}
+        <Rail pathname={pathname ?? "/"} showAdmin={showAdmin} />
 
-      {/* The docked assistant takes real width off the right; hand it over so
-          no card hides behind it. 0 on phones and when collapsed. */}
-      <div
-        className={cn(
-          "md:pl-64",
-          dock.dragging ? "" : "transition-[padding] duration-300 ease-out",
+        {/* Overlay drawer for <1024px — the expanded rail, floating. */}
+        {drawerOpen && (
+          <NavDrawer
+            pathname={pathname ?? "/"}
+            showAdmin={showAdmin}
+            onClose={() => setDrawerOpen(false)}
+          />
         )}
-        style={{ paddingRight: dock.push || undefined }}
-      >
-        {/* F-1 (2026-08-25, J #15 #8): max-w-4xl here silently capped EVERY
-            page at 896px — the money chrome asks for 5xl, the calendar for
-            7xl, and both were being squeezed without anyone's page saying so.
-            The shell is now the widest bound (7xl); each page's own container
-            decides its real width, which is where that decision belongs. */}
-        <main className="mx-auto w-full max-w-7xl px-4 pb-24 sm:px-6 md:pb-10">
-          {/* B-2 (work order 32 §2B, avocado): the top bar STAYS while you
-              scroll — search, language, theme and the account menu used to
-              vanish two lines down the page. Solid card background, no
-              backdrop-filter (the blur was killed deliberately — Stage R). */}
-          <div className="sticky top-0 z-30 -mx-4 border-b border-[color:var(--v2-border)] bg-[color:var(--v2-card)] px-4 py-2.5 sm:-mx-6 sm:px-6 md:py-3">
-            {/* Phone-only top bar; search for md+ */}
-            <MobileTopBar />
-            <div className="hidden md:block">
-              <TopSearch />
-            </div>
-          </div>
-          <div className="mt-4 md:mt-6">{children}</div>
-        </main>
+
+        {/* One animated offset: the wrapper follows --rail-w (§3.1). The
+            docked assistant takes real width off the right; hand it over so
+            no card hides behind it. */}
+        <div
+          className={cn(
+            "rail-anim lg:ml-[var(--rail-w)]",
+            dock.dragging ? "" : "transition-[padding] duration-300 ease-out",
+          )}
+          style={{ paddingRight: dock.push || undefined }}
+        >
+          {/* §5.2: the bar is the first child of the offset wrapper — sticky,
+              full width of the content column. */}
+          <TopBar pathname={pathname ?? "/"} onOpenDrawer={() => setDrawerOpen(true)} />
+          {/* F-1 (2026-08-25): the shell is the widest bound (7xl); each
+              page's own container decides its real width. */}
+          <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-4 sm:px-6 md:pb-10 md:pt-6">
+            {children}
+          </main>
+        </div>
+
+        {/* Phone tab bar — the same four entries as ever (拍板④). */}
+        <TabBar pathname={pathname ?? "/"} />
+
+        {showAiLauncher && (
+          <AIDock
+            dock={dock}
+            initialRemaining={aiRemaining}
+            initialUsedPct={aiUsedPct}
+            blocked={aiBlocked}
+          />
+        )}
+        <FirstRunFlow />
       </div>
+    </AppTooltipProvider>
+  );
+}
 
-      {/* Phone tab bar — the same four entries as the rail. */}
-      <TabBar pathname={pathname ?? "/"} />
+// ---------------------------------------------------------------------------
+// The nav list — shared verbatim by the rail (collapsible) and the drawer
+// (always expanded). `collapsed` only controls tooltips: label VISIBILITY is
+// CSS-driven off the <html> class, so hydration can never disagree with the
+// boot script.
+// ---------------------------------------------------------------------------
 
-      {showAiLauncher && (
-        <AIDock
-          dock={dock}
-          initialRemaining={aiRemaining}
-          initialUsedPct={aiUsedPct}
-          blocked={aiBlocked}
+function railEntryChildren(entry: NavEntry, einvoisVisible: boolean): NavItem[] {
+  // E-2: rail-only steps (attendance, the document) are navigated by the
+  // section's own tab rail; the menu lists the jobs.
+  return visibleGroupChildren(entry, einvoisVisible);
+}
+
+function RailItem({
+  item,
+  pathname,
+  collapsed,
+}: {
+  item: NavItem;
+  pathname: string;
+  collapsed: boolean;
+}) {
+  const t = useTriText();
+  const active = isActivePath(pathname, item.href, item.exact);
+  const Icon = item.icon;
+  const link = (
+    <Link
+      href={item.href}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "rail-item relative flex min-h-10 items-center gap-3 rounded-sm px-3 text-base transition-colors",
+        active
+          ? "bg-[color:var(--v2-primary-soft)] font-medium text-[color:var(--v2-primary)]"
+          : "text-[color:var(--v2-text)] hover:bg-[color:var(--v2-card-nested)]",
+      )}
+    >
+      {/* §3.2: the 3px accent edge bar, flush to the rail's left edge. */}
+      {active && (
+        <span
+          aria-hidden
+          className="absolute -left-3 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-[2px] bg-[color:var(--v2-accent)]"
         />
       )}
-      <FirstRunFlow />
+      <Icon className="h-5 w-5 shrink-0" strokeWidth={1.75} />
+      <span className="rail-label min-w-0 truncate">
+        <Tri bm={item.bm} zh={item.zh} en={item.en} />
+      </span>
+    </Link>
+  );
+  // §4.3: every collapsed rail icon shows its full label on hover/focus.
+  return collapsed ? (
+    <IconTip label={t(item.bm, item.zh, item.en)} side="right">
+      {link}
+    </IconTip>
+  ) : (
+    link
+  );
+}
+
+function RailNav({
+  pathname,
+  collapsed,
+}: {
+  pathname: string;
+  /** true = icons only (tooltips on); the drawer always passes false. */
+  collapsed: boolean;
+}) {
+  const [einvoisVisible] = useEinvoisVisible();
+  return (
+    <ul className="flex flex-col gap-0.5">
+      {SIDEBAR_NAV.map((entry) => {
+        if (entry.kind === "item") {
+          return (
+            <li key={entry.item.href}>
+              <RailItem item={entry.item} pathname={pathname} collapsed={collapsed} />
+            </li>
+          );
+        }
+        const children = railEntryChildren(entry, einvoisVisible);
+        const groupActive = groupHasActiveChild(entry, pathname);
+        return (
+          <li key={entry.id} className="mt-1.5">
+            {/* Expanded: an uppercase heading. Collapsed: a 1px divider —
+                never truncated initials (§3.2). Both stay in the DOM; CSS
+                decides which shows. */}
+            <p
+              className={cn(
+                "rail-group-label px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.06em]",
+                groupActive
+                  ? "text-[color:var(--v2-primary)]"
+                  : "text-[color:var(--v2-text-soft)]",
+              )}
+            >
+              <Tri bm={entry.bm} zh={entry.zh} en={entry.en} />
+            </p>
+            <div
+              aria-hidden
+              className="rail-group-divider mx-2 my-2 border-t border-[color:var(--v2-border)]"
+            />
+            <ul className="flex flex-col gap-0.5">
+              {children.map((child) => (
+                <li key={child.href}>
+                  <RailItem item={child} pathname={pathname} collapsed={collapsed} />
+                </li>
+              ))}
+            </ul>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/** The bottom block: Ops console (operators only) + pinned Settings +
+ *  collapse toggle (rail only). */
+function RailFoot({
+  pathname,
+  showAdmin,
+  collapsed,
+  onToggle,
+}: {
+  pathname: string;
+  showAdmin: boolean;
+  collapsed: boolean;
+  onToggle?: () => void;
+}) {
+  const t = useTriText();
+  return (
+    <div className="border-t border-[color:var(--v2-border)] px-3 py-2">
+      <ul className="flex flex-col gap-0.5">
+        {showAdmin && (
+          <li>
+            <RailItem
+              item={{
+                href: "/admin",
+                icon: Wrench,
+                bm: "Konsol operasi",
+                zh: "管理台",
+                en: "Ops console",
+              }}
+              pathname={pathname}
+              collapsed={collapsed}
+            />
+          </li>
+        )}
+        {/* §3.2: Settings pinned to the rail bottom — always one click away,
+            out of the records list. The settings pages open with their own
+            sub-sidebar (§7). */}
+        <li>
+          <RailItem
+            item={SETTINGS_ITEM}
+            pathname={pathname}
+            collapsed={collapsed}
+          />
+        </li>
+        {onToggle && (
+          <li>
+            <IconTip
+              label={`${collapsed ? t("Kembangkan", "展开", "Expand") : t("Runtuhkan", "收起", "Collapse")}  [`}
+              side="right"
+            >
+              <button
+                type="button"
+                onClick={onToggle}
+                aria-expanded={!collapsed}
+                aria-label={collapsed ? t("Kembangkan", "展开", "Expand") : t("Runtuhkan", "收起", "Collapse")}
+                className="rail-item flex min-h-10 w-full items-center gap-3 rounded-sm px-3 text-base text-[color:var(--v2-text-soft)] transition-colors hover:bg-[color:var(--v2-card-nested)]"
+              >
+                {collapsed ? (
+                  <PanelLeftOpen className="h-5 w-5 shrink-0" strokeWidth={1.75} />
+                ) : (
+                  <PanelLeftClose className="h-5 w-5 shrink-0" strokeWidth={1.75} />
+                )}
+                <span className="rail-label">
+                  {collapsed ? (
+                    <Tri bm="Kembangkan" zh="展开" en="Expand" />
+                  ) : (
+                    <Tri bm="Runtuhkan" zh="收起" en="Collapse" />
+                  )}
+                </span>
+              </button>
+            </IconTip>
+          </li>
+        )}
+      </ul>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Desktop rail
-// ---------------------------------------------------------------------------
-
-function railEntryChildren(entry: NavEntry, einvoisVisible: boolean): NavItem[] {
-  // E-2: rail-only steps (attendance, the document, receipts, custody) are
-  // navigated by the section's own tab rail; the menu lists the jobs. The
-  // shared filter lives in nav-items.ts so /more cannot disagree.
-  return visibleGroupChildren(entry, einvoisVisible);
-}
-
-/**
- * C-1 (拍板 30): which sidebar groups this DEVICE has folded shut. Groups are
- * OPEN unless the person closed them (`true` = closed), so a brand-new group
- * added later starts open without a migration of anybody's stored blob.
- * A device preference like text size — deliberately not org-scoped.
- */
-const CLOSED_GROUPS_KEY = "minit.sidebar.closed.v1";
-const isClosedMap = (parsed: unknown): boolean =>
-  typeof parsed === "object" &&
-  parsed !== null &&
-  !Array.isArray(parsed) &&
-  Object.values(parsed as Record<string, unknown>).every(
-    (v) => typeof v === "boolean",
-  );
+const SETTINGS_ITEM: NavItem = {
+  href: "/settings",
+  icon: SettingsIcon,
+  bm: "Tetapan",
+  zh: "设置",
+  en: "Settings",
+};
 
 function Rail({ pathname, showAdmin }: { pathname: string; showAdmin: boolean }) {
-  const [einvoisVisible] = useEinvoisVisible();
-  const [closed, setClosed] = usePersistentState<Record<string, boolean>>(
-    CLOSED_GROUPS_KEY,
-    {},
-    isClosedMap,
-  );
-  const toggleGroup = (id: string) =>
-    setClosed((prev) => ({ ...prev, [id]: !prev[id] }));
+  // Mirrors the <html> class AFTER mount — the class (set pre-paint by the
+  // boot script) is the truth; this state only drives tooltips + the toggle
+  // icon. Until mount we assume collapsed, which merely means tooltips are
+  // armed a beat early.
+  const [collapsed, setCollapsed] = useState(true);
+  useEffect(() => {
+    // Reading an external mailbox (the <html> class the boot script set):
+    // deferred a tick, per the frozen eslint baseline (STATE §6).
+    const id = setTimeout(
+      () =>
+        setCollapsed(
+          !document.documentElement.classList.contains("minit-rail-expanded"),
+        ),
+      0,
+    );
+    return () => clearTimeout(id);
+  }, []);
+
+  const toggle = () => {
+    const nowCollapsed = document.documentElement.classList.toggle("minit-rail-expanded")
+      ? false
+      : true;
+    setCollapsed(nowCollapsed);
+    // §3.1 rule 3: written only when the user toggles — never on resize.
+    try {
+      localStorage.setItem(RAIL_KEY, nowCollapsed ? "1" : "0");
+    } catch {
+      /* storage disabled: the session still works, it just forgets */
+    }
+  };
+
+  // `[` toggles the rail (§3.3) — outside inputs.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const typing =
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable);
+      if (e.key === "[" && !typing) toggle();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
 
   return (
     <aside
-      className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-[color:var(--v2-border)] bg-[color:var(--v2-card)] md:flex"
+      className="rail-anim rail-collapsible fixed inset-y-0 left-0 z-30 hidden w-[var(--rail-w)] flex-col border-r border-[color:var(--v2-border)] bg-[color:var(--v2-card)] lg:flex"
       aria-label="Navigation"
     >
-      <div className="flex items-center gap-2 px-5 pb-4 pt-5">
-        {/* P1 (拍板 0-8): the green "two people = M" logo replaces the
-            letter tile. The PNG carries its own rounded corners. */}
-        <BrandLogo size={36} className="h-9 w-9" />
-        <span className="text-xl font-semibold tracking-tight">{BRAND_NAME}</span>
+      <div className="rail-item flex items-center gap-2.5 px-3 pb-3 pt-4">
+        <Link href="/" aria-label={BRAND_NAME} className="flex items-center gap-2.5">
+          <BrandLogo size={32} className="h-8 w-8 shrink-0" />
+          <span className="rail-label text-lg font-semibold tracking-tight">
+            {BRAND_NAME}
+          </span>
+        </Link>
       </div>
 
-      <nav className="v2-scroll flex-1 overflow-y-auto px-3">
-        {/* B-1 (J 8/26 #3, 拍板④): SEVEN groups, spread out. Group names are
-            HEADINGS — not clickable, always expanded. No "More" drawer. */}
-        <ul className="flex flex-col gap-1">
-          {SIDEBAR_NAV.map((entry) => {
-            if (entry.kind === "item") {
-              const active = isActivePath(pathname, entry.item.href, entry.item.exact);
-              const Icon = entry.item.icon;
-              return (
-                <li key={entry.item.href}>
-                  <Link
-                    href={entry.item.href}
-                    className={cn(
-                      "flex min-h-11 items-center gap-3 rounded-md px-3 text-base font-medium transition-colors",
-                      active
-                        ? "bg-[color:var(--v2-primary-fill)] text-white"
-                        : "text-[color:var(--v2-text)] hover:bg-[color:var(--v2-primary-soft)]",
-                    )}
-                  >
-                    <Icon className="h-5 w-5 shrink-0" strokeWidth={1.8} />
-                    <Tri bm={entry.item.bm} zh={entry.item.zh} en={entry.item.en} />
-                  </Link>
-                </li>
-              );
-            }
-
-            const children = railEntryChildren(entry, einvoisVisible);
-            const GroupIcon = entry.icon;
-            // Lights while you are ANYWHERE inside the group — including the
-            // rail-only steps (/minutes/attendance …) that render no row here,
-            // so the sidebar never goes silent about where you are.
-            const groupActive = groupHasActiveChild(entry, pathname);
-            const isOpen = !closed[entry.id];
-            return (
-              <li key={entry.id} className="mt-2">
-                {/* C-1 (拍板 30, amending 拍板④'s "組名不可點"): the heading is
-                    a FOLD control now — never a navigation link. Default open;
-                    this device remembers what was closed. */}
-                <button
-                  type="button"
-                  onClick={() => toggleGroup(entry.id)}
-                  aria-expanded={isOpen}
-                  className={cn(
-                    "flex min-h-9 w-full items-center gap-2 rounded-sm px-3 text-sm font-semibold uppercase tracking-wide transition-colors hover:bg-[color:var(--v2-primary-soft)]",
-                    groupActive
-                      ? "text-[color:var(--v2-primary)]"
-                      : "text-[color:var(--v2-text-soft)]",
-                  )}
-                >
-                  <GroupIcon className="h-4 w-4 shrink-0" strokeWidth={1.8} />
-                  <Tri bm={entry.bm} zh={entry.zh} en={entry.en} />
-                  <ChevronDown
-                    aria-hidden
-                    className={cn(
-                      "ml-auto h-4 w-4 shrink-0 transition-transform",
-                      isOpen ? "" : "-rotate-90",
-                    )}
-                    strokeWidth={2}
-                  />
-                </button>
-                {/* Folded away is folded away — but the header above keeps its
-                    active colour, so a closed group never goes silent about
-                    holding the page you are on. */}
-                <ul className={cn("flex flex-col gap-0.5", isOpen ? "" : "hidden")}>
-                  {children.map((child) => {
-                    const active = isActivePath(pathname, child.href, child.exact);
-                    const ChildIcon = child.icon;
-                    return (
-                      <li key={child.href}>
-                        <Link
-                          href={child.href}
-                          className={cn(
-                            "flex min-h-10 items-center gap-3 rounded-md px-3 pl-5 text-[0.95rem] transition-colors",
-                            active
-                              ? "bg-[color:var(--v2-primary-fill)] font-medium text-white"
-                              : "text-[color:var(--v2-text)] hover:bg-[color:var(--v2-primary-soft)]",
-                          )}
-                        >
-                          <ChildIcon className="h-4.5 w-4.5 shrink-0" strokeWidth={1.8} />
-                          <Tri bm={child.bm} zh={child.zh} en={child.en} />
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </li>
-            );
-          })}
-        </ul>
+      <nav className="v2-scroll flex-1 overflow-y-auto overflow-x-hidden px-3 pb-2">
+        <RailNav pathname={pathname} collapsed={collapsed} />
       </nav>
 
-      {/* P-4: the operator's door — only rendered when the SERVER said so.
-          Not part of SIDEBAR_NAV: it is not a customer page, and the nav
-          tests rightly insist every listed page is for everyone. */}
-      {showAdmin && (
-        <div className="border-t border-[color:var(--v2-border)] px-3 py-2">
-          <Link
-            href="/admin"
-            className={cn(
-              "flex min-h-10 items-center gap-3 rounded-md px-3 text-[0.95rem] transition-colors",
-              isActivePath(pathname, "/admin", true)
-                ? "bg-[color:var(--v2-primary-fill)] font-medium text-white"
-                : "text-[color:var(--v2-text)] hover:bg-[color:var(--v2-primary-soft)]",
-            )}
-          >
-            <Wrench className="h-4.5 w-4.5 shrink-0" strokeWidth={1.8} />
-            <Tri bm="Konsol operasi" zh="管理台" en="Ops console" />
-          </Link>
-        </div>
-      )}
-
-      <div className="border-t border-[color:var(--v2-border)] p-3">
-        <OrgChip />
-      </div>
+      <RailFoot
+        pathname={pathname}
+        showAdmin={showAdmin}
+        collapsed={collapsed}
+        onToggle={toggle}
+      />
     </aside>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Phone chrome
+// The <1024px drawer (§3.4): the expanded rail as an overlay. Label-visible
+// always — that is how touch users get what hover gives mouse users.
 // ---------------------------------------------------------------------------
 
-function MobileTopBar() {
-  const { org } = useActiveOrg();
+function NavDrawer({
+  pathname,
+  showAdmin,
+  onClose,
+}: {
+  pathname: string;
+  showAdmin: boolean;
+  onClose: () => void;
+}) {
+  const t = useTriText();
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   return (
-    <header className="flex items-center justify-between gap-3 md:hidden">
-      <div className="flex items-center gap-2">
-        <BrandLogo size={32} className="h-8 w-8" />
-        <span className="text-lg font-semibold tracking-tight">{BRAND_NAME}</span>
+    <div
+      className="fixed inset-0 z-50 bg-[rgba(21,18,31,0.45)] lg:hidden"
+      onClick={onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("Menu", "菜单", "Menu")}
+        className="flex h-full w-[280px] flex-col bg-[color:var(--v2-card)] shadow-[var(--v2-shadow-lg)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between gap-2 px-3 pb-3 pt-4">
+          <span className="flex items-center gap-2.5">
+            <BrandLogo size={32} className="h-8 w-8" />
+            <span className="text-lg font-semibold tracking-tight">{BRAND_NAME}</span>
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t("Tutup", "关闭", "Close")}
+            className="flex h-9 w-9 items-center justify-center rounded-sm text-[color:var(--v2-text-soft)] hover:bg-[color:var(--v2-card-nested)]"
+          >
+            <X className="h-5 w-5" strokeWidth={1.8} />
+          </button>
+        </div>
+        <nav className="v2-scroll flex-1 overflow-y-auto px-3 pb-2">
+          <RailNav pathname={pathname} collapsed={false} />
+        </nav>
+        <RailFoot pathname={pathname} showAdmin={showAdmin} collapsed={false} />
       </div>
-      {org && (
-        <span className="max-w-[55%] truncate text-sm text-[color:var(--v2-text-soft)]">
-          {org.name}
-          {org.is_demo && (
-            <span className="ml-1 rounded bg-amber-500 px-1 text-xs font-bold text-white">
-              DEMO
-            </span>
-          )}
-        </span>
-      )}
-    </header>
+    </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Phone tab bar — untouched (拍板④: 4 tabs).
+// ---------------------------------------------------------------------------
 
 function TabBar({ pathname }: { pathname: string }) {
   return (

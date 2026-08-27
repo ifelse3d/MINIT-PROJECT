@@ -297,22 +297,19 @@ export const SIDEBAR_NAV: NavEntry[] = [
     en: "Records",
     children: [byHref("/history"), byHref("/inbox")],
   },
-  {
-    kind: "group",
-    id: "settings",
-    icon: Settings,
-    bm: "Tetapan",
-    zh: "设置",
-    en: "Settings",
-    // §1-13: four rows — the org's settings and feedback joined when the
-    // 3161px /settings page was split into pages.
-    children: [
-      byHref("/settings/org"),
-      byHref("/settings/plan"),
-      byHref("/settings"),
-      byHref("/settings/feedback"),
-    ],
-  },
+];
+
+/**
+ * THE SETTINGS FAMILY (violet redesign §3.2/§7): settings screens left the
+ * scrolling rail — the rail pins ONE Settings entry at its bottom, and these
+ * pages live in the settings sub-sidebar. Still part of the coverage guard:
+ * a page may live on the rail OR here, never nowhere.
+ */
+export const SETTINGS_NAV: NavItem[] = [
+  byHref("/settings"),
+  byHref("/settings/org"),
+  byHref("/settings/plan"),
+  byHref("/settings/feedback"),
 ];
 
 /** Every page the phone nav links to, groups flattened. */
@@ -322,11 +319,16 @@ export function navPages(): NavItem[] {
   );
 }
 
-/** Every page the desktop sidebar links to, groups flattened. */
+/** Every page the desktop rail links to, groups flattened — INCLUDING the
+ *  settings family (pinned Settings entry + the settings sub-sidebar), so
+ *  the coverage guard still sees one desktop surface. */
 export function sidebarPages(): NavItem[] {
-  return SIDEBAR_NAV.flatMap((entry) =>
-    entry.kind === "item" ? [entry.item] : entry.children,
-  );
+  return [
+    ...SIDEBAR_NAV.flatMap((entry) =>
+      entry.kind === "item" ? [entry.item] : entry.children,
+    ),
+    ...SETTINGS_NAV,
+  ];
 }
 
 /**

@@ -279,21 +279,33 @@ async function run() {
       fresh.waitForNavigation({ waitUntil: "networkidle2", timeout: 45000 }),
       fresh.click('button[type="submit"]'),
     ]);
-    // The chip resolves asynchronously — poll until it settles.
-    // A-5 (work order 31): the chip's label is now 「当前机构」 and the card is
-    // a link to /orgs — the mechanism under test (client fallback matches the
-    // server's) is unchanged.
+    // Violet redesign §5.3–5.4: the org context lives in the profile
+    // avatar's dropdown now (OrgChip retired). The mechanism under test is
+    // unchanged — a FRESH session (no active-org cookie) must still resolve
+    // the same first org the server resolves. Open the menu, read the row.
     let freshText = "";
     for (let i = 0; i < 20; i++) {
-      freshText = await fresh.evaluate(() => document.body.innerText);
-      if (freshText.includes("当前机构")) break;
+      // The avatar renders once the auth email resolves.
+      const opened = await fresh.evaluate(() => {
+        const btn = document.querySelector('button[aria-haspopup="menu"]');
+        if (!btn) return false;
+        btn.click();
+        return true;
+      });
+      if (opened) {
+        await new Promise((r) => setTimeout(r, 600));
+        freshText = await fresh.evaluate(
+          () => document.querySelector('[role="menu"]')?.textContent ?? "",
+        );
+        if (freshText.includes(ORG_NAME)) break;
+        // Close and retry — the org row may still be resolving.
+        await fresh.keyboard.press("Escape");
+      }
       await new Promise((r) => setTimeout(r, 500));
     }
     check(
-      "fresh-session OrgChip shows the org, not 'name your organisation'",
-      freshText.includes("当前机构") &&
-        freshText.includes(ORG_NAME) &&
-        !freshText.includes("填写您的机构名称"),
+      "fresh-session profile menu shows the org, not 'choose an organisation'",
+      freshText.includes(ORG_NAME) && !freshText.includes("选择机构"),
     );
     await ctx.close();
   }

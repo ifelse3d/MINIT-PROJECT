@@ -130,6 +130,15 @@ export default async function RootLayout({
             paint, so someone who chose "Extra large" never sees the page render
             small and then jump. See components/appearance-provider.tsx. */}
         <script dangerouslySetInnerHTML={{ __html: APPEARANCE_BOOT_SCRIPT }} />
+        {/* Rail state before first paint (§3.1): localStorage wins, always;
+            otherwise expanded ≥1440px. Written only when the user toggles —
+            never on resize. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              '(function(){try{var v=localStorage.getItem("minit.rail.collapsed");var c=v===null?window.innerWidth<1440:v==="1";if(!c)document.documentElement.classList.add("minit-rail-expanded");}catch(e){}})();',
+          }}
+        />
       </head>
       {/* No font-size here on purpose. It used to be text-[17px], which enlarged
           body copy while leaving every rem-based utility (text-sm, text-xs, and
