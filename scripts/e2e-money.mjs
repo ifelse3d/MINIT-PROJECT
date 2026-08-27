@@ -134,10 +134,11 @@ async function run() {
   // with the "what next" card, no longer on the constitution page.
   check("org creation lands home with the welcome card", page.url().includes("welcome=1"));
 
-  // --- type 9 donations in (TypeDonations grid) ----------------------------
-  await page.goto(`${BASE}/money/receipts`, { waitUntil: "networkidle2" });
+  // --- type 9 donations in (TypeDonations grid, on STEP 1 since the round
+  //     rework — launch feedback #3: /money records, /money/issue issues) ---
+  await page.goto(`${BASE}/money`, { waitUntil: "networkidle2" });
   // Open the typed-collection grid (collapsed behind its own button).
-  await clickByText(page, "button", "打字输入整份名单");
+  await clickByText(page, "button", "自己打字");
   await new Promise((r) => setTimeout(r, 800));
 
   // The grid: name + amount per row; typing in a row makes a fresh blank row.
@@ -153,14 +154,23 @@ async function run() {
   const added = await clickByText(page, "button", "加进名册");
   await new Promise((r) => setTimeout(r, 1500));
   const bodyText = await page.evaluate(() => document.body.innerText);
-  const rowsIn = /9 笔|9 筆|9 donation/.test(bodyText) || bodyText.includes("测试捐款人9");
-  check("9 typed donations reach the register", added && rowsIn);
+  // #3: the round list ("this round, so far") shows the rows RIGHT HERE for
+  // the double-check — the disappearing-rows complaint this rework answers.
+  const rowsIn = bodyText.includes("这一轮已记 9 笔") && bodyText.includes("测试捐款人9");
+  check("9 typed donations land in the visible round list (#3)", added && rowsIn);
 
-  // R-5: list view with search box appears at >= 8 rows
+  // R-5: the management page's list view (search box) appears at >= 8 rows
+  await page.goto(`${BASE}/money/receipts`, { waitUntil: "networkidle2" });
+  await new Promise((r) => setTimeout(r, 1200));
   const hasSearch = await page.$('input[placeholder*="搜索姓名"]');
   check("R-5 list view (search box) at >=8 rows", Boolean(hasSearch));
 
-  // --- issue receipts through the RPC --------------------------------------
+  // --- issue receipts for THIS ROUND on /money/issue (#3) ------------------
+  await page.goto(`${BASE}/money/issue`, { waitUntil: "networkidle2" });
+  await new Promise((r) => setTimeout(r, 1200));
+  const issuePageText = await page.evaluate(() => document.body.innerText);
+  check("issue page shows only this round (9 rows)",
+    issuePageText.includes("只显示这一轮的 9 笔"));
   await clickByText(page, "button", "生成正式收据");
   await new Promise((r) => setTimeout(r, 600));
   await clickByText(page, "button", "是，生成收据");
@@ -243,6 +253,49 @@ async function run() {
   const afterReload = await page.evaluate(() => document.body.innerText);
   check("F-4 register hydrates from the DB after local wipe",
     /MIN-\d{4}-0001/.test(afterReload));
+
+  // --- #4 (launch feedback): an UNRECEIPTED cash row can be handed over ----
+  // Money moves first, the receipt follows. Add one unreceipted row, then
+  // walk custody: tick → dialog → confirm → waiting for HQ → HQ confirms.
+  // (On a pre-28 database the remote save honestly downgrades to "this
+  // device only" — the flow itself must still complete.)
+  {
+    await page.goto(`${BASE}/money`, { waitUntil: "networkidle2" });
+    await clickByText(page, "button", "自己打字");
+    await new Promise((r) => setTimeout(r, 800));
+    const nameInputs = await page.$$('input[aria-label^="捐款人"]');
+    const amountInputs = await page.$$('input[inputmode="decimal"]');
+    if (nameInputs.length > 0 && amountInputs.length > 0) {
+      await nameInputs[nameInputs.length - 1].type("测试捐款人10");
+      await amountInputs[amountInputs.length - 1].type("10");
+      await new Promise((r) => setTimeout(r, 400));
+      await clickByText(page, "button", "加进名册");
+      await new Promise((r) => setTimeout(r, 1200));
+    }
+    await page.goto(`${BASE}/money/custody`, { waitUntil: "networkidle2" });
+    await new Promise((r) => setTimeout(r, 1500));
+    const ticked = await page.evaluate(() => {
+      const box = document.querySelector(
+        'input[type="checkbox"][aria-label*="测试捐款人10"]',
+      );
+      if (!box) return false;
+      box.click();
+      return true;
+    });
+    check("#4 unreceipted cash row is selectable on custody", ticked);
+    await clickByText(page, "button", "记录交接");
+    await new Promise((r) => setTimeout(r, 700));
+    await clickByText(page, "button", "确认交接");
+    await new Promise((r) => setTimeout(r, 2000));
+    let custodyText = await page.evaluate(() => document.body.innerText);
+    check("#4 hand-over of the unreceipted row is recorded (waiting for HQ)",
+      custodyText.includes("等待总会确认"));
+    await clickByText(page, "button", "钱到了");
+    await new Promise((r) => setTimeout(r, 2000));
+    custodyText = await page.evaluate(() => document.body.innerText);
+    check("#4 HQ confirm settles the unreceipted row",
+      custodyText.includes("总会已确认"));
+  }
 
   // --- receipts really are in the database ---------------------------------
   const orgRow = await (await rest(`/orgs?name=eq.${encodeURIComponent(ORG_NAME)}&select=id`)).json();

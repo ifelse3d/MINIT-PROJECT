@@ -539,7 +539,7 @@ function CashRowTr({
             type="checkbox"
             checked={selected}
             onChange={() => onToggle(d.id)}
-            aria-label={`${d.receiptNo} ${d.donorName}`}
+            aria-label={`${d.receiptNo ?? "—"} ${d.donorName}`}
             className="h-5 w-5 accent-[color:var(--v2-primary)]"
           />
         )}
@@ -582,7 +582,7 @@ function CashRowCard({
             type="checkbox"
             checked={selected}
             onChange={() => onToggle(d.id)}
-            aria-label={`${d.receiptNo} ${d.donorName}`}
+            aria-label={`${d.receiptNo ?? "—"} ${d.donorName}`}
             className="mt-1 h-5 w-5 accent-[color:var(--v2-primary)]"
           />
         )}
