@@ -13,10 +13,10 @@ import {
 const INITIAL: MemberActionState = { error: null, ok: false };
 
 const inputCls =
-  "w-full rounded-lg border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-3 py-2 text-base text-[color:var(--v2-text)] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[color:var(--v2-primary)] focus:shadow-[0_0_0_3px_rgba(91,75,214,0.18)]";
+  "w-full rounded-sm border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-3 py-2 text-base text-[color:var(--v2-text)] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[color:var(--v2-primary)] focus:shadow-[0_0_0_3px_rgba(91,75,214,0.18)]";
 
 const errorCls =
-  "rounded-xl border-2 border-red-300 bg-red-50 p-3 text-base font-medium whitespace-pre-line text-red-900 dark:bg-red-400/10 dark:text-red-100";
+  "rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium whitespace-pre-line text-red-900 dark:bg-red-400/10 dark:text-red-100";
 
 /** The positions a Malaysian registered society actually files. Suggestions,
  *  not a fixed list — societies use their own wording, and being told "that is
@@ -193,13 +193,13 @@ export function ImportCommittee() {
   }
 
   const choiceCls = (active: boolean) =>
-    "flex-1 min-w-[15rem] rounded-xl border-2 px-4 py-3 text-left transition " +
+    "flex-1 min-w-[15rem] rounded-md border-2 px-4 py-3 text-left transition " +
     (active
-      ? "border-[#7c6cf5] bg-[#7c6cf5]/10"
+      ? "border-[#a855f7] bg-[#a855f7]/10"
       : "border-input hover:bg-black/5 dark:hover:bg-white/5");
 
   return (
-    <div className="rounded-xl border border-input bg-white/40 p-4 dark:bg-white/5">
+    <div className="rounded-md border border-input bg-white/40 p-4 dark:bg-white/5">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -256,7 +256,7 @@ export function ImportCommittee() {
 
           {mode === "file" ? (
             <>
-              <div className="rounded-lg border border-[#7c6cf5]/40 bg-[#7c6cf5]/5 p-3">
+              <div className="rounded-sm border border-[#a855f7]/40 bg-[#a855f7]/5 p-3">
                 <a
                   href="/api/list-template?kind=committee"
                   className="text-base font-medium underline underline-offset-4"
@@ -287,7 +287,7 @@ export function ImportCommittee() {
                   en="Or paste it straight in: one person per line, position first, then name — if any line is not understood, Minit will tell you which."
                 />
               </p>
-              <pre className="rounded-lg bg-black/5 p-3 text-sm dark:bg-white/10">
+              <pre className="rounded-sm bg-black/5 p-3 text-sm dark:bg-white/10">
 {`主席, 陈大明, TAN TAI BENG
 Setiausaha, 林小美
 财政, 王小强, WONG SIEW KEONG, 2026-01-01, 2027-12-31`}

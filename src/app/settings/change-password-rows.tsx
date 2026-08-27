@@ -54,7 +54,7 @@ export function ChangePasswordRows({ email }: { email: string }) {
   const [done, setDone] = useState(false);
 
   const inputCls =
-    "w-full rounded-xl border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-3 py-2 text-base text-[color:var(--v2-text)] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[color:var(--v2-primary)] focus:shadow-[0_0_0_3px_rgba(91,75,214,0.18)]";
+    "w-full rounded-md border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-3 py-2 text-base text-[color:var(--v2-text)] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[color:var(--v2-primary)] focus:shadow-[0_0_0_3px_rgba(91,75,214,0.18)]";
 
   function close() {
     setOpen(false);
@@ -179,7 +179,7 @@ export function ChangePasswordRows({ email }: { email: string }) {
       >
         <div className="flex flex-col items-start gap-2">
           {done && (
-            <p className="rounded-xl border-2 border-green-400 bg-green-50 px-3 py-2 text-sm font-medium text-green-900 dark:bg-green-400/10 dark:text-green-100">
+            <p className="rounded-md border-2 border-green-400 bg-green-50 px-3 py-2 text-sm font-medium text-green-900 dark:bg-green-400/10 dark:text-green-100">
               ✓{" "}
               <Tri
                 bm="Kata laluan sudah ditukar."
@@ -269,7 +269,7 @@ export function ChangePasswordRows({ email }: { email: string }) {
         </label>
 
         {error && (
-          <p className="rounded-xl border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900 dark:bg-red-400/10 dark:text-red-100">
+          <p className="rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900 dark:bg-red-400/10 dark:text-red-100">
             {error}
           </p>
         )}

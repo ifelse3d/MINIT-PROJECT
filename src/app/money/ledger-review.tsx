@@ -153,7 +153,7 @@ export function LedgerReview() {
     >
       <div className="flex flex-col gap-4">
         {/* Upload / camera input — the AI ingestion path (same UX as /minutes) */}
-        <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/20 p-4">
+        <div className="flex flex-wrap items-center gap-3 rounded-sm border bg-muted/20 p-4">
           <label
             className={`inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-4 py-2 text-base font-medium text-primary-foreground shadow hover:bg-primary/90 ${
               // pointer-events-none + opacity-60 meant nothing responded AND the
@@ -266,7 +266,7 @@ export function LedgerReview() {
         {/* B-5④: income or spending? Asked BEFORE any AI action, so a
             shopping receipt can never become somebody's donation. */}
         {askDirection && !aiBusy && (
-          <div className="flex flex-col gap-3 rounded-xl border-2 border-amber-300 bg-amber-50 p-4 dark:bg-amber-400/10">
+          <div className="flex flex-col gap-3 rounded-md border-2 border-amber-300 bg-amber-50 p-4 dark:bg-amber-400/10">
             <p className="text-base font-medium text-amber-900 dark:text-amber-100">
               <Tri
                 bm="Sebelum dibaca: halaman ini merekod WANG MASUK atau WANG KELUAR?"
@@ -332,7 +332,7 @@ export function LedgerReview() {
             (replace) or next page (append)". Same mechanics — replace is
             mode:"fresh", append is the ordinary merge. */}
         {askWhichPage && !aiBusy && (
-          <div className="flex flex-col gap-3 rounded-xl border-2 border-amber-300 bg-amber-50 p-4 dark:bg-amber-400/10">
+          <div className="flex flex-col gap-3 rounded-md border-2 border-amber-300 bg-amber-50 p-4 dark:bg-amber-400/10">
             <p className="text-base font-medium text-amber-900 dark:text-amber-100">
               {/* B-5③: say it like a person would — the old wording assumed
                   the reader knew what "the review" was. */}
@@ -447,7 +447,7 @@ export function LedgerReview() {
              badge was too quiet for what this has to say: adding these
              invented rows to the register and issuing receipts would burn real,
              permanent, gap-free receipt numbers. (2026-07-28 audit.) */
-          <div className="flex flex-wrap items-center gap-3 rounded-xl border-2 border-amber-300 bg-amber-50 p-3 dark:bg-amber-400/10">
+          <div className="flex flex-wrap items-center gap-3 rounded-md border-2 border-amber-300 bg-amber-50 p-3 dark:bg-amber-400/10">
             <p className="min-w-56 flex-1 text-base font-medium text-amber-900 dark:text-amber-100">
             <Tri
               bm="Baris di bawah ialah CONTOH — bukan derma sebenar, dan hanya boleh dilihat. Ia tidak boleh disahkan, dimasukkan ke daftar atau diberi resit, supaya nombor resit sebenar tidak terbakar pada derma rekaan. Ambil gambar lejar anda sendiri dahulu."

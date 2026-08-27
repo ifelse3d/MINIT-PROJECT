@@ -160,7 +160,7 @@ export function CreateOrgForm({
   // The old glass style (white/50 on a white card) made these fields invisible
   // in light mode — J's first report after the redesign, 2026-08-25.
   const inputCls =
-    "w-full rounded-xl border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-3 py-2 text-base text-[color:var(--v2-text)] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[color:var(--v2-primary)] focus:shadow-[0_0_0_3px_rgba(91,75,214,0.18)]";
+    "w-full rounded-md border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-3 py-2 text-base text-[color:var(--v2-text)] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[color:var(--v2-primary)] focus:shadow-[0_0_0_3px_rgba(91,75,214,0.18)]";
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
@@ -224,7 +224,7 @@ export function CreateOrgForm({
           <Tri bm="Jenis pertubuhan" zh="机构类型" en="Type of organisation" />
         </legend>
         <label
-          className={`flex cursor-pointer flex-col rounded-xl border-2 px-4 py-3 ${
+          className={`flex cursor-pointer flex-col rounded-md border-2 px-4 py-3 ${
             orgType === "registered"
               ? "border-[color:var(--v2-primary)] bg-[color:var(--v2-primary-soft)]"
               : "border-[color:var(--v2-outline-border)]"
@@ -254,7 +254,7 @@ export function CreateOrgForm({
           </span>
         </label>
         <label
-          className={`flex cursor-pointer flex-col rounded-xl border-2 px-4 py-3 ${
+          className={`flex cursor-pointer flex-col rounded-md border-2 px-4 py-3 ${
             orgType === "committee"
               ? "border-[color:var(--v2-primary)] bg-[color:var(--v2-primary-soft)]"
               : "border-[color:var(--v2-outline-border)]"
@@ -342,7 +342,7 @@ export function CreateOrgForm({
           ).map((opt) => (
             <label
               key={opt.value}
-              className={`flex cursor-pointer flex-col rounded-xl border-2 px-4 py-3 ${
+              className={`flex cursor-pointer flex-col rounded-md border-2 px-4 py-3 ${
                 societyAge === opt.value
                   ? "border-[color:var(--v2-primary)] bg-[color:var(--v2-primary-soft)]"
                   : "border-[color:var(--v2-outline-border)]"
@@ -408,7 +408,7 @@ export function CreateOrgForm({
           ).map((opt) => (
             <label
               key={opt.value}
-              className={`flex cursor-pointer flex-col rounded-xl border-2 px-4 py-3 ${
+              className={`flex cursor-pointer flex-col rounded-md border-2 px-4 py-3 ${
                 plan === opt.value
                   ? "border-[color:var(--v2-primary)] bg-[color:var(--v2-primary-soft)]"
                   : "border-[color:var(--v2-outline-border)]"
@@ -432,7 +432,7 @@ export function CreateOrgForm({
           ))}
         </div>
         {plan !== "trial" && (
-          <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-sm font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+          <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-sm font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
             <Tri
               bm="Harga diumumkan selepas kos sebenar diukur. Pilihan anda direkodkan dan kami mengaktifkannya secara manual — sehingga itu, kuota AI kekal pada tahap percubaan (15 sebulan). Tiada bayaran diambil."
               zh="价格会在量出真实成本后公布。您的选择会先记下来，由我们人工帮您开通 —— 开通之前，AI 用量照试用（每月 15 次）。现在不会收任何钱。"
@@ -480,7 +480,7 @@ export function CreateOrgForm({
           front of them, and a setup step you cannot get past is how people
           abandon an app on the first screen. */}
       {!state.ok && (
-        <div className="flex flex-col gap-2 rounded-xl border-2 border-purple-200 bg-purple-50/50 p-4 dark:border-purple-400/30 dark:bg-purple-400/10">
+        <div className="flex flex-col gap-2 rounded-md border-2 border-purple-200 bg-purple-50/50 p-4 dark:border-purple-400/30 dark:bg-purple-400/10">
           <span className="text-base font-semibold">
             📜{" "}
             <Tri
@@ -502,7 +502,7 @@ export function CreateOrgForm({
             // action. It is sent separately, after the organisation exists.
             accept={CONSTITUTION_ACCEPT}
             onChange={(e) => chooseFile(e.target.files?.[0] ?? null)}
-            className="text-base file:mr-3 file:rounded-full file:border-0 file:bg-[#7c6cf5] file:px-4 file:py-2 file:text-base file:font-semibold file:text-white"
+            className="text-base file:mr-3 file:rounded-sm file:border-0 file:bg-[color:var(--v2-primary-fill)] file:px-4 file:py-2 file:text-base file:font-semibold file:text-white"
           />
           {file && (
             <p className="text-base font-medium">
@@ -533,7 +533,7 @@ export function CreateOrgForm({
       )}
 
       {state.error && (
-        <p className="rounded-xl border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900">
+        <p className="rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900">
           {state.error}
         </p>
       )}
@@ -552,7 +552,7 @@ export function CreateOrgForm({
           not decoration: without it a failed router.replace() puts the dead end
           straight back. */}
       {state.ok ? (
-        <div className="flex flex-col gap-3 rounded-xl border-2 border-green-400 bg-green-50 p-4">
+        <div className="flex flex-col gap-3 rounded-md border-2 border-green-400 bg-green-50 p-4">
           <p className="text-lg font-semibold text-green-900">
             ✓{" "}
             <Tri

@@ -88,7 +88,7 @@ export function HistoryFeed({
       {/* Page header */}
       <div className="flex flex-col gap-1">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-100/80 text-2xl ring-1 ring-white/60 backdrop-blur dark:bg-violet-400/15 dark:ring-white/10">
+          <div className="flex h-12 w-12 items-center justify-center rounded-md bg-violet-100/80 text-2xl ring-1 ring-white/60 backdrop-blur dark:bg-violet-400/15 dark:ring-white/10">
             📖
           </div>
           <h1 className="text-3xl font-semibold tracking-tight">
@@ -101,7 +101,7 @@ export function HistoryFeed({
       </div>
 
       {!orgName && (
-        <p className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
+        <p className="rounded-sm border bg-muted/30 p-3 text-sm text-muted-foreground">
           <Link href="/orgs" className="underline underline-offset-4">
             <Tri
               bm="Pilih atau cipta pertubuhan untuk melihat sejarah"
@@ -151,7 +151,7 @@ export function HistoryFeed({
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value as HistoryFilter)}
-            className="h-12 min-w-52 rounded-xl border-2 border-input bg-white px-3 text-base dark:bg-white/5"
+            className="h-12 min-w-52 rounded-md border-2 border-input bg-white px-3 text-base dark:bg-white/5"
           >
             {FILTER_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -169,7 +169,7 @@ export function HistoryFeed({
 
       {/* Feed */}
       {days.length === 0 && (
-        <div className="rounded-2xl border-2 border-dashed p-6 text-base">
+        <div className="rounded-md border-2 border-dashed p-6 text-base">
           <p className="font-semibold">
             {filter === "all" ? (
               <Tri
@@ -220,9 +220,9 @@ export function HistoryFeed({
                 </span>
                 {day.dayIso === todayIso && (
                   <Badge
-                    // White text needs the interaction green (#15803D, 5.02:1)
-                    // — never the bright #22C55E (2.28:1, P1 iron rule).
-                    className="bg-[color:var(--v2-primary-fill)] text-white hover:bg-[color:var(--v2-primary-fill)]"
+                    // White text sits on the FILL violet only (#7029E5,
+                    // 6.69:1) — never the light stops (§2.2).
+                    className="bg-[color:var(--v2-primary-fill)] text-[color:var(--v2-primary-on)] hover:bg-[color:var(--v2-primary-fill)]"
                   >
                     <Tri bm="Hari ini" zh="今天" en="Today" />
                   </Badge>
@@ -260,7 +260,7 @@ function FeedRow({ record }: { record: ActivityRecord }) {
     <li>
       <Link
         href={record.href}
-        className="flex min-h-16 items-center gap-3 rounded-2xl border-2 border-[color:var(--v2-border)] bg-white/70 p-3.5 transition-colors hover:border-[#22c55e]/60 hover:bg-white dark:bg-white/5 dark:hover:bg-white/10"
+        className="flex min-h-16 items-center gap-3 rounded-md border-2 border-[color:var(--v2-border)] bg-white/70 p-3.5 transition-colors hover:border-[#a855f7]/60 hover:bg-white dark:bg-white/5 dark:hover:bg-white/10"
       >
         <span
           aria-hidden

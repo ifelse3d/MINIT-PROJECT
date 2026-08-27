@@ -43,7 +43,7 @@ export function SettingsSection({
       <h2 className="px-1 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
         {title}
       </h2>
-      <div className="v2-glass divide-y divide-[color:var(--v2-border)] overflow-hidden rounded-3xl">
+      <div className="v2-glass divide-y divide-[color:var(--v2-border)] overflow-hidden rounded-md">
         {children}
       </div>
     </section>

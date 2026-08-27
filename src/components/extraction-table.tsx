@@ -114,7 +114,7 @@ function EditableCell({ cell, label }: { cell: ExtractionCell; label?: ReactNode
             if (ev.key === "Escape") setEditing(false);
           }}
           // h-12: a 26px input was not tappable or readable for our users.
-          className="h-12 w-full min-w-32 rounded-lg border border-input bg-white px-3 text-base dark:bg-transparent"
+          className="h-12 w-full min-w-32 rounded-sm border border-input bg-white px-3 text-base dark:bg-transparent"
         />
         <div className="flex flex-wrap items-center gap-2">
           <Button onClick={save}>
@@ -145,7 +145,7 @@ function EditableCell({ cell, label }: { cell: ExtractionCell; label?: ReactNode
             "What the AI read here"
           )}
           onClick={() => setShowSource((v) => !v)}
-          className="flex size-11 shrink-0 items-center justify-center rounded-full hover:bg-muted/60"
+          className="flex size-11 shrink-0 items-center justify-center rounded-sm hover:bg-muted/60"
         >
           <span
             className={`size-3.5 rounded-full ring-2 ring-white ${DOT_CLASS[cell.confidence]}`}
@@ -170,7 +170,7 @@ function EditableCell({ cell, label }: { cell: ExtractionCell; label?: ReactNode
           <button
             type="button"
             onClick={startEditing}
-            className={`min-h-11 rounded-lg px-2 py-1 text-left text-base underline decoration-dotted decoration-1 underline-offset-4 hover:bg-muted/60 ${
+            className={`min-h-11 rounded-sm px-2 py-1 text-left text-base underline decoration-dotted decoration-1 underline-offset-4 hover:bg-muted/60 ${
               isMissing ? "font-medium text-red-700 italic" : ""
             }`}
           >
@@ -191,7 +191,7 @@ function EditableCell({ cell, label }: { cell: ExtractionCell; label?: ReactNode
       </div>
 
       {showSource && (
-        <div className="mt-1 rounded-lg border border-input bg-white/80 p-3 dark:bg-white/5">
+        <div className="mt-1 rounded-sm border border-input bg-white/80 p-3 dark:bg-white/5">
           <div className="mb-2">
             <ConfidenceBadge level={cell.confidence} />
           </div>
@@ -243,7 +243,7 @@ export function ExtractionTable({
         {rows.map((row, i) => (
           <div
             key={i}
-            className={`rounded-xl border p-3 ${
+            className={`rounded-md border p-3 ${
               row.warning ? "border-amber-400 bg-amber-50 dark:bg-amber-400/10" : "bg-white/70 dark:bg-white/5"
             }`}
           >
@@ -269,7 +269,7 @@ export function ExtractionTable({
             {row.extra && <div className="mt-3">{row.extra}</div>}
             {/* Always visible, never a hover card. */}
             {row.warning && (
-              <p className="mt-3 rounded-lg bg-amber-100 p-2.5 font-medium text-amber-900">
+              <p className="mt-3 rounded-sm bg-amber-100 p-2.5 font-medium text-amber-900">
                 ⚠ {row.warning}
               </p>
             )}
@@ -278,7 +278,7 @@ export function ExtractionTable({
       </div>
 
       {/* TABLET / DESKTOP: the compact table. */}
-      <div className="hidden overflow-x-auto rounded-lg border sm:block">
+      <div className="hidden overflow-x-auto rounded-sm border sm:block">
         <Table>
           <TableHeader>
             <TableRow>

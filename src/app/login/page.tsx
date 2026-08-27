@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
+import { BrandLogo } from "@/components/brand-logo";
 import { Loader2 } from "lucide-react";
 import { Tri, useTriText } from "@/components/language-provider";
 import { BRAND_NAME } from "@/lib/brand";
@@ -252,7 +252,7 @@ export default function LoginPage() {
       <div className="flex flex-col items-center gap-3">
         <div className="flex items-center gap-3">
           {/* P1 (拍板 0-8): the green logo; the name follows BRAND_NAME. */}
-          <Image src="/brand-logo-96.png" alt="" width={48} height={48} className="h-12 w-12" />
+          <BrandLogo size={48} className="h-12 w-12" />
           <span className="text-4xl font-bold leading-none tracking-tight">{BRAND_NAME}</span>
         </div>
         <p className="text-pretty text-center text-base text-[color:var(--v2-text-soft)]">
@@ -453,7 +453,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={busy || (mode === "signup" && !agreed)}
-            className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-[color:var(--v2-primary-fill)] p-3.5 text-base font-semibold text-white transition-[filter] duration-150 hover:brightness-105 active:translate-y-px disabled:cursor-wait disabled:opacity-60"
+            className="mt-1 flex w-full items-center justify-center gap-2 rounded-md bg-[color:var(--v2-primary-fill)] p-3.5 text-base font-semibold text-white transition-[filter] duration-150 hover:brightness-105 active:translate-y-px disabled:cursor-wait disabled:opacity-60"
           >
             {/* Spinner sits beside a stable label so the button never resizes */}
             {busy && <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.4} />}

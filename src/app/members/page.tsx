@@ -119,7 +119,7 @@ export default async function MembersPage() {
               one number the secretary needs before opening eROSES, and it
               disappears the moment it reaches zero. */}
           {missingOfficial > 0 && (
-            <p className="rounded-xl border-2 border-amber-300 bg-amber-50/80 p-3 text-base font-medium text-amber-900 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
+            <p className="rounded-md border-2 border-amber-300 bg-amber-50/80 p-3 text-base font-medium text-amber-900 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
               ⚠{" "}
               <Tri
                 bm={`${missingOfficial} orang belum ada nama seperti dalam kad pengenalan. eROSES memerlukannya — salin daripada IC mereka, jangan terjemah sendiri.`}
@@ -145,7 +145,7 @@ export default async function MembersPage() {
                   <Tri bm="orang" zh="人" en="people" />
                 </Badge>
               </div>
-              <p className="rounded-lg border border-amber-300/70 bg-amber-50/70 px-3 py-2 text-sm text-amber-900 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
+              <p className="rounded-sm border border-amber-300/70 bg-amber-50/70 px-3 py-2 text-sm text-amber-900 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
                 <Tri
                   bm="Senarai ini masuk ke eROSES (Penyata Tahunan). Jawatan tetap pertubuhan sahaja — tugas untuk satu aktiviti BUKAN jawatan jawatankuasa."
                   zh="这份名单会进 eROSES（年度申报）。只放常设职位 —— 某一个活动的分工不是理事职位。"

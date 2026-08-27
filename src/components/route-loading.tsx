@@ -25,11 +25,11 @@ export function RouteLoading() {
       role="status"
       aria-label="Loading…"
     >
-      <div className="h-9 w-56 rounded-xl bg-[color:var(--v2-primary-soft)]" />
-      <div className="h-4 w-80 max-w-full rounded-lg bg-[color:var(--v2-primary-soft)] opacity-70" />
-      <div className="v2-glass mt-2 h-40 rounded-3xl opacity-60" />
-      <div className="v2-glass h-40 rounded-3xl opacity-40" />
-      <div className="v2-glass h-40 rounded-3xl opacity-25" />
+      <div className="h-9 w-56 rounded-md bg-[color:var(--v2-primary-soft)]" />
+      <div className="h-4 w-80 max-w-full rounded-sm bg-[color:var(--v2-primary-soft)] opacity-70" />
+      <div className="v2-glass mt-2 h-40 rounded-md opacity-60" />
+      <div className="v2-glass h-40 rounded-md opacity-40" />
+      <div className="v2-glass h-40 rounded-md opacity-25" />
     </div>
   );
 }

@@ -141,7 +141,7 @@ export function ActivityCalendar({
   return (
     <div className="flex min-w-0 flex-col gap-4">
       {!orgName && (
-        <p className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
+        <p className="rounded-sm border bg-muted/30 p-3 text-sm text-muted-foreground">
           <Link href="/orgs" className="underline underline-offset-4">
             <Tri
               bm="Pilih atau cipta pertubuhan untuk melihat aktiviti tersimpan"
@@ -214,7 +214,7 @@ export function ActivityCalendar({
                     // F-1 (2026-08-25, J #8): taller cells on desktop — the
                     // shell no longer caps the page at 896px, so the grid has
                     // real width and the cells can hold a readable day number.
-                    "flex min-h-20 flex-col items-stretch gap-1 rounded-lg border p-1.5 text-left transition-colors hover:bg-accent md:min-h-28 md:p-2",
+                    "flex min-h-20 flex-col items-stretch gap-1 rounded-sm border p-1.5 text-left transition-colors hover:bg-accent md:min-h-28 md:p-2",
                     cell.inMonth ? "bg-background" : "bg-muted/30 text-muted-foreground",
                     cell.inMonth && isPast ? "text-muted-foreground" : "",
                     isToday ? "border-2 border-primary" : "",
@@ -352,7 +352,7 @@ export function ActivityCalendar({
                 {dayEvents.map((ev) => (
                   <div
                     key={ev.id}
-                    className="rounded-xl border-2 border-sky-300 bg-sky-50 p-3 dark:bg-sky-400/10"
+                    className="rounded-md border-2 border-sky-300 bg-sky-50 p-3 dark:bg-sky-400/10"
                   >
                     <div className="flex flex-wrap items-start gap-2">
                       <span className="flex-1 text-base font-semibold">
@@ -379,7 +379,7 @@ export function ActivityCalendar({
                           `删除 ${ev.title}`,
                           `Delete ${ev.title}`,
                         )}
-                        className="flex size-11 shrink-0 items-center justify-center rounded-full text-lg text-muted-foreground hover:bg-red-100 hover:text-red-700"
+                        className="flex size-11 shrink-0 items-center justify-center rounded-sm text-lg text-muted-foreground hover:bg-red-100 hover:text-red-700"
                       >
                         ✕
                       </button>
@@ -396,7 +396,7 @@ export function ActivityCalendar({
             )}
 
             {historyLines.length === 0 && futureItems.length === 0 && dayEvents.length === 0 && (
-              <p className="rounded-xl border-2 border-dashed p-4 text-base text-muted-foreground">
+              <p className="rounded-md border-2 border-dashed p-4 text-base text-muted-foreground">
                 <Tri
                   bm="Tiada apa-apa direkodkan pada hari ini. Kalau ada sesuatu akan berlaku, tambahkan di atas supaya anda tidak lupa."
                   zh="这一天还没有任何记录。如果这天有事，就在上面加上去，免得忘记。"
@@ -451,7 +451,7 @@ export function ActivityCalendar({
                           .slice(0, 40)}`,
                       };
                   return (
-                    <div key={i} className="flex flex-col gap-2 rounded-lg border p-3">
+                    <div key={i} className="flex flex-col gap-2 rounded-sm border p-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <span>{isDeadline ? "⏰" : "🎉"}</span>
                         <span className="flex-1 text-sm font-medium">
@@ -559,7 +559,7 @@ function SummaryBullet({ line }: { line: SummaryLine }) {
   const s = CATEGORY_STYLE[line.category];
   const text = LINE_TEXT[`${line.category}/${line.kind}`]?.(line.count);
   return (
-    <li className="flex flex-col gap-1 rounded-lg border p-3">
+    <li className="flex flex-col gap-1 rounded-sm border p-3">
       <div className="flex items-center gap-2">
         <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${s.dot}`} />
         <span className="flex-1 text-sm">

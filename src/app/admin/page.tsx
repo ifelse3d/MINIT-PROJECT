@@ -413,7 +413,7 @@ export default async function AdminPage() {
       {platformAdmin ? (
         <GrantCreditsCard />
       ) : (
-        <p className="rounded-xl border-2 border-dashed p-4 text-sm text-[color:var(--v2-text-soft)]">
+        <p className="rounded-md border-2 border-dashed p-4 text-sm text-[color:var(--v2-text-soft)]">
           <Tri
             bm="Borang beri-kredit disembunyikan: akaun ini belum ada dalam senarai pentadbir platform (pangkalan data yang memutuskan, bukan butang). Untuk membukanya, jalankan dalam SQL Editor:"
             zh="加额度的表单被隐藏了：这个账号还不在平台管理员名单里（是数据库在把关，不是按钮）。要开通，在 SQL Editor 跑："
@@ -440,7 +440,7 @@ export default async function AdminPage() {
         ) : (
           <ul className="flex flex-col gap-2">
             {feedback.map((f) => (
-              <li key={f.id} className="rounded-lg border border-[color:var(--v2-border)] p-3">
+              <li key={f.id} className="rounded-sm border border-[color:var(--v2-border)] p-3">
                 <p className="whitespace-pre-line text-base">{f.message}</p>
                 <p className="mt-1 text-xs text-[color:var(--v2-text-soft)]">
                   {f.orgName} · {f.page ?? "—"} · {formatMytDateTime(f.createdAt)} ·{" "}

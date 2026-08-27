@@ -96,7 +96,7 @@ export function ReceiptSeriesRows({
         </p>
 
         {state.ok && (
-          <p className="rounded-xl border-2 border-green-400 bg-green-50 px-3 py-2 text-sm font-medium text-green-900 dark:bg-green-400/10 dark:text-green-100">
+          <p className="rounded-md border-2 border-green-400 bg-green-50 px-3 py-2 text-sm font-medium text-green-900 dark:bg-green-400/10 dark:text-green-100">
             ✓ <Tri bm="Sudah disimpan." zh="已经保存了。" en="Saved." />
           </p>
         )}
@@ -136,7 +136,7 @@ export function ReceiptSeriesRows({
                 // Same rule as the database's check constraint, so the browser
                 // and Postgres can never disagree about what is acceptable.
                 pattern="[A-Za-z][A-Za-z0-9]{1,7}"
-                className="w-full rounded-xl border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-3 py-2 font-mono text-base uppercase text-[color:var(--v2-text)] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[color:var(--v2-primary)] focus:shadow-[0_0_0_3px_rgba(91,75,214,0.18)]"
+                className="w-full rounded-md border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-3 py-2 font-mono text-base uppercase text-[color:var(--v2-text)] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[color:var(--v2-primary)] focus:shadow-[0_0_0_3px_rgba(91,75,214,0.18)]"
               />
               <span className="text-sm leading-relaxed text-muted-foreground">
                 <Tri
@@ -147,7 +147,7 @@ export function ReceiptSeriesRows({
               </span>
             </label>
 
-            <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-sm font-medium leading-relaxed text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+            <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-sm font-medium leading-relaxed text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
               ⚠{" "}
               <Tri
                 bm="Selepas resit pertama dikeluarkan, huruf ini tidak boleh ditukar lagi."
@@ -157,7 +157,7 @@ export function ReceiptSeriesRows({
             </p>
 
             {state.error && (
-              <p className="rounded-xl border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900 dark:bg-red-400/10 dark:text-red-100">
+              <p className="rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900 dark:bg-red-400/10 dark:text-red-100">
                 {state.error}
               </p>
             )}

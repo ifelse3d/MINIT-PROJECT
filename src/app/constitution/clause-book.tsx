@@ -90,7 +90,7 @@ export function ClauseBook({
 
   if (book.length === 0) {
     return (
-      <div className="rounded-2xl border-2 border-dashed p-6 text-base">
+      <div className="rounded-md border-2 border-dashed p-6 text-base">
         <p className="text-lg font-semibold">
           <Tri
             bm="Minit belum membaca perlembagaan anda."
@@ -116,7 +116,7 @@ export function ClauseBook({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-3 rounded-2xl border-2 border-[color:var(--v2-border)] bg-white/60 p-4 dark:bg-white/5">
+      <div className="flex flex-wrap items-center gap-3 rounded-md border-2 border-[color:var(--v2-border)] bg-white/60 p-4 dark:bg-white/5">
         <label className="flex min-w-56 flex-1 items-center gap-2">
           <Search aria-hidden className="size-5 shrink-0 text-muted-foreground" strokeWidth={2} />
           <span className="sr-only">
@@ -159,7 +159,7 @@ export function ClauseBook({
       </p>
 
       {shown.length === 0 ? (
-        <p className="rounded-xl border-2 border-dashed p-4 text-base text-muted-foreground">
+        <p className="rounded-md border-2 border-dashed p-4 text-base text-muted-foreground">
           {/* Says which of the two things happened. "Not in your constitution"
               and "we have not read that page yet" are very different news to
               somebody deciding whether they may hold a meeting. */}
@@ -177,7 +177,7 @@ export function ClauseBook({
               // Anchored so an answer elsewhere can link straight to the clause
               // it cited, which is the whole point of citing it.
               id={`clause-${encodeURIComponent(c.clause_no)}`}
-              className="scroll-mt-24 rounded-2xl border-2 border-[color:var(--v2-border)] bg-white/60 p-4 target:border-amber-400 dark:bg-white/5"
+              className="scroll-mt-24 rounded-md border-2 border-[color:var(--v2-border)] bg-white/60 p-4 target:border-amber-400 dark:bg-white/5"
             >
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                 <span className="font-mono text-base font-bold">{c.clause_no}</span>

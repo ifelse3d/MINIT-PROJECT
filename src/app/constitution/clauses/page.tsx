@@ -25,7 +25,7 @@ export default async function ConstitutionClausesPage() {
     <div className="mx-auto w-full max-w-4xl pb-10">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-100/80 text-3xl ring-1 ring-white/60 backdrop-blur dark:bg-violet-400/15 dark:ring-white/10">
+          <div className="flex h-14 w-14 items-center justify-center rounded-md bg-violet-100/80 text-3xl ring-1 ring-white/60 backdrop-blur dark:bg-violet-400/15 dark:ring-white/10">
             📜
           </div>
           <div>

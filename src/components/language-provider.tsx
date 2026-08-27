@@ -216,8 +216,8 @@ export function LanguageSwitcher({ tone = "light" }: { tone?: "light" | "dark" }
         aria-label="Bahasa · 语言 · Language"
         className={
           dark
-            ? "rounded-full border border-white/40 bg-transparent px-3 py-1.5 text-sm font-semibold text-white md:hidden"
-            : "rounded-full border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-3 py-1.5 text-sm font-semibold text-[color:var(--v2-text)] md:hidden"
+            ? "rounded-xs border border-white/40 bg-transparent px-3 py-1.5 text-sm font-semibold text-white md:hidden"
+            : "rounded-xs border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-3 py-1.5 text-sm font-semibold text-[color:var(--v2-text)] md:hidden"
         }
       >
         {items.map((it) => (
@@ -240,12 +240,12 @@ export function LanguageSwitcher({ tone = "light" }: { tone?: "light" | "dark" }
             aria-pressed={active}
             className={
               dark
-                ? `hidden whitespace-nowrap rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors md:inline-block ${
+                ? `hidden whitespace-nowrap rounded-xs border px-4 py-1.5 text-sm font-semibold transition-colors md:inline-block ${
                     active
                       ? "border-white/40 bg-white/[0.18] text-white"
                       : "border-transparent text-white/80 hover:bg-white/[0.1] hover:text-white"
                   }`
-                : `hidden whitespace-nowrap rounded-full border px-3 py-1 text-sm font-semibold transition-colors md:inline-block ${
+                : `hidden whitespace-nowrap rounded-xs border px-3 py-1 text-sm font-semibold transition-colors md:inline-block ${
                     active
                       ? "border-transparent bg-[color:var(--v2-primary-fill)] text-white"
                       : "border-[color:var(--v2-outline-border)] text-[color:var(--v2-text-soft)] hover:bg-[color:var(--v2-primary-soft)]"

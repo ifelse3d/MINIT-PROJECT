@@ -60,7 +60,7 @@ export function HomeUpcoming({ deadlines, todayIso }: { deadlines: Deadline[]; t
       </div>
 
       {items.length === 0 ? (
-        <p className="v2-glass rounded-2xl p-4 text-sm text-[color:var(--v2-text-soft)]">
+        <p className="v2-glass rounded-md p-4 text-sm text-[color:var(--v2-text-soft)]">
           <Link href="/calendar" className="underline underline-offset-4">
             <Tri
               bm="Tiada tarikh akhir atau acara buat masa ini — lihat kalendar."
@@ -81,7 +81,7 @@ export function HomeUpcoming({ deadlines, todayIso }: { deadlines: Deadline[]; t
                 <li key={`d-${d.kind}-${d.dueDateIso}`}>
                   <Link
                     href="/calendar"
-                    className={`flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border-2 p-3 backdrop-blur transition-all hover:-translate-y-0.5 hover:border-foreground/30 ${URGENCY_CARD[u]}`}
+                    className={`flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border-2 p-3 backdrop-blur transition-all hover:-translate-y-0.5 hover:border-foreground/30 ${URGENCY_CARD[u]}`}
                   >
                     <span className="text-base font-bold tabular-nums">{d.dueDateIso}</span>
                     <span className="min-w-40 flex-1 text-sm font-medium leading-snug">
@@ -103,7 +103,7 @@ export function HomeUpcoming({ deadlines, todayIso }: { deadlines: Deadline[]; t
               <li key={`e-${ev.id}`}>
                 <Link
                   href="/calendar"
-                  className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border-2 border-sky-300 bg-sky-50/80 p-3 backdrop-blur transition-all hover:-translate-y-0.5 hover:border-sky-400"
+                  className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border-2 border-sky-300 bg-sky-50/80 p-3 backdrop-blur transition-all hover:-translate-y-0.5 hover:border-sky-400"
                 >
                   <span className="text-base font-bold tabular-nums">{ev.dateIso}</span>
                   <span className="min-w-40 flex-1 text-sm font-medium leading-snug">

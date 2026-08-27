@@ -51,7 +51,7 @@ export function BeforeReading({
   const [dateText, setDateText] = useState("");
 
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border-2 border-[color:var(--v2-border)] bg-white/70 p-4 dark:bg-white/5">
+    <div className="flex flex-col gap-4 rounded-md border-2 border-[color:var(--v2-border)] bg-white/70 p-4 dark:bg-white/5">
       <div>
         <p className="text-lg font-semibold">
           <Tri

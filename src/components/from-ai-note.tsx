@@ -19,7 +19,7 @@ function FromAiNoteInner({ bm, zh, en }: { bm: string; zh: string; en: string })
   const params = useSearchParams();
   if (params.get("dari") !== "ai") return null;
   return (
-    <p className="mb-4 rounded-2xl border-2 border-[#7c6cf5]/40 bg-[#7c6cf5]/10 px-4 py-3 text-base">
+    <p className="mb-4 rounded-md border-2 border-[#a855f7]/40 bg-[#a855f7]/10 px-4 py-3 text-base">
       ✨{" "}
       <Tri
         bm={`Anda datang dari jawapan AI: ${bm}`}

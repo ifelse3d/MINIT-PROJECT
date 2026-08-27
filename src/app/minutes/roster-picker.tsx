@@ -100,7 +100,7 @@ export function RosterPicker({
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border-2 border-[color:var(--v2-border)] bg-white/60 p-4 dark:bg-white/5">
+    <div className="flex flex-col gap-3 rounded-md border-2 border-[color:var(--v2-border)] bg-white/60 p-4 dark:bg-white/5">
       <p className="text-base font-medium">
         <Tri
           bm="Siapa antara mereka yang hadir?"
@@ -133,7 +133,7 @@ export function RosterPicker({
                     return next;
                   })
                 }
-                className={`min-h-9 rounded-full border-2 px-3 text-base font-medium ${
+                className={`min-h-9 rounded-xs border-2 px-3 text-base font-medium ${
                   on
                     ? "border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900"
                     : "border-[color:var(--v2-border)] hover:bg-accent"

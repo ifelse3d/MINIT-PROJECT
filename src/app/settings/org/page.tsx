@@ -153,7 +153,7 @@ export default async function OrgSettingsPage() {
                   )}
                 </p>
                 {active.taxExemptStatus === "none" && (
-                  <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-sm font-medium leading-relaxed text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+                  <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-sm font-medium leading-relaxed text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
                     ⚠{" "}
                     <Tri
                       bm="Tiada status s.44(6), jadi resit anda TIDAK boleh menyebut pelepasan cukai — dan Minit tidak akan mencetaknya. s.44(6) ialah kelulusan LHDN yang mesti diluluskan dahulu."

@@ -22,8 +22,8 @@ export function PaymentMethodToggle({
   compact?: boolean;
 }) {
   const base = compact
-    ? "rounded-full border px-2.5 py-1 text-sm font-medium"
-    : "rounded-full border-2 px-3.5 py-1.5 text-base font-medium";
+    ? "rounded-xs border px-2.5 py-1 text-sm font-medium"
+    : "rounded-xs border-2 px-3.5 py-1.5 text-base font-medium";
   const on = "border-[color:var(--v2-primary)] bg-[color:var(--v2-primary)]/10 text-foreground";
   const off = "border-[color:var(--v2-outline-border)] text-muted-foreground hover:bg-accent";
   return (

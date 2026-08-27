@@ -32,7 +32,7 @@ export function PageThumbs({ pages }: { pages: ThumbPage[] }) {
             key={i}
             type="button"
             onClick={() => setViewPage(i)}
-            className="flex w-24 flex-col items-center gap-1 rounded-lg border border-[color:var(--v2-outline-border)] bg-white/60 p-1.5 hover:bg-accent dark:bg-white/5"
+            className="flex w-24 flex-col items-center gap-1 rounded-sm border border-[color:var(--v2-outline-border)] bg-white/60 p-1.5 hover:bg-accent dark:bg-white/5"
             title={p.name}
           >
             {p.dataUrl ? (
@@ -77,10 +77,10 @@ export function PageThumbs({ pages }: { pages: ThumbPage[] }) {
             <img
               src={pages[viewPage].dataUrl as string}
               alt={pages[viewPage].name}
-              className="max-h-[80vh] max-w-full rounded-lg object-contain"
+              className="max-h-[80vh] max-w-full rounded-sm object-contain"
             />
           ) : (
-            <p className="rounded-lg bg-white/90 p-6 text-base">
+            <p className="rounded-sm bg-white/90 p-6 text-base">
               <Tri
                 bm="Fail PDF — pratonton tidak tersedia di sini."
                 zh="这是 PDF 文件 —— 这里没有预览。"

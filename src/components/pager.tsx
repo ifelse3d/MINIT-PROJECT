@@ -32,7 +32,7 @@ export function Pager({
   const { first, last, total, page, pageCount, hasPrev, hasNext } = summary;
 
   const arrow =
-    "inline-flex min-h-11 items-center gap-1 rounded-full border-2 px-4 text-base font-medium";
+    "inline-flex min-h-11 items-center gap-1 rounded-sm border-2 px-4 text-base font-medium";
   const enabled = "border-[color:var(--v2-border)] hover:bg-accent active:scale-95";
   const disabled = "border-transparent text-muted-foreground/50 pointer-events-none";
 

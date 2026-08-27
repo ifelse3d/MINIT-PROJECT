@@ -239,8 +239,8 @@ export function AIDock({
               >
                 <span
                   className={
-                    "h-16 w-1.5 rounded-full bg-[color:var(--v2-text-soft)]/25 transition-colors group-hover:bg-[#22c55e]/70 group-focus-visible:bg-[#22c55e] " +
-                    (dragging ? "bg-[#22c55e]" : "")
+                    "h-16 w-1.5 rounded-full bg-[color:var(--v2-text-soft)]/25 transition-colors group-hover:bg-[#a855f7]/70 group-focus-visible:bg-[#a855f7] " +
+                    (dragging ? "bg-[#a855f7]" : "")
                   }
                 />
               </div>

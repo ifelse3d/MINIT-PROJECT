@@ -147,7 +147,7 @@ export function UpcomingSidebar({
           const label = DEADLINE_LABELS[d.kind];
           const key = d.kind + d.dueDateIso;
           return (
-            <div key={key} className={`flex flex-col gap-2 rounded-xl border-2 p-3 ${URGENCY_CARD[u]}`}>
+            <div key={key} className={`flex flex-col gap-2 rounded-md border-2 p-3 ${URGENCY_CARD[u]}`}>
               <div className="flex flex-wrap items-center gap-2">
                 <span>{s.icon}</span>
                 <span className="flex-1 text-sm font-semibold leading-snug">
@@ -205,7 +205,7 @@ export function UpcomingSidebar({
       </div>
 
       {tickIssue === "permission" && (
-        <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+        <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
           <Tri
             bm="Akaun anda baca sahaja, jadi tanda “sudah difailkan” ini tidak dimasukkan ke rekod pertubuhan — ahli lain masih nampak tarikh akhir ini merah. Minta mana-mana ahli jawatankuasa (kecuali juruaudit) menandakannya."
             zh="您的账号是只读（审计）账号，这个「已经做了」的标记进不了机构的记录 —— 其他委员看到的这条死线还是红的。请找除审计外的任何成员来标记。"
@@ -214,7 +214,7 @@ export function UpcomingSidebar({
         </p>
       )}
       {tickIssue === "other" && (
-        <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+        <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
           <Tri
             bm="Tanda “sudah difailkan” ini ada pada peranti ini sahaja — ahli jawatankuasa lain masih akan nampak tarikh akhir ini merah. Pilih pertubuhan anda, atau cuba lagi apabila ada talian."
             zh="这个「已经做了」的标记只在这台设备上 —— 其他委员看到的这条死线还是红的。请选好您的机构，或者等有网络时再试。"
@@ -239,7 +239,7 @@ export function UpcomingSidebar({
           return (
             <div
               key={ev.id}
-              className={`flex flex-col gap-2 rounded-xl border-2 p-3 ${
+              className={`flex flex-col gap-2 rounded-md border-2 p-3 ${
                 past ? "border-muted bg-muted/30 text-muted-foreground" : "border-sky-300 bg-sky-50"
               }`}
             >
@@ -268,7 +268,7 @@ export function UpcomingSidebar({
                     `删除活动 ${ev.title}`,
                     `Delete the event ${ev.title}`,
                   )}
-                  className="flex size-11 shrink-0 items-center justify-center rounded-full text-lg text-muted-foreground hover:bg-red-100 hover:text-red-700"
+                  className="flex size-11 shrink-0 items-center justify-center rounded-sm text-lg text-muted-foreground hover:bg-red-100 hover:text-red-700"
                 >
                   ✕
                 </button>

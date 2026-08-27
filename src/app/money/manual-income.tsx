@@ -225,7 +225,7 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
                 rides along and pre-fills what the model reads no purpose for;
                 the rows land in the step-1 review like any ledger page. */}
             {onSlipPhoto && (
-              <div className="flex flex-col gap-2 rounded-xl border-2 border-[color:var(--v2-outline-border)] bg-muted/20 p-3">
+              <div className="flex flex-col gap-2 rounded-md border-2 border-[color:var(--v2-outline-border)] bg-muted/20 p-3">
                 <p className="text-sm text-muted-foreground">
                   <Tri
                     bm="Ada resit / slip di tangan? Pilih jenis di bawah, kemudian ambil gambar — Minit membacanya dan barisnya menunggu di langkah 1 untuk disemak."

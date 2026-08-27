@@ -133,7 +133,7 @@ export function EventsSection({ onAdd }: { onAdd: (ev: SimpleEvent) => void }) {
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
         {/* AI paste-box */}
-        <div className="rounded-xl border-2 border-violet-200 bg-violet-50/50 p-4">
+        <div className="rounded-md border-2 border-violet-200 bg-violet-50/50 p-4">
           <div className="mb-2 font-semibold">
             🤖 <Tri bm="Tampal rancangan anda" zh="贴上你们的计划" en="Paste your plans" />
           </div>
@@ -146,10 +146,10 @@ export function EventsSection({ onAdd }: { onAdd: (ev: SimpleEvent) => void }) {
               "例如：常年大会 8月30日上午10点。周年晚宴 9月12日晚上7点半……",
               "e.g. AGM 30 Aug 10am main hall. Annual dinner 12 Sept 7:30pm..."
             )}
-            className="w-full rounded-lg border bg-background p-3 text-base outline-none focus:ring-2 focus:ring-violet-300"
+            className="w-full rounded-sm border bg-background p-3 text-base outline-none focus:ring-2 focus:ring-violet-300"
           />
           <div className="mt-2 flex flex-wrap items-center gap-3">
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border-2 border-violet-300 bg-white px-4 py-2 font-medium hover:bg-violet-100 dark:bg-white/5">
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-sm border-2 border-violet-300 bg-white px-4 py-2 font-medium hover:bg-violet-100 dark:bg-white/5">
               📎{" "}
               {file ? (
                 file.name
@@ -200,7 +200,7 @@ export function EventsSection({ onAdd }: { onAdd: (ev: SimpleEvent) => void }) {
               {proposed.map((p, i) => (
                 <div
                   key={i}
-                  className={`flex flex-wrap items-end gap-2 rounded-lg border bg-background p-3 ${
+                  className={`flex flex-wrap items-end gap-2 rounded-sm border bg-background p-3 ${
                     // Was opacity-60, which dropped already-added rows to about 2.4:1 —
                     // "done" became "unreadable" rather than "de-emphasised".
                     p.added ? "border-green-300 bg-green-50" : ""
@@ -265,7 +265,7 @@ export function EventsSection({ onAdd }: { onAdd: (ev: SimpleEvent) => void }) {
         {/* Manual quick-add */}
         <form
           onSubmit={addEvent}
-          className="flex flex-wrap items-end gap-2 rounded-xl border bg-muted/20 p-4"
+          className="flex flex-wrap items-end gap-2 rounded-md border bg-muted/20 p-4"
         >
           <div className="flex min-w-48 flex-1 flex-col gap-1">
             <label className="text-sm font-medium">
@@ -275,7 +275,7 @@ export function EventsSection({ onAdd }: { onAdd: (ev: SimpleEvent) => void }) {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={t("cth: Makan malam tahunan", "例如：周年晚宴", "e.g. Annual dinner")}
-              className="h-11 rounded-lg border bg-background px-3"
+              className="h-11 rounded-sm border bg-background px-3"
             />
           </div>
           <div className="flex flex-col gap-1">
@@ -286,7 +286,7 @@ export function EventsSection({ onAdd }: { onAdd: (ev: SimpleEvent) => void }) {
               type="date"
               value={dateIso}
               onChange={(e) => setDateIso(e.target.value)}
-              className="h-11 rounded-lg border bg-background px-3"
+              className="h-11 rounded-sm border bg-background px-3"
             />
           </div>
           <div className="flex flex-col gap-1">
@@ -297,7 +297,7 @@ export function EventsSection({ onAdd }: { onAdd: (ev: SimpleEvent) => void }) {
               value={timeText}
               onChange={(e) => setTimeText(e.target.value)}
               placeholder="7:30 malam"
-              className="h-11 w-36 rounded-lg border bg-background px-3"
+              className="h-11 w-36 rounded-sm border bg-background px-3"
             />
           </div>
           <Button type="submit" size="lg" disabled={!title.trim() || !dateIso}>

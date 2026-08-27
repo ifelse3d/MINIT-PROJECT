@@ -158,7 +158,7 @@ export function RegisterAndReceipts() {
             and screen and paper must match word for word. So it now stands on
             its own, labelled as what it is, with the meaning said plainly
             underneath in the reader's language. */}
-        <div className="rounded-2xl border-2 border-[color:var(--v2-border)] bg-white/60 p-3 dark:bg-white/5">
+        <div className="rounded-md border-2 border-[color:var(--v2-border)] bg-white/60 p-3 dark:bg-white/5">
           <p className="text-sm font-medium text-muted-foreground">
             <Tri
               bm="Ayat ini dicetak pada setiap resit, tepat seperti di bawah:"
@@ -214,7 +214,7 @@ export function RegisterAndReceipts() {
               role="dialog"
               aria-modal="true"
             >
-              <div className="flex w-full max-w-md flex-col gap-3 rounded-2xl border bg-background p-5 shadow-xl">
+              <div className="flex w-full max-w-md flex-col gap-3 rounded-md border bg-background p-5 shadow-xl">
                 <p className="text-lg font-semibold">
                   <Tri
                     bm={`Jana resit untuk ${unreceiptedCount} derma?`}
@@ -311,7 +311,7 @@ export function RegisterAndReceipts() {
         {issueNotice === "saved" && (
           /* B-4④ (J #16): after the numbers land, say what happens NEXT —
              the tester issued a receipt and then stared at the page. */
-          <div className="flex flex-col gap-1.5 rounded-xl border-2 border-green-400 bg-green-50 p-3 text-base text-green-900 dark:bg-green-400/10 dark:text-green-100">
+          <div className="flex flex-col gap-1.5 rounded-md border-2 border-green-400 bg-green-50 p-3 text-base text-green-900 dark:bg-green-400/10 dark:text-green-100">
             <p className="font-medium">
               ✓{" "}
               <Tri
@@ -344,7 +344,7 @@ export function RegisterAndReceipts() {
         {issueNotice === "readonly" && (
           /* B-4: not only auditors any more — a collector or secretary who
              reaches this button gets the same refusal, naming who to ask. */
-          <p className="rounded-xl border-2 border-slate-300 bg-slate-50 p-3 text-base font-medium text-slate-800 dark:bg-white/10 dark:text-slate-100">
+          <p className="rounded-md border-2 border-slate-300 bg-slate-50 p-3 text-base font-medium text-slate-800 dark:bg-white/10 dark:text-slate-100">
             <Tri
               bm="Peranan anda tidak boleh menjana resit — itu tugas bendahari atau pentadbir. Minta mereka melakukannya."
               zh="您的角色不能开收据 —— 开收据是财政或管理员的事，请找他们处理。"
@@ -361,7 +361,7 @@ export function RegisterAndReceipts() {
             role="dialog"
             aria-modal="true"
           >
-            <div className="flex w-full max-w-lg flex-col gap-3 rounded-2xl border bg-background p-5 shadow-xl">
+            <div className="flex w-full max-w-lg flex-col gap-3 rounded-md border bg-background p-5 shadow-xl">
               <p className="text-lg font-semibold">
                 <Tri
                   bm="Sebelum resit pertama: pilih huruf resit anda"
@@ -492,7 +492,7 @@ export function RegisterAndReceipts() {
           </div>
         )}
         {issueNotice === "sample" && (
-          <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+          <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
             <Tri
               bm="Ada baris CONTOH dalam daftar — resit tidak dijana dan tiada apa-apa disimpan. Nombor resit sebenar tidak boleh digunakan untuk derma rekaan. Padam baris contoh itu dahulu, kemudian cuba lagi."
               zh="登记簿里有示范用的记录——收据没有生成，也没有写入任何东西。真实的收据号码不能用在虚构的捐款上。请先删掉那些示范记录，再试一次。"
@@ -501,7 +501,7 @@ export function RegisterAndReceipts() {
           </p>
         )}
         {issueNotice === "db_behind" && (
-          <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+          <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
             <Tri
               bm="Daftar ini ada derma barangan, tetapi pangkalan data belum dikemas kini untuknya (migration 25). Tiada resit dijana dan tiada apa-apa hilang — baris menunggu dengan selamat. Minta pentadbir sistem jalankan migration itu, kemudian cuba lagi."
               zh="登记簿里有实物捐赠，但数据库还没更新到支持它（migration 25）。收据没有生成，东西也不会丢 —— 记录安全地等着。请系统管理员跑完那支 migration 再试一次。"
@@ -524,7 +524,7 @@ export function RegisterAndReceipts() {
         {donations.length === 0 && (
           /* /money had NO empty state at all — it was permanently in demo
              mode with five fictional donors. (2026-07-28 audit.) */
-          <div className="rounded-xl border-2 border-dashed p-5 text-base">
+          <div className="rounded-md border-2 border-dashed p-5 text-base">
             <p className="font-semibold">
               <Tri
                 bm="Daftar derma masih kosong."
@@ -578,7 +578,7 @@ export function RegisterAndReceipts() {
                 )
               : null;
             return (
-              <div key={d.id} className="rounded-lg border p-4">
+              <div key={d.id} className="rounded-sm border p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="font-medium">
@@ -874,7 +874,7 @@ function ListRegister({
             "搜索姓名、收据号码、日期……",
             "Search name, receipt number, date…",
           )}
-          className="min-w-56 flex-1 rounded-xl border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-4 py-2.5 text-base outline-none focus:border-[color:var(--v2-primary)]"
+          className="min-w-56 flex-1 rounded-md border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-4 py-2.5 text-base outline-none focus:border-[color:var(--v2-primary)]"
         />
         <span className="text-sm text-muted-foreground">
           {filtered.length} / {donations.length}
@@ -895,7 +895,7 @@ function ListRegister({
         )}
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-[color:var(--v2-border)]">
+      <div className="overflow-x-auto rounded-md border border-[color:var(--v2-border)]">
         <table className="w-full text-base">
           <thead>
             <tr className="border-b border-[color:var(--v2-border)] text-left text-sm text-muted-foreground">

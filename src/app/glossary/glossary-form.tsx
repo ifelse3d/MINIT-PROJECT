@@ -13,10 +13,10 @@ import {
 const INITIAL: GlossaryActionState = { error: null, ok: false };
 
 const inputCls =
-  "w-full rounded-lg border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-3 py-2 text-base text-[color:var(--v2-text)] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[color:var(--v2-primary)] focus:shadow-[0_0_0_3px_rgba(91,75,214,0.18)]";
+  "w-full rounded-sm border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-3 py-2 text-base text-[color:var(--v2-text)] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[color:var(--v2-primary)] focus:shadow-[0_0_0_3px_rgba(91,75,214,0.18)]";
 
 const errorCls =
-  "rounded-xl border-2 border-red-300 bg-red-50 p-3 text-base font-medium whitespace-pre-line text-red-900 dark:bg-red-400/10 dark:text-red-100";
+  "rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium whitespace-pre-line text-red-900 dark:bg-red-400/10 dark:text-red-100";
 
 /** One row inside the card it feeds, not a second card below it. */
 export function AddTermForm() {
@@ -148,7 +148,7 @@ export function ImportGlossary() {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="rounded-xl border border-input bg-white/40 p-4 dark:bg-white/5">
+    <div className="rounded-md border border-input bg-white/40 p-4 dark:bg-white/5">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -164,7 +164,7 @@ export function ImportGlossary() {
 
       {open && (
         <form action={formAction} className="mt-4 flex flex-col gap-3">
-          <div className="rounded-lg border border-[#7c6cf5]/40 bg-[#7c6cf5]/5 p-3">
+          <div className="rounded-sm border border-[#a855f7]/40 bg-[#a855f7]/5 p-3">
             <a
               href="/api/list-template?kind=glossary"
               className="text-base font-medium underline underline-offset-4"
@@ -192,7 +192,7 @@ export function ImportGlossary() {
               en="One word per line. The word alone = keep it exactly. Add “=” and the wording to translate it."
             />
           </p>
-          <pre className="rounded-lg bg-black/5 p-3 text-sm dark:bg-white/10">
+          <pre className="rounded-sm bg-black/5 p-3 text-sm dark:bg-white/10">
 {`崇德
 点传师
 家长班 = Kelas Ibu Bapa

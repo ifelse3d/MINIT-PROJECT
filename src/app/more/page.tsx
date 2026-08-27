@@ -121,7 +121,7 @@ export default function MorePage() {
           <button
             type="button"
             onClick={() => setConfirmSignOut(true)}
-            className="flex items-center gap-2 rounded-xl border border-[color:var(--v2-outline-border)] px-4 py-2 text-base font-medium text-[color:var(--v2-text-soft)] transition-colors hover:bg-[color:var(--v2-primary-soft)]"
+            className="flex items-center gap-2 rounded-md border border-[color:var(--v2-outline-border)] px-4 py-2 text-base font-medium text-[color:var(--v2-text-soft)] transition-colors hover:bg-[color:var(--v2-primary-soft)]"
           >
             <LogOut className="h-4 w-4" strokeWidth={1.8} />
             <Tri bm="Keluar" zh="退出" en="Sign out" />

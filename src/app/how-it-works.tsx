@@ -165,7 +165,7 @@ function HowItWorksModal({ onClose }: { onClose: () => void }) {
       onClick={onClose}
     >
       <div
-        className="flex max-h-[92vh] w-full max-w-lg flex-col gap-3 overflow-y-auto rounded-3xl bg-[color:var(--v2-card)] p-4 sm:p-6"
+        className="flex max-h-[92vh] w-full max-w-lg flex-col gap-3 overflow-y-auto rounded-md bg-[color:var(--v2-card)] p-4 sm:p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3">
@@ -179,7 +179,7 @@ function HowItWorksModal({ onClose }: { onClose: () => void }) {
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted/60"
+            className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted/60"
             aria-label={t("Tutup", "关闭", "Close")}
           >
             <X className="h-6 w-6" strokeWidth={2.2} />
@@ -193,11 +193,11 @@ function HowItWorksModal({ onClose }: { onClose: () => void }) {
           <img
             src={frame.src}
             alt={t(frame.bm, frame.zh, frame.en)}
-            className="w-full rounded-2xl border border-[color:var(--v2-border)]"
+            className="w-full rounded-md border border-[color:var(--v2-border)]"
           />
           <div
             aria-hidden
-            className="pointer-events-none absolute rounded-lg border-4 border-red-500 shadow-[0_0_0_3px_rgba(255,255,255,0.7)]"
+            className="pointer-events-none absolute rounded-sm border-4 border-red-500 shadow-[0_0_0_3px_rgba(255,255,255,0.7)]"
             style={{
               left: frame.hi.left,
               top: frame.hi.top,

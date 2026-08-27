@@ -80,7 +80,7 @@ export function NextStepLink({
 }) {
   if (blockedReason) {
     return (
-      <p className="rounded-xl border-2 border-dashed p-4 text-base text-muted-foreground">
+      <p className="rounded-md border-2 border-dashed p-4 text-base text-muted-foreground">
         {blockedReason}
       </p>
     );
@@ -103,7 +103,7 @@ export function NextStepLink({
   return (
     <Link
       href={href}
-      className="inline-flex min-h-12 flex-col items-start gap-0.5 self-start rounded-2xl bg-primary px-5 py-2.5 text-primary-foreground shadow hover:bg-primary/90 active:scale-95"
+      className="inline-flex min-h-12 flex-col items-start gap-0.5 self-start rounded-md bg-primary px-5 py-2.5 text-primary-foreground shadow hover:bg-primary/90 active:scale-95"
     >
       <span className="inline-flex items-center gap-2 text-base font-semibold">
         <Tri bm="Seterusnya" zh="下一步" en="Next" />

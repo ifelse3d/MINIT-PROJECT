@@ -42,7 +42,7 @@ export function SearchForm({ onSubmitted }: { onSubmitted?: () => void }) {
 
   return (
     <form
-      className="v2-glass flex flex-1 items-center gap-3 rounded-full px-5 py-3"
+      className="v2-glass flex flex-1 items-center gap-3 rounded-md px-5 py-3"
       onSubmit={(e) => {
         e.preventDefault();
         submit();
@@ -51,7 +51,7 @@ export function SearchForm({ onSubmitted }: { onSubmitted?: () => void }) {
       <button
         type="submit"
         aria-label={t("Cari", "搜索", "Search")}
-        className="flex size-11 shrink-0 items-center justify-center rounded-full text-[color:var(--v2-text-soft)] hover:bg-white/60"
+        className="flex size-11 shrink-0 items-center justify-center rounded-sm text-[color:var(--v2-text-soft)] hover:bg-white/60"
       >
         <Search className="h-5 w-5" strokeWidth={1.9} />
       </button>
@@ -77,7 +77,7 @@ export function TopSearch() {
       {/* The active organisation lives in the sidebar footer, not here — one
           place for "which org am I in", and a calmer top bar. */}
       <div className="hidden items-center gap-2 sm:flex">
-        <div className="v2-glass rounded-full px-2 py-1.5">
+        <div className="v2-glass rounded-xs px-2 py-1.5">
           <LanguageSwitcher />
         </div>
         <ThemeToggle />
@@ -101,7 +101,7 @@ export function ThemeToggle() {
           ? t("Tukar ke terang", "切换到浅色", "Switch to light")
           : t("Tukar ke gelap", "切换到深色", "Switch to dark")
       }
-      className="v2-glass flex h-11 w-11 items-center justify-center rounded-full text-[color:var(--v2-text)]"
+      className="v2-glass flex h-11 w-11 items-center justify-center rounded-sm text-[color:var(--v2-text)]"
     >
       {dark ? <Sun className="h-5 w-5" strokeWidth={1.9} /> : <Moon className="h-5 w-5" strokeWidth={1.9} />}
     </button>

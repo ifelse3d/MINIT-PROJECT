@@ -84,7 +84,7 @@ function MemberLine({ member }: { member: MemberRow }) {
   const error = roleState.error ?? removeState.error;
 
   return (
-    <li className="flex flex-col gap-1 rounded-xl border border-[color:var(--v2-border)] p-3">
+    <li className="flex flex-col gap-1 rounded-md border border-[color:var(--v2-border)] p-3">
       <div className="flex flex-wrap items-center gap-3">
         <span className="text-base font-semibold">
           {member.name}
@@ -100,7 +100,7 @@ function MemberLine({ member }: { member: MemberRow }) {
             name="role"
             value={role}
             onChange={(e) => setRole(e.target.value)}
-            className="h-10 rounded-lg border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-2 text-base"
+            className="h-10 rounded-sm border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-2 text-base"
             aria-label={t("Peranan", "角色", "Role")}
           >
             {ROLE_CHOICES.map((r) => (
@@ -159,7 +159,7 @@ function CreateInviteForm() {
   const [copied, setCopied] = useState(false);
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border-2 border-[color:var(--v2-primary)]/30 p-3">
+    <div className="flex flex-col gap-3 rounded-md border-2 border-[color:var(--v2-primary)]/30 p-3">
       <p className="text-base font-semibold">
         <Tri bm="Jemput seorang ahli" zh="邀请一位成员" en="Invite a member" />
       </p>
@@ -171,7 +171,7 @@ function CreateInviteForm() {
           <select
             name="role"
             defaultValue="committee"
-            className="h-11 rounded-lg border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-2 text-base"
+            className="h-11 rounded-sm border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-2 text-base"
           >
             {ROLE_CHOICES.map((r) => (
               <option key={r} value={r}>
@@ -191,7 +191,7 @@ function CreateInviteForm() {
           <select
             name="expiresDays"
             defaultValue="30"
-            className="h-11 rounded-lg border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-2 text-base"
+            className="h-11 rounded-sm border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-2 text-base"
           >
             <option value="7">{t("7 hari", "7 天", "7 days")}</option>
             <option value="30">{t("30 hari", "30 天", "30 days")}</option>
@@ -207,7 +207,7 @@ function CreateInviteForm() {
         </Button>
       </form>
       {state.ok && state.code && (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border-2 border-green-400 bg-green-50 p-3">
+        <div className="flex flex-wrap items-center gap-3 rounded-md border-2 border-green-400 bg-green-50 p-3">
           <span className="font-mono text-2xl font-bold tracking-widest text-green-900">
             {state.code}
           </span>
@@ -293,7 +293,7 @@ function InviteLine({
   }[status];
 
   return (
-    <li className="flex flex-wrap items-center gap-3 rounded-lg border border-[color:var(--v2-border)] px-3 py-2 text-base">
+    <li className="flex flex-wrap items-center gap-3 rounded-sm border border-[color:var(--v2-border)] px-3 py-2 text-base">
       <span className={`font-mono tracking-widest ${status !== "open" ? "text-muted-foreground line-through" : "font-semibold"}`}>
         {invite.code}
       </span>

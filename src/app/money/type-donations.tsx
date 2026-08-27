@@ -305,7 +305,7 @@ export function TypeDonations({
           />
         </Button>
         {added !== null && (
-          <p className="rounded-xl border-2 border-green-400 bg-green-50 px-3 py-2 text-sm font-medium text-green-900 dark:bg-green-400/10 dark:text-green-100">
+          <p className="rounded-md border-2 border-green-400 bg-green-50 px-3 py-2 text-sm font-medium text-green-900 dark:bg-green-400/10 dark:text-green-100">
             ✓{" "}
             <Tri
               bm={`${added} baris ditambah ke daftar. Jana resitnya sekali gus di halaman “Resit”.`}
@@ -319,7 +319,7 @@ export function TypeDonations({
   }
 
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-[color:var(--v2-border)] p-4">
+    <div className="flex flex-col gap-4 rounded-md border border-[color:var(--v2-border)] p-4">
       <div>
         <p className="text-base font-semibold">
           <Tri
@@ -587,7 +587,7 @@ export function TypeDonations({
       </p>
 
       {error && (
-        <p className="rounded-xl border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900 dark:bg-red-400/10 dark:text-red-100">
+        <p className="rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900 dark:bg-red-400/10 dark:text-red-100">
           {error}
         </p>
       )}

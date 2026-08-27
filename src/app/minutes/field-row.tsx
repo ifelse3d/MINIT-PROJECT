@@ -141,7 +141,7 @@ export function FieldRow({
                   setDraft(ev.target.value);
                   setProblem(null);
                 }}
-                className="h-12 w-full max-w-md rounded-lg border border-input bg-white px-3 text-base dark:bg-transparent"
+                className="h-12 w-full max-w-md rounded-sm border border-input bg-white px-3 text-base dark:bg-transparent"
                 aria-label={labelEn}
               >
                 <option value="">
@@ -165,7 +165,7 @@ export function FieldRow({
                   setDraft(ev.target.value);
                   setProblem(null);
                 }}
-                className="h-12 w-full max-w-md rounded-lg border border-input bg-white px-3 text-base dark:bg-transparent"
+                className="h-12 w-full max-w-md rounded-sm border border-input bg-white px-3 text-base dark:bg-transparent"
                 aria-label={labelEn}
               />
             ) : (
@@ -187,7 +187,7 @@ export function FieldRow({
                     setDraft(ev.target.value);
                     setProblem(null);
                   }}
-                  className="h-12 w-full max-w-md rounded-lg border border-input bg-white px-3 text-base dark:bg-transparent"
+                  className="h-12 w-full max-w-md rounded-sm border border-input bg-white px-3 text-base dark:bg-transparent"
                   aria-label={labelEn}
                 />
                 {/* F-3: speak instead of type. Free-text rows only — an enum
@@ -304,7 +304,7 @@ export function FieldRow({
           md+ (fixed, so it stays in view while the list scrolls). Only for
           photographed minutes: a typed sheet has no original to compare. */}
       {editing && !typedByHand && photoPages.length > 0 && photoPages[comparePage] && (
-        <figure className="mt-1 flex flex-col gap-2 rounded-xl border-2 border-[color:var(--v2-border)] bg-[color:var(--v2-card)] p-3 md:fixed md:right-6 md:top-24 md:z-30 md:w-80 md:shadow-xl">
+        <figure className="mt-1 flex flex-col gap-2 rounded-md border-2 border-[color:var(--v2-border)] bg-[color:var(--v2-card)] p-3 md:fixed md:right-6 md:top-24 md:z-30 md:w-80 md:shadow-xl">
           <figcaption className="flex flex-wrap items-center gap-2 text-sm font-medium">
             🖼️{" "}
             <Tri bm="Gambar asal" zh="原照对照" en="The original page" />
@@ -315,7 +315,7 @@ export function FieldRow({
                   onClick={() =>
                     setComparePage((p) => (p + photoPages.length - 1) % photoPages.length)
                   }
-                  className="inline-flex min-h-8 min-w-8 items-center justify-center rounded-full border border-[color:var(--v2-outline-border)] hover:bg-accent"
+                  className="inline-flex min-h-8 min-w-8 items-center justify-center rounded-sm border border-[color:var(--v2-outline-border)] hover:bg-accent"
                   aria-label={t("Halaman sebelum", "上一页", "Previous page")}
                 >
                   ‹
@@ -326,7 +326,7 @@ export function FieldRow({
                 <button
                   type="button"
                   onClick={() => setComparePage((p) => (p + 1) % photoPages.length)}
-                  className="inline-flex min-h-8 min-w-8 items-center justify-center rounded-full border border-[color:var(--v2-outline-border)] hover:bg-accent"
+                  className="inline-flex min-h-8 min-w-8 items-center justify-center rounded-sm border border-[color:var(--v2-outline-border)] hover:bg-accent"
                   aria-label={t("Halaman seterusnya", "下一页", "Next page")}
                 >
                   ›
@@ -342,7 +342,7 @@ export function FieldRow({
               `第 ${comparePage + 1} 页原始照片`,
               `Original photo, page ${comparePage + 1}`,
             )}
-            className="max-h-72 w-full rounded-lg bg-black/5 object-contain"
+            className="max-h-72 w-full rounded-sm bg-black/5 object-contain"
           />
           {field.source_ref && (
             <p className="text-xs text-muted-foreground">

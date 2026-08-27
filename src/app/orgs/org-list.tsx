@@ -128,7 +128,7 @@ export function OrgList({ orgs }: { orgs: OrgListItem[] }) {
           placeholder, not a heading — the icon already says "search". */}
       {showSearch && (
         <div className="mb-1">
-          <div className="v2-glass flex items-center gap-3 rounded-full px-5 py-3">
+          <div className="v2-glass flex items-center gap-3 rounded-md px-5 py-3">
             <span
               aria-hidden
               className="flex size-11 shrink-0 items-center justify-center rounded-full text-[color:var(--v2-text-soft)]"
@@ -156,7 +156,7 @@ export function OrgList({ orgs }: { orgs: OrgListItem[] }) {
                 type="button"
                 onClick={() => setQuery("")}
                 aria-label={t("Kosongkan", "清除", "Clear")}
-                className="flex size-11 shrink-0 items-center justify-center rounded-full text-[color:var(--v2-text-soft)] hover:bg-white/60"
+                className="flex size-11 shrink-0 items-center justify-center rounded-sm text-[color:var(--v2-text-soft)] hover:bg-white/60"
               >
                 <X className="h-5 w-5" strokeWidth={1.9} />
               </button>
@@ -203,7 +203,7 @@ export function OrgList({ orgs }: { orgs: OrgListItem[] }) {
             type="button"
             onClick={() => setShowDemo((v) => !v)}
             aria-expanded={showDemo}
-            className="flex w-full items-center gap-2 rounded-2xl px-4 py-3 text-left text-sm text-muted-foreground hover:bg-white/50 dark:hover:bg-white/5"
+            className="flex w-full items-center gap-2 rounded-md px-4 py-3 text-left text-sm text-muted-foreground hover:bg-white/50 dark:hover:bg-white/5"
           >
             <ChevronRight
               className={`h-4 w-4 shrink-0 transition-transform ${showDemo ? "rotate-90" : ""}`}
@@ -242,7 +242,7 @@ function TreeCard({ tree }: { tree: Tree }) {
   const treeIsActive = root.isActive || branches.some((b) => b.isActive);
 
   return (
-    <Card className={treeIsActive ? "ring-2 ring-[#7c6cf5]/70" : ""}>
+    <Card className={treeIsActive ? "ring-2 ring-[#a855f7]/70" : ""}>
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -297,8 +297,8 @@ function TreeCard({ tree }: { tree: Tree }) {
             {branches.map((b) => (
               <li
                 key={b.id}
-                className={`flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl px-3 py-2 text-sm ${
-                  b.isActive ? "bg-[#7c6cf5]/10" : ""
+                className={`flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md px-3 py-2 text-sm ${
+                  b.isActive ? "bg-[#a855f7]/10" : ""
                 }`}
               >
                 <CornerDownRight

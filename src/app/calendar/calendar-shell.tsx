@@ -158,7 +158,7 @@ export function CalendarShell({
       {/* Page header — the primary action sits HERE, not below the grid */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100/80 text-2xl ring-1 ring-white/60 backdrop-blur dark:bg-rose-400/15 dark:ring-white/10">
+          <div className="flex h-12 w-12 items-center justify-center rounded-md bg-rose-100/80 text-2xl ring-1 ring-white/60 backdrop-blur dark:bg-rose-400/15 dark:ring-white/10">
             🗓️
           </div>
           <h1 className="text-3xl font-semibold tracking-tight">
@@ -224,7 +224,7 @@ export function CalendarShell({
           is working. What is NOT working is the part the committee cannot see,
           which is exactly the part that has to be said out loud. */}
       {syncIssue === "permission" && (
-        <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-base text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+        <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-base text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
           <Tri
             bm="Akaun anda baca sahaja, jadi acara ini tidak dimasukkan ke rekod pertubuhan — ia kekal pada peranti ini sahaja. Minta mana-mana ahli jawatankuasa (kecuali juruaudit) menambahnya."
             zh="您的账号是只读（审计）账号，这个活动进不了机构的记录 —— 只存在这台设备上。要让其他委员看到，请找除审计外的任何成员来添加。"
@@ -233,7 +233,7 @@ export function CalendarShell({
         </p>
       )}
       {syncIssue === "other" && (
-        <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-base text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+        <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-base text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
           <Tri
             bm="Acara ini disimpan pada peranti ini sahaja — ia belum sampai ke rekod pertubuhan, jadi ahli jawatankuasa lain tidak akan melihatnya. Pilih pertubuhan anda, atau cuba lagi apabila ada talian."
             zh="这些活动只存在这台设备上 —— 还没有进到机构的记录里，所以其他委员看不到。请选好您的机构，或者等有网络时再试。"

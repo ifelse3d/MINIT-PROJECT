@@ -17,7 +17,7 @@ export function UnreceiptedNote() {
   const { unreceipted } = useRegister();
   if (unreceipted === 0) return null;
   return (
-    <p className="mb-4 rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-base text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+    <p className="mb-4 rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-base text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
       💡{" "}
       <Tri
         bm={`${unreceipted} rekod lagi sudah didaftar tetapi belum ada resit — ia belum muncul di sini.`}

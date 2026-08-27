@@ -111,7 +111,7 @@ export function MoneyChrome({ children }: { children: ReactNode }) {
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 pb-10 text-base">
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-green-100/80 text-3xl ring-1 ring-white/60 backdrop-blur dark:bg-emerald-400/15 dark:ring-white/10">
+          <div className="flex h-14 w-14 items-center justify-center rounded-md bg-green-100/80 text-3xl ring-1 ring-white/60 backdrop-blur dark:bg-emerald-400/15 dark:ring-white/10">
             🧾
           </div>
           <h1 className="text-3xl font-semibold tracking-tight">

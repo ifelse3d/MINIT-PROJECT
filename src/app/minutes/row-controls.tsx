@@ -67,7 +67,7 @@ export function DeletableRow({
         }}
         // Always visible, never hover-only: on a phone there is no hover, and
         // this is the control somebody is hunting for when they are annoyed.
-        className="absolute right-0 top-3 inline-flex min-h-9 min-w-9 items-center justify-center rounded-full text-muted-foreground hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-400/10"
+        className="absolute right-0 top-3 inline-flex min-h-9 min-w-9 items-center justify-center rounded-sm text-muted-foreground hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-400/10"
         aria-label={t(`Buang ${what}`, `删掉${what}`, `Delete ${what}`)}
         title={t(`Buang ${what}`, `删掉${what}`, `Delete ${what}`)}
       >

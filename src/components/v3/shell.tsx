@@ -23,7 +23,7 @@ import { usePathname } from "next/navigation";
 import { LanguageSwitcher, Tri } from "@/components/language-provider";
 import { FirstRunFlow } from "@/components/first-run-flow";
 import { usePersistentState } from "@/lib/use-persistent-state";
-import Image from "next/image";
+import { BrandLogo } from "@/components/brand-logo";
 import { BRAND_NAME } from "@/lib/brand";
 import {
   PRIMARY_NAV,
@@ -183,7 +183,7 @@ function Rail({ pathname, showAdmin }: { pathname: string; showAdmin: boolean })
       <div className="flex items-center gap-2 px-5 pb-4 pt-5">
         {/* P1 (拍板 0-8): the green "two people = M" logo replaces the
             letter tile. The PNG carries its own rounded corners. */}
-        <Image src="/brand-logo-96.png" alt="" width={36} height={36} className="h-9 w-9" />
+        <BrandLogo size={36} className="h-9 w-9" />
         <span className="text-xl font-semibold tracking-tight">{BRAND_NAME}</span>
       </div>
 
@@ -200,7 +200,7 @@ function Rail({ pathname, showAdmin }: { pathname: string; showAdmin: boolean })
                   <Link
                     href={entry.item.href}
                     className={cn(
-                      "flex min-h-11 items-center gap-3 rounded-xl px-3 text-base font-medium transition-colors",
+                      "flex min-h-11 items-center gap-3 rounded-md px-3 text-base font-medium transition-colors",
                       active
                         ? "bg-[color:var(--v2-primary-fill)] text-white"
                         : "text-[color:var(--v2-text)] hover:bg-[color:var(--v2-primary-soft)]",
@@ -230,7 +230,7 @@ function Rail({ pathname, showAdmin }: { pathname: string; showAdmin: boolean })
                   onClick={() => toggleGroup(entry.id)}
                   aria-expanded={isOpen}
                   className={cn(
-                    "flex min-h-9 w-full items-center gap-2 rounded-lg px-3 text-sm font-semibold uppercase tracking-wide transition-colors hover:bg-[color:var(--v2-primary-soft)]",
+                    "flex min-h-9 w-full items-center gap-2 rounded-sm px-3 text-sm font-semibold uppercase tracking-wide transition-colors hover:bg-[color:var(--v2-primary-soft)]",
                     groupActive
                       ? "text-[color:var(--v2-primary)]"
                       : "text-[color:var(--v2-text-soft)]",
@@ -259,7 +259,7 @@ function Rail({ pathname, showAdmin }: { pathname: string; showAdmin: boolean })
                         <Link
                           href={child.href}
                           className={cn(
-                            "flex min-h-10 items-center gap-3 rounded-xl px-3 pl-5 text-[0.95rem] transition-colors",
+                            "flex min-h-10 items-center gap-3 rounded-md px-3 pl-5 text-[0.95rem] transition-colors",
                             active
                               ? "bg-[color:var(--v2-primary-fill)] font-medium text-white"
                               : "text-[color:var(--v2-text)] hover:bg-[color:var(--v2-primary-soft)]",
@@ -286,7 +286,7 @@ function Rail({ pathname, showAdmin }: { pathname: string; showAdmin: boolean })
           <Link
             href="/admin"
             className={cn(
-              "flex min-h-10 items-center gap-3 rounded-xl px-3 text-[0.95rem] transition-colors",
+              "flex min-h-10 items-center gap-3 rounded-md px-3 text-[0.95rem] transition-colors",
               isActivePath(pathname, "/admin", true)
                 ? "bg-[color:var(--v2-primary-fill)] font-medium text-white"
                 : "text-[color:var(--v2-text)] hover:bg-[color:var(--v2-primary-soft)]",
@@ -314,7 +314,7 @@ function MobileTopBar() {
   return (
     <header className="flex items-center justify-between gap-3 md:hidden">
       <div className="flex items-center gap-2">
-        <Image src="/brand-logo-96.png" alt="" width={32} height={32} className="h-8 w-8" />
+        <BrandLogo size={32} className="h-8 w-8" />
         <span className="text-lg font-semibold tracking-tight">{BRAND_NAME}</span>
       </div>
       {org && (

@@ -74,10 +74,10 @@ export function AppearanceRows() {
                 type="button"
                 aria-pressed={selected}
                 onClick={() => setTextSize(size)}
-                className={`flex min-h-20 flex-col items-start justify-center gap-0.5 rounded-2xl border-2 px-4 py-3 text-left transition-colors ${
+                className={`flex min-h-20 flex-col items-start justify-center gap-0.5 rounded-md border-2 px-4 py-3 text-left transition-colors ${
                   selected
-                    ? "border-[#7c6cf5] bg-[#7c6cf5]/10"
-                    : "border-input bg-white/70 hover:border-[#7c6cf5]/50 dark:bg-white/5"
+                    ? "border-[#a855f7] bg-[#a855f7]/10"
+                    : "border-input bg-white/70 hover:border-[#a855f7]/50 dark:bg-white/5"
                 }`}
               >
                 <span
@@ -101,9 +101,9 @@ export function AppearanceRows() {
             type="button"
             aria-pressed={!dark}
             onClick={() => setDark(false)}
-            className={`flex min-h-12 items-center gap-2 rounded-2xl border-2 px-4 text-base font-medium ${
+            className={`flex min-h-12 items-center gap-2 rounded-md border-2 px-4 text-base font-medium ${
               !dark
-                ? "border-[#7c6cf5] bg-[#7c6cf5]/10"
+                ? "border-[#a855f7] bg-[#a855f7]/10"
                 : "border-input bg-white/70 dark:bg-white/5"
             }`}
           >
@@ -114,9 +114,9 @@ export function AppearanceRows() {
             type="button"
             aria-pressed={dark}
             onClick={() => setDark(true)}
-            className={`flex min-h-12 items-center gap-2 rounded-2xl border-2 px-4 text-base font-medium ${
+            className={`flex min-h-12 items-center gap-2 rounded-md border-2 px-4 text-base font-medium ${
               dark
-                ? "border-[#7c6cf5] bg-[#7c6cf5]/10"
+                ? "border-[#a855f7] bg-[#a855f7]/10"
                 : "border-input bg-white/70 dark:bg-white/5"
             }`}
           >

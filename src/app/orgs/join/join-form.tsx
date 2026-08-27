@@ -32,11 +32,11 @@ export function JoinForm() {
   }, [state.ok]);
 
   const inputCls =
-    "w-full rounded-xl border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-3 py-2 text-base text-[color:var(--v2-text)] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[color:var(--v2-primary)] focus:shadow-[0_0_0_3px_rgba(91,75,214,0.18)]";
+    "w-full rounded-md border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-3 py-2 text-base text-[color:var(--v2-text)] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[color:var(--v2-primary)] focus:shadow-[0_0_0_3px_rgba(91,75,214,0.18)]";
 
   if (state.ok) {
     return (
-      <div className="flex flex-col gap-2 rounded-xl border-2 border-green-400 bg-green-50 p-4">
+      <div className="flex flex-col gap-2 rounded-md border-2 border-green-400 bg-green-50 p-4">
         <p className="text-lg font-semibold text-green-900">
           ✓{" "}
           <Tri
@@ -90,7 +90,7 @@ export function JoinForm() {
       </label>
 
       {state.error && (
-        <p className="rounded-xl border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900">
+        <p className="rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900">
           {state.error}
         </p>
       )}

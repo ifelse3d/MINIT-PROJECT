@@ -38,7 +38,7 @@ export function DayAddForm({
   const [justAdded, setJustAdded] = useState<string | null>(null);
 
   const inputClass =
-    "h-12 w-full rounded-xl border-2 border-input bg-white px-3 text-base dark:bg-white/5";
+    "h-12 w-full rounded-md border-2 border-input bg-white px-3 text-base dark:bg-white/5";
 
   function submit() {
     const trimmed = title.trim();
@@ -65,7 +65,7 @@ export function DayAddForm({
     return (
       <div className="flex flex-col gap-2">
         {justAdded && (
-          <p className="rounded-xl border-2 border-green-400 bg-green-50 p-3 text-base font-medium text-green-900 dark:bg-green-400/10 dark:text-green-100">
+          <p className="rounded-md border-2 border-green-400 bg-green-50 p-3 text-base font-medium text-green-900 dark:bg-green-400/10 dark:text-green-100">
             ✓{" "}
             <Tri
               bm={`"${justAdded}" ditambah pada hari ini.`}
@@ -88,7 +88,7 @@ export function DayAddForm({
 
   return (
     <form
-      className="flex flex-col gap-3 rounded-2xl border-2 border-[#7c6cf5]/40 bg-white/70 p-4 dark:bg-white/5"
+      className="flex flex-col gap-3 rounded-md border-2 border-[#a855f7]/40 bg-white/70 p-4 dark:bg-white/5"
       onSubmit={(e) => {
         e.preventDefault();
         submit();
@@ -156,7 +156,7 @@ export function DayAddForm({
             "例如：要先订椅子",
             "e.g. need to book the chairs first",
           )}
-          className="w-full resize-y rounded-xl border-2 border-input bg-white p-3 text-base dark:bg-white/5"
+          className="w-full resize-y rounded-md border-2 border-input bg-white p-3 text-base dark:bg-white/5"
         />
       </label>
 

@@ -41,13 +41,18 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  /* §2.4 (violet redesign spec): a five-step literal scale — 4/6/8/12/999.
+     The old calc() derivation from --radius could not produce 6/8/12. The
+     xl+ steps are pinned to 12px as a safety net; the codemod swept every
+     rounded-xl/2xl/3xl class out of src, so they should never fire. */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 12px;
+  --radius-2xl: 12px;
+  --radius-3xl: 12px;
+  --radius-4xl: 12px;
 }
 
 :root {
@@ -85,10 +90,8 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  /* B-3 (work order 32 §2B, avocado: "our corners are too curved"): one
-     step smaller, ONE token — every rounded-sm…4xl derives from this via
-     the @theme calc block above, so the whole app steps down together. */
-  --radius: 0.5rem;
+  /* --radius deleted (§2.4): nothing derives from it any more — the @theme
+     block above pins literal values. */
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -167,11 +170,12 @@
    MINIT · v3 DESIGN SYSTEM — "clean ledger" (Stage R, 2026-08-25)
 
    THE ONE TOKEN FILE. Every colour, edge and shadow the shell uses is defined
-   here and nowhere else. J's brief (2026-08-24): kill the glassmorphism — it
-   caused the mobile login ghosting, the contrast failures and the "template"
-   look. Replaced with: near-white page (deep slate in dark mode), SOLID cards,
-   thin borders, light shadows, ONE brand colour (brand GREEN since 2026-08-27,
-   拍板 0-8 — was deep purple), and the green/amber/red semantic colours
+   here and nowhere else. Since 2026-08-27 下午 the values follow tan shi
+   hui's VIOLET redesign spec (J: 「logo 用這個，design 換差不多這樣」) —
+   violet-tinted canvas gradient, SOLID white cards, brand violet #7029E5.
+   backdrop-filter returns in ONE contained place only (the sticky top bar's
+   glass, spec §5.2) — the full-page glassmorphism that caused the mobile
+   login ghosting stays dead. The green/amber/red semantic colours are
    untouched (Hard Rule 9).
 
    The class/variable NAMES from the old system are kept (.v2-glass, --v2-*):
@@ -181,85 +185,127 @@
    ========================================================================= */
 
 .v2-root {
-  /* --- the one brand accent ------------------------------------------- */
-  /* GREEN since 2026-08-27 (拍板 0-8, work order 32 P1; values from the
-     avocado spec §2.2 — computed, not estimated). ⚠ THE CONTRAST IRON RULE:
-     the brand's Fresh Green #22C55E measures only 2.28:1 under white text —
-     it is DECORATION (--v2-accent), never a fill under white. Interaction
-     green is #15803D: white on it = 5.02:1 (AA). The "gradient" pair still
-     holds ONE colour twice: primary buttons are flat. */
-  --v2-primary: #15803d;        /* accent for TEXT and icons — 5.0:1 on white */
-  --v2-primary-fill: #15803d;   /* filled controls carrying WHITE text (5.02:1) */
-  --v2-primary-soft: #ecfdf5;
-  --v2-accent: #22c55e;         /* decorative only: indicator bars, glyphs */
-  --v2-grad-from: #15803d;
-  --v2-grad-to: #15803d;
+  /* --- brand ------------------------------------------------------------ */
+  /* VIOLET since 2026-08-27 下午 (J: 「logo 用這個，design 換差不多這樣」—
+     tan shi hui's violet redesign spec §2.1–2.3; every ratio below was
+     computed by that spec, not estimated). #7029E5 carries white text at
+     6.69:1, so the logo colour and the button colour are the SAME colour.
+     The light stops are restricted: #A855F7 = icons/large text only
+     (3.96:1); #C47CF9 = decoration only (2.76:1). Never small text on the
+     light end of any brand gradient. */
+  --v2-primary: #7029e5;        /* the interaction colour — 6.69:1 under white */
+  --v2-primary-fill: #7029e5;   /* filled controls carrying WHITE text */
+  --v2-primary-on: #ffffff;     /* label colour on a filled primary */
+  --v2-primary-hover: #5b21b6;  /* white on this: 8.98:1 */
+  --v2-primary-soft: #f3ebfe;   /* tint for active nav / selected cards */
+  --v2-primary-ring: rgba(168, 85, 247, 0.28);
+  --v2-accent: #a855f7;         /* indicator bars, icon glyphs, large text */
+  --v2-accent-light: #c47cf9;   /* the logo's light stop — decoration only */
 
-  /* --- surfaces --------------------------------------------------------- */
-  /* §1-2 (work order 32): the page ground carries a faint GREEN tint so the
-     white cards visibly float ("background 白然后 form 也白，看了很乱" —
-     avocado; J: light mode 还是看不到框). Gradient from the spec §9.2; the
-     flat --v2-page is the fallback. ⚠ C-5 contrast held: --v2-border
-     #888ea0 measures 3.12:1 on the lightest stop #ECFDF5 (≥3:1, WCAG
-     1.4.11) and 3.27:1 on the white card — do NOT lighten the borders back. */
-  --v2-page: #f1f6f3;
-  --v2-page-grad: linear-gradient(160deg, #ecfdf5 0%, #eff9f6 34%, #f2f6fa 70%, #f5f7fa 100%);
+  /* --- brand gradients --------------------------------------------------- */
+  /* grad-brand runs DARK→light so text sits on the dark end; grad-logo is
+     the ONE light→dark gradient (it matches the supplied app icon). */
+  --v2-grad-from: #4c1d95;
+  --v2-grad-to: #a855f7;
+  --v2-grad-brand: linear-gradient(160deg, var(--v2-grad-from) 0%, var(--v2-grad-to) 100%);
+  --v2-grad-logo: linear-gradient(145deg, #c47cf9 0%, #8b3fee 52%, #7029e5 100%);
+
+  /* --- canvas & surfaces ------------------------------------------------- */
+  /* §9: the canvas is coloured, cards are pure white, nothing white sits
+     directly on white. The gradient paints on the fixed ::before below —
+     NOT background-attachment: fixed (ignored on iOS Safari). */
+  --v2-page: #f4f2fa;
+  --v2-page-grad: linear-gradient(160deg, #f3ebfe 0%, #f3f1fb 34%, #f2f6fa 70%, #f5f7fa 100%);
   --v2-card: #ffffff;
-  --v2-glass: var(--v2-card);         /* legacy name, solid value */
-  --v2-glass-strong: var(--v2-card);
-  /* C-5 (work order 31, J #5): #d8dbe2 measured 1.4:1 on the white card —
-     in light mode card edges and row separators were invisible. WCAG 1.4.11
-     wants NON-TEXT contrast ≥ 3:1, computed on its own (text contrast passing
-     says nothing about borders — STATE §6). #888ea0 ⇒ 3.27:1 on the white
-     card and 3.04:1 on the #f6f7f9 page behind it. */
-  --v2-border: #888ea0;
-  --v2-outline-border: rgba(71, 77, 96, 0.7); /* ≈ #7e828f ⇒ 3.8:1 on white —
-                                         an outline button's border IS its
-                                         affordance (was 0.65 ⇒ 3.4:1) */
-  --v2-shadow: 0 0.0625rem 0.1875rem rgba(16, 24, 40, 0.07),
-    0 0.0625rem 0.125rem rgba(16, 24, 40, 0.04);
-  --v2-shadow-soft: 0 0.25rem 0.75rem -0.25rem rgba(21, 128, 61, 0.35);
+  --v2-card-nested: #f8f7fc;
+  --v2-card-raised: #ffffff;
+  --v2-glass: rgba(255, 255, 255, 0.82);        /* sticky top bar only */
+  --v2-glass-strong: rgba(255, 255, 255, 0.94);
+  --v2-glass-blur: saturate(180%) blur(12px);
+  /* Card hairline per spec (#E2DEEC): with the tinted canvas + shadow the
+     card's edge no longer depends on a dark border (§9.3 desaturation test).
+     ⚠ DELIBERATE DEVIATION for inputs: the spec's #CBC4DC input border is
+     1.55:1 — that would re-open C-5 (J: "看不到框"; WCAG 1.4.11 wants ≥3:1
+     for form controls). --v2-border-strong is therefore #8b84a6 ⇒ 3.6:1 on
+     white, same violet family, and --v2-outline-border stays dark. */
+  --v2-border: #e2deec;
+  --v2-border-strong: #8b84a6;
+  --v2-outline-border: rgba(21, 18, 31, 0.55);
+  --v2-shadow: 0 1px 2px rgba(21, 18, 31, 0.06), 0 1px 3px rgba(21, 18, 31, 0.08);
+  --v2-shadow-md: 0 4px 12px rgba(21, 18, 31, 0.08), 0 2px 4px rgba(21, 18, 31, 0.05);
+  --v2-shadow-lg: 0 16px 40px rgba(21, 18, 31, 0.16);
+  --v2-shadow-soft: 0 4px 14px -4px rgba(112, 41, 229, 0.28);
 
-  /* --- text ------------------------------------------------------------- */
-  --v2-text: #1b1e27;                 /* 15.9:1 on white */
-  --v2-text-soft: #4c5261;            /* 7.4:1 on white */
+  /* --- text -------------------------------------------------------------- */
+  --v2-text: #15121f;                 /* Ink Violet — 18.45:1 on white */
+  --v2-text-soft: #6b6480;            /* Slate Violet — 5.59:1 on white */
+  --v2-text-on-brand: #ffffff;
+
+  /* --- shell metrics (§3.1 / §5.2 / §7.3) -------------------------------- */
+  --rail-w: 68px;
+  --topbar-h: 56px;
+  --subnav-w: 240px;
 
   position: relative;
   min-height: 100vh;
   color: var(--v2-text);
-  background: var(--v2-page-grad, var(--v2-page));
-  background-attachment: fixed;
-  font-family: var(--font-v2, "Inter"), var(--font-sc, "Noto Sans SC"),
+  background: var(--v2-page);
+  font-family: var(--font-v2, "Poppins"), var(--font-sc, "Noto Sans SC"),
     ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
   letter-spacing: -0.01em;
 }
 
+/* §9.2: the canvas gradient on a fixed pseudo-element — cheap, and it works
+   on iOS Safari where background-attachment: fixed is ignored. */
+.v2-root::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--v2-page-grad);
+  pointer-events: none;
+}
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  .v2-root::before {
+    display: none; /* falls back to the flat --v2-page */
+  }
+}
+
 .dark .v2-root {
-  /* TWO tokens on purpose (same shape as the purple era): the bright green
-     that reads well as TEXT on the dark page (#22c55e, ~8:1) fails as a FILL
-     under white text (2.28:1 — the iron rule again). Fills keep the deep
-     interaction green in BOTH modes, so every white label stays ≥5:1. */
-  --v2-primary: #22c55e;
-  --v2-primary-fill: #15803d;   /* white text on this: 5.02:1 */
-  --v2-primary-soft: rgba(34, 197, 94, 0.16);
-  --v2-accent: #22c55e;
-  --v2-page: #12151c;
-  /* Same faint green tint, dark register — WITHOUT this line dark mode
-     would inherit the light gradient above. */
-  --v2-page-grad: linear-gradient(160deg, #0e1f19 0%, #111827 55%, #12151c 100%);
-  --v2-card: #1a1e28;
-  --v2-glass: var(--v2-card);
-  --v2-glass-strong: var(--v2-card);
-  /* Cards no longer dissolve in dark mode (the 2026-08-07 complaint): the
-     surface itself is a step lighter than the page, so the border can stay a
-     hairline. Outline buttons keep the audited 5.25:1 edge. */
-  --v2-border: rgba(255, 255, 255, 0.16);
-  --v2-outline-border: rgba(255, 255, 255, 0.55);
-  --v2-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.45);
-  --v2-shadow-soft: 0 0.25rem 0.75rem -0.25rem rgba(0, 0, 0, 0.5);
-  --v2-text: #eef0f5;
-  --v2-text-soft: #b0b6c4;
+  /* TWO tokens on purpose (spec §2.2 dark table): #7029E5 on a dark card is
+     unreadable as TEXT, so the text violet brightens to #C084FC (7.02:1 on
+     the card) while the FILL lightens only one step to #7C3AED — white
+     labels on it measure 5.70:1, so --v2-primary-on stays white in both
+     modes. */
+  --v2-primary: #c084fc;        /* TEXT violet */
+  --v2-primary-fill: #7c3aed;   /* FILL violet — white label 5.70:1 */
+  --v2-primary-on: #ffffff;
+  --v2-primary-hover: #8b5cf6;
+  --v2-primary-soft: rgba(168, 85, 247, 0.16);
+  --v2-primary-ring: rgba(168, 85, 247, 0.42);
+  --v2-accent: #a855f7;
+  --v2-accent-light: #c47cf9;
+  --v2-grad-from: #2e1065;
+  --v2-grad-to: #7c3aed;
+  --v2-page: #0c0918;
+  /* WITHOUT this line dark mode would inherit the light gradient above. */
+  --v2-page-grad: linear-gradient(160deg, #160b33 0%, #0e0a1e 45%, #15121f 100%);
+  --v2-card: #141026;
+  --v2-card-nested: #100c1f;
+  --v2-card-raised: #1b1530;
+  --v2-glass: rgba(20, 16, 38, 0.78);
+  --v2-glass-strong: rgba(20, 16, 38, 0.92);
+  --v2-border: #272038;
+  --v2-border-strong: #4d456b; /* same deviation as light: inputs stay visible */
+  --v2-outline-border: rgba(233, 231, 242, 0.42);
+  --v2-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --v2-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+  --v2-shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.55);
+  --v2-shadow-soft: 0 4px 14px -4px rgba(168, 85, 247, 0.42);
+  --v2-text: #e9e7f2;
+  --v2-text-soft: #9a93b5;
+  --v2-text-on-brand: #ffffff;
 
   /* ---------------------------------------------------------------------
      DARK-MODE PALETTE FLIP (kept from the audit — it is correct)
@@ -336,8 +382,8 @@
 .v2-glass-strong {
   background: var(--v2-card);
   border: 1px solid var(--v2-border);
-  /* B-3: cards step down one radius notch with the global token. */
-  border-radius: 0.75rem;
+  /* Spec §7.4/§9: cards are 8px (--v2-r-md equivalent). */
+  border-radius: 0.5rem;
   box-shadow: var(--v2-shadow);
 }
 
@@ -349,15 +395,15 @@
   background: none;
 }
 
-/* --- Pill buttons (legacy class names) ---------------------------------- */
+/* --- Pill buttons (legacy class names — §2.4: buttons are 6px now) ------- */
 .v2-pill {
-  border-radius: 0.75rem;
+  border-radius: 0.375rem;
   font-weight: 600;
   transition: background 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
 }
 
 .v2-pill-primary {
-  color: #fff;
+  color: var(--v2-primary-on);
   background: var(--v2-primary-fill);
   box-shadow: var(--v2-shadow-soft);
 }

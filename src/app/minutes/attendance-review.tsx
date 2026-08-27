@@ -203,7 +203,7 @@ export function AttendanceReview() {
           one who can say so (Hard Rule 1 — a human may assert it, nothing may
           assume it). */}
       {attendanceUnsettled && !nothingYet && (
-        <div className="flex flex-col gap-3 rounded-xl border-2 border-amber-400 bg-amber-50 p-4 dark:bg-amber-400/10">
+        <div className="flex flex-col gap-3 rounded-md border-2 border-amber-400 bg-amber-50 p-4 dark:bg-amber-400/10">
           <p className="text-base font-medium text-amber-900 dark:text-amber-100">
             <Tri
               bm="Tiada seorang pun direkodkan sebagai hadir."
@@ -236,7 +236,7 @@ export function AttendanceReview() {
       {/* Said, and reversible. Somebody who ticked it and then found the list
           on the back of the page must be able to take it back. */}
       {noAttendeesRecorded && groups.attendees.total === 0 && (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border-2 border-[color:var(--v2-border)] bg-white/60 p-3 dark:bg-white/5">
+        <div className="flex flex-wrap items-center gap-3 rounded-md border-2 border-[color:var(--v2-border)] bg-white/60 p-3 dark:bg-white/5">
           <p className="min-w-56 flex-1 text-base">
             <Tri
               bm="Anda beritahu Minit yang nota ini tidak mencatat kehadiran."
@@ -251,7 +251,7 @@ export function AttendanceReview() {
       )}
 
       {nothingYet && groups.attendees.total === 0 ? (
-        <p className="rounded-xl border-2 border-dashed p-4 text-base text-muted-foreground">
+        <p className="rounded-md border-2 border-dashed p-4 text-base text-muted-foreground">
           <Tri
             bm="Ambil gambar nota mesyuarat dahulu — atau tambah nama sendiri di bawah."
             zh="请先拍下会议笔记 —— 或者在下面自己加名字。"
@@ -305,7 +305,7 @@ export function AttendanceReview() {
                   en={`${ordered.done.length} already checked`}
                 />
               </h3>
-              <ul className="divide-y rounded-xl border">
+              <ul className="divide-y rounded-md border">
                 {ordered.done.map(({ a, i }) =>
                   openRows.has(i) ? (
                     <li key={`att-open-${i}`} className="px-3">
@@ -399,7 +399,7 @@ export function AttendanceReview() {
                     "打一个名字，按 Enter 加入",
                     "Type one name, press Enter",
                   )}
-                  className="h-12 w-full max-w-md rounded-lg border border-input bg-white px-3 text-base dark:bg-transparent"
+                  className="h-12 w-full max-w-md rounded-sm border border-input bg-white px-3 text-base dark:bg-transparent"
                 />
                 <Button
                   variant="outline"

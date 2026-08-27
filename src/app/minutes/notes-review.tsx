@@ -143,7 +143,7 @@ export function NotesReview() {
       }
     >
       <div className="flex flex-col gap-4">
-        <div className="relative overflow-hidden rounded-xl border border-[color:var(--v2-border)]">
+        <div className="relative overflow-hidden rounded-md border border-[color:var(--v2-border)]">
           {!(allReviewed && !attendanceUnsettled) && (
             <span
               aria-hidden
@@ -171,7 +171,7 @@ export function NotesReview() {
             </Button>
           )}
           {missingOutstanding > 0 && (
-            <span className="rounded-full bg-rose-100 px-3 py-1.5 text-sm font-semibold text-rose-900 dark:bg-rose-400/15 dark:text-rose-200">
+            <span className="rounded-xs bg-rose-100 px-3 py-1.5 text-sm font-semibold text-rose-900 dark:bg-rose-400/15 dark:text-rose-200">
               {/* D-4: "N items unreadable" is the truth about a photo and a
                   lie about typing — nothing was read at all.
                   I-3: and a lie about a MIXED document too — those fields were
@@ -282,10 +282,10 @@ export function NotesReview() {
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <label
-            className={`inline-flex cursor-pointer items-center gap-2 rounded-full px-5 py-3 text-base font-semibold text-white ${
+            className={`inline-flex cursor-pointer items-center gap-2 rounded-sm px-5 py-3 text-base font-semibold text-white ${
               aiBusy
                 ? "cursor-wait bg-muted-foreground"
-                : "v2-pill bg-[color:var(--v2-primary-fill)] shadow-[0_10px_26px_-10px_rgba(21,128,61,0.5)]"
+                : "v2-pill bg-[color:var(--v2-primary-fill)] shadow-[var(--v2-shadow-soft)]"
             }`}
           >
             {aiBusy ? (
@@ -323,7 +323,7 @@ export function NotesReview() {
               scanner; the route counts pages before charging (5 for minutes),
               so a 40-page scan is turned away with a reason instead of a bill. */}
           {!aiBusy && (
-            <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border-2 border-[color:var(--v2-border)] px-5 text-base font-medium hover:bg-accent">
+            <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-sm border-2 border-[color:var(--v2-border)] px-5 text-base font-medium hover:bg-accent">
               📄{" "}
               <Tri
                 bm="Pilih fail (gambar atau PDF)"
@@ -418,7 +418,7 @@ export function NotesReview() {
         )}
         {/* 0-1 (26 号报告 2-1): which meeting is this photo? */}
         {askWhichMeeting && !aiBusy && (
-          <div className="flex flex-col gap-3 rounded-xl border-2 border-amber-300 bg-amber-50 p-4 dark:bg-amber-400/10">
+          <div className="flex flex-col gap-3 rounded-md border-2 border-amber-300 bg-amber-50 p-4 dark:bg-amber-400/10">
             <p className="text-base font-medium text-amber-900 dark:text-amber-100">
               <Tri
                 bm="Mesyuarat di skrin ini sudah disimpan ke Sejarah. Gambar baharu ini —"
@@ -549,7 +549,7 @@ export function NotesReview() {
         }
       >
         {nothingYet ? (
-          <p className="rounded-xl border-2 border-dashed p-4 text-base text-muted-foreground">
+          <p className="rounded-md border-2 border-dashed p-4 text-base text-muted-foreground">
             <Tri
               bm="Ambil gambar nota mesyuarat di atas dahulu — Minit hanya boleh menyemak perkara yang ia sudah baca."
               zh="请先在上面拍下会议笔记 —— Minit 只能核对它已经读到的内容。"
@@ -651,7 +651,7 @@ export function NotesReview() {
                   "例如：青年组周会",
                   "for example: Youth Section weekly meeting",
                 )}
-                className="h-12 w-full max-w-md rounded-lg border border-input bg-white px-3 text-base dark:bg-transparent"
+                className="h-12 w-full max-w-md rounded-sm border border-input bg-white px-3 text-base dark:bg-transparent"
                 aria-label="Your own name for this meeting"
               />
               <p className="text-base text-muted-foreground">

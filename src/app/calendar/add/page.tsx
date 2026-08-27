@@ -63,7 +63,7 @@ export default function AddEventsPage() {
           <Link
             href="/calendar"
             aria-label="Kalendar"
-            className="v2-glass flex h-10 w-10 items-center justify-center rounded-full text-[color:var(--v2-text)] transition-transform hover:scale-105"
+            className="v2-glass flex h-10 w-10 items-center justify-center rounded-sm text-[color:var(--v2-text)] transition-transform hover:scale-105"
           >
             <ArrowLeft className="h-5 w-5" strokeWidth={1.8} />
           </Link>
@@ -85,7 +85,7 @@ export default function AddEventsPage() {
       <EventsSection onAdd={addEvent} />
 
       {syncIssue === "permission" && (
-        <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-base text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+        <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-base text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
           <Tri
             bm="Akaun anda baca sahaja, jadi acara ini tidak dimasukkan ke rekod pertubuhan — ia kekal pada peranti ini sahaja. Minta mana-mana ahli jawatankuasa (kecuali juruaudit) menambahnya."
             zh="您的账号是只读（审计）账号，这个活动进不了机构的记录 —— 只存在这台设备上。要让其他委员看到，请找除审计外的任何成员来添加。"
@@ -94,7 +94,7 @@ export default function AddEventsPage() {
         </p>
       )}
       {syncIssue === "other" && (
-        <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-base text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+        <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-base text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
           <Tri
             bm="Acara ini disimpan pada peranti ini sahaja — ia belum sampai ke rekod pertubuhan, jadi ahli jawatankuasa lain tidak akan melihatnya. Pilih pertubuhan anda, atau cuba lagi apabila ada talian."
             zh="这些活动只存在这台设备上 —— 还没有进到机构的记录里，所以其他委员看不到。请选好您的机构，或者等有网络时再试。"

@@ -89,7 +89,7 @@ export function WelcomeCard() {
         <button
           type="button"
           onClick={() => setDismissed(true)}
-          className="inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted/60"
+          className="inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted/60"
           aria-label={t("Tutup", "关闭", "Close")}
         >
           <X className="h-5 w-5" strokeWidth={2.2} />
@@ -100,7 +100,7 @@ export function WelcomeCard() {
           <li key={s.href}>
             <Link
               href={s.href}
-              className="flex min-h-11 items-center gap-3 rounded-xl border-2 border-[color:var(--v2-border)] px-3 py-2 text-base font-medium hover:border-[color:var(--v2-primary)] hover:bg-[color:var(--v2-primary-soft)]"
+              className="flex min-h-11 items-center gap-3 rounded-md border-2 border-[color:var(--v2-border)] px-3 py-2 text-base font-medium hover:border-[color:var(--v2-primary)] hover:bg-[color:var(--v2-primary-soft)]"
             >
               <span aria-hidden>{s.icon}</span>
               <Tri bm={s.bm} zh={s.zh} en={s.en} />

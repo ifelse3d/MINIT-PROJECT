@@ -40,7 +40,7 @@ export function MinutesFilters({
     <form
       method="get"
       action="/minutes/history"
-      className="mb-6 flex flex-wrap items-end gap-3 rounded-2xl border-2 border-[color:var(--v2-border)] bg-white/60 p-4 dark:bg-white/5"
+      className="mb-6 flex flex-wrap items-end gap-3 rounded-md border-2 border-[color:var(--v2-border)] bg-white/60 p-4 dark:bg-white/5"
     >
       {/* C-6: w-full + min-w-0, or the select's longest option (the full BM
           meeting names ride along in every language — G-4) sets its intrinsic

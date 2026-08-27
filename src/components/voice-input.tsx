@@ -143,7 +143,7 @@ export function VoiceButton({
           " · " +
           t("percubaan", "试验中", "experimental")
         }
-        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border transition-colors ${
+        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-sm border transition-colors ${
           listening
             ? "border-red-400 bg-red-50 text-red-600 dark:bg-red-400/15"
             : "border-[color:var(--v2-outline-border)] text-[color:var(--v2-text-soft)] hover:bg-[color:var(--v2-primary-soft)]"

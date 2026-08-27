@@ -49,7 +49,7 @@ export const AUTH_CARD = "v2-glass px-5 pb-6 pt-7 sm:px-8";
 /** Text input for the auth forms. `hasError` reddens the border. */
 export function authInputClass(hasError: boolean): string {
   return [
-    "w-full rounded-xl border bg-[color:var(--v2-card)] px-4 py-3 text-base text-[color:var(--v2-text)]",
+    "w-full rounded-md border bg-[color:var(--v2-card)] px-4 py-3 text-base text-[color:var(--v2-text)]",
     "placeholder:text-[color:var(--v2-text-soft)]/60 outline-none transition-[border-color,box-shadow] duration-150",
     "focus:border-[color:var(--v2-primary)] focus:shadow-[0_0_0_3px_rgba(91,75,214,0.18)]",
     hasError ? "border-red-400" : "border-[color:var(--v2-outline-border)]",

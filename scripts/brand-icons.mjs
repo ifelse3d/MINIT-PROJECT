@@ -1,8 +1,9 @@
 // ---------------------------------------------------------------------------
-// BRAND ICONS from the green "two people = M" logo (拍板 0-8, work order 32 P1).
+// BRAND ICONS from the VIOLET "two people = M" logo (J 8/27 下午拍板 — the
+// violet redesign supersedes the morning's green 拍板 0-8).
 //
-// Source: scripts/assets/minit-logo.png (J's asset from the avocado pack —
-// a green rounded-square tile with a white margin around it).
+// Source: scripts/assets/minit-logo.png (J's supplied asset — a violet
+// gradient rounded-square tile with a white margin around it).
 //
 // What this produces, deterministically, so a future logo swap is ONE command
 // (`node scripts/brand-icons.mjs`):
@@ -81,6 +82,7 @@ const out = async (size, file) => {
 
 await out(512, "icon-512.png");
 await out(192, "icon-192.png");
+await out(180, "apple-touch-icon.png"); // spec §2.6: 180px for iOS
 await out(96, "brand-logo-96.png");
 
 const icoSizes = [48, 32, 16];

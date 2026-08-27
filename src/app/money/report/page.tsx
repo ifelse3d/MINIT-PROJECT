@@ -126,7 +126,7 @@ export default async function MoneyReportPage({
               <Link
                 key={qk.en}
                 href={`/money/report?dari=${qk.fromIso}&hingga=${qk.toIso}`}
-                className={`inline-flex min-h-11 items-center rounded-full border-2 px-4 text-base font-medium ${
+                className={`inline-flex min-h-11 items-center rounded-xs border-2 px-4 text-base font-medium ${
                   activePeriod
                     ? "border-[color:var(--v2-primary)] bg-[color:var(--v2-primary-soft)]"
                     : "border-[color:var(--v2-outline-border)] hover:bg-[color:var(--v2-primary-soft)]"
@@ -162,7 +162,7 @@ export default async function MoneyReportPage({
         </div>
 
         {statement === null ? (
-          <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-4 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+          <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-4 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
             <Tri
               bm="Penyata tidak dapat dikira sekarang — pangkalan data tidak dapat dibaca. Cuba sebentar lagi."
               zh="现在算不出财报 —— 数据库读取不了。请稍后再试。"
@@ -174,7 +174,7 @@ export default async function MoneyReportPage({
             {/* §1-7: an empty period is not a dead wall — say where the money
                 actually is, with a one-tap jump. */}
             {periodIsEmpty && (
-              <p className="rounded-xl border-2 border-[color:var(--v2-outline-border)] bg-muted/30 p-4 text-base">
+              <p className="rounded-md border-2 border-[color:var(--v2-outline-border)] bg-muted/30 p-4 text-base">
                 {latestMonthPeriod ? (
                   <>
                     <Tri
@@ -204,7 +204,7 @@ export default async function MoneyReportPage({
               </p>
             )}
             {/* The statement table. */}
-            <div className="overflow-x-auto rounded-xl border-2 border-[color:var(--v2-border)]">
+            <div className="overflow-x-auto rounded-md border-2 border-[color:var(--v2-border)]">
               <table className="w-full text-base">
                 <tbody>
                   <tr className="border-b border-[color:var(--v2-border)] bg-muted/40">
@@ -290,7 +290,7 @@ export default async function MoneyReportPage({
 
             {/* In-kind schedule: goods, never money (拍板③). */}
             {statement.inKind.length > 0 && (
-              <div className="flex flex-col gap-2 rounded-xl border-2 border-teal-200 p-4 dark:border-teal-400/30">
+              <div className="flex flex-col gap-2 rounded-md border-2 border-teal-200 p-4 dark:border-teal-400/30">
                 <p className="font-semibold">
                   📦{" "}
                   <Tri

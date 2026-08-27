@@ -31,7 +31,7 @@ import { Tri } from "@/components/language-provider";
 
 export function NewOrgBanner() {
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border-2 border-green-400 bg-green-50/70 p-4 dark:border-green-500/40 dark:bg-green-400/10">
+    <div className="flex flex-col gap-3 rounded-md border-2 border-green-400 bg-green-50/70 p-4 dark:border-green-500/40 dark:bg-green-400/10">
       <p className="text-lg font-semibold text-green-900 dark:text-green-100">
         ✓{" "}
         <Tri

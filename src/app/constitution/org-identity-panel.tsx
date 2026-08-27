@@ -76,7 +76,7 @@ export function OrgIdentityPanel({
   if (clauses.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border-2 border-purple-200 bg-purple-50/50 p-4 dark:border-purple-400/30 dark:bg-purple-400/10">
+    <div className="flex flex-col gap-4 rounded-md border-2 border-purple-200 bg-purple-50/50 p-4 dark:border-purple-400/30 dark:bg-purple-400/10">
       <p className="text-lg font-semibold">
         📋{" "}
         <Tri
@@ -165,7 +165,7 @@ function NameRow({
           )}
         </p>
       ) : (
-        <div className="mt-3 flex flex-col gap-2 rounded-xl border-2 border-amber-300 bg-amber-50 p-3 dark:border-amber-400/40 dark:bg-amber-400/10">
+        <div className="mt-3 flex flex-col gap-2 rounded-md border-2 border-amber-300 bg-amber-50 p-3 dark:border-amber-400/40 dark:bg-amber-400/10">
           <p className="text-base font-medium text-amber-900 dark:text-amber-100">
             <Tri
               bm="Nama ini tidak sama dengan nama yang Minit guna sekarang:"
@@ -269,7 +269,7 @@ function AmendmentRow({
         />
       }
     >
-      <div className="flex flex-col gap-3 rounded-xl border-2 border-amber-300 bg-amber-50 p-3 dark:border-amber-400/40 dark:bg-amber-400/10">
+      <div className="flex flex-col gap-3 rounded-md border-2 border-amber-300 bg-amber-50 p-3 dark:border-amber-400/40 dark:bg-amber-400/10">
         <p className="text-base font-medium text-amber-900 dark:text-amber-100">
           ⚠{" "}
           <Tri

@@ -48,7 +48,7 @@ export function DeleteRegisterSection({ orgName }: { orgName: string }) {
   }
 
   return (
-    <div className="rounded-2xl border border-red-300/70 bg-red-50/60 p-4 dark:border-red-500/30 dark:bg-red-500/10">
+    <div className="rounded-md border border-red-300/70 bg-red-50/60 p-4 dark:border-red-500/30 dark:bg-red-500/10">
       <h3 className="font-semibold text-red-900">
         <Tri
           bm="Padam daftar derma pada peranti ini"

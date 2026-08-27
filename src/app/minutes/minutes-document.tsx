@@ -120,7 +120,7 @@ export function MinutesDocument() {
       >
         {notReady ? (
           <>
-            <p className="rounded-xl border-2 border-dashed p-4 text-base text-muted-foreground">
+            <p className="rounded-md border-2 border-dashed p-4 text-base text-muted-foreground">
               {notReady}
             </p>
             <NextStepLink
@@ -171,9 +171,9 @@ export function MinutesDocument() {
                     onClick={() => setDocLang(code)}
                     aria-pressed={docLang === code}
                     className={
-                      "rounded-xl border-2 px-4 py-2 text-base transition " +
+                      "rounded-md border-2 px-4 py-2 text-base transition " +
                       (docLang === code
-                        ? "border-[#7c6cf5] bg-[#7c6cf5]/10 font-semibold"
+                        ? "border-[#a855f7] bg-[#a855f7]/10 font-semibold"
                         : "border-input hover:bg-black/5 dark:hover:bg-white/5")
                     }
                   >
@@ -221,7 +221,7 @@ export function MinutesDocument() {
                 </span>
               </div>
               {draftError && (
-                <p className="rounded-xl border-2 border-red-300 bg-red-50 p-3 text-base font-medium whitespace-pre-line text-red-900 dark:bg-red-400/10 dark:text-red-100">
+                <p className="rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium whitespace-pre-line text-red-900 dark:bg-red-400/10 dark:text-red-100">
                   {draftError}
                   {"\n"}
                   <Tri
@@ -253,7 +253,7 @@ export function MinutesDocument() {
                 }
                 spellCheck={false}
                 rows={22}
-                className="w-full rounded-xl border-2 border-input bg-white/80 p-4 text-base leading-relaxed dark:bg-white/5"
+                className="w-full rounded-md border-2 border-input bg-white/80 p-4 text-base leading-relaxed dark:bg-white/5"
               />
               <p className="text-sm text-muted-foreground">
                 <Tri
@@ -280,13 +280,13 @@ export function MinutesDocument() {
               )}
             </div>
           ) : (
-            <pre className="rounded-xl border-2 border-input bg-white/80 p-4 text-base whitespace-pre-wrap dark:bg-white/5">
+            <pre className="rounded-md border-2 border-input bg-white/80 p-4 text-base whitespace-pre-wrap dark:bg-white/5">
               {shownDocument}
             </pre>
           )}
           <div className="flex flex-col gap-3">
             {isSample && (
-              <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+              <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
                 <Tri
                   bm="Ini contoh — tidak boleh disimpan ke sejarah pertubuhan anda. Ambil gambar nota anda dahulu."
                   zh="这是示范内容，不能保存到您机构的历史。请先拍下您自己的笔记。"
@@ -330,7 +330,7 @@ export function MinutesDocument() {
           </div>
           {alreadySaved && (
             <>
-              <p className="rounded-xl border-2 border-green-400 bg-green-50 p-3 text-base font-medium text-green-900 dark:bg-green-400/10 dark:text-green-100">
+              <p className="rounded-md border-2 border-green-400 bg-green-50 p-3 text-base font-medium text-green-900 dark:bg-green-400/10 dark:text-green-100">
                 ✓{" "}
                 <Tri
                   bm="Minit disimpan ke sejarah pertubuhan."
@@ -361,7 +361,7 @@ export function MinutesDocument() {
             </>
           )}
           {saveResult && saveResult !== "ok" && (
-            <p className="rounded-xl border-2 border-red-300 bg-red-50 p-3 text-base font-medium whitespace-pre-line text-red-900 dark:bg-red-400/10 dark:text-red-100">
+            <p className="rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium whitespace-pre-line text-red-900 dark:bg-red-400/10 dark:text-red-100">
               {saveResult}
             </p>
           )}
@@ -383,12 +383,12 @@ export function MinutesDocument() {
         }
       >
         {notReady ? (
-          <p className="rounded-xl border-2 border-dashed p-4 text-base text-muted-foreground">
+          <p className="rounded-md border-2 border-dashed p-4 text-base text-muted-foreground">
             {notReady}
           </p>
         ) : (
         <div>
-          <p className="mb-4 rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+          <p className="mb-4 rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
             ⚠{" "}
             <Tri
               bm="Semak nama medan dengan portal sebenar sebelum menghantar. Nama medan di laman ROS boleh berubah."
@@ -398,7 +398,7 @@ export function MinutesDocument() {
           </p>
           <div className="grid gap-3">
             {pastePack.map((row) => (
-              <div key={row.erosesField} className="rounded-lg border p-4">
+              <div key={row.erosesField} className="rounded-sm border p-4">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <div className="font-medium">{row.erosesField}</div>
@@ -513,7 +513,7 @@ export function MinutesDocument() {
         {evRows?.map((r, i) => (
           <div
             key={i}
-            className={`flex flex-wrap items-center gap-3 rounded-lg border bg-background p-3 ${
+            className={`flex flex-wrap items-center gap-3 rounded-sm border bg-background p-3 ${
               // Was opacity-60 on the whole row including its text.
               r.added ? "border-green-300 bg-green-50" : ""
             }`}

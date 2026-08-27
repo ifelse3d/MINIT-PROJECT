@@ -117,7 +117,7 @@ export function FilingsView({
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 pb-10 text-base">
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-100/80 text-3xl ring-1 ring-white/60 backdrop-blur dark:bg-blue-400/15 dark:ring-white/10">
+          <div className="flex h-14 w-14 items-center justify-center rounded-md bg-blue-100/80 text-3xl ring-1 ring-white/60 backdrop-blur dark:bg-blue-400/15 dark:ring-white/10">
             📋
           </div>
           <h1 className="text-3xl font-semibold tracking-tight">
@@ -131,7 +131,7 @@ export function FilingsView({
       {/* B-5: an internal committee files nothing with ROS — say so instead
           of nagging, but keep the page working (a saved link must not break). */}
       {orgType === "committee" && (
-        <p className="rounded-xl border-2 border-[color:var(--v2-border)] bg-[color:var(--v2-card)] p-4 text-base">
+        <p className="rounded-md border-2 border-[color:var(--v2-border)] bg-[color:var(--v2-card)] p-4 text-base">
           ℹ️{" "}
           <Tri
             bm="Pertubuhan ini didaftarkan dalam Minit sebagai jawatankuasa dalaman/sementara — ia tidak memfailkan Penyata Tahunan eROSES. Bahagian di bawah kekal untuk rujukan."
@@ -157,7 +157,7 @@ export function FilingsView({
         </CardHeader>
         <CardContent>
           {pastePack ? (
-            <div className="overflow-x-auto rounded-lg border">
+            <div className="overflow-x-auto rounded-sm border">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -273,7 +273,7 @@ export function FilingsView({
               return (
                 <div
                   key={row.key}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-sm border p-3"
                 >
                   <span className="font-medium">
                     <Tri bm={row.bm} zh={row.zh} en={row.en} />
@@ -327,7 +327,7 @@ export function FilingsView({
           {/* No confirmed AGM ⇒ no annual-return deadline is shown at all. We
               used to show one computed from fictional sample minutes. */}
           {!agm && (
-            <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+            <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
               <Tri
                 bm="Tarikh akhir Penyata Tahunan belum boleh dikira: pertubuhan ini belum ada minit Mesyuarat Agung yang disahkan. Sahkan minit AGM anda dahulu."
                 zh="还不能算出年度呈报的截止日期：这个机构还没有已确认的会员大会（AGM）记录。请先确认您的 AGM 会议记录。"
@@ -345,7 +345,7 @@ export function FilingsView({
               return (
                 <div
                   key={`${d.kind}-${d.dueDateIso}`}
-                  className="flex flex-wrap items-center gap-3 rounded-lg border p-4"
+                  className="flex flex-wrap items-center gap-3 rounded-sm border p-4"
                 >
                   <div className="flex-1">
                     <p className="font-medium">
@@ -413,7 +413,7 @@ function ChecklistItem({
   href: string;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border p-3">
+    <div className="flex items-center gap-3 rounded-sm border p-3">
       <span
         className={`flex h-6 w-6 items-center justify-center rounded-full text-sm ${
           done ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-900"

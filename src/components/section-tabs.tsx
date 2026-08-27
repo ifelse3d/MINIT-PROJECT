@@ -77,7 +77,7 @@ export function SectionTabs({
       aria-label={t(ariaLabelBm, ariaLabelZh, ariaLabelEn)}
       className="sticky top-0 z-20 py-2"
     >
-      <ol className="v2-glass v2-scroll flex items-center gap-1 overflow-x-auto rounded-full px-2 py-2">
+      <ol className="v2-glass v2-scroll flex items-center gap-1 overflow-x-auto rounded-md px-2 py-2">
         {tabs.map((tab, i) => {
           const here = pathname === tab.href;
           const tone =
@@ -99,7 +99,7 @@ export function SectionTabs({
                 // F-3 (2026-08-25): min-h-11 = the app's 44px touch-target
                 // floor. These pills are the PRIMARY step navigation on a
                 // phone; 36px was below the floor everything else keeps.
-                className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border-2 px-3 text-base font-medium ${tone} ${
+                className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xs border-2 px-3 text-base font-medium ${tone} ${
                   // The page you are ON is the one thing this rail must make
                   // unmissable — colour alone cannot do it, because two tabs can
                   // legitimately share a colour.
@@ -120,7 +120,7 @@ export function SectionTabs({
                   // D-4 (work order 31, 客⑩): a solid badge that SAYS what the
                   // number is. The old faint circle with a bare digit read as
                   // decoration, not as "3 things are waiting for you".
-                  <span className="rounded-full bg-amber-700 px-2 py-0.5 text-sm font-bold text-white dark:bg-amber-400 dark:text-black">
+                  <span className="rounded-xs bg-amber-700 px-2 py-0.5 text-sm font-bold text-white dark:bg-amber-400 dark:text-black">
                     {t(
                       `${tab.count} untuk disemak`,
                       `${tab.count} 项待核对`,
@@ -140,7 +140,7 @@ export function SectionTabs({
             <Link
               href={entry.href}
               aria-current={pathname === entry.href ? "page" : undefined}
-              className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border-2 border-dashed border-slate-300 px-3 text-base font-medium text-slate-600 dark:border-slate-500 dark:text-slate-300 ${
+              className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xs border-2 border-dashed border-slate-300 px-3 text-base font-medium text-slate-600 dark:border-slate-500 dark:text-slate-300 ${
                 pathname === entry.href
                   ? "ring-2 ring-slate-900/70 ring-offset-1 dark:ring-white/80"
                   : "hover:brightness-95 active:scale-95"

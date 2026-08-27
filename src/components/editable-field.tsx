@@ -104,7 +104,7 @@ export function EditableField({
               type={kind === "date" ? "date" : "text"}
               placeholder={kind === "amount" ? "RM 0.00" : undefined}
               onChange={(ev) => setDraft(ev.target.value)}
-              className="h-12 w-full max-w-md rounded-lg border border-input bg-white px-3 text-base dark:bg-transparent"
+              className="h-12 w-full max-w-md rounded-sm border border-input bg-white px-3 text-base dark:bg-transparent"
               aria-label={t(
                 `Nilai untuk ${labelBm}`,
                 `${labelZh}的内容`,

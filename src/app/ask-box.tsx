@@ -304,7 +304,7 @@ export function AskBox({
   }
 
   return (
-    <section className="v2-glass-strong rounded-3xl border-2 border-[#7c6cf5]/40 p-4 sm:p-6">
+    <section className="v2-glass-strong rounded-md border-2 border-[#a855f7]/40 p-4 sm:p-6">
       <h2 className="font-heading text-2xl font-semibold leading-snug">
         <Tri
           bm="Ada kertas di tangan, atau ada soalan?"
@@ -318,7 +318,7 @@ export function AskBox({
           and it read like notes to ourselves rather than something a user needs. */}
 
       {!hasOrg && (
-        <p className="mt-4 rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+        <p className="mt-4 rounded-md border-2 border-amber-300 bg-amber-50 p-4 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
           <Tri
             bm="Beritahu Minit nama pertubuhan anda dahulu — barulah ia tahu dokumen ini untuk siapa."
             zh="请先告诉 Minit 您机构的名字 —— 它才知道这些文件是属于谁的。"
@@ -381,7 +381,7 @@ export function AskBox({
         {/* A-2: the staged file, visible and removable BEFORE anything is
             sent or charged. */}
         {staged && (
-          <div className="flex flex-wrap items-center gap-3 rounded-2xl border-2 border-[#7c6cf5]/40 bg-white/70 p-3 dark:bg-white/10">
+          <div className="flex flex-wrap items-center gap-3 rounded-md border-2 border-[#a855f7]/40 bg-white/70 p-3 dark:bg-white/10">
             <span className="text-base font-medium">
               📄 {staged.name}{" "}
               <span className="text-muted-foreground">
@@ -401,7 +401,7 @@ export function AskBox({
                 setStaged(null);
                 setAskKind(null);
               }}
-              className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-full text-muted-foreground hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-400/10"
+              className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-sm text-muted-foreground hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-400/10"
               aria-label={t("Buang fail", "移除档案", "Remove the file")}
             >
               <X className="h-5 w-5" strokeWidth={2.2} />
@@ -412,7 +412,7 @@ export function AskBox({
         {/* Minit could not place the page → it asks, with one-tap answers.
             Only the read is charged after the person answers. */}
         {askKind && staged && (
-          <div className="flex flex-col gap-3 rounded-2xl border-2 border-[color:var(--v2-border)] bg-white/80 p-4 dark:bg-white/10">
+          <div className="flex flex-col gap-3 rounded-md border-2 border-[color:var(--v2-border)] bg-white/80 p-4 dark:bg-white/10">
             <p className="text-lg">
               🤔{" "}
               <Tri
@@ -468,7 +468,7 @@ export function AskBox({
         )}
 
         {busy === "file" && (
-          <p className="rounded-2xl border-2 border-[#7c6cf5]/40 bg-white/70 p-4 text-lg font-medium dark:bg-white/10">
+          <p className="rounded-md border-2 border-[#a855f7]/40 bg-white/70 p-4 text-lg font-medium dark:bg-white/10">
             ⏳{" "}
             <Tri
               bm={`Minit sedang tengok "${reading}" — ia akan kenal ini kertas apa, kemudian bacanya. Tunggu sekejap.`}
@@ -522,7 +522,7 @@ export function AskBox({
                       "e.g. When do I have to file the Annual Return?",
                     )
               }
-              className="w-full resize-y rounded-2xl border-2 border-input bg-white p-3.5 text-lg leading-snug disabled:opacity-60 dark:bg-white/5"
+              className="w-full resize-y rounded-md border-2 border-input bg-white p-3.5 text-lg leading-snug disabled:opacity-60 dark:bg-white/5"
             />
           </label>
           {/* C-4 (work order 27): speak instead of type — free, browser-side,
@@ -568,7 +568,7 @@ export function AskBox({
                 type="button"
                 disabled={busy !== null || outOfQuota}
                 onClick={() => setQuestion(t(ex.bm, ex.zh, ex.en))}
-                className="min-h-11 rounded-full border-2 border-[#7c6cf5]/30 bg-white/70 px-4 text-base font-medium hover:border-[#7c6cf5]/60 disabled:opacity-50 dark:bg-white/10"
+                className="min-h-11 rounded-xs border-2 border-[color:var(--v2-accent)]/30 bg-white/70 px-4 text-base font-medium hover:border-[color:var(--v2-accent)]/60 disabled:opacity-50 dark:bg-white/10"
               >
                 {t(ex.bm, ex.zh, ex.en)}
               </button>
@@ -578,7 +578,7 @@ export function AskBox({
       </div>
 
       {error && (
-        <p className="mt-4 rounded-2xl border-2 border-red-300 bg-red-50 p-4 text-base font-medium whitespace-pre-line text-red-900 dark:bg-red-400/10 dark:text-red-100">
+        <p className="mt-4 rounded-md border-2 border-red-300 bg-red-50 p-4 text-base font-medium whitespace-pre-line text-red-900 dark:bg-red-400/10 dark:text-red-100">
           {error}
         </p>
       )}
@@ -590,14 +590,14 @@ export function AskBox({
             turn.role === "user" ? (
               <p
                 key={i}
-                className="self-end rounded-2xl rounded-br-md bg-[color:var(--v2-primary-fill)] px-4 py-3 text-lg text-white sm:max-w-[80%]"
+                className="self-end rounded-md rounded-br-md bg-[color:var(--v2-primary-fill)] px-4 py-3 text-lg text-white sm:max-w-[80%]"
               >
                 {turn.text}
               </p>
             ) : (
               <div
                 key={i}
-                className="self-start rounded-2xl rounded-bl-md border-2 border-[color:var(--v2-border)] bg-white/80 px-4 py-3 sm:max-w-[85%] dark:bg-white/10"
+                className="self-start rounded-md rounded-bl-md border-2 border-[color:var(--v2-border)] bg-white/80 px-4 py-3 sm:max-w-[85%] dark:bg-white/10"
               >
                 <p className="text-lg whitespace-pre-line">{turn.text}</p>
                 {turn.button && (
@@ -630,7 +630,7 @@ export function AskBox({
               button, so the next thing the eye lands on is "Start again" —
               which reads as "this is stuck, press me". */}
           {busy === "chat" && (
-            <div className="self-start rounded-2xl rounded-bl-md border-2 border-[color:var(--v2-border)] bg-white/80 px-4 py-3 sm:max-w-[85%] dark:bg-white/10">
+            <div className="self-start rounded-md rounded-bl-md border-2 border-[color:var(--v2-border)] bg-white/80 px-4 py-3 sm:max-w-[85%] dark:bg-white/10">
               <p className="text-lg">
                 ⏳{" "}
                 <Tri

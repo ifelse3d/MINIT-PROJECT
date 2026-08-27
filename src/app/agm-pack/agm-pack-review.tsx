@@ -135,7 +135,7 @@ export function AgmPackReview({
   const heading = (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-100/80 text-3xl ring-1 ring-white/60 backdrop-blur dark:bg-blue-400/15 dark:ring-white/10">
+        <div className="flex h-14 w-14 items-center justify-center rounded-md bg-blue-100/80 text-3xl ring-1 ring-white/60 backdrop-blur dark:bg-blue-400/15 dark:ring-white/10">
           🏛️
         </div>
         <h1 className="text-3xl font-semibold tracking-tight">
@@ -158,7 +158,7 @@ export function AgmPackReview({
     return (
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 pb-10 text-base">
         {heading}
-        <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+        <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
           <Tri
             bm={`Anda sedang melihat CONTOH. Semuanya di bawah — pertubuhan "${p.orgName}", tarikh, AJK — adalah rekaan. PDF dicap “CONTOH — JANGAN GUNA” pada setiap halaman.`}
             zh={`您现在看的是【示范】。下面的一切 ——「${p.orgName}」、日期、理事 —— 都是虚构的。PDF 每页盖「示范 — 请勿使用」。`}
@@ -361,7 +361,7 @@ export function AgmPackReview({
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {!factsReady && (
-            <p className="rounded-xl border-2 border-dashed p-3 text-base text-muted-foreground">
+            <p className="rounded-md border-2 border-dashed p-3 text-base text-muted-foreground">
               <Tri
                 bm="Isi tarikh, masa dan tempat di atas dahulu."
                 zh="请先在上面填好日期、时间、地点。"
@@ -404,7 +404,7 @@ export function AgmPackReview({
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {confirmedResolutions === null || confirmedResolutions.length === 0 ? (
-            <p className="rounded-xl border-2 border-dashed p-4 text-base text-muted-foreground">
+            <p className="rounded-md border-2 border-dashed p-4 text-base text-muted-foreground">
               <Tri
                 bm="Belum ada minit disahkan dengan keputusan untuk dipetik. Sahkan minit mesyuarat itu dahulu."
                 zh="还没有已确认、带决议的会议记录可以摘录。请先去确认那场会议的记录。"

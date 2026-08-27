@@ -111,7 +111,7 @@ function StatusChip({ status, count }: { status: StepStatus; count?: number }) {
   const s = STATUS_STYLE[status];
   return (
     <span
-      className={`inline-flex min-h-8 shrink-0 items-center rounded-full border-2 px-3 text-base font-semibold ${s.chip}`}
+      className={`inline-flex min-h-8 shrink-0 items-center rounded-xs border-2 px-3 text-base font-semibold ${s.chip}`}
     >
       {status === "done" && <Tri bm="✓ Siap" zh="✓ 完成" en="✓ Done" />}
       {status === "needs-you" && (
@@ -221,7 +221,7 @@ export function StepCard({
       id={id}
       ref={sectionRef}
       // scroll-mt keeps the card clear of the sticky progress rail.
-      className={`v2-glass scroll-mt-28 overflow-hidden rounded-3xl border-2 ${
+      className={`v2-glass scroll-mt-28 overflow-hidden rounded-md border-2 ${
         s.edge || "border-transparent"
       }`}
     >
@@ -268,7 +268,7 @@ export function StepCard({
         </span>
         <span
           aria-hidden
-          className={`flex shrink-0 items-center justify-center rounded-full text-muted-foreground ${
+          className={`flex shrink-0 items-center justify-center rounded-sm text-muted-foreground ${
             compact ? "size-9" : "size-11"
           }`}
         >
@@ -290,7 +290,7 @@ export function StepCard({
         <div className="border-t-2 border-[color:var(--v2-border)] p-4 sm:p-5">
           {status === "locked" && lockedReason ? (
             // A locked step explains itself instead of showing dead controls.
-            <p className="rounded-xl border-2 border-slate-300 bg-slate-50 p-4 text-base font-medium text-slate-800 dark:bg-white/10 dark:text-slate-100">
+            <p className="rounded-md border-2 border-slate-300 bg-slate-50 p-4 text-base font-medium text-slate-800 dark:bg-white/10 dark:text-slate-100">
               {lockedReason}
             </p>
           ) : (
@@ -337,7 +337,7 @@ export function StepGroup({
 
   return (
     <div
-      className={`overflow-hidden rounded-2xl border-2 ${
+      className={`overflow-hidden rounded-md border-2 ${
         done ? "border-green-300" : "border-amber-400"
       }`}
     >
@@ -419,7 +419,7 @@ export function StepProgress({ steps }: { steps: StepProgressItem[] }) {
       aria-label={t("Kemajuan", "进度", "Progress")}
       className="sticky top-0 z-20 py-2"
     >
-      <ol className="v2-glass v2-scroll flex items-center gap-1 overflow-x-auto rounded-full px-2 py-2">
+      <ol className="v2-glass v2-scroll flex items-center gap-1 overflow-x-auto rounded-md px-2 py-2">
         {steps.map((s, i) => {
           const tone =
             s.status === "done"
@@ -442,13 +442,13 @@ export function StepProgress({ steps }: { steps: StepProgressItem[] }) {
               {s.status === "needs-you" &&
                 typeof s.count === "number" &&
                 s.count > 0 && (
-                  <span className="rounded-full bg-amber-900/10 px-2 text-sm font-bold">
+                  <span className="rounded-xs bg-amber-900/10 px-2 text-sm font-bold">
                     {s.count}
                   </span>
                 )}
             </>
           );
-          const shape = `inline-flex min-h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border-2 px-3 text-base font-medium ${tone}`;
+          const shape = `inline-flex min-h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xs border-2 px-3 text-base font-medium ${tone}`;
           const targetId = s.targetId;
           return (
             <li key={i} className="flex shrink-0 items-center gap-1">
@@ -509,7 +509,7 @@ export function StepNextButton({
         onClick?.();
         goToStep(targetId);
       }}
-      className="v2-pill inline-flex min-h-12 items-center gap-2 self-start rounded-full bg-[color:var(--v2-primary-fill)] px-5 py-3 text-base font-semibold text-white shadow-[0_10px_26px_-10px_rgba(21,128,61,0.5)]"
+      className="v2-pill inline-flex min-h-12 items-center gap-2 self-start bg-[color:var(--v2-primary-fill)] px-5 py-3 text-base font-semibold text-[color:var(--v2-primary-on)] shadow-[var(--v2-shadow-soft)]"
     >
       <Tri bm={labelBm} zh={labelZh} en={labelEn} />
       <ArrowRight aria-hidden className="size-5" strokeWidth={2.4} />
@@ -533,9 +533,9 @@ export function NextAction({
       ? "border-green-400 bg-green-50 text-green-900 dark:bg-green-400/10 dark:text-green-100"
       : tone === "warning"
         ? "border-red-400 bg-red-50 text-red-900 dark:bg-red-400/10 dark:text-red-100"
-        : "border-[#7c6cf5]/50 bg-white/70 text-[color:var(--v2-text)] dark:bg-white/10";
+        : "border-[#a855f7]/50 bg-white/70 text-[color:var(--v2-text)] dark:bg-white/10";
   return (
-    <p className={`rounded-2xl border-2 p-4 text-lg font-medium ${cls}`}>
+    <p className={`rounded-md border-2 p-4 text-lg font-medium ${cls}`}>
       {children}
     </p>
   );

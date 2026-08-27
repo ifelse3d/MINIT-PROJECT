@@ -73,7 +73,7 @@ function Rendered({ block }: { block: Block }) {
 
     case "quote":
       return (
-        <div className="mt-6 rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 text-sm leading-relaxed text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+        <div className="mt-6 rounded-md border-2 border-amber-300 bg-amber-50 p-4 text-sm leading-relaxed text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
           {block.lines.map((line, i) => (
             <p key={i} className={i ? "mt-1" : undefined}>
               <Spans spans={line} />

@@ -160,7 +160,7 @@ export default async function PlanPage() {
         {plan.id !== "trial" &&
           usage &&
           usage.monthlyFreeQuota <= PLANS.trial.monthlyAiQuota && (
-            <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-sm font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+            <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-sm font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
               <Tri
                 bm={`Pelan ${plan.name.bm} sudah dipilih — kami mengaktifkannya secara manual selepas harga diumumkan. Sehingga itu, kuota AI kekal pada tahap percubaan (${PLANS.trial.monthlyAiQuota} sebulan).`}
                 zh={`已选「${plan.name.zh}」配套 —— 价格公布后由我们人工开通。开通之前，AI 用量照试用（每月 ${PLANS.trial.monthlyAiQuota} 次）。`}
@@ -227,7 +227,7 @@ export default async function PlanPage() {
         {contactEmail !== "" ? (
           <a
             href={`mailto:${contactEmail}?subject=Minit%20plan%20upgrade%20-%20${encodeURIComponent(active.name)}`}
-            className="inline-flex min-h-11 items-center rounded-xl bg-[color:var(--v2-primary-fill)] px-5 text-base font-semibold text-white"
+            className="inline-flex min-h-11 items-center rounded-md bg-[color:var(--v2-primary-fill)] px-5 text-base font-semibold text-white"
           >
             <Tri bm="Hubungi kami" zh="联络我们" en="Contact us" />
           </a>

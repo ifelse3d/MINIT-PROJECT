@@ -172,7 +172,7 @@ export function CashCustody() {
           person. It is worth what the record BOTH of them can see — so if it
           only reached this device, that has to be on screen, not swallowed. */}
       {custodyLocalOnly && (
-        <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+        <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
           <Tri
             bm="Perubahan ini tercatat pada peranti ini sahaja — ia belum sampai ke rekod pertubuhan, jadi HQ tidak dapat melihatnya lagi. Pilih pertubuhan anda, atau buka halaman ini semula apabila ada talian."
             zh="这次改动只记在这台设备上 —— 还没有进到机构的记录里，所以总会那边看不到。请选好您的机构，或者等有网络时再打开这一页一次。"
@@ -181,14 +181,14 @@ export function CashCustody() {
         </p>
       )}
       {error && (
-        <p className="rounded-xl border-2 border-red-300 bg-red-50 p-3 text-base text-red-900">
+        <p className="rounded-md border-2 border-red-300 bg-red-50 p-3 text-base text-red-900">
           {error}
         </p>
       )}
 
       <div className="flex flex-col gap-5">
         {/* How cash moves — a legend, not steps of a form. */}
-        <div className="flex flex-col gap-2 rounded-lg border bg-muted/30 p-4 sm:flex-row sm:items-center sm:gap-3">
+        <div className="flex flex-col gap-2 rounded-sm border bg-muted/30 p-4 sm:flex-row sm:items-center sm:gap-3">
           <span className="rounded-md bg-amber-100 px-3 py-1 text-sm font-medium text-amber-900">
             <Tri bm="Tunai di tangan pemungut" zh="钱在收款人手上" en="Cash with collector" />
           </span>
@@ -204,12 +204,12 @@ export function CashCustody() {
 
         {/* THE PER-ITEM REGISTER (拍板 0-6): every cash row, its own status,
             tick the ones being handed over. */}
-        <div className="flex flex-col gap-3 rounded-lg border p-4">
+        <div className="flex flex-col gap-3 rounded-sm border p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-base font-semibold">
               <Tri bm="Tunai, sekeping demi sekeping" zh="现金逐笔" en="Cash, row by row" />
             </p>
-            <div className="flex items-center gap-1 rounded-lg border p-0.5 text-sm">
+            <div className="flex items-center gap-1 rounded-sm border p-0.5 text-sm">
               <button
                 type="button"
                 onClick={() => setView("list")}
@@ -234,7 +234,7 @@ export function CashCustody() {
           </div>
 
           {cashRows.length === 0 ? (
-            <p className="rounded-xl border-2 border-dashed p-4 text-base text-muted-foreground">
+            <p className="rounded-md border-2 border-dashed p-4 text-base text-muted-foreground">
               <Tri
                 bm="Tiada tunai dalam rekod lagi. Derma tunai akan muncul di sini, sekeping demi sekeping."
                 zh="记录里还没有现金。现金捐款会逐笔出现在这里。"
@@ -308,7 +308,7 @@ export function CashCustody() {
         {balances.length > 0 && (
           <div className="grid gap-3 sm:grid-cols-2">
             {balances.map((b) => (
-              <div key={b.collector} className="rounded-lg border p-4">
+              <div key={b.collector} className="rounded-sm border p-4">
                 <p className="font-medium">{b.collector}</p>
                 <div className="mt-3 grid grid-cols-3 gap-2 text-center">
                   <div className="rounded-md bg-amber-50 p-2">
@@ -350,7 +350,7 @@ export function CashCustody() {
         {settled.map((batch) => (
           <div
             key={batch.id}
-            className="rounded-lg border border-green-300 bg-green-50 p-4 text-base"
+            className="rounded-sm border border-green-300 bg-green-50 p-4 text-base"
           >
             <div className="font-medium">
               ✅ {t("HQ sudah sahkan wang ini", "总会已确认这笔钱", "HQ has confirmed this money")}
@@ -381,7 +381,7 @@ export function CashCustody() {
         {cancelled.map((batch) => (
           <div
             key={batch.id}
-            className="rounded-lg border border-dashed p-4 text-base text-muted-foreground"
+            className="rounded-sm border border-dashed p-4 text-base text-muted-foreground"
           >
             <div className="font-medium">
               ✖ {t("Serahan dibatalkan", "已取消的交接记录", "Hand-over cancelled")}
@@ -403,7 +403,7 @@ export function CashCustody() {
           <h2 id="handover-title" className="text-xl font-semibold">
             <Tri bm="Rekod serahan tunai" zh="记录这次交接" en="Record this hand-over" />
           </h2>
-          <ul className="flex flex-col gap-1 rounded-lg border p-3 text-base">
+          <ul className="flex flex-col gap-1 rounded-sm border p-3 text-base">
             {chosen.map((d) => (
               <li key={d.id} className="flex flex-wrap justify-between gap-2">
                 <span>
@@ -575,7 +575,7 @@ function CashRowCard({
 }) {
   const status = rowStatus(d);
   return (
-    <div className={`rounded-lg border p-3 ${selected ? "border-[color:var(--v2-primary)]" : ""}`}>
+    <div className={`rounded-sm border p-3 ${selected ? "border-[color:var(--v2-primary)]" : ""}`}>
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="font-medium">{d.donorName}</p>
@@ -623,7 +623,7 @@ function PendingBatchCard({
   const [confirmCancel, setConfirmCancel] = useState(false);
 
   return (
-    <div className="rounded-lg border border-blue-300 bg-blue-50 p-4 text-base dark:bg-blue-400/10">
+    <div className="rounded-sm border border-blue-300 bg-blue-50 p-4 text-base dark:bg-blue-400/10">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="font-medium">

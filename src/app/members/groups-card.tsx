@@ -115,7 +115,7 @@ export function GroupsCard({
                 {(byGroup.get(g) ?? []).map((n) => (
                   <li
                     key={`${g}-${n}`}
-                    className="inline-flex items-center gap-1.5 rounded-full border-2 border-[color:var(--v2-border)] px-3 py-1 text-base"
+                    className="inline-flex items-center gap-1.5 rounded-xs border-2 border-[color:var(--v2-border)] px-3 py-1 text-base"
                   >
                     {n}
                     {canEdit && (
@@ -208,7 +208,7 @@ export function GroupsCard({
           </div>
 
           {failed && (
-            <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-base text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+            <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-base text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
               <Tri
                 bm="Tidak berjaya disimpan. Ciri kumpulan ini memerlukan satu kemas kini pangkalan data yang belum dijalankan — semua yang lain di halaman ini masih berfungsi seperti biasa."
                 zh="没有保存成功。分组这个功能需要一支还没有跑的资料库更新 —— 这一页其他东西都照常可以用。"

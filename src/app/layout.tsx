@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist_Mono, Inter } from "next/font/google";
+import { Geist_Mono, Poppins } from "next/font/google";
 import localFont from "next/font/local";
 import { cookies } from "next/headers";
 import "./globals.css";
@@ -19,10 +19,18 @@ import { isOperatorEmail } from "@/lib/admin-gate";
 import { AppShell } from "@/components/v3/shell";
 import { BRAND_NAME } from "@/lib/brand";
 
-const inter = Inter({
+// Redesign spec §2.5 (tan shi hui's violet brief, J 8/27 拍板): Poppins is
+// the brand face. It has NO CJK coverage, so Noto Sans SC below stays the
+// Chinese fallback. The CSS variable keeps its old name (--font-v2) — the
+// name is plumbing, and globals.css + forty components read it.
+// display:"swap" + adjustFontFallback: text is readable immediately and the
+// metric-matched fallback means the swap causes no visible reflow.
+const poppins = Poppins({
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
   variable: "--font-v2",
   display: "swap",
+  adjustFontFallback: true,
 });
 
 // Chinese UI face (Stage R: the interface renders ONE language, and 中文 is
@@ -43,7 +51,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: BRAND_NAME,
   manifest: "/manifest.webmanifest",
-  icons: { icon: "/icon-192.png", apple: "/icon-192.png" },
+  icons: { icon: "/icon-192.png", apple: "/apple-touch-icon.png" },
   description:
     "Pembantu pematuhan AI untuk persatuan berdaftar dan NGO Malaysia / AI compliance assistant for Malaysian registered societies and NGOs",
 };
@@ -107,7 +115,7 @@ export default async function RootLayout({
   return (
     <html
       lang={htmlLangFor(langMode)}
-      className={`${inter.variable} ${notoSansSC.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${poppins.variable} ${notoSansSC.variable} ${geistMono.variable} h-full antialiased`}
       // The boot script below adds the `dark` class and a font-size to <html>
       // BEFORE React hydrates, so the server-rendered attributes legitimately
       // differ from the live DOM. Without this, every dark-mode user gets a

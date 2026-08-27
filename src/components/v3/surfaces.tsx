@@ -113,7 +113,7 @@ export function GlassBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold ring-1 ring-inset",
+        "inline-flex items-center gap-1.5 rounded-xs px-3 py-1 text-sm font-semibold ring-1 ring-inset",
         toneMap[tone],
         className
       )}
@@ -136,7 +136,7 @@ export function IconChip({
   return (
     <span
       className={cn(
-        "inline-flex h-11 w-11 items-center justify-center rounded-xl",
+        "inline-flex h-11 w-11 items-center justify-center rounded-md",
         gradient
           ? "bg-[color:var(--v2-primary-fill)] text-white"
           : "bg-[color:var(--v2-primary-soft)] text-[color:var(--v2-primary)]",

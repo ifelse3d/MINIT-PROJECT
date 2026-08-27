@@ -359,7 +359,7 @@ export function ConstitutionReview({
 
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-100/80 text-3xl ring-1 ring-white/60 backdrop-blur dark:bg-purple-400/15 dark:ring-white/10">
+          <div className="flex h-14 w-14 items-center justify-center rounded-md bg-purple-100/80 text-3xl ring-1 ring-white/60 backdrop-blur dark:bg-purple-400/15 dark:ring-white/10">
             📜
           </div>
           <h1 className="text-3xl font-semibold tracking-tight">
@@ -406,7 +406,7 @@ export function ConstitutionReview({
             <Tri bm="fasal dibaca" zh="条条文已读入" en="clauses read" />
           </p>
         ) : isSample ? (
-          <div className="flex flex-wrap items-center gap-3 rounded-xl border-2 border-amber-300 bg-amber-50 p-3 dark:bg-amber-400/10">
+          <div className="flex flex-wrap items-center gap-3 rounded-md border-2 border-amber-300 bg-amber-50 p-3 dark:bg-amber-400/10">
             <p className="min-w-56 flex-1 text-base font-medium text-amber-900 dark:text-amber-100">
               <Tri
                 bm="Ini perlembagaan CONTOH (rekaan) — jawapan di bawah BUKAN daripada perlembagaan pertubuhan anda."
@@ -428,7 +428,7 @@ export function ConstitutionReview({
           </p>
         )}
         {storeMeta.corrupt && (
-          <p className="rounded-xl border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900 dark:bg-red-400/10 dark:text-red-100">
+          <p className="rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900 dark:bg-red-400/10 dark:text-red-100">
             <Tri
               bm="Perlembagaan yang tersimpan pada peranti ini tidak dapat dibaca, jadi Minit tiada fasal sekarang. Ambil gambar halaman-halaman itu semula."
               zh="这台设备上暂存的章程读不出来，所以 Minit 现在手上没有条文。请重新把章程的每一页拍一次。"
@@ -473,10 +473,10 @@ export function ConstitutionReview({
         <CardContent className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center gap-3">
             <label
-              className={`inline-flex cursor-pointer items-center gap-2 rounded-full px-5 py-3 text-base font-semibold text-white ${
+              className={`inline-flex cursor-pointer items-center gap-2 rounded-sm px-5 py-3 text-base font-semibold text-white ${
                 aiBusy
                   ? "cursor-wait bg-muted-foreground"
-                  : "v2-pill bg-[color:var(--v2-primary-fill)] shadow-[0_10px_26px_-10px_rgba(21,128,61,0.5)]"
+                  : "v2-pill bg-[color:var(--v2-primary-fill)] shadow-[var(--v2-shadow-soft)]"
               }`}
             >
               {aiBusy ? (
@@ -535,12 +535,12 @@ export function ConstitutionReview({
           {/* 0-5: the paid-tier privacy notice beside the upload door. */}
           <PdpaNote />
           {aiError && (
-            <div className="rounded-xl border-2 border-red-300 bg-red-50 p-3 text-base font-medium whitespace-pre-line text-red-900">
+            <div className="rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium whitespace-pre-line text-red-900">
               {aiError}
             </div>
           )}
           {storeMeta.quotaFull && (
-            <p className="rounded-xl border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900">
+            <p className="rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900">
               <Tri
                 bm="Peranti ini penuh, jadi fasal-fasal ini tidak dapat disimpan untuk kunjungan seterusnya."
                 zh="这台设备的储存空间满了，这些条文没能存下来，下次打开就看不到了。"
@@ -552,7 +552,7 @@ export function ConstitutionReview({
               Said plainly, because the old behaviour was to save nowhere and
               tell nobody. */}
           {saveWarning && (
-            <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-base font-medium text-amber-900">
+            <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-base font-medium text-amber-900">
               <Tri
                 bm="Fasal-fasal ini tersimpan pada peranti ini, tetapi belum disimpan ke dalam rekod pertubuhan — jadi peranti lain belum dapat melihatnya. Cuba muat semula halaman ini."
                 zh="这些条文存在这台设备上了，但还没存进机构记录，所以别的设备暂时看不到。可以重新载入这一页再试一次。"
@@ -609,7 +609,7 @@ export function ConstitutionReview({
           {/* No clauses = no question box. A search field that can only ever
               answer "I don't know" is worse than not offering it. */}
           {nothingYet ? (
-            <p className="rounded-xl border-2 border-slate-300 bg-slate-50 p-4 text-base font-medium text-slate-800 dark:bg-white/10 dark:text-slate-100">
+            <p className="rounded-md border-2 border-slate-300 bg-slate-50 p-4 text-base font-medium text-slate-800 dark:bg-white/10 dark:text-slate-100">
               <Tri
                 bm="Selepas Minit membaca perlembagaan anda, tanya di sini — setiap jawapan memetik fasal anda sendiri, perkataan demi perkataan."
                 zh="等 Minit 读过您的章程之后，就可以在这里提问 —— 每个答案都会逐字引用您自己的条文。"
@@ -636,7 +636,7 @@ export function ConstitutionReview({
                 "例如：开年度大会要提前几天通知？",
                 "e.g. How many days notice for the AGM?"
               )}
-              className="h-12 flex-1 rounded-lg border bg-background px-4 text-base shadow-sm outline-none focus:ring-2 focus:ring-purple-300"
+              className="h-12 flex-1 rounded-sm border bg-background px-4 text-base shadow-sm outline-none focus:ring-2 focus:ring-purple-300"
             />
             <Button type="submit" size="lg" className="text-base">
               <Tri bm="Tanya" zh="问" en="Ask" />
@@ -649,7 +649,7 @@ export function ConstitutionReview({
                 key={q.en}
                 type="button"
                 onClick={() => ask(q.bm)}
-                className="rounded-full border-2 border-purple-200 bg-purple-50 px-4 py-2 text-left leading-tight transition-colors hover:border-purple-400 hover:bg-purple-100"
+                className="rounded-xs border-2 border-purple-200 bg-purple-50 px-4 py-2 text-left leading-tight transition-colors hover:border-purple-400 hover:bg-purple-100"
               >
                 <span className="block font-medium">{q.bm}</span>
                 <span className="block text-sm text-muted-foreground">
@@ -670,7 +670,7 @@ export function ConstitutionReview({
                 :
               </div>
               {result.matches.map(({ clause }) => (
-                <div key={clause.clause_no} className="rounded-xl border-2 border-green-300 bg-green-50 p-4">
+                <div key={clause.clause_no} className="rounded-md border-2 border-green-300 bg-green-50 p-4">
                   <div className="mb-1 flex flex-wrap items-center gap-2">
                     <Badge variant="outline" className="border-green-400 bg-green-100 text-green-900">
                       {clause.clause_no}
@@ -690,7 +690,7 @@ export function ConstitutionReview({
           )}
 
           {result?.kind === "refusal" && (
-            <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-4 leading-relaxed whitespace-pre-wrap text-amber-900">
+            <div className="rounded-md border-2 border-amber-300 bg-amber-50 p-4 leading-relaxed whitespace-pre-wrap text-amber-900">
               {result.text}
             </div>
           )}
@@ -708,7 +708,7 @@ export function ConstitutionReview({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col gap-3 rounded-xl border-2 border-green-300 bg-green-50 p-4">
+            <div className="flex flex-col gap-3 rounded-md border-2 border-green-300 bg-green-50 p-4">
               <div className="flex items-center gap-3">
                 <div className="text-3xl">🏛️</div>
                 <div className="font-semibold">
@@ -763,8 +763,8 @@ export function ConstitutionReview({
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
           {clauses.map((c) => (
-            <details key={c.clause_no} className="group rounded-lg border">
-              <summary className="flex cursor-pointer list-none items-center gap-3 rounded-lg p-4 hover:bg-accent">
+            <details key={c.clause_no} className="group rounded-sm border">
+              <summary className="flex cursor-pointer list-none items-center gap-3 rounded-sm p-4 hover:bg-accent">
                 <Badge variant="outline" className="shrink-0 border-purple-300 bg-purple-50 text-purple-900">
                   {c.clause_no}
                 </Badge>

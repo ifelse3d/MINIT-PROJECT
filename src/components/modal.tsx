@@ -50,7 +50,7 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={labelledBy}
         tabIndex={-1}
-        className={`max-h-[90vh] w-full overflow-y-auto rounded-2xl bg-[color:var(--v2-card)] p-5 shadow-xl outline-none ${
+        className={`max-h-[90vh] w-full overflow-y-auto rounded-md bg-[color:var(--v2-card)] p-5 shadow-xl outline-none ${
           wide ? "max-w-2xl" : "max-w-md"
         }`}
         onClick={(e) => e.stopPropagation()}

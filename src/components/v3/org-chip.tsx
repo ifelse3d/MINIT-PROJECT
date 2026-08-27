@@ -202,7 +202,7 @@ export function OrgChip({
       <Link
         href="/orgs"
         className={cn(
-          "flex min-h-12 items-center justify-center rounded-2xl border-2 border-[#7c6cf5]/50 bg-white/80 px-4 text-base font-semibold text-[color:var(--v2-text)] dark:bg-white/10",
+          "flex min-h-12 items-center justify-center rounded-md border-2 border-[#a855f7]/50 bg-white/80 px-4 text-base font-semibold text-[color:var(--v2-text)] dark:bg-white/10",
           className,
         )}
       >
@@ -223,7 +223,7 @@ export function OrgChip({
     <Link
       href="/orgs"
       className={cn(
-        "block rounded-2xl bg-white/60 px-3.5 py-2.5 transition-colors hover:bg-white/80 dark:bg-white/10 dark:hover:bg-white/20",
+        "block rounded-md bg-white/60 px-3.5 py-2.5 transition-colors hover:bg-white/80 dark:bg-white/10 dark:hover:bg-white/20",
         className,
       )}
     >
@@ -235,7 +235,7 @@ export function OrgChip({
           {org.name}
         </span>
         {org.is_demo && (
-          <span className="rounded-full bg-amber-500 px-2 py-0.5 text-sm font-bold text-white">
+          <span className="rounded-xs bg-amber-500 px-2 py-0.5 text-sm font-bold text-white">
             DEMO
           </span>
         )}
@@ -312,7 +312,7 @@ export function AccountControls({ className }: { className?: string }) {
       {open && (
         <div
           role="menu"
-          className="v2-glass absolute right-0 top-13 z-50 w-56 overflow-hidden rounded-2xl p-1.5 shadow-[0_24px_60px_-20px_rgba(33,31,51,0.45)]"
+          className="v2-glass absolute right-0 top-13 z-50 w-56 overflow-hidden rounded-md p-1.5 shadow-[0_24px_60px_-20px_rgba(33,31,51,0.45)]"
         >
           <p className="truncate px-3 pt-2 text-base text-[color:var(--v2-text-soft)]">
             {email}
@@ -333,7 +333,7 @@ export function AccountControls({ className }: { className?: string }) {
                 role="menuitem"
                 onClick={() => setOpen(false)}
                 className={cn(
-                  "flex min-h-12 items-center gap-3 rounded-xl px-3 py-2.5 text-base font-medium transition-colors",
+                  "flex min-h-12 items-center gap-3 rounded-md px-3 py-2.5 text-base font-medium transition-colors",
                   active
                     ? "bg-[color:var(--v2-primary-fill)] text-white"
                     : "text-[color:var(--v2-text)] hover:bg-white/60 dark:hover:bg-white/10",
@@ -362,7 +362,7 @@ export function AccountControls({ className }: { className?: string }) {
               setOpen(false);
               setConfirmSignOut(true);
             }}
-            className="mt-1 flex w-full items-center gap-3 rounded-xl border-t border-white/40 px-3 py-2.5 text-sm font-medium text-[color:var(--v2-text-soft)] transition-colors hover:bg-white/60 dark:border-white/10 dark:hover:bg-white/10"
+            className="mt-1 flex w-full items-center gap-3 rounded-md border-t border-white/40 px-3 py-2.5 text-sm font-medium text-[color:var(--v2-text-soft)] transition-colors hover:bg-white/60 dark:border-white/10 dark:hover:bg-white/10"
           >
             <LogOut className="h-4 w-4 shrink-0" strokeWidth={1.7} />
             <Tri bm="Keluar" zh="退出" en="Sign out" />

@@ -47,7 +47,7 @@ export function DeleteOrgSection({
   }
 
   return (
-    <div className="rounded-3xl border border-red-300/70 bg-red-50/60 p-4 backdrop-blur dark:border-red-500/30 dark:bg-red-500/10">
+    <div className="rounded-md border border-red-300/70 bg-red-50/60 p-4 backdrop-blur dark:border-red-500/30 dark:bg-red-500/10">
       <h3 className="font-semibold text-red-900">
         <Tri bm="Padam pertubuhan ini" zh="删除该组织" en="Delete this organisation" />
       </h3>

@@ -27,7 +27,7 @@ import { Tri } from "@/components/language-provider";
 export const ASK_INPUT_ID = "minit-ask-input";
 
 const CARD_CLASS =
-  "flex min-h-28 flex-col justify-between gap-2 rounded-2xl border-2 " +
+  "flex min-h-28 flex-col justify-between gap-2 rounded-md border-2 " +
   "border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] p-4 " +
   "text-left transition-colors hover:border-[color:var(--v2-primary)] " +
   "hover:bg-[color:var(--v2-primary-soft)]";

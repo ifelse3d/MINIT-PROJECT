@@ -327,7 +327,7 @@ export function ExpensesView({ role }: { role: string }) {
   return (
     <div className="flex flex-col gap-6">
       {loadIssue === "db_behind" && (
-        <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+        <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
           <Tri
             bm="Bahagian perbelanjaan menunggu kemas kini pangkalan data (migration 25). Tiada apa-apa hilang — halaman ini mula berfungsi sebaik sahaja ia dijalankan."
             zh="开支这一区在等数据库更新（migration 25）。什么都不会丢 —— 那支 migration 跑完，这一页就能用了。"
@@ -388,7 +388,7 @@ export function ExpensesView({ role }: { role: string }) {
 
             {/* B-5④: the photo that came over from the ledger page. */}
             {handedPhoto && (
-              <div className="flex flex-col gap-2 rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-base text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+              <div className="flex flex-col gap-2 rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-base text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
                 <p className="font-medium">
                   📷{" "}
                   <Tri
@@ -421,7 +421,7 @@ export function ExpensesView({ role }: { role: string }) {
 
             {/* Photo first (the eROSES law): the receipt in the hand beats
                 seven fields. Cost said ON the button. */}
-            <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/20 p-4">
+            <div className="flex flex-wrap items-center gap-3 rounded-sm border bg-muted/20 p-4">
               <label
                 className={`inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-4 py-2 text-base font-medium text-primary-foreground shadow hover:bg-primary/90 ${
                   reading ? "pointer-events-none opacity-70" : ""
@@ -531,12 +531,12 @@ export function ExpensesView({ role }: { role: string }) {
             </div>
 
             {formError && (
-              <p className="rounded-xl border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900 dark:bg-red-400/10 dark:text-red-100">
+              <p className="rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900 dark:bg-red-400/10 dark:text-red-100">
                 {formError}
               </p>
             )}
             {formNotice && (
-              <p className="rounded-xl border-2 border-green-400 bg-green-50 p-3 text-base font-medium text-green-900 dark:bg-green-400/10 dark:text-green-100">
+              <p className="rounded-md border-2 border-green-400 bg-green-50 p-3 text-base font-medium text-green-900 dark:bg-green-400/10 dark:text-green-100">
                 ✓ {formNotice}
               </p>
             )}
@@ -570,12 +570,12 @@ export function ExpensesView({ role }: { role: string }) {
         >
           <div className="flex flex-col gap-3">
             {decideError && (
-              <p className="rounded-xl border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900 dark:bg-red-400/10 dark:text-red-100">
+              <p className="rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900 dark:bg-red-400/10 dark:text-red-100">
                 {decideError}
               </p>
             )}
             {[...pending, ...approvedUnpaid].map((r) => (
-              <div key={r.id} className="rounded-lg border p-4">
+              <div key={r.id} className="rounded-sm border p-4">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <p className="font-medium">{r.description}</p>
@@ -666,7 +666,7 @@ export function ExpensesView({ role }: { role: string }) {
         >
           <div className="flex flex-col gap-2">
             {mine.map((r) => (
-              <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
+              <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-sm border p-3">
                 <div>
                   <p className="font-medium">{r.description}</p>
                   <p className="text-sm text-muted-foreground">
@@ -706,7 +706,7 @@ export function ExpensesView({ role }: { role: string }) {
             <Tri bm="Memuatkan…" zh="载入中…" en="Loading…" />
           </p>
         ) : rows.length === 0 ? (
-          <p className="rounded-xl border-2 border-dashed p-4 text-base text-muted-foreground">
+          <p className="rounded-md border-2 border-dashed p-4 text-base text-muted-foreground">
             {loadIssue === null ? (
               <Tri
                 bm="Belum ada perbelanjaan direkodkan."
@@ -724,7 +724,7 @@ export function ExpensesView({ role }: { role: string }) {
         ) : (
           <div className="flex flex-col gap-2">
             {rows.map((r) => (
-              <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
+              <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-sm border p-3">
                 <div>
                   <p className="font-medium">
                     {r.description}

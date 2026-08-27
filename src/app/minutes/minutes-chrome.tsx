@@ -109,7 +109,7 @@ export function MinutesChrome({ children }: { children: ReactNode }) {
     return (
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 pb-10 text-base">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-100/80 text-3xl ring-1 ring-white/60 backdrop-blur dark:bg-amber-400/15 dark:ring-white/10">
+          <div className="flex h-14 w-14 items-center justify-center rounded-md bg-amber-100/80 text-3xl ring-1 ring-white/60 backdrop-blur dark:bg-amber-400/15 dark:ring-white/10">
             📝
           </div>
           <h1 className="text-3xl font-semibold tracking-tight">
@@ -129,7 +129,7 @@ export function MinutesChrome({ children }: { children: ReactNode }) {
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 pb-10 text-base">
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-100/80 text-3xl ring-1 ring-white/60 backdrop-blur dark:bg-amber-400/15 dark:ring-white/10">
+          <div className="flex h-14 w-14 items-center justify-center rounded-md bg-amber-100/80 text-3xl ring-1 ring-white/60 backdrop-blur dark:bg-amber-400/15 dark:ring-white/10">
             📝
           </div>
           <h1 className="text-3xl font-semibold tracking-tight">
@@ -163,7 +163,7 @@ export function MinutesChrome({ children }: { children: ReactNode }) {
         {/* Shown ONLY to someone who asked for the example — and it has a way
             out, instead of just telling them they are in the wrong place. */}
         {isSample && (
-          <div className="flex flex-wrap items-center gap-3 rounded-xl border-2 border-amber-300 bg-amber-50 p-3 dark:bg-amber-400/10">
+          <div className="flex flex-wrap items-center gap-3 rounded-md border-2 border-amber-300 bg-amber-50 p-3 dark:bg-amber-400/10">
             <p className="min-w-56 flex-1 text-base font-medium text-amber-900 dark:text-amber-100">
               <Tri
                 bm="Ini contoh sahaja — bukan data anda, dan hanya boleh dilihat. Ia tidak boleh diubah atau disimpan."
@@ -179,7 +179,7 @@ export function MinutesChrome({ children }: { children: ReactNode }) {
           </div>
         )}
         {storageNote === "photo-dropped" && (
-          <p className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+          <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
             <Tri
               bm="Telefon ini penuh, jadi gambar asal tidak dapat disimpan. Medan anda selamat. Simpan minit ini ke Sejarah sekarang."
               zh="这台手机的储存空间满了，原始照片没能留下。您填的内容还在。请现在就把会议记录保存到「历史」。"
@@ -188,7 +188,7 @@ export function MinutesChrome({ children }: { children: ReactNode }) {
           </p>
         )}
         {storageNote === "failed" && (
-          <p className="rounded-xl border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900 dark:bg-red-400/10 dark:text-red-100">
+          <p className="rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900 dark:bg-red-400/10 dark:text-red-100">
             <Tri
               bm="Kerja ini TIDAK dapat disimpan pada peranti ini. Jangan tutup halaman — semak semua medan dan tekan “Simpan ke Sejarah” sekarang."
               zh="这些内容无法暂存在这台设备上。请先不要关掉页面 —— 核对好所有栏位，马上按「保存到历史」。"
@@ -203,7 +203,7 @@ export function MinutesChrome({ children }: { children: ReactNode }) {
 
       {/* The one sentence answering "what do I do now?" — it has to survive the
           split, because on a single page the answer was "scroll down". */}
-      <p className="rounded-2xl border-2 border-[color:var(--v2-border)] bg-white/60 p-4 text-base font-medium dark:bg-white/5">
+      <p className="rounded-md border-2 border-[color:var(--v2-border)] bg-white/60 p-4 text-base font-medium dark:bg-white/5">
         {!isReal ? (
           <Tri
             bm="Mula di sini: ambil gambar nota mesyuarat tulisan tangan anda dan Minit akan membacanya — atau taip sendiri kalau tiada gambar."

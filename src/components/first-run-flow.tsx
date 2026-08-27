@@ -82,7 +82,7 @@ export function FirstRunFlow() {
                     setMode(o.key);
                     setStep(2);
                   }}
-                  className="flex flex-col items-start rounded-xl border border-[color:var(--v2-outline-border)] px-4 py-3 text-left transition-colors hover:border-[color:var(--v2-primary)] hover:bg-[color:var(--v2-primary-soft)]"
+                  className="flex flex-col items-start rounded-md border border-[color:var(--v2-outline-border)] px-4 py-3 text-left transition-colors hover:border-[color:var(--v2-primary)] hover:bg-[color:var(--v2-primary-soft)]"
                 >
                   <span className="text-lg font-semibold">{o.label}</span>
                   <span className="text-sm text-[color:var(--v2-text-soft)]">
@@ -134,7 +134,7 @@ export function FirstRunFlow() {
                     type="button"
                     onClick={() => setTextSize(size)}
                     aria-pressed={active}
-                    className={`flex min-h-14 items-center justify-between rounded-xl border-2 px-4 py-3 text-left transition-colors ${
+                    className={`flex min-h-14 items-center justify-between rounded-md border-2 px-4 py-3 text-left transition-colors ${
                       active
                         ? "border-[color:var(--v2-primary)] bg-[color:var(--v2-primary-soft)]"
                         : "border-[color:var(--v2-outline-border)] hover:border-[color:var(--v2-primary)]"

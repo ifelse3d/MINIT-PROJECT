@@ -154,7 +154,7 @@ export function EInvoisPack() {
             {/* B-7 (拍板 37): the month at a glance — real layout, not a
                 monospace dump pretending to be a report. */}
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-xl border-2 border-[color:var(--v2-border)] bg-white/60 p-3 dark:bg-white/5">
+              <div className="rounded-md border-2 border-[color:var(--v2-border)] bg-white/60 p-3 dark:bg-white/5">
                 <p className="text-sm text-muted-foreground">
                   <Tri
                     bm="Derma terkumpul (consolidated)"
@@ -170,7 +170,7 @@ export function EInvoisPack() {
                   <Tri bm="resit" zh="张收据" en="receipts" />
                 </p>
               </div>
-              <div className="rounded-xl border-2 border-[color:var(--v2-border)] bg-white/60 p-3 dark:bg-white/5">
+              <div className="rounded-md border-2 border-[color:var(--v2-border)] bg-white/60 p-3 dark:bg-white/5">
                 <p className="text-sm text-muted-foreground">
                   <Tri
                     bm="Derma individu ≥ RM10,000"
@@ -189,7 +189,7 @@ export function EInvoisPack() {
                   />
                 </p>
               </div>
-              <div className="rounded-xl border-2 border-[color:var(--v2-border)] bg-white/60 p-3 dark:bg-white/5">
+              <div className="rounded-md border-2 border-[color:var(--v2-border)] bg-white/60 p-3 dark:bg-white/5">
                 <p className="text-sm text-muted-foreground">
                   <Tri bm="Jumlah besar" zh="本月总额" en="Grand total" />
                 </p>
@@ -206,7 +206,7 @@ export function EInvoisPack() {
                   />
                 </p>
               </div>
-              <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 dark:bg-amber-400/10">
+              <div className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 dark:bg-amber-400/10">
                 <p className="text-sm text-amber-900/80 dark:text-amber-100/80">
                   <Tri bm="Tarikh akhir hantar" zh="申报截止" en="Submit by" />
                 </p>
@@ -225,7 +225,7 @@ export function EInvoisPack() {
 
             {/* B-7 / D21: the steps live HERE, on the page — not inside the
                 upload file, where a sheet of prose makes portals choke. */}
-            <ol className="flex flex-col gap-2 rounded-xl border-2 border-[color:var(--v2-border)] bg-white/60 p-4 text-base dark:bg-white/5">
+            <ol className="flex flex-col gap-2 rounded-md border-2 border-[color:var(--v2-border)] bg-white/60 p-4 text-base dark:bg-white/5">
               <li>
                 1️⃣{" "}
                 <Tri
@@ -285,7 +285,7 @@ export function EInvoisPack() {
           /* AUDIT FIX: `einvois.error` was computed and then NEVER rendered,
              so a real failure collapsed the whole section into the innocuous
              "issue receipts first" message even when receipts existed. */
-          <div className="rounded-xl border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900 dark:bg-red-400/10 dark:text-red-100">
+          <div className="rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900 dark:bg-red-400/10 dark:text-red-100">
             <Tri
               bm="Pek cukai bulan ini tidak dapat disiapkan. Semak jumlah dan nombor resit di halaman Resit, kemudian cuba lagi."
               zh="这个月的税务文件包做不出来。请先到「开收据」那一页检查金额和收据号码，然后再试。"

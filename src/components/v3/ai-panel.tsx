@@ -225,7 +225,7 @@ export function AIPanel({
           explanation as small print. Nothing competes with the title for
           width any more. */}
       <div className="flex items-center gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[color:var(--v2-primary-fill)] text-white shadow-[0_12px_30px_-8px_rgba(21,128,61,0.5)]">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[color:var(--v2-primary-fill)] text-white shadow-[var(--v2-shadow-soft)]">
           <Sparkles className="h-5 w-5" strokeWidth={1.9} />
         </span>
         <p className="min-w-0 flex-1 truncate text-lg font-semibold text-[color:var(--v2-text)]">
@@ -240,7 +240,7 @@ export function AIPanel({
             type="button"
             aria-label={t("Tutup", "关闭", "Close")}
             onClick={onClose}
-            className="flex size-10 shrink-0 items-center justify-center rounded-full text-[color:var(--v2-text-soft)] hover:bg-white/60 dark:hover:bg-white/10"
+            className="flex size-10 shrink-0 items-center justify-center rounded-sm text-[color:var(--v2-text-soft)] hover:bg-white/60 dark:hover:bg-white/10"
           >
             <X className="h-5 w-5" strokeWidth={2} />
           </button>
@@ -280,7 +280,7 @@ export function AIPanel({
       {/* Conversation */}
       <div className="v2-scroll mt-4 flex flex-1 flex-col gap-3 overflow-y-auto">
         {turns.length === 0 && (
-          <div className="rounded-3xl rounded-tl-lg bg-white/60 p-4 text-base leading-relaxed text-[color:var(--v2-text)] ring-1 ring-white/60 dark:bg-white/10 dark:ring-white/10">
+          <div className="rounded-md rounded-tl-sm bg-white/60 p-4 text-base leading-relaxed text-[color:var(--v2-text)] ring-1 ring-white/60 dark:bg-white/10 dark:ring-white/10">
             {/* A-3 (work order 31): the "I cannot see your records" opener was
                 written BEFORE 2026-08-22, when the assistant got its six
                 lookup tools — it has been able to read the org's confirmed
@@ -298,14 +298,14 @@ export function AIPanel({
           turn.role === "user" ? (
             <p
               key={i}
-              className="max-w-[88%] self-end rounded-3xl rounded-br-md bg-[color:var(--v2-primary-fill)] px-4 py-3 text-base text-white"
+              className="max-w-[88%] self-end rounded-md rounded-br-md bg-[color:var(--v2-primary-fill)] px-4 py-3 text-base text-white"
             >
               {turn.text}
             </p>
           ) : (
             <div
               key={i}
-              className="max-w-[92%] self-start rounded-3xl rounded-tl-lg bg-white/70 p-4 ring-1 ring-white/60 dark:bg-white/10 dark:ring-white/10"
+              className="max-w-[92%] self-start rounded-md rounded-tl-sm bg-white/70 p-4 ring-1 ring-white/60 dark:bg-white/10 dark:ring-white/10"
             >
               <p className="text-base leading-relaxed whitespace-pre-line text-[color:var(--v2-text)]">
                 {turn.text}
@@ -314,7 +314,7 @@ export function AIPanel({
                 <Link
                   href={turn.button.href}
                   onClick={onNavigate}
-                  className="v2-pill mt-3 inline-flex min-h-11 items-center gap-2 rounded-full bg-[color:var(--v2-primary-fill)] px-5 text-base font-semibold text-white"
+                  className="v2-pill mt-3 inline-flex min-h-11 items-center gap-2 bg-[color:var(--v2-primary-fill)] px-5 text-base font-semibold text-white"
                 >
                   <Tri
                     bm={turn.button.bm}
@@ -330,13 +330,13 @@ export function AIPanel({
         )}
 
         {busy && (
-          <p className="self-start rounded-3xl rounded-tl-lg bg-white/50 p-4 text-base text-[color:var(--v2-text-soft)] ring-1 ring-white/50 dark:bg-white/5 dark:ring-white/10">
+          <p className="self-start rounded-md rounded-tl-sm bg-white/50 p-4 text-base text-[color:var(--v2-text-soft)] ring-1 ring-white/50 dark:bg-white/5 dark:ring-white/10">
             <Tri bm="Sedang berfikir…" zh="想一下…" en="Thinking…" />
           </p>
         )}
 
         {isBlocked && (
-          <p className="rounded-2xl border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900 dark:bg-red-400/10 dark:text-red-100">
+          <p className="rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900 dark:bg-red-400/10 dark:text-red-100">
             <Tri
               bm="Bantuan AI untuk bulan ini sudah habis. Ia bermula semula pada 1 hari bulan depan — rekod dan dokumen anda masih boleh dibuka seperti biasa."
               zh="这个月的 AI 用量已经用完了。下个月 1 号会重新开始 —— 您的记录和文件都还能照常打开。"
@@ -346,7 +346,7 @@ export function AIPanel({
         )}
 
         {error && !isBlocked && (
-          <p className="rounded-2xl border-2 border-red-300 bg-red-50 p-3 text-base whitespace-pre-line text-red-900 dark:bg-red-400/10 dark:text-red-100">
+          <p className="rounded-md border-2 border-red-300 bg-red-50 p-3 text-base whitespace-pre-line text-red-900 dark:bg-red-400/10 dark:text-red-100">
             {error}
           </p>
         )}
@@ -361,7 +361,7 @@ export function AIPanel({
                 key={i}
                 type="button"
                 onClick={() => setQuestion(t(s.bm, s.zh, s.en))}
-                className="min-h-12 rounded-2xl bg-white/50 px-4 py-3 text-left text-base text-[color:var(--v2-text)] ring-1 ring-white/50 hover:bg-white/70 dark:bg-white/5 dark:ring-white/10 dark:hover:bg-white/10"
+                className="min-h-12 rounded-md bg-white/50 px-4 py-3 text-left text-base text-[color:var(--v2-text)] ring-1 ring-white/50 hover:bg-white/70 dark:bg-white/5 dark:ring-white/10 dark:hover:bg-white/10"
               >
                 {t(s.bm, s.zh, s.en)}
               </button>
@@ -388,7 +388,7 @@ export function AIPanel({
                 setTurnsLeft(null);
                 setError(null);
               }}
-              className="inline-flex min-h-11 items-center gap-2 rounded-full border-2 border-[color:var(--v2-outline-border)] bg-white/80 px-4 text-base font-medium dark:bg-white/10"
+              className="inline-flex min-h-11 items-center gap-2 rounded-sm border-2 border-[color:var(--v2-outline-border)] bg-white/80 px-4 text-base font-medium dark:bg-white/10"
             >
               <RotateCcw className="h-5 w-5" strokeWidth={2} />
               <Tri bm="Padam perbualan" zh="清除对话" en="Clear conversation" />
@@ -414,7 +414,7 @@ export function AIPanel({
       )}
 
       {/* Input */}
-      <div className="mt-3 flex items-end gap-2 rounded-3xl bg-white/60 p-2 pl-4 ring-1 ring-white/60 dark:bg-white/10 dark:ring-white/10">
+      <div className="mt-3 flex items-end gap-2 rounded-md bg-white/60 p-2 pl-4 ring-1 ring-white/60 dark:bg-white/10 dark:ring-white/10">
         <textarea
           value={question}
           rows={1}
@@ -439,7 +439,7 @@ export function AIPanel({
           aria-label={t("Hantar soalan", "发送问题", "Send question")}
           onClick={() => ask()}
           disabled={busy || isBlocked || !question.trim()}
-          className="v2-pill flex size-11 shrink-0 items-center justify-center rounded-full bg-[color:var(--v2-primary-fill)] text-white shadow-[0_8px_20px_-6px_rgba(21,128,61,0.5)] disabled:opacity-50"
+          className="v2-pill flex size-11 shrink-0 items-center justify-center bg-[color:var(--v2-primary-fill)] text-[color:var(--v2-primary-on)] shadow-[var(--v2-shadow-soft)] disabled:opacity-50"
         >
           <ArrowUp className="h-5 w-5" strokeWidth={2.4} />
         </button>

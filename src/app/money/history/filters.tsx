@@ -35,7 +35,7 @@ export function ReceiptFilters({
     <form
       method="get"
       action="/money/history"
-      className="mb-6 flex flex-wrap items-end gap-3 rounded-2xl border-2 border-[color:var(--v2-border)] bg-white/60 p-4 dark:bg-white/5"
+      className="mb-6 flex flex-wrap items-end gap-3 rounded-md border-2 border-[color:var(--v2-border)] bg-white/60 p-4 dark:bg-white/5"
     >
       <label className="flex min-w-48 flex-1 flex-col gap-1">
         <span className="text-sm font-medium text-muted-foreground">
