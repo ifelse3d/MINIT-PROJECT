@@ -23,7 +23,7 @@ const ACCOUNT_ROWS: NavItem[] = ["/orgs", "/settings"].map((href) => {
   return found;
 });
 import { getSupabaseBrowser } from "@/db/supabase-browser";
-import { clearMinitLocalData } from "@/lib/storage-scope-core";
+import { SignOutConfirm } from "@/components/sign-out-confirm";
 import { cn } from "./surfaces";
 
 function readActiveOrgId(): number | null {
@@ -55,15 +55,8 @@ export function useAuthEmail(): string | null {
   return email;
 }
 
-/** Sign out and land on /login — used by the top bar and mobile drawer. */
-export async function signOutToLogin(): Promise<void> {
-  // S0-4: a shared laptop must not hand this person's register, minutes and
-  // constitution to whoever signs in next. Device preferences (text size,
-  // theme, language) survive — they are the device's, not the account's.
-  clearMinitLocalData();
-  await getSupabaseBrowser().auth.signOut();
-  window.location.assign("/login");
-}
+// signOutToLogin moved to ./sign-out.ts (B-1: the confirm dialog needed to
+// import it without a circular import). Sign-out buttons open SignOutConfirm.
 
 /** Active org name + DEMO badge, kept fresh across auth changes. */
 export function useActiveOrg(): {
@@ -265,6 +258,8 @@ export function AccountControls({ className }: { className?: string }) {
   const t = useTriText();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  // B-1 (work order 32): sign-out asks first — it clears local data.
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
   // Close on outside click / Escape — a plain popover, no extra dependency.
@@ -363,7 +358,10 @@ export function AccountControls({ className }: { className?: string }) {
           <button
             type="button"
             role="menuitem"
-            onClick={signOutToLogin}
+            onClick={() => {
+              setOpen(false);
+              setConfirmSignOut(true);
+            }}
             className="mt-1 flex w-full items-center gap-3 rounded-xl border-t border-white/40 px-3 py-2.5 text-sm font-medium text-[color:var(--v2-text-soft)] transition-colors hover:bg-white/60 dark:border-white/10 dark:hover:bg-white/10"
           >
             <LogOut className="h-4 w-4 shrink-0" strokeWidth={1.7} />
@@ -371,6 +369,7 @@ export function AccountControls({ className }: { className?: string }) {
           </button>
         </div>
       )}
+      <SignOutConfirm open={confirmSignOut} onClose={() => setConfirmSignOut(false)} />
     </div>
   );
 }

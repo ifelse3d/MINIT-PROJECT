@@ -9,15 +9,19 @@
 // ---------------------------------------------------------------------------
 
 import Link from "next/link";
+import { useState } from "react";
 import { LogOut } from "lucide-react";
 import { LanguageSwitcher, Tri } from "@/components/language-provider";
 import { SIDEBAR_NAV, visibleGroupChildren } from "@/components/nav-items";
-import { signOutToLogin, useActiveOrg } from "@/components/v3/org-chip";
+import { useActiveOrg } from "@/components/v3/org-chip";
+import { SignOutConfirm } from "@/components/sign-out-confirm";
 import { useEinvoisVisible } from "@/lib/einvois-pref";
 
 export default function MorePage() {
   const [einvoisVisible] = useEinvoisVisible();
   const { email, org } = useActiveOrg();
+  // B-1 (work order 32): sign-out asks first — it clears local data.
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
 
   // Every sidebar entry; Home is the bottom bar's own first tab, so that one
   // item is skipped here. Other top-level items (C-1: the calendar) render as
@@ -116,7 +120,7 @@ export default function MorePage() {
         {email && (
           <button
             type="button"
-            onClick={signOutToLogin}
+            onClick={() => setConfirmSignOut(true)}
             className="flex items-center gap-2 rounded-xl border border-[color:var(--v2-outline-border)] px-4 py-2 text-base font-medium text-[color:var(--v2-text-soft)] transition-colors hover:bg-[color:var(--v2-primary-soft)]"
           >
             <LogOut className="h-4 w-4" strokeWidth={1.8} />
@@ -124,6 +128,7 @@ export default function MorePage() {
           </button>
         )}
       </div>
+      <SignOutConfirm open={confirmSignOut} onClose={() => setConfirmSignOut(false)} />
     </div>
   );
 }

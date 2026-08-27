@@ -85,7 +85,10 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
+  /* B-3 (work order 32 §2B, avocado: "our corners are too curved"): one
+     step smaller, ONE token — every rounded-sm…4xl derives from this via
+     the @theme calc block above, so the whole app steps down together. */
+  --radius: 0.5rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -333,7 +336,8 @@
 .v2-glass-strong {
   background: var(--v2-card);
   border: 1px solid var(--v2-border);
-  border-radius: 1rem;
+  /* B-3: cards step down one radius notch with the global token. */
+  border-radius: 0.75rem;
   box-shadow: var(--v2-shadow);
 }
 
