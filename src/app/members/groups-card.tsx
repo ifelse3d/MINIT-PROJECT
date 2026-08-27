@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/modal";
 import { Tri, useTriText } from "@/components/language-provider";
 import {
+  addManyToGroup,
   addToGroup,
   loadMemberGroups,
   removeFromGroup,
@@ -48,6 +50,18 @@ export function GroupsCard({
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  // #9 (launch feedback): pick MANY people from the roster in one popup.
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerGroup, setPickerGroup] = useState("");
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+
+  // Everyone the popup can offer: the committee roster plus anyone already
+  // in any group — a shortcut, never a limit (typing still works below).
+  const candidates = useMemo(() => {
+    const set = new Set<string>(committeeNames);
+    for (const r of rows ?? []) set.add(r.name);
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [committeeNames, rows]);
 
   async function refresh() {
     setRows(await loadMemberGroups());
@@ -146,6 +160,25 @@ export function GroupsCard({
 
       {canEdit && (
         <div className="flex flex-col gap-3 border-t border-border pt-4">
+          {/* #9: the one-popup way — pick a group, tick many names, done. */}
+          {candidates.length > 0 && (
+            <Button
+              variant="outline"
+              className="self-start"
+              onClick={() => {
+                setPickerGroup(group);
+                setPicked(new Set());
+                setPickerOpen(true);
+              }}
+            >
+              ☑️{" "}
+              <Tri
+                bm="Pilih ramai daripada senarai sekali gus"
+                zh="从名单一次过选多人"
+                en="Pick several from the roster at once"
+              />
+            </Button>
+          )}
           <div className="flex flex-wrap items-end gap-3">
             <label className="flex min-w-40 flex-1 flex-col gap-1">
               <span className="text-sm font-medium text-muted-foreground">
@@ -218,6 +251,107 @@ export function GroupsCard({
           )}
         </div>
       )}
+
+      {/* #9: the multi-select popup. */}
+      <Modal open={pickerOpen} onClose={() => setPickerOpen(false)} labelledBy="group-picker-title">
+        <div className="flex flex-col gap-4">
+          <h2 id="group-picker-title" className="text-xl font-semibold">
+            ☑️ <Tri bm="Pilih ahli untuk kumpulan" zh="选人加进分组" en="Pick people for a group" />
+          </h2>
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium text-muted-foreground">
+              <Tri bm="Nama kumpulan" zh="分组名字" en="Group name" />
+            </span>
+            <input
+              list="minit-group-names"
+              value={pickerGroup}
+              onChange={(e) => setPickerGroup(e.target.value)}
+              maxLength={60}
+              placeholder={t(
+                "nama kumpulan anda sendiri",
+                "你们自己的分组名字",
+                "your own group name",
+              )}
+              className="rounded-md border border-input bg-background px-3 py-2 text-base"
+            />
+          </label>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm text-muted-foreground">
+              <Tri
+                bm={`${picked.size} dipilih daripada ${candidates.length}`}
+                zh={`已选 ${picked.size} / ${candidates.length} 人`}
+                en={`${picked.size} of ${candidates.length} picked`}
+              />
+            </span>
+            <button
+              type="button"
+              className="text-sm underline underline-offset-4"
+              onClick={() =>
+                setPicked((prev) =>
+                  prev.size === candidates.length ? new Set() : new Set(candidates),
+                )
+              }
+            >
+              {picked.size === candidates.length ? (
+                <Tri bm="Kosongkan semua" zh="全部取消" en="Clear all" />
+              ) : (
+                <Tri bm="Pilih semua" zh="全选" en="Select all" />
+              )}
+            </button>
+          </div>
+          <ul className="flex max-h-72 flex-col gap-1 overflow-y-auto rounded-sm border border-[color:var(--v2-border)] p-2">
+            {candidates.map((n) => (
+              <li key={n}>
+                <label className="flex cursor-pointer items-center gap-2.5 rounded-sm px-2 py-1.5 text-base hover:bg-[color:var(--v2-card-nested)]">
+                  <input
+                    type="checkbox"
+                    checked={picked.has(n)}
+                    onChange={() =>
+                      setPicked((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(n)) next.delete(n);
+                        else next.add(n);
+                        return next;
+                      })
+                    }
+                    className="h-5 w-5 accent-[color:var(--v2-primary)]"
+                  />
+                  {n}
+                </label>
+              </li>
+            ))}
+          </ul>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="ghost" onClick={() => setPickerOpen(false)}>
+              <Tri bm="Batal" zh="取消" en="Cancel" />
+            </Button>
+            <Button
+              disabled={busy || picked.size === 0 || pickerGroup.trim() === ""}
+              onClick={async () => {
+                setBusy(true);
+                const res = await addManyToGroup({
+                  group: pickerGroup,
+                  names: [...picked],
+                });
+                setFailed(!res.ok);
+                if (res.ok) {
+                  setPickerOpen(false);
+                  setGroup(pickerGroup.trim());
+                  await refresh();
+                }
+                setBusy(false);
+              }}
+            >
+              ＋{" "}
+              <Tri
+                bm={`Masukkan ${picked.size} orang`}
+                zh={`把 ${picked.size} 人加进去`}
+                en={`Add ${picked.size} people`}
+              />
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

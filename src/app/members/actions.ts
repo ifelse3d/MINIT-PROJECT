@@ -20,6 +20,7 @@ import { getSupabaseServer, getSessionUser } from "@/db/supabase-server";
 import { getActiveOrg } from "@/lib/active-org";
 import { can, permissionError } from "@/lib/roles";
 import { describeBadLines, parseCommitteePaste } from "@/lib/bulk-paste";
+import { toIsoDate } from "@/lib/date-input";
 import { xlsxToPasteText } from "@/lib/roster-xlsx";
 
 export type MemberActionState = { error: string | null; ok: boolean };
@@ -31,13 +32,13 @@ const ERR = {
     "Akaun auditor hanya boleh membaca / 审计账号只能查看 / Auditor accounts are read-only",
   needFields:
     "Isi jawatan dan nama dahulu / 请先填上职位和姓名 / Fill in the position and the name first",
+  // #8 (launch feedback): the format is OUR job — this only fires when the
+  // typing cannot be read as a date at all, and it shows working examples.
   badDate:
-    "Tarikh mesti dalam bentuk YYYY-MM-DD / 日期要写成 YYYY-MM-DD / Dates must look like YYYY-MM-DD",
+    "Tarikh tidak difahami — contoh yang boleh: 2026-01-01, 1/1/2026, 20260101 / 日期看不懂 —— 可以这样写：2026-01-01、1/1/2026、20260101 / That date was not understood — examples that work: 2026-01-01, 1/1/2026, 20260101",
   failed:
     "Tidak berjaya — cuba lagi / 没有成功 —— 请再试一次 / Something went wrong — please try again",
 };
-
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 const BULK_ERR = {
   empty: "Tampal senarai anda dahulu / 请先贴上您的名单 / Paste your list first",
@@ -60,14 +61,18 @@ export async function addCommitteeMember(
   const position = String(formData.get("position") ?? "").trim();
   const personName = String(formData.get("personName") ?? "").trim();
   const nameOfficial = String(formData.get("nameOfficial") ?? "").trim();
-  const termStart = String(formData.get("termStart") ?? "").trim();
-  const termEnd = String(formData.get("termEnd") ?? "").trim();
+  const termStartRaw = String(formData.get("termStart") ?? "").trim();
+  const termEndRaw = String(formData.get("termEnd") ?? "").trim();
 
   if (position === "" || personName === "") {
     return { error: ERR.needFields, ok: false };
   }
-  for (const d of [termStart, termEnd]) {
-    if (d !== "" && !ISO_DATE.test(d)) return { error: ERR.badDate, ok: false };
+  // #8: normalise whatever was typed (20260101, 1/1/2026, …) instead of
+  // demanding dashes. Only genuinely unreadable input is refused.
+  const termStart = termStartRaw === "" ? "" : (toIsoDate(termStartRaw) ?? null);
+  const termEnd = termEndRaw === "" ? "" : (toIsoDate(termEndRaw) ?? null);
+  if (termStart === null || termEnd === null) {
+    return { error: ERR.badDate, ok: false };
   }
 
   const supabase = await getSupabaseServer();

@@ -39,6 +39,8 @@ function build(year: number, month: number, day: number): string | null {
  *   2026-02-02  2026-2-2   →  2026-02-02   (already the storage format)
  *   2/2/2026    02.02.2026 →  2026-02-02   (day first — see the note above)
  *   2-2-2026               →  2026-02-02
+ *   20260202    02022026   →  2026-02-02   (bare digits, launch feedback #8:
+ *                              nobody should be scolded over missing dashes)
  */
 export function toIsoDate(raw: string): string | null {
   const s = raw.trim();
@@ -50,6 +52,18 @@ export function toIsoDate(raw: string): string | null {
   const dayFirst = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(s);
   if (dayFirst) {
     return build(Number(dayFirst[3]), Number(dayFirst[2]), Number(dayFirst[1]));
+  }
+
+  // Eight bare digits (#8): the dashes are OUR formatting job, not the
+  // typist's. A leading 19xx/20xx/21xx reads as year-first (20260101);
+  // otherwise day-first, the local convention (01012026).
+  const digits = /^\d{8}$/.exec(s);
+  if (digits) {
+    const head = Number(s.slice(0, 4));
+    if (head >= 1900 && head <= 2200) {
+      return build(head, Number(s.slice(4, 6)), Number(s.slice(6, 8)));
+    }
+    return build(Number(s.slice(4, 8)), Number(s.slice(2, 4)), Number(s.slice(0, 2)));
   }
 
   return null;

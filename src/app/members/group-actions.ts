@@ -108,6 +108,48 @@ export async function addToGroup(input: {
   return { ok: true };
 }
 
+/**
+ * Put SEVERAL people in a group at once (launch feedback #9, 2026-08-27
+ * evening: 「沒有一個地方讓選名單然後 POPUP 出來讓 USER 可以一次過選」).
+ * One statement, all-or-nothing — a half-added selection is the kind of
+ * silent partial success nobody can see.
+ */
+export async function addManyToGroup(input: {
+  group: string;
+  names: string[];
+}): Promise<GroupOutcome> {
+  const group = (input?.group ?? "").trim();
+  const names = Array.from(
+    new Set(
+      (input?.names ?? [])
+        .map((n) => (typeof n === "string" ? n.trim() : ""))
+        .filter((n) => n !== "" && n.length <= MAX_NAME),
+    ),
+  );
+  if (group === "" || group.length > MAX_GROUP || names.length === 0 || names.length > 200) {
+    return { ok: false, reason: "invalid" };
+  }
+  const user = await getSessionUser();
+  if (!user) return { ok: false, reason: "no_session" };
+  const active = await getActiveOrg();
+  if (!active) return { ok: false, reason: "no_org" };
+
+  const supabase = await getSupabaseServer();
+  const { error } = await supabase
+    .from("member_groups")
+    .upsert(
+      names.map((name) => ({
+        org_id: active.id,
+        group_name: group,
+        person_name: name,
+      })),
+      { onConflict: "org_id,group_name,person_name" },
+    );
+  if (error) return { ok: false, reason: "db" };
+  revalidatePath("/members");
+  return { ok: true };
+}
+
 /** Take somebody out of a group. The group disappears when its last member does. */
 export async function removeFromGroup(input: {
   group: string;

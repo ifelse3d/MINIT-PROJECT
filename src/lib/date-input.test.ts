@@ -38,6 +38,22 @@ describe("what a person types becomes the stored date", () => {
     expect(toIsoDate("2 Feb 2026")).toBeNull();
     expect(toIsoDate("2/2/26")).toBeNull();
   });
+
+  // #8 (launch feedback 2026-08-27): J typed 20260101 and was scolded about
+  // dashes. Eight bare digits are a date; the dashes are our job.
+  it("reads eight bare digits — year-first when the head reads as a year", () => {
+    expect(toIsoDate("20260101")).toBe("2026-01-01");
+    expect(toIsoDate("20271231")).toBe("2027-12-31");
+  });
+
+  it("reads eight bare digits day-first otherwise", () => {
+    expect(toIsoDate("01012026")).toBe("2026-01-01");
+    expect(toIsoDate("31122027")).toBe("2027-12-31");
+  });
+
+  it("still refuses eight digits that are no date either way", () => {
+    expect(toIsoDate("99999999")).toBeNull();
+  });
 });
 
 describe("the date written back in words", () => {

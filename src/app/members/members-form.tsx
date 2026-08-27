@@ -3,12 +3,33 @@
 import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tri } from "@/components/language-provider";
+import { toIsoDate } from "@/lib/date-input";
 import {
   addCommitteeMember,
   importCommittee,
   removeCommitteeMember,
   type MemberActionState,
 } from "./actions";
+
+/** #8 (launch feedback): a term-date box that formats ITSELF — type 20260101
+ *  or 1/1/2026 and it becomes 2026-01-01 on blur. The dashes are our job. */
+function TermDateInput({ name }: { name: string }) {
+  const [value, setValue] = useState("");
+  return (
+    <input
+      name={name}
+      className={inputCls}
+      value={value}
+      inputMode="numeric"
+      placeholder="2026-01-01"
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={() => {
+        const iso = toIsoDate(value);
+        if (iso) setValue(iso);
+      }}
+    />
+  );
+}
 
 const INITIAL: MemberActionState = { error: null, ok: false };
 
@@ -82,14 +103,14 @@ export function AddCommitteeRow() {
           <span className="text-sm font-medium text-muted-foreground">
             <Tri bm="Mula" zh="任期开始" en="From" />
           </span>
-          <input name="termStart" className={inputCls} placeholder="2026-01-01" />
+          <TermDateInput name="termStart" />
         </label>
 
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium text-muted-foreground">
             <Tri bm="Tamat" zh="任期结束" en="To" />
           </span>
-          <input name="termEnd" className={inputCls} placeholder="2027-12-31" />
+          <TermDateInput name="termEnd" />
         </label>
 
         <Button type="submit" disabled={pending} className="md:mb-[1px]">
@@ -103,9 +124,9 @@ export function AddCommitteeRow() {
 
       <p className="text-sm text-muted-foreground">
         <Tri
-          bm="Tarikh penggal boleh dibiarkan kosong. “Nama dalam IC” ialah nama yang eROSES mahu — salin daripada kad pengenalan, jangan terjemah sendiri; biarkan kosong jika anda belum tahu."
-          zh="任期可以不填。「身份证上的名字」是 eROSES 要的那个 —— 请照身份证抄，不要自己音译；还不知道就留空。"
-          en="The term dates can be left blank. “Name on IC” is the one eROSES wants — copy it from the identity card rather than transliterating it yourself; leave it blank if you do not know it yet."
+          bm="Tarikh penggal boleh dibiarkan kosong — taip apa sahaja bentuk (20260101, 1/1/2026), ia dikemas sendiri. “Nama dalam IC” ialah nama yang eROSES mahu — salin daripada kad pengenalan, jangan terjemah sendiri; biarkan kosong jika anda belum tahu."
+          zh="任期可以不填 —— 随便怎么打（20260101、1/1/2026）都行，会自动整理好。「身份证上的名字」是 eROSES 要的那个 —— 请照身份证抄，不要自己音译；还不知道就留空。"
+          en="The term dates can be left blank — type them any way (20260101, 1/1/2026), they tidy themselves. “Name on IC” is the one eROSES wants — copy it from the identity card rather than transliterating it yourself; leave it blank if you do not know it yet."
         />
       </p>
 

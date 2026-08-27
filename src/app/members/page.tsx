@@ -69,6 +69,19 @@ export default async function MembersPage() {
   // never the authority, but it must not offer a form the server will refuse.
   const canEdit = active !== null && can(active.role, "minutes_write");
 
+  // #8 (launch feedback): 「任期結束也已經不在那個職位了」— a member whose
+  // term has ENDED is not on the current committee. They stay on file (the
+  // record is real) but move to their own "former" section below.
+  const todayIso = new Date().toLocaleDateString("en-CA", {
+    timeZone: "Asia/Kuala_Lumpur",
+  });
+  const current = committee.filter(
+    (m) => !(m.term_end && m.term_end.slice(0, 10) < todayIso),
+  );
+  const former = committee.filter(
+    (m) => m.term_end && m.term_end.slice(0, 10) < todayIso,
+  );
+
   // How many of the filed committee still have no name as printed on their IC.
   //
   // 2026-08-19, J's decision, written down so nobody quietly reverses it:
@@ -79,7 +92,7 @@ export default async function MembersPage() {
   // a government form is a false filing. That is the exact thing being
   // prevented. So: never in the way while the list is being built, and counted
   // in plain sight because eROSES will ask.
-  const missingOfficial = committee.filter(
+  const missingOfficial = current.filter(
     (m) => (m.name_official ?? "").trim() === "",
   ).length;
 
@@ -141,7 +154,7 @@ export default async function MembersPage() {
                   />
                 </CardTitle>
                 <Badge variant="secondary">
-                  {committee.length}{" "}
+                  {current.length}{" "}
                   <Tri bm="orang" zh="人" en="people" />
                 </Badge>
               </div>
@@ -155,7 +168,7 @@ export default async function MembersPage() {
             </CardHeader>
 
             <CardContent className="flex flex-col gap-5">
-              {committee.length === 0 ? (
+              {current.length === 0 ? (
                 <p className="text-base text-muted-foreground">
                   <Tri
                     bm="Masih kosong — tambah seorang di bawah, atau tampal senarai sedia ada."
@@ -188,7 +201,7 @@ export default async function MembersPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {committee.map((m) => (
+                      {current.map((m) => (
                         <tr key={m.id} className="border-b border-border/60 last:border-0">
                           <td className="px-2 py-3 align-top">{m.position}</td>
                           <td className="px-2 py-3 align-top font-semibold">
@@ -222,6 +235,35 @@ export default async function MembersPage() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+
+              {/* #8: former bearers — term ended, off the current list, still
+                  on file. Grey, separate, and clearly labelled. */}
+              {former.length > 0 && (
+                <div className="rounded-md border border-dashed border-[color:var(--v2-border-strong)] p-3">
+                  <p className="text-sm font-semibold text-muted-foreground">
+                    <Tri
+                      bm={`Mantan (penggal tamat) — ${former.length}`}
+                      zh={`已卸任（任期已结束）— ${former.length} 人`}
+                      en={`Former (term ended) — ${former.length}`}
+                    />
+                  </p>
+                  <ul className="mt-2 flex flex-col gap-1 text-sm text-muted-foreground">
+                    {former.map((m) => (
+                      <li
+                        key={m.id}
+                        className="flex flex-wrap items-center justify-between gap-2"
+                      >
+                        <span>
+                          {m.position} · <span className="font-medium">{m.person_name}</span>
+                          {" · "}
+                          {m.term_start ?? "—"} → {m.term_end}
+                        </span>
+                        {canEdit && <RemoveCommitteeButton id={m.id} />}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
 
