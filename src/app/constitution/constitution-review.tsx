@@ -409,18 +409,15 @@ export function ConstitutionReview({
             <Tri bm="fasal dibaca" zh="条条文已读入" en="clauses read" />
           </p>
         ) : isSample ? (
-          <div className="flex flex-wrap items-center gap-3 rounded-md border-2 border-amber-300 bg-amber-50 p-3 dark:bg-amber-400/10">
-            <p className="min-w-56 flex-1 text-base font-medium text-amber-900 dark:text-amber-100">
-              <Tri
-                bm="Ini perlembagaan CONTOH (rekaan) — jawapan di bawah BUKAN daripada perlembagaan pertubuhan anda."
-                zh="这是一份示范（虚构）章程 —— 下面的答案不是来自您机构的章程。"
-                en="This is an EXAMPLE (invented) constitution — the answers below are NOT from your organisation's."
-              />
-            </p>
-            <Button variant="outline" onClick={() => setShowSample(false)}>
-              <Tri bm="Tutup contoh" zh="关掉示范" en="Close the example" />
-            </Button>
-          </div>
+          // 28#7 (J, 2026-08-28): the example lives in its own amber CARD
+          // below — up here just one quiet line, not a page-wide takeover.
+          <p className="text-base text-muted-foreground">
+            <Tri
+              bm="Contoh sedang dibuka di bawah — perlembagaan anda sendiri masih boleh dimuat naik di sini."
+              zh="下面开着一份示范 —— 您自己的章程还是可以在这里上传。"
+              en="An example is open below — your own constitution can still be uploaded here."
+            />
+          </p>
         ) : (
           <p className="text-base text-muted-foreground">
             <Tri
@@ -581,6 +578,34 @@ export function ConstitutionReview({
           )}
         </CardContent>
       </Card>
+
+      {/* 28#7 (J, 2026-08-28): in example mode, everything the example touches
+          sits INSIDE one amber card with its own header and close button — the
+          example is "another thing on the page", never the page itself. When
+          no example is open, display:contents makes this wrapper invisible to
+          the layout. */}
+      <div
+        className={
+          isSample
+            ? "flex flex-col gap-4 rounded-lg border-2 border-amber-300 bg-amber-50/40 p-4 dark:bg-amber-400/5"
+            : "contents"
+        }
+      >
+        {isSample && (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="min-w-56 flex-1 text-base font-semibold text-amber-900 dark:text-amber-100">
+              📎{" "}
+              <Tri
+                bm="CONTOH (rekaan) — jawapan di dalam kad ini BUKAN daripada perlembagaan pertubuhan anda."
+                zh="示范（虚构）—— 这张卡里的答案不是来自您机构的章程。"
+                en="EXAMPLE (invented) — the answers inside this card are NOT from your organisation's constitution."
+              />
+            </p>
+            <Button variant="outline" onClick={() => setShowSample(false)}>
+              <Tri bm="Tutup contoh" zh="关掉示范" en="Close the example" />
+            </Button>
+          </div>
+        )}
 
       {/* 1 — Ask */}
       <Card>
@@ -787,6 +812,7 @@ export function ConstitutionReview({
         </CardContent>
       </Card>
       )}
+      </div>
     </div>
   );
 }
