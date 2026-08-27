@@ -310,6 +310,10 @@ export function NotesReview() {
       >
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-3">
+          {/* #8 (J review 27-evening, 2026-08-28): ONE door for photo and
+              file. Without `capture`, a phone's picker offers the camera
+              beside the album and files — nothing lost by merging, and a
+              scanned PDF is reachable from the same button. */}
           <label
             className={`inline-flex cursor-pointer items-center gap-2 rounded-sm px-5 py-3 text-base font-semibold text-white ${
               aiBusy
@@ -323,20 +327,17 @@ export function NotesReview() {
               </>
             ) : (
               <>
-                📷 <Tri bm="Ambil gambar" zh="拍照" en="Take a photo" />
+                📷{" "}
+                <Tri
+                  bm="Ambil gambar / pilih fail (gambar atau PDF)"
+                  zh="拍照或选档案（照片或 PDF）"
+                  en="Take a photo / choose a file (photo or PDF)"
+                />
               </>
             )}
-            {/* THE CAMERA. `capture` and `accept="image/*"` belong together and
-                nowhere else: on a phone, `capture` opens the camera directly,
-                which is the whole point here — and which is also why a PDF can
-                never be chosen through this input, whatever `accept` says. That
-                is the trap. Adding "application/pdf" to a capture input on
-                2026-08-23 made the label promise something a phone cannot do.
-                Two inputs, like src/app/ask-box.tsx already had. */}
             <input
               type="file"
-              accept="image/*"
-              capture="environment"
+              accept="image/*,application/pdf"
               className="hidden"
               disabled={aiBusy}
               onChange={(e) => {
@@ -345,31 +346,6 @@ export function NotesReview() {
               }}
             />
           </label>
-
-          {/* THE FILE. No `capture`, so this opens the file picker on every
-              platform and a scanned PDF is reachable. Until 2026-08-23 the same
-              page of minutes was accepted from a phone and refused from a
-              scanner; the route counts pages before charging (5 for minutes),
-              so a 40-page scan is turned away with a reason instead of a bill. */}
-          {!aiBusy && (
-            <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-sm border-2 border-[color:var(--v2-border)] px-5 text-base font-medium hover:bg-accent">
-              📄{" "}
-              <Tri
-                bm="Pilih fail (gambar atau PDF)"
-                zh="选一个档案（照片或 PDF）"
-                en="Choose a file (photo or PDF)"
-              />
-              <input
-                type="file"
-                accept="image/*,application/pdf"
-                className="hidden"
-                onChange={(e) => {
-                  setPending(e.target.files?.[0] ?? null);
-                  e.target.value = "";
-                }}
-              />
-            </label>
-          )}
           {/* J's UX list N1: MinitAI only took photos. Typing costs no credit, no
               upload and no model — and it is the answer when the photo will not
               read, when the notes are already on a laptop, or when four people

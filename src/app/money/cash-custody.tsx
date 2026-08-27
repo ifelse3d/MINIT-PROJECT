@@ -113,8 +113,13 @@ export function CashCustody() {
   const chosenCents = chosen.reduce((s, d) => s + d.amountCents, 0);
 
   const pending = batches.filter((b) => b.status === "pending");
-  const settled = batches.filter((b) => b.status === "settled");
-  const cancelled = batches.filter((b) => b.status === "cancelled");
+  // #19: newest first, so "the last hand-over" is the first card.
+  const byNewest = (a: RemittanceBatch, b: RemittanceBatch) =>
+    (b.confirmedAtIso ?? b.recordedAtIso ?? b.handedOverAtIso).localeCompare(
+      a.confirmedAtIso ?? a.recordedAtIso ?? a.handedOverAtIso,
+    );
+  const settled = batches.filter((b) => b.status === "settled").sort(byNewest);
+  const cancelled = batches.filter((b) => b.status === "cancelled").sort(byNewest);
 
   const toggle = (id: string) =>
     setSelected((prev) => {
@@ -340,54 +345,64 @@ export function CashCustody() {
           />
         ))}
 
-        {/* THE HISTORY: locked forever once HQ confirmed. */}
-        {settled.map((batch) => (
-          <div
-            key={batch.id}
-            className="rounded-sm border border-green-300 bg-green-50 p-4 text-base"
-          >
-            <div className="font-medium">
-              ✅ {t("HQ sudah sahkan wang ini", "总会已确认这笔钱", "HQ has confirmed this money")}
-            </div>
-            <div className="mt-1 text-sm text-muted-foreground">
-              {batch.collector} · {t("diserah", "交接日期", "handed over")} {batch.handedOverAtIso} ·{" "}
-              {t("jumlah", "金额", "total")} {formatRm(batch.totalCents)} ·{" "}
-              {t("resit", "收据", "receipts")} {batch.receiptNos.length > 0 ? batch.receiptNos.join(", ") : "—"}
-              {batch.note ? ` · ${batch.note}` : ""}
-            </div>
-            {/* §1-11: all four moments of a ringgit are on record — this card
-                carries the last two. */}
-            <div className="mt-1 text-sm text-muted-foreground">
-              {batch.recordedAtIso
-                ? `${t("direkod", "记录于", "recorded")} ${formatMytDateTime(batch.recordedAtIso)} · `
-                : ""}
-              {t("disahkan", "确认于", "confirmed")}{" "}
-              {batch.confirmedAtIso ? formatMytDateTime(batch.confirmedAtIso) : "—"}
-              {batch.confirmedByHq
-                ? ` · ${t("oleh", "确认人", "by")} ${batch.confirmedByHq}`
-                : ""}
-            </div>
-          </div>
+        {/* THE HISTORY: locked forever once HQ confirmed. #19 (J review
+            27-evening, 2026-08-28): "confirm 后全部跑下去…无止境" — the newest
+            few stay visible, everything older folds behind one line, so five
+            years of hand-overs stay findable without a wall. */}
+        {settled.slice(0, RECENT_SETTLED).map((batch) => (
+          <SettledBatchCard key={batch.id} batch={batch} t={t} />
         ))}
+        {settled.length > RECENT_SETTLED && (
+          <details className="rounded-sm border border-green-200">
+            <summary className="cursor-pointer list-none p-3 text-base font-medium hover:bg-accent">
+              ▸{" "}
+              {t(
+                `Serahan lebih awal (${settled.length - RECENT_SETTLED})`,
+                `更早的交接记录（${settled.length - RECENT_SETTLED} 笔）`,
+                `Earlier hand-overs (${settled.length - RECENT_SETTLED})`,
+              )}
+            </summary>
+            <div className="flex flex-col gap-3 border-t p-3">
+              {settled.slice(RECENT_SETTLED).map((batch) => (
+                <SettledBatchCard key={batch.id} batch={batch} t={t} />
+              ))}
+            </div>
+          </details>
+        )}
 
         {/* Voided records stay on file — an audit trail nobody can quietly
-            empty (拍板 0-6). */}
-        {cancelled.map((batch) => (
-          <div
-            key={batch.id}
-            className="rounded-sm border border-dashed p-4 text-base text-muted-foreground"
-          >
-            <div className="font-medium">
-              ✖ {t("Serahan dibatalkan", "已取消的交接记录", "Hand-over cancelled")}
+            empty (拍板 0-6). Folded (#19): they are history, not work. */}
+        {cancelled.length > 0 && (
+          <details className="rounded-sm border border-dashed">
+            <summary className="cursor-pointer list-none p-3 text-base font-medium text-muted-foreground hover:bg-accent">
+              ▸{" "}
+              {t(
+                `Serahan dibatalkan (${cancelled.length})`,
+                `已取消的交接记录（${cancelled.length} 笔）`,
+                `Cancelled hand-overs (${cancelled.length})`,
+              )}
+            </summary>
+            <div className="flex flex-col gap-3 border-t p-3">
+              {cancelled.map((batch) => (
+                <div
+                  key={batch.id}
+                  className="rounded-sm border border-dashed p-4 text-base text-muted-foreground"
+                >
+                  <div className="font-medium">
+                    ✖ {t("Serahan dibatalkan", "已取消的交接记录", "Hand-over cancelled")}
+                  </div>
+                  <div className="mt-1 text-sm">
+                    {batch.collector} · {batch.handedOverAtIso} ·{" "}
+                    {t("jumlah", "金额", "total")} {formatRm(batch.totalCents)} ·{" "}
+                    {t("resit", "收据", "receipts")}{" "}
+                    {batch.receiptNos.length > 0 ? batch.receiptNos.join(", ") : "—"}
+                    {batch.note ? ` · ${batch.note}` : ""}
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="mt-1 text-sm">
-              {batch.collector} · {batch.handedOverAtIso} ·{" "}
-              {t("jumlah", "金额", "total")} {formatRm(batch.totalCents)} ·{" "}
-              {t("resit", "收据", "receipts")} {batch.receiptNos.length > 0 ? batch.receiptNos.join(", ") : "—"}
-              {batch.note ? ` · ${batch.note}` : ""}
-            </div>
-          </div>
-        ))}
+          </details>
+        )}
       </div>
 
       {/* THE HAND-OVER DIALOG (拍板 0-6): itemised list + total + editable
@@ -475,6 +490,45 @@ export function CashCustody() {
         </div>
       </Modal>
     </PageSection>
+  );
+}
+
+/** #19: how many settled hand-overs stay visible before the fold. */
+const RECENT_SETTLED = 5;
+
+/** One settled hand-over card (extracted so the fold can reuse it). */
+function SettledBatchCard({
+  batch,
+  t,
+}: {
+  batch: RemittanceBatch;
+  t: ReturnType<typeof useTriText>;
+}) {
+  return (
+    <div className="rounded-sm border border-green-300 bg-green-50 p-4 text-base">
+      <div className="font-medium">
+        ✅ {t("HQ sudah sahkan wang ini", "总会已确认这笔钱", "HQ has confirmed this money")}
+      </div>
+      <div className="mt-1 text-sm text-muted-foreground">
+        {batch.collector} · {t("diserah", "交接日期", "handed over")} {batch.handedOverAtIso} ·{" "}
+        {t("jumlah", "金额", "total")} {formatRm(batch.totalCents)} ·{" "}
+        {t("resit", "收据", "receipts")}{" "}
+        {batch.receiptNos.length > 0 ? batch.receiptNos.join(", ") : "—"}
+        {batch.note ? ` · ${batch.note}` : ""}
+      </div>
+      {/* §1-11: all four moments of a ringgit are on record — this card
+          carries the last two. */}
+      <div className="mt-1 text-sm text-muted-foreground">
+        {batch.recordedAtIso
+          ? `${t("direkod", "记录于", "recorded")} ${formatMytDateTime(batch.recordedAtIso)} · `
+          : ""}
+        {t("disahkan", "确认于", "confirmed")}{" "}
+        {batch.confirmedAtIso ? formatMytDateTime(batch.confirmedAtIso) : "—"}
+        {batch.confirmedByHq
+          ? ` · ${t("oleh", "确认人", "by")} ${batch.confirmedByHq}`
+          : ""}
+      </div>
+    </div>
   );
 }
 

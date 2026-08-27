@@ -448,9 +448,10 @@ export function ExpensesView({ role }: { role: string }) {
             )}
 
             {/* Photo first (the eROSES law): the receipt in the hand beats
-                seven fields. Cost said ON the button. #19 (J's launch
-                feedback): camera and file picker are TWO doors — suppliers
-                send PDFs, and "photograph" hid the upload path. */}
+                seven fields. Cost said ON the button. #8 (J review
+                27-evening, 2026-08-28): ONE door — without `capture`, a
+                phone's picker offers the camera beside files, so the camera
+                and the PDF live behind the same button. */}
             <div className="flex flex-wrap items-center gap-3 rounded-sm border bg-muted/20 p-4">
               <label
                 className={`inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-4 py-2 text-base font-medium text-primary-foreground shadow hover:bg-primary/90 ${
@@ -460,12 +461,18 @@ export function ExpensesView({ role }: { role: string }) {
                 {reading ? (
                   <>⏳ <Tri bm="AI sedang membaca…" zh="AI 读取中…" en="AI is reading…" /></>
                 ) : (
-                  <>📷 <Tri bm="Ambil gambar resit (1 tindakan AI)" zh="拍收据/发票（用 1 次 AI 额度）" en="Photograph the receipt (1 AI action)" /></>
+                  <>
+                    📷{" "}
+                    <Tri
+                      bm="Ambil gambar / pilih fail resit (1 tindakan AI)"
+                      zh="拍照或选收据档案（用 1 次 AI 额度）"
+                      en="Photo / choose the receipt file (1 AI action)"
+                    />
+                  </>
                 )}
                 <input
                   type="file"
-                  accept="image/*"
-                  capture="environment"
+                  accept="image/*,application/pdf"
                   className="hidden"
                   disabled={reading}
                   onChange={(e) => {
@@ -474,25 +481,6 @@ export function ExpensesView({ role }: { role: string }) {
                   }}
                 />
               </label>
-              {!reading && (
-                <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-md border-2 border-[color:var(--v2-border)] px-4 text-base font-medium hover:bg-accent">
-                  📄{" "}
-                  <Tri
-                    bm="Pilih fail (gambar atau PDF · 1 tindakan AI)"
-                    zh="选一个档案（照片或 PDF · 用 1 次 AI 额度）"
-                    en="Choose a file (photo or PDF · 1 AI action)"
-                  />
-                  <input
-                    type="file"
-                    accept="image/*,application/pdf"
-                    className="hidden"
-                    onChange={(e) => {
-                      void readReceipt(e.target.files?.[0] ?? null);
-                      e.target.value = "";
-                    }}
-                  />
-                </label>
-              )}
               <span className="text-sm text-muted-foreground">
                 {mode === "claim" ? (
                   /* B-8: a claim WANTS its receipt attached — say so here,

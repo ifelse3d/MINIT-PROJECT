@@ -158,6 +158,11 @@ export function LedgerReview() {
       <div className="flex flex-col gap-4">
         {/* Upload / camera input — the AI ingestion path (same UX as /minutes) */}
         <div className="flex flex-wrap items-center gap-3 rounded-sm border bg-muted/20 p-4">
+          {/* #8 (J review 27-evening, 2026-08-28): ONE door for photo and
+              file — "不用分只可以照片還是 document". Without `capture`, a
+              phone's picker offers the camera alongside the album and files,
+              so nothing was lost by merging; a PDF is finally reachable from
+              the same button the camera lives behind. */}
           <label
             className={`inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-4 py-2 text-base font-medium text-primary-foreground shadow hover:bg-primary/90 ${
               // pointer-events-none + opacity-60 meant nothing responded AND the
@@ -172,19 +177,17 @@ export function LedgerReview() {
               </>
             ) : (
               <>
-                📷 <Tri bm="Ambil gambar lejar" zh="拍账页照片" en="Take a photo of the ledger" />
+                📷{" "}
+                <Tri
+                  bm="Ambil gambar / pilih fail (gambar atau PDF)"
+                  zh="拍照或选档案（照片或 PDF）"
+                  en="Take a photo / choose a file (photo or PDF)"
+                />
               </>
             )}
-            {/* THE CAMERA. `capture` and `accept="image/*"` belong together and
-                nowhere else: on a phone `capture` opens the camera directly,
-                which is the point — and which is also why a PDF could never be
-                chosen through this input, whatever `accept` claimed. This one
-                used to say "application/pdf" as well, so on a phone the label
-                promised something the input cannot do. (2026-08-23.) */}
             <input
               type="file"
-              accept="image/*"
-              capture="environment"
+              accept="image/*,application/pdf"
               className="hidden"
               disabled={aiBusy}
               onChange={(e) => {
@@ -193,30 +196,6 @@ export function LedgerReview() {
               }}
             />
           </label>
-
-          {/* THE FILE. No `capture`, so the file picker opens on every platform
-              and a scanned ledger is reachable. J, 2026-08-22:
-              「賬單如果捐錢人多的話會到很多」 — a long donation list arrives as a
-              multi-page PDF, and the page limit for a ledger is 20. */}
-          {!aiBusy && (
-            <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-md border-2 border-[color:var(--v2-border)] px-4 text-base font-medium hover:bg-accent">
-              📄{" "}
-              <Tri
-                bm="Pilih fail (gambar atau PDF)"
-                zh="选一个档案（照片或 PDF）"
-                en="Choose a file (photo or PDF)"
-              />
-              <input
-                type="file"
-                accept="image/*,application/pdf"
-                className="hidden"
-                onChange={(e) => {
-                  pickLedgerFile(e.target.files?.[0] ?? null);
-                  e.target.value = "";
-                }}
-              />
-            </label>
-          )}
           {/* G-1 (2026-08-25): typing is a first-class way in, beside the
               camera — same three doors as /minutes.
               B-5① (J #13): it no longer JUMPS to another page — the typing

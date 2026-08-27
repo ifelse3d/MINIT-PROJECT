@@ -26,7 +26,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowUp, Camera, Paperclip, RotateCcw, X } from "lucide-react";
+import { ArrowUp, Camera, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
 import { PdpaNote } from "@/components/pdpa-note";
@@ -106,7 +106,6 @@ export function AskBox({
   const localizeError = useLocalizedError();
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement | null>(null);
-  const cameraInput = useRef<HTMLInputElement | null>(null);
   /** Ticket for the question currently in flight — see send(). */
   const sendSeq = useRef(0);
 
@@ -331,43 +330,24 @@ export function AskBox({
         </p>
       )}
 
-      {/* --- the two ways in ------------------------------------------------ */}
+      {/* --- the one way in (#8, J review 27-evening: photo and file are ONE
+          button; a phone's picker offers the camera when `capture` is off) --- */}
       <div className="mt-4 flex flex-col gap-3">
         <div className="flex flex-wrap gap-3">
           <Button
             size="lg"
             disabled={!hasOrg || busy !== null || outOfQuota}
-            onClick={() => cameraInput.current?.click()}
-          >
-            <Camera className="h-5 w-5" strokeWidth={2} />
-            <Tri bm="Ambil gambar" zh="拍一张" en="Take a photo" />
-          </Button>
-          <Button
-            size="lg"
-            variant="outline"
-            disabled={!hasOrg || busy !== null || outOfQuota}
             onClick={() => fileInput.current?.click()}
           >
-            <Paperclip className="h-5 w-5" strokeWidth={2} />
+            <Camera className="h-5 w-5" strokeWidth={2} />
             <Tri
-              bm="Pilih gambar, PDF atau Word/Excel"
-              zh="选照片、PDF 或 Word/Excel"
-              en="Choose a photo, PDF or Word/Excel"
+              bm="Ambil gambar / pilih fail"
+              zh="拍照或选档案"
+              en="Take a photo / choose a file"
             />
           </Button>
         </div>
 
-        <input
-          ref={cameraInput}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="hidden"
-          onChange={(e) => {
-            stageFile(e.target.files?.[0] ?? null);
-            e.target.value = "";
-          }}
-        />
         <input
           ref={fileInput}
           type="file"
