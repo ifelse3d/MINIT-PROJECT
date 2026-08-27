@@ -5,38 +5,42 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-27 下午（MYT）· Fable 5（32 号单一场做完：P0 快拳＋P1 绿品牌＋P2 记录诚实＋P3 交现金重做＋P4 界面收尾＋P5 tester 小包＋导览四格重拍）**
-**🔴 32 号单（`C:\dev\_J-要做的事\32-上線日反饋施工單-20260827.md`）全部 ✅；J 照 `33-報告-20260827.md` §1 走：贴 migration 26＋27 → push → 五分钟验收。**
-**31 号单场次 5（D-7/D-8/B-7/G-3，要 J 在场）仍然待开，不在本轮。**
+**最后更新：2026-08-27 傍晚（MYT）· Fable 5（同日第二场：D24 紫色全套改版 W1–W7＋D25 马来语把关。早上是 32 号单 P0–P5）**
+**🔴 32 号单全部 ✅；下午 J 又拍板两件也全部 ✅：①紫色 logo＋tester 规格书全套改版（icon rail/分屏登入/Poppins/头像选单/设置 13 子页——功能用我们自己的，绿色版做完当天即被覆盖、从未上线）②eROSES 文件马来语把关（挡保存＋用户选「AI 译/自己改」）。见 D24/D25 与 `34-報告-20260827-紫色改版與馬來語把關.md`。**
+**J 照 34 号报告 §1 走：贴 migration 26＋27 → push（一次 15 支）→ 五分钟验收。31 号单场次 5（D-7/D-8/B-7/G-3，要 J 在场）仍然待开。**
 
 ---
 
-## 🌙 现在在哪里（2026-08-27 下午，32 号单收工）
+## 🌙 现在在哪里（2026-08-27 傍晚，两场都收工）
 
-> **已上线**：https://minit-project.vercel.app（Vercel 专案 if-else/minit-project）。
+> **已上线**：https://minit-project.vercel.app（Vercel 专案 if-else/minit-project）——
+> 线上还是**旧紫**（8/27 早上那版）；本机已经是**新紫全套**，push 后一步到位。
 > push 到 main 自动重新部署——**push 是 J 的事**（push-cabang.bat，账号已钉 ifelse3d）。
 > 线上资料库两个 org（15「J」、58「avocado」），migration 1–25 APPLIED；
-> 🔴 **migration 26（payment_method）与 27（20260905000000 记录时间＋交接批次细节）都已写好、尚未套用**——J 照 33 号报告贴（salin-migration.bat 选 26、再选 27）。
-> **未 push 共 8 支 commit**（31 号单那 19 支 J 今早已 push）：
-> `1ad3ad4` P0 快拳 · `7b9bca0` P1 绿 logo＋主色 · `cad78fa` P2 记录诚实 ·
-> `2a302fb` P3 交现金重做 · `7bf5cc3` P4 界面收尾 · `d14f015` P5 tester 小包 ·
-> 导览重拍一支 · 收工文书一支。
+> 🔴 **migration 26（payment_method）与 27（20260905000000 记录时间＋交接批次细节）都已写好、尚未套用**——J 照 34 号报告贴（salin-migration.bat 选 26、再选 27）。
+> **未 push 共 15 支 commit**：早上 32 号单 8 支（P0–P5＋导览＋文书）＋下午 7 支
+> （W1 tokens/radius/Poppins/紫 logo · W2+W3 tooltip/彈窗/icon rail/頂欄 ·
+> W4 分屏登入 · W5 设置 13 子页 · W6 马来语把关＋财报签名栏 · 导览重拍 · 收工文书）。
 
 ### 现场量到的（不是听说的）
 
-- 四道关（每场收尾都跑）：`tsc` **0** · `eslint` **21（与基准逐字同）** ·
-  `vitest` **808 全过（64 档；+10＝custody 逐笔批次 7＋timeMytOf 3）** · `build` ✓
-- `e2e:money`：P3 后与收工前各一跑，**15/15 全绿、page errors 0**
-  （删机构那步已改走 /settings/org——拆页后脚本一度只出 NOTE 不出红，见 §6 新坑）。
-- **绿主色对比是算过的**：白字只压 #15803D（5.02:1 AA，亮暗两模式同）；
-  #22C55E 只做装饰/深底文字（深页上 8:1）；页面绿 tint 最浅一站 #ECFDF5 上
-  --v2-border #888ea0 = 3.12:1（C-5 的 3:1 不退步）。浏览器实测过 token 生效、
-  logo 渲染、暗色 fill 仍深绿。
-- **导览四格是绿 UI 现拍的**（scripts/howitworks-shots.mjs，零 AI 额度，
-  高亮坐标由脚本量出回填；step-3 改对准「加入登记」按钮——示范表已删）。
+- 四道关（两场每波收尾都跑，最终态）：`tsc` **0** · `eslint` **21（与基准
+  逐字同）** · `vitest` **814 全过（66 档；早上 +10 custody/time，下午 +6
+  bm-guard）** · `build` ✓
+- `e2e:money` **15/15、page errors 0**（最终跑于全部改动之后）；
+  `e2e:minutes` **ALL PASSED、page errors 0**（venue fixture 改成 BM——
+  马来语把关把它的旧中文 fixture 正确地挡下来了，脚本的职责是测保存路）。
+- **紫主色对比照 tester 规格书（他算的）落地**：#7029E5 白字 6.69:1（亮）、
+  #7C3AED 5.70:1（暗 fill）；#A855F7 只做图标/大字、#C47CF9 只做装饰。
+  输入框边框刻意偏离规格（#8B84A6 ≈3.6:1），不让 C-5 的「看不到框」还魂。
+- **QA grep 实测**：旧紫/绿 hex（5b4bd6/eceafc/6f5ef2/8d80f0）＝0；
+  rounded-2xl/3xl＝0（codemod 单趟扫 293 处）。
+- **导览四格是紫色新壳现拍的**（icon rail＋玻璃顶栏＋头像都在图里；
+  高亮坐标由脚本量出回填）。财报 PDF 签名栏 smoke 过（能 load、1 页）。
 - ⚠ **没能验证的**：migration 26/27 是否套用（等 J 贴完 status.bat 看探针）；
-  交现金新页的真人操作（逻辑有 20 个 custody 测试＋e2e 守着，J 照 32 号单
-  §1-6 验收剧本点一遍）；线上部署效果（push 是 J 的手）。
+  「AI 译成正式马来文」的真实译文品质（走现成 /api/draft-minutes，本场零真实
+  厂商呼叫——J 验收第 5 步就是第一跑）；iOS Safari 的渐层背景（写法就是为它
+  选的，但手上没有 iPhone）；线上部署效果（push 是 J 的手）。
 
 ### 这一场做了什么（细节都勾在 32 号单 §1/§2B/§3 各条目里）
 
@@ -75,12 +79,13 @@
   icon rail／分屏登入／Poppins／头像选单／命令面板（§4 明确不做）；
   /privacy 法律文的「训练」句（要人审，见 33 号报告 §4-1）。
 
-### 🔴 J 的事（写在 33 号报告 §1，三步）
+### 🔴 J 的事（写在 34 号报告 §1；33 号报告的 push 步骤已被它取代）
 
 1. 贴 migration **26**、再贴 **27**（salin-migration.bat 选号）→ status.bat 看探针。
-2. **双击 push-cabang.bat**（本机领先 **8 支**）→ 线上换新（旧样先 Ctrl+Shift+R，
-   再想 §6 的 8-27 两个坑）。
-3. 照 33 号报告 §3 五分钟验收（重点：交现金逐笔剧本、/history 点交接落地）。
+2. **双击 push-cabang.bat**（本机领先 **15 支**）→ 线上从旧紫直接换新紫
+   （旧样先 Ctrl+Shift+R，再想 §6 的 build-cache 坑）。
+3. 照 34 号报告 §4 五分钟验收（重点：icon rail/头像选单/分屏登入/设置子侧栏/
+   BM 挡保存＋「AI 译」第一跑；另有 33 号报告 §3 的交现金逐笔剧本）。
    之后：31 号单**场次 5**（十大观音照片→D-7/D-8、MyInvois 模板→B-7、bench 实跑 G-3）。
    ⚠ **8/31 23:59 竞赛截止（内部 cutoff 18:00）**；one-pager 的 [YOU] 两处还空着。
 
@@ -109,6 +114,23 @@ B-7 后半（MyInvois 官方模板逐栏对齐）＋ G-3（J 双击 bench-models
 ---
 
 ## 6. 已知陷阱（踩过的，别再踩）
+
+### 2026-08-27 下午第二场新增（紫色改版＋马来语把关那一场）
+
+- 🔴 **同一天的拍板也会被同一天更晚的拍板覆盖——绿色整套做完 6 小时就被紫色
+  换掉。** 改版型的工作先把「可重跑」做进工具（brand-icons.mjs 一条命令重生
+  图标、radius codemod、howitworks 重拍脚本），第二次换皮只花第一次的零头。
+  **判断方法：凡「换主题/换 logo」类需求，第一问是「下次再换要几步」。**
+- 🔴 **「不准出现某语言」的把关，必有合法例外：注册名照印、永不改写。**
+  BM 把关第一版把 e2e 的中文机构名当违规，挡了它自己的文件。**修法：
+  cjkSnippets 带 allow 清单（机构名/签名人先剔除再验）；判断方法：写任何
+  「内容白名单/黑名单」检查前，先列「哪些字符串是这份文件必须原样印的」。**
+- ⚠ **规格书是别人量的，也要过自己的底线**：tester 的输入框边框 1.55:1 会
+  重演 C-5 的「看不到框」——照抄前把对比自己再算一遍，偏离要写进报告。
+- ⚠ **radius 类 codemod 必须单趟查表**（3xl→lg→sm 连锁替换会把 26px 干到
+  6px）——规格书自己警告了，照做就对。
+- 💡 **e2e 是「组件退役」的探测器**：OrgChip 删了，e2e 的 fresh-session 检查
+  立刻红——把它改成测新机制（头像选单里的 org 行），而不是删断言。
 
 ### 2026-08-27 下午新增（32 号单那一场）
 
@@ -367,7 +389,7 @@ J 手贴 migration 的步骤：记事本开档 → `Ctrl+A` `Ctrl+C` → Supabas
 |---|---|
 | 根目录 | `CLAUDE.md`（规则）· `STATE.md`（这份）· `BUILD_PLAN.md` · `PROMPTS.md` · `DEPLOY.md`（⚠ 过期，上线照 `docs/上线与截图-给J的步骤.md`）· `README.md` · `AGENTS.md` |
 | `docs/` | `DECISIONS.md`（D1–**D23**）· `功能盤點-計劃vs實作.md` · `产品缺口盘点.md` · `上线与截图-给J的步骤.md` · `换模型手册.md` · `AI-API-选型与成本.md` · 其余照旧 |
-| 品牌 | `src/lib/brand.ts`（BRAND_NAME="MinitAI"，D23）· logo 原图 `scripts/assets/minit-logo.png` · 重生图标：`node scripts/brand-icons.mjs` |
+| 品牌 | `src/lib/brand.ts`（BRAND_NAME="MinitAI"，D23）· **紫色**（D24）：logo 原图 `scripts/assets/minit-logo.png`、向量版 `src/components/brand-logo.tsx` · 重生图标：`node scripts/brand-icons.mjs` · tokens 都在 `globals.css` 的 `.v2-root` |
 | 定价／毛利 | `src/lib/unit-economics.ts` + `npm run economics`（价目表查证日 `PRICES_CHECKED_ON`） |
 | AI 分流设定 | `.env.example` 的 AI 段 + `npm run check:ai` |
 | 模型对比 | `npm run bench`（--dry-run / --mock）· `bench-models.bat` · 报告在 `eval/reports/model-bench-<日期>.md` |

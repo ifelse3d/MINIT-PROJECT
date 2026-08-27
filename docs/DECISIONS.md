@@ -542,6 +542,24 @@ MyInvois Batch Upload 的 .xlsx 只放資料表（Dokumen 表第一且唯一，�
 `BRAND_NAME = "MinitAI"`（brand.ts 一行）。D13「賽後才定名」被此條覆蓋；
 D20 的其餘部分不變：已開收據字首 MIN- 鎖死、prompts 一字不動。
 
+### D24 — 紫色全套改版定案（2026-08-27 下午，J：「logo 用這個，design 換差不多這樣，但功能還是用我們自己的」）
+
+**覆蓋當天早上的拍板 0-8（綠色）**。以 tester（tan shi hui）的紫色規格書為底：
+主色 `#7029E5` 系、紫色雙人 M logo、Poppins、icon rail 側欄、sticky 玻璃頂欄
+＋頭像選單（機構切換收進去）、分屏登入、設置 13 子頁＋子側欄、五級圓角、
+淡紫漸層 canvas。**功能、導航分組（拍板④）、金流、RLS 一律用我們自己的**——
+換皮不換骨。全套一次做（J 拍板「全套現在做」，8/31 交件前）。
+偏差一條：輸入框邊框保 ≥3:1（規格書的 1.55:1 會重演「看不到框」）。
+
+### D25 — eROSES 文件的馬來語把關（2026-08-27 下午，J）
+
+要交 eROSES 的馬來文文件**不可以有華語**。程式確定性偵測（免費）、就地標紅
+＋鎖保存；出路由**用戶選**：「讓 AI 譯成正式馬來文（花額度，走現成
+draft-minutes 路）」或「自己改」——不背著人自動翻譯。機構**註冊名照印、
+永不改寫**（不擋自己的文件）；人名用名冊 IC 官方名。四種文件都要正式：
+會議記錄（Stage D 模板＋此把關；深版式仍等 D-8）、財報（PDF 簽名欄）、
+貼上包（逐格標紅）、AGM 包（地點就地把關）。
+
 ---
 
-*Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C) · D16 appended 2026-08-25 (Stage D) · D17 appended 2026-08-27 (work order 27, the overnight sprint) · D18–D21 appended 2026-08-27 (work order 31 §0, J's post-launch rulings) · D22–D23 appended 2026-08-27 (work order 32 §0, launch-day feedback rulings)*
+*Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C) · D16 appended 2026-08-25 (Stage D) · D17 appended 2026-08-27 (work order 27, the overnight sprint) · D18–D21 appended 2026-08-27 (work order 31 §0, J's post-launch rulings) · D22–D23 appended 2026-08-27 (work order 32 §0, launch-day feedback rulings) · D24–D25 appended 2026-08-27 (the afternoon rulings: violet redesign + BM guard)*
