@@ -67,8 +67,14 @@ function CardBody({
 }
 
 export function TaskCards() {
+  // Container variants (J #1, 2026-08-28): columns follow the CONTENT
+  // column's width, not the viewport's — with the AI dock open on a 14"
+  // laptop the old lg:grid-cols-4 forced four skinny towers.
   return (
-    <section aria-label="Tugas / 任务 / Tasks" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <section
+      aria-label="Tugas / 任务 / Tasks"
+      className="grid grid-cols-1 gap-3 @md:grid-cols-2 @4xl:grid-cols-4"
+    >
       <Link href="/minutes" className={CARD_CLASS}>
         <CardBody
           icon="📝"

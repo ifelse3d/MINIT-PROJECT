@@ -2,8 +2,9 @@
 
 import { MINUTES_STATUS_LABEL, labelFor } from "@/lib/status-labels";
 import { scopedKey } from "@/lib/storage-scope-core";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { NAV_ITEMS, SETTINGS_NAV, type NavItem } from "@/components/nav-items";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -82,6 +83,30 @@ type LocalDonationHit = {
   receiptNo: string | null;
 };
 
+/**
+ * #2 (J review 27-evening, 2026-08-28): typing 財報 / "Settings" into search
+ * found nothing — the search only knew records, never the app itself. Pages
+ * are now first-class results: every navigable page, matched across all
+ * three languages, ranked before the records so "take me there" is one tap.
+ */
+function matchPages(query: string): NavItem[] {
+  const ql = query.toLowerCase();
+  const seen = new Set<string>();
+  const out: NavItem[] = [];
+  for (const item of [...NAV_ITEMS, ...SETTINGS_NAV]) {
+    if (seen.has(item.href)) continue;
+    if (
+      item.bm.toLowerCase().includes(ql) ||
+      item.zh.includes(query) ||
+      item.en.toLowerCase().includes(ql)
+    ) {
+      seen.add(item.href);
+      out.push(item);
+    }
+  }
+  return out.slice(0, 8);
+}
+
 export function SearchResults({
   query,
   dbReceipts,
@@ -145,8 +170,13 @@ export function SearchResults({
     setReady(true);
   }, [query, dbReceipts]);
 
+  const pageHits = useMemo(() => (query ? matchPages(query) : []), [query]);
   const totalHits =
-    dbReceipts.length + dbMinutes.length + localDonations.length + clauses.length;
+    pageHits.length +
+    dbReceipts.length +
+    dbMinutes.length +
+    localDonations.length +
+    clauses.length;
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 pb-10">
@@ -186,6 +216,35 @@ export function SearchResults({
               />
             </CardDescription>
           </CardHeader>
+        </Card>
+      )}
+
+      {/* #2: the app's own pages, first — "financial statement" should take
+          you to the financial statement. */}
+      {pageHits.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">
+              🧭 <Tri bm="Halaman" zh="页面" en="Pages" />{" "}
+              <Badge variant="secondary">{pageHits.length}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            {pageHits.map((p) => {
+              const Icon = p.icon;
+              return (
+                <Link
+                  key={p.href}
+                  href={p.href}
+                  className="flex flex-wrap items-center gap-2 rounded-md border p-3 text-base font-medium hover:bg-muted/40"
+                >
+                  <Icon className="h-4 w-4 shrink-0" strokeWidth={1.8} />
+                  <Tri bm={p.bm} zh={p.zh} en={p.en} />
+                  <span className="ml-auto text-muted-foreground">→</span>
+                </Link>
+              );
+            })}
+          </CardContent>
         </Card>
       )}
 

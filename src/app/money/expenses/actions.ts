@@ -81,6 +81,13 @@ type ExpenseInput = {
   /** YYYY-MM-DD */
   spentAtIso: string;
   source: "photo" | "manual";
+  /**
+   * #20 (J review 27-evening, 2026-08-28): the person who paid out of pocket
+   * is not always the person typing — an aunty hands her receipt to whoever
+   * has the app. Claims only; blank = the signed-in member themselves. The
+   * submitter stays on record (claimant_user_id, created_by) either way.
+   */
+  onBehalfOf?: string | null;
 };
 
 function validInput(input: ExpenseInput): boolean {
@@ -96,7 +103,10 @@ function validInput(input: ExpenseInput): boolean {
     typeof input.category === "string" &&
     input.category.length <= 60 &&
     /^\d{4}-\d{2}-\d{2}$/.test(input.spentAtIso) &&
-    (input.source === "photo" || input.source === "manual")
+    (input.source === "photo" || input.source === "manual") &&
+    (input.onBehalfOf === undefined ||
+      input.onBehalfOf === null ||
+      (typeof input.onBehalfOf === "string" && input.onBehalfOf.length <= 120))
   );
 }
 
@@ -167,10 +177,16 @@ export async function submitClaim(input: ExpenseInput): Promise<ExpenseOutcome> 
     .eq("user_id", user.id)
     .maybeSingle();
 
+  // #20: the money may be owed to someone else — their name goes on the
+  // claim; who SUBMITTED it stays on claimant_user_id / created_by.
+  const onBehalf = (input.onBehalfOf ?? "").trim();
   return insertExpense(input, {
     status: "submitted",
     claimant_user_id: user.id,
-    claimant_name: (member?.name as string | null) ?? user.email ?? "",
+    claimant_name:
+      onBehalf !== ""
+        ? onBehalf
+        : ((member?.name as string | null) ?? user.email ?? ""),
     submitted_at: new Date().toISOString(),
     created_by: user.email ?? "",
   });

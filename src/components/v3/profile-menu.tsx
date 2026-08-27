@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, LogOut, Settings, UserRound } from "lucide-react";
+import { Building2, LogOut, UserRound } from "lucide-react";
 import { Tri, useTriText } from "@/components/language-provider";
 import { IconTip } from "@/components/ui/tooltip";
 import { SignOutConfirm } from "@/components/sign-out-confirm";
@@ -86,10 +86,9 @@ export function ProfileMenu() {
             <UserRound className="h-4 w-4 shrink-0" strokeWidth={1.8} />
             <Tri bm="Profil saya" zh="我的账号" en="My profile" />
           </Link>
-          <Link href="/settings" role="menuitem" onClick={() => setOpen(false)} className={row}>
-            <Settings className="h-4 w-4 shrink-0" strokeWidth={1.8} />
-            <Tri bm="Tetapan" zh="设置" en="Settings" />
-          </Link>
+          {/* #7 (J review 27-evening, 2026-08-28): no Settings up here — the
+              sidebar already pins it at the bottom, and two doors to the same
+              place read as clutter. */}
 
           {/* §5.3: the org context lives HERE now — this row is what allowed
               the rail-footer org block to go. */}

@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tri, useLocalizedError } from "@/components/language-provider";
 import { SectionTabs, type SectionTab } from "@/components/section-tabs";
-import { useEinvoisVisible } from "@/lib/einvois-pref";
 import { useRegister } from "./register-store";
 
 // ---------------------------------------------------------------------------
@@ -33,44 +32,11 @@ const MONEY_TABS = [
   { href: "/money/issue", labelBm: "Resit pusingan ini", labelZh: "开收据 · 这一轮", labelEn: "Receipts · this round" },
 ] as const;
 
-// The management view over the WHOLE register — see which rows have or lack
-// a receipt, pick several, issue or re-download (#3's second ask).
-const MONEY_RECEIPTS_MGMT = {
-  href: "/money/receipts",
-  labelBm: "Urus resit",
-  labelZh: "开收据 · 管理",
-  labelEn: "Manage receipts",
-  iconEmoji: "🧾",
-} as const;
-
-const MONEY_CUSTODY = {
-  href: "/money/custody",
-  labelBm: "Simpanan tunai",
-  labelZh: "现金保管",
-  labelEn: "Cash custody",
-  iconEmoji: "💰",
-} as const;
-
-// R-6 (2026-08-25): e-Invois is OPTIONAL (J 2026-08-24) — its entry appears
-// only when the organisation has switched it on (Settings). The route itself
-// always works.
-const MONEY_EINVOIS = {
-  href: "/money/einvois",
-  labelBm: "Fail cukai",
-  labelZh: "税务文件",
-  labelEn: "Tax file",
-  iconEmoji: "🗂",
-} as const;
-
-// E-1 (2026-08-25): receipt history is the section's RECORDS, not the last
-// numbered step. Rendered apart from the chain — no number, never locked.
-// Same word the rest of the app uses for this concept: Sejarah / 历史 / History.
-const MONEY_RECORDS = {
-  href: "/money/history",
-  labelBm: "Sejarah",
-  labelZh: "历史",
-  labelEn: "History",
-} as const;
+// #12/#16 (J review 27-evening, 2026-08-28): the rail's right side used to
+// repeat Manage receipts / Cash custody / Tax file / History — every one of
+// them already a sidebar row in the 钱 group. The rail now carries ONLY the
+// two numbered steps of the job; the records pages live in the sidebar,
+// once.
 
 export function MoneyChrome({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -89,7 +55,6 @@ export function MoneyChrome({ children }: { children: ReactNode }) {
     error,
     setError,
   } = useRegister();
-  const [einvoisVisible] = useEinvoisVisible();
 
   const roundUnreceipted = roundDonations.filter((d) => d.receiptNo === null).length;
   const tabs: SectionTab[] = [
@@ -116,16 +81,6 @@ export function MoneyChrome({ children }: { children: ReactNode }) {
             : "done",
       count: roundUnreceipted,
     },
-  ];
-
-  // B-3: the record pages, apart from the numbered steps. The tax entry is
-  // hidden while the organisation says it does not need e-Invois (R-6) —
-  // unless someone is standing on the page itself, in which case hiding its
-  // own entry would be disorienting.
-  const extras = [
-    MONEY_RECEIPTS_MGMT,
-    MONEY_CUSTODY,
-    ...(einvoisVisible || pathname === "/money/einvois" ? [MONEY_EINVOIS] : []),
   ];
 
   return (
@@ -200,9 +155,9 @@ export function MoneyChrome({ children }: { children: ReactNode }) {
         </div>
       )}
 
-      {/* Where am I? One rail: the two steps, and the record pages apart
-          from them (custody, tax file, history — none of them is a step). */}
-      <SectionTabs tabs={tabs} extras={extras} records={MONEY_RECORDS} />
+      {/* Where am I? The two steps of the round — the record pages (custody,
+          tax file, history) are sidebar rows, not rail pills (#12/#16). */}
+      <SectionTabs tabs={tabs} />
 
       {/* /money/history is a plain server page with its own heading; the rail
           above is all the frame it needs. */}

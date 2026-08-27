@@ -28,12 +28,9 @@ const MINUTES_TABS = [
 // The label stays "Sejarah / 历史 / History" — the same word the save button
 // and the menus already use for this concept (STATE §6: same concept, same
 // words on every screen).
-const MINUTES_RECORDS = {
-  href: "/minutes/history",
-  labelBm: "Sejarah",
-  labelZh: "历史",
-  labelEn: "History",
-} as const;
+// #16 (J review 27-evening, 2026-08-28): the History pill is gone from the
+// rail — "Minit lama / 以前的记录" is already a sidebar row, and repeating it
+// up here was exactly the duplication J listed. The rail carries steps only.
 
 export function MinutesChrome({ children }: { children: ReactNode }) {
   const t = useTriText();
@@ -198,8 +195,9 @@ export function MinutesChrome({ children }: { children: ReactNode }) {
         )}
       </div>
 
-      {/* Where am I? One rail: three steps, and the records apart from them. */}
-      <SectionTabs tabs={tabs} records={MINUTES_RECORDS} />
+      {/* Where am I? One rail: the three steps (#16: History lives in the
+          sidebar, not here). */}
+      <SectionTabs tabs={tabs} />
 
       {/* The one sentence answering "what do I do now?" — it has to survive the
           split, because on a single page the answer was "scroll down". */}

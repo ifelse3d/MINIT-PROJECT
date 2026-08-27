@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { Plus, X } from "lucide-react";
@@ -196,9 +196,9 @@ export function GroupsCard({
                 // answer without proposing a category. Whatever this society
                 // calls its own groups is the right answer.
                 placeholder={t(
-                  "nama kumpulan anda sendiri",
-                  "你们自己的分组名字",
-                  "your own group name",
+                  "cth: Unit Belia, Kumpulan Wanita",
+                  "例如：青年组、妇女组",
+                  "e.g. Youth unit, Women's group",
                 )}
                 className="min-h-11 rounded-md border border-input bg-background px-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
@@ -268,9 +268,9 @@ export function GroupsCard({
               onChange={(e) => setPickerGroup(e.target.value)}
               maxLength={60}
               placeholder={t(
-                "nama kumpulan anda sendiri",
-                "你们自己的分组名字",
-                "your own group name",
+                "cth: Unit Belia, Kumpulan Wanita",
+                "例如：青年组、妇女组",
+                "e.g. Youth unit, Women's group",
               )}
               className="rounded-md border border-input bg-background px-3 py-2 text-base"
             />

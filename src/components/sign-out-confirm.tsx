@@ -30,18 +30,20 @@ export function SignOutConfirm({
         void signOutToLogin();
       }}
       body={
+        // #6 (J review 27-evening, 2026-08-28): short. The clearing of local
+        // drafts is the reason the dialog exists, said in one line.
         <>
           <Tri bm="Log keluar?" zh="要退出吗？" en="Sign out?" />{" "}
           <span className="text-muted-foreground">
             <Tri
-              bm="Data MinitAI pada peranti ini (deraf yang belum ada resit, kerja separuh siap) akan dikosongkan supaya pengguna komputer ini yang seterusnya tidak nampak rekod anda. Rekod yang sudah disimpan ke pertubuhan selamat."
-              zh="这台设备上的本机资料（还没开收据的草稿、做到一半的东西）会被清掉，这样别人用这台电脑时看不到您的记录。已保存到机构的记录不受影响。"
-              en="MinitAI's data on this device (unreceipted drafts, half-done work) will be cleared so the next person on this computer cannot see your records. Anything already saved to the organisation is safe."
+              bm="Deraf pada peranti ini akan dikosongkan. Rekod yang sudah disimpan selamat."
+              zh="这台设备上的草稿会被清掉。已保存的记录不受影响。"
+              en="Drafts on this device will be cleared. Saved records are safe."
             />
           </span>
         </>
       }
-      confirmLabel={<Tri bm="Ya, log keluar" zh="是，退出" en="Yes, sign out" />}
+      confirmLabel={<Tri bm="Ya" zh="是" en="Yes" />}
     />
   );
 }

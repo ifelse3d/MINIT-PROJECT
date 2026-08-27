@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Check, History, Lock } from "lucide-react";
+import { Check, Lock } from "lucide-react";
 import { Tri, useTriText } from "@/components/language-provider";
 import type { StepStatus } from "@/components/step-card";
 
@@ -32,39 +32,18 @@ export type SectionTab = {
   count?: number;
 };
 
-/**
- * E-1 (2026-08-25, J #18): the section's RECORDS — history is not a step.
- * It used to be the last numbered ring of the chain, which said "after you
- * finish, you do History", and it wore a number and could sit next to a
- * padlock. Looking back is not part of doing the job: it gets its own fixed
- * entry at the far end of the rail — no number, no connector, never locked.
- */
-export type SectionRecords = {
-  href: string;
-  labelBm: string;
-  labelZh: string;
-  labelEn: string;
-  /** Optional emoji in place of the History icon (extras use this). */
-  iconEmoji?: string;
-};
+// The `records`/`extras` side entries (History, Manage receipts, Cash
+// custody, Tax file) were REMOVED on 2026-08-28 (J review 27-evening
+// #12/#16): every one of them is a sidebar row, and repeating them here was
+// the duplication J listed. The rail carries the job's numbered steps only.
 
 export function SectionTabs({
   tabs,
-  records,
-  extras = [],
   ariaLabelBm = "Langkah",
   ariaLabelZh = "步骤",
   ariaLabelEn = "Steps",
 }: {
   tabs: SectionTab[];
-  /** The section's records page — rendered apart from the numbered steps. */
-  records?: SectionRecords;
-  /**
-   * B-3 (D19): pages that belong to the section but are NOT steps of the job —
-   * the cash-custody record, the month-end tax file. Rendered like `records`
-   * (no number, no connector, never locked), before it.
-   */
-  extras?: SectionRecords[];
   ariaLabelBm?: string;
   ariaLabelZh?: string;
   ariaLabelEn?: string;
@@ -73,11 +52,15 @@ export function SectionTabs({
   const pathname = usePathname();
 
   return (
+    // #11 (J review 27-evening, 2026-08-28): the rail used to stick at top-0
+    // and slide UNDER the taller top bar (z-40) — "滑下會不見". It now sticks
+    // just below the bar, wraps instead of scrolling sideways, and the pills
+    // are a size smaller on desktop (phones keep the 44px touch floor).
     <nav
       aria-label={t(ariaLabelBm, ariaLabelZh, ariaLabelEn)}
-      className="sticky top-0 z-20 py-2"
+      className="sticky top-14 z-20 py-2"
     >
-      <ol className="v2-glass v2-scroll flex items-center gap-1 overflow-x-auto rounded-md px-2 py-2">
+      <ol className="v2-glass flex flex-wrap items-center gap-1 rounded-md px-2 py-1.5">
         {tabs.map((tab, i) => {
           const here = pathname === tab.href;
           const tone =
@@ -99,7 +82,7 @@ export function SectionTabs({
                 // F-3 (2026-08-25): min-h-11 = the app's 44px touch-target
                 // floor. These pills are the PRIMARY step navigation on a
                 // phone; 36px was below the floor everything else keeps.
-                className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xs border-2 px-3 text-base font-medium ${tone} ${
+                className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xs border-2 px-3 text-base font-medium md:min-h-9 md:px-2.5 md:text-sm ${tone} ${
                   // The page you are ON is the one thing this rail must make
                   // unmissable — colour alone cannot do it, because two tabs can
                   // legitimately share a colour.
@@ -132,29 +115,6 @@ export function SectionTabs({
             </li>
           );
         })}
-        {[...extras, ...(records ? [records] : [])].map((entry, i) => (
-          <li
-            key={entry.href}
-            className={`flex shrink-0 items-center ${i === 0 ? "ml-auto pl-2" : "pl-1"}`}
-          >
-            <Link
-              href={entry.href}
-              aria-current={pathname === entry.href ? "page" : undefined}
-              className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xs border-2 border-dashed border-slate-300 px-3 text-base font-medium text-slate-600 dark:border-slate-500 dark:text-slate-300 ${
-                pathname === entry.href
-                  ? "ring-2 ring-slate-900/70 ring-offset-1 dark:ring-white/80"
-                  : "hover:brightness-95 active:scale-95"
-              }`}
-            >
-              {entry.iconEmoji ? (
-                <span aria-hidden>{entry.iconEmoji}</span>
-              ) : (
-                <History aria-hidden className="size-4 shrink-0" strokeWidth={2.2} />
-              )}
-              <Tri bm={entry.labelBm} zh={entry.labelZh} en={entry.labelEn} />
-            </Link>
-          </li>
-        ))}
       </ol>
     </nav>
   );

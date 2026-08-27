@@ -272,9 +272,10 @@ export default function LoginPage() {
           className="flex items-center gap-2.5 p-6 text-white md:w-[42%] md:flex-col md:items-start md:justify-start md:gap-0 md:p-10"
           style={{ background: "var(--v2-grad-brand)" }}
         >
-          <div className="flex items-center gap-2.5">
-            <BrandLogo size={36} white className="h-9 w-9" />
-            <span className="text-2xl font-bold leading-none tracking-tight">
+          {/* #14 (J review 27-evening): the wordmark and logo, a size up. */}
+          <div className="flex items-center gap-3">
+            <BrandLogo size={48} white className="h-12 w-12" />
+            <span className="text-3xl font-bold leading-none tracking-tight">
               {BRAND_NAME}
             </span>
           </div>

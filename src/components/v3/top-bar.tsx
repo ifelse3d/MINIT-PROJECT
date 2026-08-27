@@ -127,25 +127,22 @@ export function TopBar({
               className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--v2-text-soft)]"
               strokeWidth={1.8}
             />
+            {/* #4 (J review 27-evening): the "/" kbd hint is gone — nobody in
+                the audience knows what it means. The shortcut itself still
+                works for those who do. */}
             <input
               ref={inputRef}
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder={t("Cari…", "搜索…", "Search…")}
-              className="h-[34px] w-80 rounded-sm border border-[color:var(--v2-border-strong)] bg-[color:var(--v2-card)] pl-8 pr-9 text-sm outline-none transition-[width] duration-150 focus:w-[420px] focus:border-[color:var(--v2-primary)] focus:ring-[3px] focus:ring-[color:var(--v2-primary-ring)]"
+              className="h-[34px] w-80 rounded-sm border border-[color:var(--v2-border-strong)] bg-[color:var(--v2-card)] pl-8 pr-3 text-sm outline-none transition-[width] duration-150 focus:w-[420px] focus:border-[color:var(--v2-primary)] focus:ring-[3px] focus:ring-[color:var(--v2-primary-ring)]"
             />
-            <kbd
-              aria-hidden
-              className="pointer-events-none absolute right-2 top-1/2 flex h-[18px] w-[18px] -translate-y-1/2 items-center justify-center rounded-xs border border-[color:var(--v2-border)] bg-[color:var(--v2-card-nested)] font-mono text-[11px] text-[color:var(--v2-text-soft)]"
-            >
-              /
-            </kbd>
           </div>
         </form>
 
         {/* Right: search icon (<lg) · language · theme · avatar. */}
         <div className="flex shrink-0 items-center gap-2">
-          <IconTip label={`${t("Cari", "搜索", "Search")}  /`} side="bottom">
+          <IconTip label={t("Cari", "搜索", "Search")} side="bottom">
             <button
               type="button"
               onClick={() => setPaletteOpen(true)}

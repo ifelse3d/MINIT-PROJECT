@@ -16,7 +16,7 @@
 // "manual". Money parsing is parseRmToCents only (Hard Rule 2).
 // ---------------------------------------------------------------------------
 
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
@@ -137,6 +137,11 @@ export function ExpensesView({ role }: { role: string }) {
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState(EXPENSE_CATEGORIES[0].value);
+  // #22 (J review 27-evening, 2026-08-28): "Other" alone tells nobody
+  // anything — a box asks WHAT it is, and the answer rides in the category.
+  const [otherDetail, setOtherDetail] = useState("");
+  // #20: who actually paid out of pocket — blank = the signed-in member.
+  const [onBehalfOf, setOnBehalfOf] = useState("");
   const [date, setDate] = useState(today);
   const [source, setSource] = useState<"photo" | "manual">("manual");
   const [formError, setFormError] = useState<string | null>(null);
@@ -249,15 +254,32 @@ export function ExpensesView({ role }: { role: string }) {
       );
       return;
     }
+    // #22: "Other" must say what it is — an approver reading a claim marked
+    // only 其他 cannot approve anything.
+    if (category === "Lain-lain" && otherDetail.trim() === "") {
+      setFormError(
+        t(
+          "Kategori 'Lain-lain' perlu dinyatakan — tulis ia apa dalam kotak di bawah kategori.",
+          "类别选了「其他」就要写清楚是什么 —— 请在类别下面那格写。",
+          "The 'Other' category needs a word — say what it is in the box under the category.",
+        ),
+      );
+      return;
+    }
     setSaving(true);
     try {
       const input = {
         clientId,
         description: description.trim(),
         amountCents: cents,
-        category,
+        category:
+          category === "Lain-lain"
+            ? `Lain-lain — ${otherDetail.trim()}`
+            : category,
         spentAtIso: date || today,
         source,
+        // #20: claims only — the server ignores it on "record" rows.
+        onBehalfOf: mode === "claim" ? onBehalfOf.trim() || null : null,
       };
       if (mode === "record") {
         sayOutcome(
@@ -551,7 +573,45 @@ export function ExpensesView({ role }: { role: string }) {
                     </option>
                   ))}
                 </select>
+                {/* #22: "Other" opens its own box — required before save. */}
+                {category === "Lain-lain" && (
+                  <input
+                    className={inputClass}
+                    value={otherDetail}
+                    autoFocus
+                    maxLength={40}
+                    onChange={(e) => setOtherDetail(e.target.value)}
+                    placeholder={t(
+                      "Lain-lain apa? cth: hadiah AGM",
+                      "其他是什么？例如：AGM 礼品",
+                      "Other what? e.g. AGM gifts",
+                    )}
+                  />
+                )}
               </label>
+              {/* #20: a claim is not always the typist's own money. */}
+              {mode === "claim" && (
+                <label className="flex flex-col gap-1">
+                  <span className="text-base font-semibold">
+                    <Tri
+                      bm="Siapa yang membayar dahulu"
+                      zh="是谁垫付的"
+                      en="Who paid out of pocket"
+                    />
+                  </span>
+                  <input
+                    className={inputClass}
+                    value={onBehalfOf}
+                    maxLength={120}
+                    onChange={(e) => setOnBehalfOf(e.target.value)}
+                    placeholder={t(
+                      "Kosong = anda sendiri",
+                      "留空 = 您自己",
+                      "Blank = you",
+                    )}
+                  />
+                </label>
+              )}
               <label className="flex flex-col gap-1">
                 <span className="text-base font-semibold">
                   <Tri bm="Tarikh" zh="日期" en="Date" />
@@ -610,78 +670,106 @@ export function ExpensesView({ role }: { role: string }) {
                 {decideError}
               </p>
             )}
-            {[...pending, ...approvedUnpaid].map((r) => (
-              <div key={r.id} className="rounded-sm border p-4">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <p className="font-medium">{r.description}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {r.claimantName ?? "—"} · {r.category ?? "—"} · {r.spentAtIso ?? "—"}
-                    </p>
-                  </div>
-                  <span className="font-semibold tabular-nums">{formatRm(r.amountCents)}</span>
-                </div>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <Badge variant="outline" className={STATUS_BADGE[r.status].cls}>
-                    <Tri {...STATUS_BADGE[r.status]} />
-                  </Badge>
-                  {r.status === "submitted" && (
-                    <>
-                      <Button
-                        size="sm"
-                        disabled={decideBusy === r.id}
-                        onClick={() => void decide(r.id, "approve")}
-                      >
-                        ✓ <Tri bm="Luluskan" zh="批准" en="Approve" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={decideBusy === r.id}
-                        onClick={() => {
-                          setRejecting(rejecting === r.id ? null : r.id);
-                          setRejectReason("");
-                        }}
-                      >
-                        <Tri bm="Tolak…" zh="退回…" en="Reject…" />
-                      </Button>
-                    </>
-                  )}
-                  {r.status === "approved" && (
-                    <Button
-                      size="sm"
-                      disabled={decideBusy === r.id}
-                      onClick={() => void decide(r.id, "mark_paid")}
-                    >
-                      💸 <Tri bm="Tanda sudah dibayar" zh="标「已付款」" en="Mark paid" />
-                    </Button>
-                  )}
-                </div>
-                {rejecting === r.id && (
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <input
-                      className={`${inputClass} max-w-md`}
-                      value={rejectReason}
-                      placeholder={t(
-                        "Sebab penolakan (wajib)",
-                        "退回理由（必填）",
-                        "Reason for rejecting (required)",
+            {/* #23 (J review 27-evening, 2026-08-28): a TABLE — who, what,
+                category, date, amount, then the action. Ten claims must scan
+                in ten lines, not ten paragraphs. */}
+            <div className="overflow-x-auto rounded-sm border">
+              <table className="w-full text-base">
+                <thead>
+                  <tr className="border-b text-left text-sm text-muted-foreground">
+                    <th className="px-3 py-2"><Tri bm="Siapa" zh="谁" en="Who" /></th>
+                    <th className="px-3 py-2"><Tri bm="Perihal" zh="是什么" en="What" /></th>
+                    <th className="px-3 py-2"><Tri bm="Kategori" zh="类别" en="Category" /></th>
+                    <th className="px-3 py-2"><Tri bm="Tarikh" zh="日期" en="Date" /></th>
+                    <th className="px-3 py-2 text-right"><Tri bm="Jumlah" zh="金额" en="Amount" /></th>
+                    <th className="px-3 py-2"><Tri bm="Tindakan" zh="处理" en="Action" /></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...pending, ...approvedUnpaid].map((r) => (
+                    <React.Fragment key={r.id}>
+                      <tr className="border-b last:border-b-0">
+                        <td className="px-3 py-2 font-medium">{r.claimantName ?? "—"}</td>
+                        <td className="px-3 py-2">{r.description}</td>
+                        <td className="px-3 py-2 text-sm">{r.category ?? "—"}</td>
+                        <td className="px-3 py-2 text-sm tabular-nums">{r.spentAtIso ?? "—"}</td>
+                        <td className="px-3 py-2 text-right font-semibold tabular-nums">
+                          {formatRm(r.amountCents)}
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {r.status === "submitted" ? (
+                              <>
+                                <Button
+                                  size="sm"
+                                  disabled={decideBusy === r.id}
+                                  onClick={() => void decide(r.id, "approve")}
+                                >
+                                  ✓ <Tri bm="Luluskan" zh="批准" en="Approve" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={decideBusy === r.id}
+                                  onClick={() => {
+                                    setRejecting(rejecting === r.id ? null : r.id);
+                                    setRejectReason("");
+                                  }}
+                                >
+                                  <Tri bm="Tolak…" zh="退回…" en="Reject…" />
+                                </Button>
+                              </>
+                            ) : (
+                              <>
+                                <Badge variant="outline" className={STATUS_BADGE[r.status].cls}>
+                                  <Tri {...STATUS_BADGE[r.status]} />
+                                </Badge>
+                                {r.status === "approved" && (
+                                  <Button
+                                    size="sm"
+                                    disabled={decideBusy === r.id}
+                                    onClick={() => void decide(r.id, "mark_paid")}
+                                  >
+                                    💸 <Tri bm="Sudah dibayar" zh="已付款" en="Mark paid" />
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                      {rejecting === r.id && (
+                        <tr className="border-b bg-red-50/50 last:border-b-0 dark:bg-red-400/5">
+                          <td colSpan={6} className="px-3 py-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <input
+                                className={`${inputClass} max-w-md`}
+                                value={rejectReason}
+                                placeholder={t(
+                                  "Sebab penolakan (wajib)",
+                                  "退回理由（必填）",
+                                  "Reason for rejecting (required)",
+                                )}
+                                onChange={(e) => setRejectReason(e.target.value)}
+                              />
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-red-700"
+                                disabled={decideBusy === r.id}
+                                onClick={() => void decide(r.id, "reject", rejectReason)}
+                              >
+                                <Tri bm="Sahkan tolak" zh="确认退回" en="Confirm reject" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
                       )}
-                      onChange={(e) => setRejectReason(e.target.value)}
-                    />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-red-700"
-                      disabled={decideBusy === r.id}
-                      onClick={() => void decide(r.id, "reject", rejectReason)}
-                    >
-                      <Tri bm="Sahkan tolak" zh="确认退回" en="Confirm reject" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            ))}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </PageSection>
       )}

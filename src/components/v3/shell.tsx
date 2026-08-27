@@ -148,8 +148,14 @@ export function AppShell({
               full width of the content column. */}
           <TopBar pathname={pathname ?? "/"} onOpenDrawer={() => setDrawerOpen(true)} />
           {/* F-1 (2026-08-25): the shell is the widest bound (7xl); each
-              page's own container decides its real width. */}
-          <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-4 sm:px-6 md:pb-10 md:pt-6">
+              page's own container decides its real width.
+              @container (2026-08-28, J #1 "14寸 LAPTOP 不好看"): the rail
+              takes 248px and the AI dock up to 640px off this column, so
+              viewport breakpoints lie about the room actually available —
+              a 14" laptop with the assistant open showed FOUR card columns
+              in phone-width space. Width-sensitive grids below use
+              container variants (@md:/@3xl:/…), which measure THIS column. */}
+          <main className="@container mx-auto w-full max-w-7xl px-4 pb-24 pt-4 sm:px-6 md:pb-10 md:pt-6">
             {children}
           </main>
         </div>
@@ -215,7 +221,9 @@ function RailItem({
         />
       )}
       <Icon className="h-5 w-5 shrink-0" strokeWidth={1.75} />
-      <span className="rail-label min-w-0 truncate">
+      {/* #13 (J review 27-evening): wrap, never "Spending & cl…" — a label
+          the person cannot read is not a label. */}
+      <span className="rail-label min-w-0 break-words py-1 leading-snug">
         <Tri bm={item.bm} zh={item.zh} en={item.en} />
       </span>
     </Link>
@@ -296,7 +304,9 @@ function RailNav({
               onClick={() => toggleGroup(entry.id, isOpen)}
               aria-expanded={isOpen}
               className={cn(
-                "rail-group-label flex w-full items-center justify-between rounded-sm px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.06em] transition-colors hover:bg-[color:var(--v2-card-nested)]",
+                // #15 (J review 27-evening): 11px group headers were unreadably
+                // small next to 16px items, worst in Chinese. One size up.
+                "rail-group-label flex w-full items-center justify-between rounded-sm px-3 pb-1 pt-2 text-[13px] font-semibold uppercase tracking-[0.06em] transition-colors hover:bg-[color:var(--v2-card-nested)]",
                 groupActive
                   ? "text-[color:var(--v2-primary)]"
                   : "text-[color:var(--v2-text-soft)]",

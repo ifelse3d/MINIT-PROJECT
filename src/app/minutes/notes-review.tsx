@@ -414,17 +414,11 @@ export function NotesReview() {
             </Button>
           )}
         </div>
-        {/* D-6 → F-10 (拍板 41): Word/Excel now goes through the HOME page's
-            box, which converts it to text on the server (no AI charge for the
-            conversion). This gate still takes photos/PDFs only, so keep the
-            PDF workaround as the second half of the sentence. */}
-        <p className="text-sm text-muted-foreground">
-          <Tri
-            bm="Fail Word/Excel: masukkannya ke dalam kotak di halaman Utama — MinitAI membacanya terus. Di sini, sila simpan sebagai PDF dahulu (telefon: Kongsi → Cetak → Simpan sebagai PDF)."
-            zh="Word/Excel 档：放进主页的框，MinitAI 可以直接读；在这一页则请先另存为 PDF（手机：分享 → 列印 → 存成 PDF）。"
-            en="Word/Excel files: drop them in the Home page box — MinitAI reads them directly. Here, save as PDF first (on a phone: Share → Print → Save as PDF)."
-          />
-        </p>
+        {/* #9 (J review 27-evening, 2026-08-28): the two-line Word/Excel
+            lecture is DELETED, not reworded — J highlighted it by hand. The
+            Home box path still exists; someone who picks a Word file here
+            gets told at that moment (the route's own error), which is the
+            only moment the advice is useful. */}
         {/* The step between choosing a file and spending a credit on it. */}
         {pending && (
           <BeforeReading

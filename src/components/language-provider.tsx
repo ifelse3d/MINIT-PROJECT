@@ -203,9 +203,12 @@ export function LanguageSwitcher({ tone = "light" }: { tone?: "light" | "dark" }
     { key: "en", label: "EN" },
   ];
   const dark = tone === "dark";
+  // J's review 27-evening #3 (2026-08-28): ONE dropdown at every width. The
+  // three side-by-side chips (C-2 kept them on md+) crowded the top bar and
+  // read as three separate buttons; the phone dropdown was already the
+  // clearer control, so it is now the only one.
   return (
     <div className="flex items-center gap-1" title="Bahasa · 语言 · Language">
-      {/* Phone: one dropdown. */}
       <select
         value={mode}
         onChange={(e) => {
@@ -216,8 +219,8 @@ export function LanguageSwitcher({ tone = "light" }: { tone?: "light" | "dark" }
         aria-label="Bahasa · 语言 · Language"
         className={
           dark
-            ? "rounded-xs border border-white/40 bg-transparent px-3 py-1.5 text-sm font-semibold text-white md:hidden"
-            : "rounded-xs border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-3 py-1.5 text-sm font-semibold text-[color:var(--v2-text)] md:hidden"
+            ? "rounded-xs border border-white/40 bg-transparent px-3 py-1.5 text-sm font-semibold text-white"
+            : "rounded-xs border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-3 py-1.5 text-sm font-semibold text-[color:var(--v2-text)]"
         }
       >
         {items.map((it) => (
@@ -229,33 +232,6 @@ export function LanguageSwitcher({ tone = "light" }: { tone?: "light" | "dark" }
             be able to SHOW the current mode; switching away is one tap. */}
         {mode === "all" && <option value="all">BM · 中文 · EN</option>}
       </select>
-      {/* md+: the three chips, unchanged. */}
-      {items.map((it) => {
-        const active = mode === it.key || mode === "all";
-        return (
-          <button
-            key={it.key}
-            type="button"
-            onClick={() => setMode(it.key)}
-            aria-pressed={active}
-            className={
-              dark
-                ? `hidden whitespace-nowrap rounded-xs border px-4 py-1.5 text-sm font-semibold transition-colors md:inline-block ${
-                    active
-                      ? "border-white/40 bg-white/[0.18] text-white"
-                      : "border-transparent text-white/80 hover:bg-white/[0.1] hover:text-white"
-                  }`
-                : `hidden whitespace-nowrap rounded-xs border px-3 py-1 text-sm font-semibold transition-colors md:inline-block ${
-                    active
-                      ? "border-transparent bg-[color:var(--v2-primary-fill)] text-white"
-                      : "border-[color:var(--v2-outline-border)] text-[color:var(--v2-text-soft)] hover:bg-[color:var(--v2-primary-soft)]"
-                  }`
-            }
-          >
-            {it.label}
-          </button>
-        );
-      })}
     </div>
   );
 }
