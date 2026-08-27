@@ -29,21 +29,24 @@ import { useRegister } from "./register-store";
 // who carried it; a pending batch can have its date/note edited or be
 // cancelled until HQ confirms; after that it is locked forever.
 //
-// 口徑 (0-6 #5): "in hand" counts ONLY receipted, still-collected cash —
-// the money that can actually be handed over. Unreceipted rows are listed
-// (not tickable) with their own line and a door to the receipts page.
+// #4 (launch feedback, 2026-08-27 evening — J: 「都是先交錢才開收據……先拿到
+// 錢才開收據才對」): a receipt is NO LONGER required before a hand-over.
+// Money moves first; the batch record itself (donor, amount, date, carrier)
+// is the voucher, and receipt numbers ride along for rows that have one.
+// Rows without a receipt are marked so the treasurer knows to issue it —
+// they are selectable like any other collected cash.
 //
 // Bank transfers never appear here (D19); goods never appear (D-1).
 // The donations state machine stays forward-only; cancelling a batch voids
 // a RECORD, not money (see lib/custody.ts).
 // ---------------------------------------------------------------------------
 
-type RowStatus = "handable" | "unreceipted" | "waiting_hq" | "settled";
+type RowStatus = "handable" | "waiting_hq" | "settled";
 
 function rowStatus(d: RegisterDonation): RowStatus {
   if (d.custodyStatus === "settled") return "settled";
   if (d.custodyStatus === "pending_remittance") return "waiting_hq";
-  return d.receiptNo === null ? "unreceipted" : "handable";
+  return "handable";
 }
 
 const STATUS_BADGE: Record<RowStatus, { cls: string; bm: string; zh: string; en: string }> = {
@@ -52,12 +55,6 @@ const STATUS_BADGE: Record<RowStatus, { cls: string; bm: string; zh: string; en:
     bm: "Di tangan — boleh diserah",
     zh: "在手上，可交",
     en: "In hand — can be handed over",
-  },
-  unreceipted: {
-    cls: "border-red-300 bg-red-50 text-red-900",
-    bm: "Belum ada resit",
-    zh: "还没开收据",
-    en: "No receipt yet",
   },
   waiting_hq: {
     cls: "border-blue-300 bg-blue-100 text-blue-900",
@@ -101,19 +98,16 @@ export function CashCustody() {
     () => cashRows.filter((d) => rowStatus(d) === "handable"),
     [cashRows],
   );
-  const unreceipted = useMemo(
-    () => cashRows.filter((d) => rowStatus(d) === "unreceipted"),
-    [cashRows],
+  // #4: rows without a receipt are handable too — flagged, never blocked.
+  const unreceiptedHandable = useMemo(
+    () => handable.filter((d) => d.receiptNo === null),
+    [handable],
   );
-  // 口徑 (0-6 #5): "in hand" = money that can actually be handed over.
+  // 口徑: "in hand" = every collected cash row (receipt or not — #4).
   const handableCents = handable.reduce((s, d) => s + d.amountCents, 0);
-  const unreceiptedCents = unreceipted.reduce((s, d) => s + d.amountCents, 0);
-  // Per-collector balances over RECEIPTED rows only — same 口徑 as the list,
-  // so the two can never contradict each other again (§1-6 真相).
-  const balances = useMemo(
-    () => collectorBalances(donations.filter((d) => d.receiptNo !== null)),
-    [donations],
-  );
+  // Per-collector balances over the SAME rows as the list, so the two can
+  // never contradict each other again (§1-6 真相).
+  const balances = useMemo(() => collectorBalances(donations), [donations]);
 
   const chosen = handable.filter((d) => selected.has(d.id));
   const chosenCents = chosen.reduce((s, d) => s + d.amountCents, 0);
@@ -155,9 +149,9 @@ export function CashCustody() {
       summary={
         handableCents > 0 ? (
           <Tri
-            bm={`${formatRm(handableCents)} tunai beresit sedia diserahkan kepada HQ.`}
-            zh={`${formatRm(handableCents)} 已开收据的现金在手上，可交给总会。`}
-            en={`${formatRm(handableCents)} in receipted cash is in hand, ready to hand to HQ.`}
+            bm={`${formatRm(handableCents)} tunai di tangan, sedia diserahkan kepada bendahari/HQ.`}
+            zh={`${formatRm(handableCents)} 现金在手上，可交给财政／总会。`}
+            en={`${formatRm(handableCents)} in cash is in hand, ready to hand to the treasurer/HQ.`}
           />
         ) : (
           <Tri
@@ -269,22 +263,22 @@ export function CashCustody() {
             </div>
           )}
 
-          {/* 口徑 (0-6 #5): one honest pair of numbers. */}
+          {/* 口徑: one honest number — every collected cash row counts (#4). */}
           <div className="flex flex-col gap-1 rounded-md bg-muted/40 p-3 text-base">
             <p>
               <Tri bm="Di tangan (boleh diserah)" zh="手上（可交）" en="In hand (can be handed over)" />
               {": "}
               <span className="font-semibold">{formatRm(handableCents)}</span>
             </p>
-            {unreceipted.length > 0 && (
+            {unreceiptedHandable.length > 0 && (
               <p className="text-muted-foreground">
                 <Tri
-                  bm={`${unreceipted.length} lagi (${formatRm(unreceiptedCents)}) belum ada resit — belum boleh diserah.`}
-                  zh={`另有 ${unreceipted.length} 笔（${formatRm(unreceiptedCents)}）未开收据 —— 还不能交。`}
-                  en={`${unreceipted.length} more (${formatRm(unreceiptedCents)}) have no receipt yet — cannot be handed over.`}
+                  bm={`${unreceiptedHandable.length} daripadanya belum ada resit — boleh diserah dahulu, resit dijana kemudian untuk penderma.`}
+                  zh={`其中 ${unreceiptedHandable.length} 笔还没开收据 —— 可以先交，收据之后补开给捐款人。`}
+                  en={`${unreceiptedHandable.length} of them have no receipt yet — hand over first, issue the donor's receipt after.`}
                 />{" "}
                 <Link href="/money/receipts" className="font-medium underline underline-offset-4">
-                  <Tri bm="Pergi jana resit" zh="去开收据" en="Go issue receipts" /> →
+                  <Tri bm="Jana resit" zh="去开收据" en="Issue receipts" /> →
                 </Link>
               </p>
             )}
@@ -358,7 +352,7 @@ export function CashCustody() {
             <div className="mt-1 text-sm text-muted-foreground">
               {batch.collector} · {t("diserah", "交接日期", "handed over")} {batch.handedOverAtIso} ·{" "}
               {t("jumlah", "金额", "total")} {formatRm(batch.totalCents)} ·{" "}
-              {t("resit", "收据", "receipts")} {batch.receiptNos.join(", ")}
+              {t("resit", "收据", "receipts")} {batch.receiptNos.length > 0 ? batch.receiptNos.join(", ") : "—"}
               {batch.note ? ` · ${batch.note}` : ""}
             </div>
             {/* §1-11: all four moments of a ringgit are on record — this card
@@ -389,7 +383,7 @@ export function CashCustody() {
             <div className="mt-1 text-sm">
               {batch.collector} · {batch.handedOverAtIso} ·{" "}
               {t("jumlah", "金额", "total")} {formatRm(batch.totalCents)} ·{" "}
-              {t("resit", "收据", "receipts")} {batch.receiptNos.join(", ")}
+              {t("resit", "收据", "receipts")} {batch.receiptNos.length > 0 ? batch.receiptNos.join(", ") : "—"}
               {batch.note ? ` · ${batch.note}` : ""}
             </div>
           </div>
@@ -407,7 +401,7 @@ export function CashCustody() {
             {chosen.map((d) => (
               <li key={d.id} className="flex flex-wrap justify-between gap-2">
                 <span>
-                  <span className="font-mono text-sm">{d.receiptNo}</span> · {d.donorName}
+                  <span className="font-mono text-sm">{d.receiptNo ?? "—"}</span> · {d.donorName}
                 </span>
                 <span className="tabular-nums">{formatRm(d.amountCents)}</span>
               </li>
@@ -510,16 +504,18 @@ function RowTimes({ d }: { d: RegisterDonation }) {
 }
 
 function UnreceiptedHint() {
+  // #4: not a gate any more — the row can be handed over; the receipt is the
+  // donor's proof and can be issued after.
   return (
-    <span className="block text-xs">
+    <span className="block text-xs text-muted-foreground">
       <Tri
-        bm="Jana resit dahulu sebelum diserah"
-        zh="先开收据才能交"
-        en="Issue the receipt before handing over"
+        bm="Belum ada resit — boleh diserah; jana resit kemudian"
+        zh="还没开收据 —— 可以交；收据之后补开"
+        en="No receipt yet — can be handed over; issue it after"
       />{" "}
       →{" "}
       <Link href="/money/receipts" className="underline underline-offset-4">
-        <Tri bm="pergi" zh="去开收据" en="go" />
+        <Tri bm="jana" zh="去开" en="issue" />
       </Link>
     </span>
   );
@@ -558,7 +554,7 @@ function CashRowTr({
       </td>
       <td className="px-2 py-2">
         <RowBadge d={d} />
-        {status === "unreceipted" && <UnreceiptedHint />}
+        {status === "handable" && d.receiptNo === null && <UnreceiptedHint />}
       </td>
     </tr>
   );
@@ -597,7 +593,7 @@ function CashRowCard({
       </p>
       <div className="mt-2">
         <RowBadge d={d} />
-        {status === "unreceipted" && <UnreceiptedHint />}
+        {status === "handable" && d.receiptNo === null && <UnreceiptedHint />}
       </div>
     </div>
   );
@@ -632,7 +628,7 @@ function PendingBatchCard({
           <div className="mt-1 text-sm text-muted-foreground">
             {batch.collector} · {t("diserah", "交接日期", "handed over")} {batch.handedOverAtIso} ·{" "}
             {t("jumlah", "金额", "total")} {formatRm(batch.totalCents)} ·{" "}
-            {t("resit", "收据", "receipts")} {batch.receiptNos.join(", ")}
+            {t("resit", "收据", "receipts")} {batch.receiptNos.length > 0 ? batch.receiptNos.join(", ") : "—"}
             {batch.note ? ` · ${batch.note}` : ""}
           </div>
           {batch.recordedAtIso && (

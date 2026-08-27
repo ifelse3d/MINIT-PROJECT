@@ -73,17 +73,29 @@ export async function saveRemittanceBatch(
     confirmed_by_hq: batch.confirmedByHq,
     status: batch.status,
   };
-  // Migration 27 columns first; retry without them on a pre-27 database.
+  const m27 = {
+    recorded_at: batch.recordedAtIso ?? null,
+    confirmed_at: batch.confirmedAtIso ?? null,
+    note: batch.note ?? null,
+  };
+  // Migration 28 column first (the donation-id link, launch feedback #4);
+  // retry down one migration at a time on an older database.
   const { error } = await supabase.from("remittance_batches").upsert(
-    {
-      ...base,
-      recorded_at: batch.recordedAtIso ?? null,
-      confirmed_at: batch.confirmedAtIso ?? null,
-      note: batch.note ?? null,
-    },
+    { ...base, ...m27, client_donation_ids: batch.donationIds ?? null },
     { onConflict: "org_id,client_id" },
   );
   if (!error) return { ok: true };
+  // 🔴 A batch containing UNRECEIPTED rows cannot be written to a pre-28
+  // database: without client_donation_ids, every other device would resolve
+  // it by receipt numbers and silently lose those rows. Refusing keeps the
+  // record honest — the UI says "on this device only" until J applies 28.
+  const hasUnreceipted =
+    (batch.donationIds?.length ?? 0) > batch.receiptNos.length;
+  if (hasUnreceipted) return { ok: false, reason: "db" };
+  const retry27 = await supabase
+    .from("remittance_batches")
+    .upsert({ ...base, ...m27 }, { onConflict: "org_id,client_id" });
+  if (!retry27.error) return { ok: true };
   // 🔴 A CANCELLED batch cannot be written to a pre-27 database at all (its
   // status check only knows pending/settled). Refusing is correct: writing it
   // as anything else would un-cancel it on every other device. The UI then
@@ -113,6 +125,9 @@ export async function loadRemittanceBatches(): Promise<RemittanceBatch[]> {
 
   const supabase = await getSupabaseServer();
   const SELECT =
+    "id, client_id, collector_name, receipt_nos, total_cents, handed_over_at, confirmed_by_hq, status, recorded_at, confirmed_at, note, client_donation_ids";
+  /** While migration 28 (client_donation_ids) is not applied. */
+  const SELECT_NO_IDS =
     "id, client_id, collector_name, receipt_nos, total_cents, handed_over_at, confirmed_by_hq, status, recorded_at, confirmed_at, note";
   /** While migration 27 (recorded_at/confirmed_at/note) is not applied. */
   const SELECT_LEGACY =
@@ -137,8 +152,14 @@ export async function loadRemittanceBatches(): Promise<RemittanceBatch[]> {
     recorded_at?: string | null;
     confirmed_at?: string | null;
     note?: string | null;
+    client_donation_ids?: string[] | null;
   };
   let { data, error } = await query(SELECT).returns<BatchRow[]>();
+  if (error) {
+    const retry = await query(SELECT_NO_IDS).returns<BatchRow[]>();
+    data = retry.data;
+    error = retry.error;
+  }
   if (error) {
     const retry = await query(SELECT_LEGACY).returns<BatchRow[]>();
     data = retry.data;
@@ -170,5 +191,9 @@ export async function loadRemittanceBatches(): Promise<RemittanceBatch[]> {
     recordedAtIso: row.recorded_at ?? undefined,
     confirmedAtIso: row.confirmed_at ?? null,
     note: row.note ?? null,
+    donationIds:
+      row.client_donation_ids && row.client_donation_ids.length > 0
+        ? row.client_donation_ids
+        : undefined,
   }));
 }

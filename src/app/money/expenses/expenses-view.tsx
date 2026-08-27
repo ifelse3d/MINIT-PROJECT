@@ -29,6 +29,7 @@ import { parseRmToCents } from "@/lib/receipts";
 import { dayIsoMalaysia } from "@/lib/history";
 import { consumeExpensePhoto } from "@/lib/expense-handoff";
 import type { ExpenseExtraction } from "@/lib/extraction";
+import { TemplateChips } from "../templates";
 import {
   decideClaim,
   loadExpenses,
@@ -514,6 +515,14 @@ export function ExpensesView({ role }: { role: string }) {
                   />
                 </span>
               </label>
+              {/* #5: the organisation's own expense wordings, one tap. */}
+              <div className="sm:col-span-2">
+                <TemplateChips
+                  kind="expense_desc"
+                  currentValue={description}
+                  onPick={setDescription}
+                />
+              </div>
               <label className="flex flex-col gap-1">
                 <span className="text-base font-semibold">
                   <Tri bm="Jumlah (RM)" zh="金额 (RM)" en="Amount (RM)" />

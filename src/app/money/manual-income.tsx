@@ -15,6 +15,7 @@ import { Req } from "@/components/required-mark";
 import { parseRmToCents, type RegisterDonation } from "@/lib/receipts";
 import { dayIsoMalaysia } from "@/lib/history";
 import { PaymentMethodToggle, type PaymentMethod } from "./payment-method-toggle";
+import { TemplateChips } from "./templates";
 import { uploadTransferProof } from "./transfer-proof-actions";
 
 // ---------------------------------------------------------------------------
@@ -459,6 +460,15 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
                   />
                 </span>
               </label>
+              {/* #5: the organisation's own wordings, one tap. Outside the
+                  label so chip taps and the popup never yank focus around. */}
+              <div className="sm:col-span-2">
+                <TemplateChips
+                  kind="income_purpose"
+                  currentValue={note}
+                  onPick={setNote}
+                />
+              </div>
             </div>
 
             {error && (

@@ -67,6 +67,9 @@ const probes = [
   ["20260904000000 payment method: transfer proof", "donations", "transfer_proof_path"],
   ["20260905000000 record times: donations.created_at", "donations", "created_at"],
   ["20260905000000 custody batch details", "remittance_batches", "recorded_at"],
+  ["20260906000000 custody donation-id link", "remittance_batches", "client_donation_ids"],
+  ["20260906000000 glossary languages", "org_glossary", "lang"],
+  ["20260906000000 templates", "org_templates", "label"],
 ];
 
 const headers = { apikey: key, Authorization: `Bearer ${key}` };

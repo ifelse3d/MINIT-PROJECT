@@ -10,6 +10,7 @@ import { dayIsoMalaysia } from "@/lib/history";
 import { usePersistentState } from "@/lib/use-persistent-state";
 import { useScopedKey } from "@/lib/storage-scope";
 import { PaymentMethodToggle } from "./payment-method-toggle";
+import { TemplateChips } from "./templates";
 
 // ---------------------------------------------------------------------------
 // TYPE A WHOLE COLLECTION IN ONE GO (2026-08-22)
@@ -348,6 +349,28 @@ export function TypeDonations({
           placeholder={defaultCollector}
         />
       </label>
+
+      {/* #5: the organisation's own purpose wordings — one tap fills every
+          still-empty row, and rows typed after inherit it as usual. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm font-semibold">
+          <Tri bm="Tujuan biasa" zh="常用用途" en="Usual purposes" />:
+        </span>
+        <TemplateChips
+          kind="income_purpose"
+          onPick={(label) =>
+            setRows((current) =>
+              current.map((r) =>
+                r.name.trim() === "" &&
+                r.amount.trim() === "" &&
+                r.phone.trim() === ""
+                  ? { ...r, purpose: label }
+                  : r,
+              ),
+            )
+          }
+        />
+      </div>
 
       <div className="overflow-x-auto">
         <table className="w-full min-w-[40rem] border-collapse text-sm">

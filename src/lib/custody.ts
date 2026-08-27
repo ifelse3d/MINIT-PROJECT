@@ -39,8 +39,16 @@ export function assertTransition(from: CustodyStatus, to: CustodyStatus): void {
 export type RemittanceBatch = {
   id: string;
   collector: string;
-  /** Exact receipt numbers handed over — the paper trail. */
+  /** Receipt numbers of the rows handed over that HAVE one — the paper
+   *  trail. Since J's launch feedback #4 (2026-08-27 evening: 「先拿到錢才
+   *  開收據」— money first, receipts after) a batch may include rows whose
+   *  receipt is issued later, so this list can be shorter than the batch. */
   receiptNos: string[];
+  /** The register rows in this batch, by client id — the authoritative link
+   *  since receipts stopped being mandatory before a hand-over. Absent on
+   *  batches recorded before migration 28; those were all-receipted, so
+   *  receiptNos still resolves them. */
+  donationIds?: string[];
   /** Summed by this code from the donation rows, never keyed in. */
   totalCents: number;
   /** The DATE the cash changed hands (拍板 0-6: editable while pending —
@@ -108,10 +116,14 @@ export function createRemittanceBatch(
 /**
  * 拍板 0-6 (work order 32): hand over a HAND-PICKED set of register rows —
  * the per-item successor to createRemittanceBatch's "everything the collector
- * holds". Every selected row must be receipted, still `collected`, and
- * actually cash (holdsCash) — anything else is a CustodyError, because a
- * batch containing it would be a paper trail claiming cash that was not
- * there to hand over. Pure function — no mutation.
+ * holds". Every selected row must be still `collected` and actually cash
+ * (holdsCash) — anything else is a CustodyError, because a batch containing
+ * it would be a paper trail claiming cash that was not there to hand over.
+ *
+ * A receipt is NOT required any more (J's launch feedback #4, 2026-08-27
+ * evening: money moves first, the receipt follows). The batch record itself —
+ * donor, amount, date, carrier — is the hand-over's voucher; receipt numbers
+ * ride along for the rows that already have one. Pure function — no mutation.
  */
 export function createRemittanceBatchFromIds(
   donations: RegisterDonation[],
@@ -134,9 +146,6 @@ export function createRemittanceBatchFromIds(
     throw new CustodyError("A selected donation is not in the register.");
   }
   for (const d of inBatch) {
-    if (d.receiptNo === null) {
-      throw new CustodyError(`Donation ${d.id} has no receipt yet — issue it first.`);
-    }
     if (!holdsCash(d)) {
       throw new CustodyError(`Donation ${d.id} is not cash in a hand (goods or transfer).`);
     }
@@ -148,7 +157,10 @@ export function createRemittanceBatchFromIds(
     batch: {
       id: params.id,
       collector: params.collector,
-      receiptNos: inBatch.map((d) => d.receiptNo as string),
+      receiptNos: inBatch
+        .map((d) => d.receiptNo)
+        .filter((n): n is string => n !== null),
+      donationIds: inBatch.map((d) => d.id),
       totalCents: inBatch.reduce((sum, d) => sum + d.amountCents, 0),
       handedOverAtIso: params.handedOverAtIso,
       status: "pending",
@@ -161,6 +173,25 @@ export function createRemittanceBatchFromIds(
       ids.has(d.id) ? { ...d, custodyStatus: "pending_remittance" as const } : d
     ),
   };
+}
+
+/**
+ * Which register rows belong to this batch. donationIds is the authority;
+ * batches recorded before migration 28 carry only receiptNos — those were
+ * all-receipted by the old rule, so the numbers still resolve them.
+ */
+function batchMembers(
+  batch: RemittanceBatch,
+  donations: RegisterDonation[],
+): RegisterDonation[] {
+  if (batch.donationIds && batch.donationIds.length > 0) {
+    const wanted = new Set(batch.donationIds);
+    return donations.filter((d) => wanted.has(d.id));
+  }
+  const receiptNos = new Set(batch.receiptNos);
+  return donations.filter(
+    (d) => d.receiptNo !== null && receiptNos.has(d.receiptNo),
+  );
 }
 
 /**
@@ -198,15 +229,9 @@ export function cancelRemittanceBatch(
   if (batch.status !== "pending") {
     throw new CustodyError(`Batch ${batch.id} is ${batch.status} — only a pending batch can be cancelled.`);
   }
-  const receiptNos = new Set(batch.receiptNos);
   const ids = new Set(
-    donations
-      .filter(
-        (d) =>
-          d.receiptNo !== null &&
-          receiptNos.has(d.receiptNo) &&
-          d.custodyStatus === "pending_remittance",
-      )
+    batchMembers(batch, donations)
+      .filter((d) => d.custodyStatus === "pending_remittance")
       .map((d) => d.id),
   );
   return {
@@ -229,8 +254,7 @@ export function confirmRemittanceBatch(
   if (batch.status === "cancelled") {
     throw new CustodyError(`Batch ${batch.id} was cancelled — there is nothing to confirm.`);
   }
-  const receiptNos = new Set(batch.receiptNos);
-  const inBatch = donations.filter((d) => d.receiptNo !== null && receiptNos.has(d.receiptNo));
+  const inBatch = batchMembers(batch, donations);
   inBatch.forEach((d) => assertTransition(d.custodyStatus, "settled"));
 
   const ids = new Set(inBatch.map((d) => d.id));

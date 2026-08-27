@@ -249,10 +249,44 @@ describe("per-item remittance batches (拍板 0-6)", () => {
     expect(after.find((d) => d.id === "d2")?.custodyStatus).toBe("collected");
   });
 
-  it("refuses an unreceipted row — nothing to tie the hand-over to", () => {
-    expect(() =>
-      createRemittanceBatchFromIds(rows, { ...params, donationIds: ["d1", "u1"] }),
-    ).toThrow(CustodyError);
+  // #4 (launch feedback, 2026-08-27 evening): money moves FIRST, the receipt
+  // follows — an unreceipted cash row can be handed over. The batch keeps the
+  // donation-id link as the authority and carries only the receipt numbers
+  // that exist.
+  it("accepts an unreceipted row — the batch record itself is the voucher", () => {
+    const { batch, donations: after } = createRemittanceBatchFromIds(rows, {
+      ...params,
+      donationIds: ["d1", "u1"],
+    });
+    expect(batch.donationIds).toEqual(["d1", "u1"]);
+    expect(batch.receiptNos).toEqual(["MIN-2026-0001"]);
+    expect(batch.totalCents).toBe(12000);
+    expect(after.find((d) => d.id === "u1")?.custodyStatus).toBe("pending_remittance");
+  });
+
+  it("cancels and confirms an unreceipted batch through the donation-id link", () => {
+    const { batch, donations: pending } = createRemittanceBatchFromIds(rows, {
+      ...params,
+      donationIds: ["u1"],
+    });
+    // Cancel: the row returns to collected; the batch stays on file.
+    const cancelledResult = cancelRemittanceBatch(batch, pending);
+    expect(cancelledResult.batch.status).toBe("cancelled");
+    expect(cancelledResult.donations.find((d) => d.id === "u1")?.custodyStatus).toBe(
+      "collected",
+    );
+    // Confirm (fresh batch): the row settles even though it has no receipt.
+    const again = createRemittanceBatchFromIds(rows, {
+      ...params,
+      id: "b2",
+      donationIds: ["u1"],
+    });
+    const confirmed = confirmRemittanceBatch(again.batch, again.donations, {
+      confirmedBy: "HQ",
+    });
+    expect(confirmed.donations.find((d) => d.id === "u1")?.custodyStatus).toBe(
+      "settled",
+    );
   });
 
   it("refuses goods and transfers — they are not cash in a hand", () => {

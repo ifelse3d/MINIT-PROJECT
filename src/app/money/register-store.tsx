@@ -136,6 +136,18 @@ export type RegisterStore = {
   balances: ReturnType<typeof collectorBalances>;
   availableMonths: string[];
 
+  // --- THIS ROUND (J's launch feedback #3, 2026-08-27 evening) --------------
+  // 「那一輪就是那一輪的東西」: rows recorded in the current sitting, so the
+  // flow can show "what you just did" and issue receipts for EXACTLY those —
+  // never the whole mixed register. Persisted per user+org, cleared by
+  // finishRound(). Ids are pruned against the register, so a deleted row can
+  // never haunt the round.
+  roundIds: string[];
+  /** The register rows of the current round, in the order they were added. */
+  roundDonations: RegisterDonation[];
+  /** Close the round: the next recorded row starts a fresh one. */
+  finishRound: () => void;
+
   // --- actions -------------------------------------------------------------
   saveDonation: (updated: RegisterDonation) => void;
   /**
@@ -163,7 +175,13 @@ export type RegisterStore = {
   clearUnreceiptedDrafts: () => void;
   addManualDonation: (d: RegisterDonation) => void;
   addManualDonations: (rows: RegisterDonation[]) => void;
-  issueReceipts: (opts?: { acceptDefaultPrefix?: boolean }) => Promise<void>;
+  /** `ids` narrows the issue to those rows (#3: "this round only", or a
+   *  hand-picked selection on the receipts page). Absent = every
+   *  unreceipted row, the original behaviour. */
+  issueReceipts: (opts?: {
+    acceptDefaultPrefix?: boolean;
+    ids?: string[];
+  }) => Promise<void>;
   issueBusy: boolean;
   issueNotice: IssueNotice | null;
   setIssueNotice: Dispatch<SetStateAction<IssueNotice | null>>;
@@ -267,6 +285,14 @@ export function RegisterProvider({
     [],
     undefined,
     "minit:money:batches:v1",
+  );
+  // #3: the current round — ids of rows recorded this sitting. Persisted so
+  // a page hop or a closed tab does not lose "what I just did".
+  const roundKey = useScopedKey("money:round:v1");
+  const [roundIdsRaw, setRoundIds] = usePersistentState<string[]>(
+    roundKey,
+    [],
+    (parsed) => Array.isArray(parsed) && parsed.every((x) => typeof x === "string"),
   );
 
   const [ledger, setLedger] = useState<LedgerExtraction>(emptyLedgerExtraction);
@@ -520,6 +546,11 @@ export function RegisterProvider({
       .filter(({ r, i }) => eligibleForReceipt(r) && !addedRows.has(i));
     if (eligible.length === 0) return;
     const stamp = Date.now();
+    // #3: everything added this tap joins the current round.
+    setRoundIds((prev) => [
+      ...prev,
+      ...eligible.map(({ i }) => `ledger-${stamp}-${i}`),
+    ]);
     setDonations((prev) => [
       ...prev,
       ...eligible.map(({ r, i }) => ({
@@ -548,7 +579,7 @@ export function RegisterProvider({
       eligible.forEach(({ i }) => next.add(i));
       return next;
     });
-  }, [isSampleLedger, ledger, addedRows, registerCollector, ledgerPayments, setDonations]);
+  }, [isSampleLedger, ledger, addedRows, registerCollector, ledgerPayments, setDonations, setRoundIds]);
 
   // --- Editing a register row BEFORE its receipt is issued ------------------
   const saveDonation = useCallback(
@@ -576,25 +607,43 @@ export function RegisterProvider({
 
   // Manual income entry (the eROSES-test exception) appends a confirmed row.
   const addManualDonation = useCallback(
-    (d: RegisterDonation) => setDonations((prev) => [...prev, d]),
-    [setDonations],
+    (d: RegisterDonation) => {
+      setRoundIds((prev) => [...prev, d.id]);
+      setDonations((prev) => [...prev, d]);
+    },
+    [setDonations, setRoundIds],
   );
 
   /** A whole typed collection at once (see ./type-donations.tsx). One state
    *  update, not one per row: forty setState calls in a loop would re-render
    *  the register forty times and, worse, each would read a stale `prev`. */
   const addManualDonations = useCallback(
-    (rows: RegisterDonation[]) => setDonations((prev) => [...prev, ...rows]),
-    [setDonations],
+    (rows: RegisterDonation[]) => {
+      setRoundIds((prev) => [...prev, ...rows.map((r) => r.id)]);
+      setDonations((prev) => [...prev, ...rows]);
+    },
+    [setDonations, setRoundIds],
   );
+
+  /** #3: close the round. The register keeps every row — only the "this
+   *  sitting" marker is cleared, so the next recorded row starts round 2. */
+  const finishRound = useCallback(() => {
+    setRoundIds([]);
+  }, [setRoundIds]);
 
   // --- Issue receipts (deterministic, gap-free) ----------------------------
   // Phase 7: numbers come from the DATABASE series for the active org, so they
   // stay sequential across devices and sessions, and every receipt is saved to
   // history. Without an active org (pure demo), numbering falls back to the
   // local series — clearly flagged as not saved.
-  const issueReceipts = useCallback(async (opts?: { acceptDefaultPrefix?: boolean }) => {
-    const need = donations.filter((d) => d.receiptNo === null);
+  const issueReceipts = useCallback(async (opts?: {
+    acceptDefaultPrefix?: boolean;
+    ids?: string[];
+  }) => {
+    const wanted = opts?.ids ? new Set(opts.ids) : null;
+    const need = donations.filter(
+      (d) => d.receiptNo === null && (wanted === null || wanted.has(d.id)),
+    );
     if (need.length === 0) return;
     setIssueBusy(true);
     setIssueNotice(null);
@@ -634,7 +683,9 @@ export function RegisterProvider({
       if (result.reason === "no_org") {
         setDonations((prev) => {
           const existing = prev.map((d) => d.receiptNo).filter((n): n is string => n !== null);
-          const pending = prev.filter((d) => d.receiptNo === null);
+          const pending = prev.filter(
+            (d) => d.receiptNo === null && (wanted === null || wanted.has(d.id)),
+          );
           const nos = allocateReceiptNos(existing, pending.length, {
             prefix: "MIN",
             // Malaysia time, not the browser's clock: a phone set to another
@@ -642,7 +693,11 @@ export function RegisterProvider({
             year: Number(todayIsoMalaysia().slice(0, 4)),
           });
           let i = 0;
-          return prev.map((d) => (d.receiptNo === null ? { ...d, receiptNo: nos[i++] } : d));
+          return prev.map((d) =>
+            d.receiptNo === null && (wanted === null || wanted.has(d.id))
+              ? { ...d, receiptNo: nos[i++] }
+              : d,
+          );
         });
         setIssueNotice("local");
         return;
@@ -842,10 +897,23 @@ export function RegisterProvider({
     donationsRef.current = [];
     batchesRef.current = [];
     setBatches([]);
+    setRoundIds([]);
     ledgerBackToEmpty();
-  }, [donationStore, setBatches, ledgerBackToEmpty]);
+  }, [donationStore, setBatches, setRoundIds, ledgerBackToEmpty]);
 
   // --- derived -------------------------------------------------------------
+  // #3: the round, resolved against the live register — a deleted row simply
+  // stops appearing, and order follows the order of recording.
+  const roundDonations = useMemo(() => {
+    const byId = new Map(donations.map((d) => [d.id, d]));
+    return roundIdsRaw
+      .map((id) => byId.get(id))
+      .filter((d): d is RegisterDonation => d !== undefined);
+  }, [donations, roundIdsRaw]);
+  const roundIds = useMemo(
+    () => roundDonations.map((d) => d.id),
+    [roundDonations],
+  );
   const ledgerRowsToCheck = ledger.rows.filter((r) => !eligibleForReceipt(r)).length;
   const rowsReadyToAdd = ledger.rows.filter(
     (r, i) => eligibleForReceipt(r) && !addedRows.has(i),
@@ -919,6 +987,9 @@ export function RegisterProvider({
         hasPendingBatch,
         balances,
         availableMonths,
+        roundIds,
+        roundDonations,
+        finishRound,
         saveDonation,
         deleteDonation,
         clearUnreceiptedDrafts,

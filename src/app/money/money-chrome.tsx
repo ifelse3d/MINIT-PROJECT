@@ -20,17 +20,28 @@ import { useRegister } from "./register-store";
 // it.
 // ---------------------------------------------------------------------------
 
-// B-3 (拍板 34, D19): the JOB is two steps — read the ledger, issue receipts.
-// Handing cash to HQ is not step 3 of anybody's afternoon: it is a RECORD page
-// (who is holding how much, tick off what arrived), so it moved out of the
-// numbered chain and lives beside History. The tax file was never a step
-// either — a once-a-month errand.
+// Launch feedback #3 (2026-08-27 evening): the JOB is one round — record the
+// money that arrived, check it, issue receipts for EXACTLY those rows. The
+// second step is the ROUND's receipts page (/money/issue); the whole-register
+// receipts view became a management page beside custody and history.
+// Handing cash to HQ stays a RECORD page — and since #4 it no longer waits
+// for receipts (money moves first, the receipt follows).
 const MONEY_TABS = [
   // G-4 (2026-08-25, J #19): the BM official term rides along in zh/EN — it
   // is the word on the ledger book, the bank slip and the auditor's mouth.
-  { href: "/money", labelBm: "Baca lejar", labelZh: "读账页 · Lejar", labelEn: "Read the ledger · Lejar" },
-  { href: "/money/receipts", labelBm: "Resit", labelZh: "开收据 · Resit", labelEn: "Receipts · Resit" },
+  { href: "/money", labelBm: "Rekod wang masuk", labelZh: "收钱记账 · Lejar", labelEn: "Record money in · Lejar" },
+  { href: "/money/issue", labelBm: "Resit pusingan ini", labelZh: "开收据 · 这一轮", labelEn: "Receipts · this round" },
 ] as const;
+
+// The management view over the WHOLE register — see which rows have or lack
+// a receipt, pick several, issue or re-download (#3's second ask).
+const MONEY_RECEIPTS_MGMT = {
+  href: "/money/receipts",
+  labelBm: "Urus resit",
+  labelZh: "开收据 · 管理",
+  labelEn: "Manage receipts",
+  iconEmoji: "🧾",
+} as const;
 
 const MONEY_CUSTODY = {
   href: "/money/custody",
@@ -70,15 +81,15 @@ export function MoneyChrome({ children }: { children: ReactNode }) {
     isSampleLedger,
     donations,
     donationStore,
-    receiptsIssued,
     ledgerRowsToCheck,
     rowsReadyToAdd,
-    unreceipted,
+    roundDonations,
     error,
     setError,
   } = useRegister();
   const [einvoisVisible] = useEinvoisVisible();
 
+  const roundUnreceipted = roundDonations.filter((d) => d.receiptNo === null).length;
   const tabs: SectionTab[] = [
     {
       ...MONEY_TABS[0],
@@ -93,8 +104,15 @@ export function MoneyChrome({ children }: { children: ReactNode }) {
     },
     {
       ...MONEY_TABS[1],
-      status: donations.length === 0 ? "locked" : receiptsIssued ? "done" : "needs-you",
-      count: unreceipted,
+      // #3: the step is about THIS ROUND only. No round = locked; a round
+      // with unreceipted rows wants you; a fully-receipted round is done.
+      status:
+        roundDonations.length === 0
+          ? "locked"
+          : roundUnreceipted > 0
+            ? "needs-you"
+            : "done",
+      count: roundUnreceipted,
     },
   ];
 
@@ -103,6 +121,7 @@ export function MoneyChrome({ children }: { children: ReactNode }) {
   // unless someone is standing on the page itself, in which case hiding its
   // own entry would be disorienting.
   const extras = [
+    MONEY_RECEIPTS_MGMT,
     MONEY_CUSTODY,
     ...(einvoisVisible || pathname === "/money/einvois" ? [MONEY_EINVOIS] : []),
   ];

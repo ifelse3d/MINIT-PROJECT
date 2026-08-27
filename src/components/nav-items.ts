@@ -98,9 +98,12 @@ export const NAV_ITEMS: NavItem[] = [
   // "record income", and the once rail-only steps are sidebar rows J listed
   // by name (记收入·开收据·交现金·收据历史).
   { href: "/money", icon: Wallet, bm: "Rekod wang masuk", zh: "记收入", en: "Record income", exact: true },
+  // #3 (launch feedback): step 2 of the round — receipts for what was just
+  // recorded. A mid-flow step: the money rail navigates it, not the menus.
+  { href: "/money/issue", icon: Receipt, bm: "Resit pusingan ini", zh: "开收据（这一轮）", en: "This round's receipts", railOnly: true },
   // Stage E: spending + the claim flow — the row J's 錢-group list reserved.
   { href: "/money/expenses", icon: CreditCard, bm: "Rekod perbelanjaan & tuntutan", zh: "记开支与报销", en: "Spending & claims" },
-  { href: "/money/receipts", icon: Receipt, bm: "Jana resit", zh: "开收据", en: "Issue receipts" },
+  { href: "/money/receipts", icon: Receipt, bm: "Urus resit", zh: "开收据 · 管理", en: "Manage receipts" },
   { href: "/money/custody", icon: Coins, bm: "Serah tunai", zh: "交现金", en: "Hand over cash" },
   // Stage F: the financial statement — computed, never typed.
   { href: "/money/report", icon: BarChart3, bm: "Penyata kewangan", zh: "财报", en: "Financial statement" },
@@ -198,6 +201,7 @@ export const PRIMARY_NAV: NavEntry[] = [
     en: "Money",
     children: [
       byHref("/money"),
+      byHref("/money/issue"),
       byHref("/money/expenses"),
       byHref("/money/receipts"),
       byHref("/money/custody"),
@@ -283,6 +287,7 @@ export const SIDEBAR_NAV: NavEntry[] = [
     en: "Money",
     children: [
       byHref("/money"),
+      byHref("/money/issue"),
       byHref("/money/expenses"),
       byHref("/money/receipts"),
       byHref("/money/custody"),

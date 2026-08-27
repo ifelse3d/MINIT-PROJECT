@@ -57,10 +57,12 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
       if (!g || g.kind !== "group") throw new Error(`expected group ${id}`);
       return g;
     };
-    // 錢: 记收入 · 记开支与报销 · 开收据 · 交现金 · 财报 ·
-    // 税务 e-Invois(开关) · 收据历史 — the full B-1 enumeration, delivered.
+    // 錢: 记收入 · 开收据(这一轮, rail-only) · 记开支与报销 · 收据管理 ·
+    // 交现金 · 财报 · 税务 e-Invois(开关) · 收据历史. /money/issue joined as
+    // the round's step 2 (launch feedback #3) — railOnly, so menus skip it.
     expect(byId("money").children.map((c) => c.href)).toEqual([
       "/money",
+      "/money/issue",
       "/money/expenses",
       "/money/receipts",
       "/money/custody",
@@ -129,6 +131,7 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
     if (!group || group.kind !== "group") throw new Error("expected a money group");
     expect(group.children.map((c) => c.href)).toEqual([
       "/money",
+      "/money/issue",
       "/money/expenses",
       "/money/receipts",
       "/money/custody",

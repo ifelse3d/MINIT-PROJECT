@@ -82,6 +82,8 @@ echo    26.  20260904000000  cara bayaran tunai/pindahan + bukti pindahan
 echo         payment method cash/transfer + transfer proof column
 echo    27.  20260905000000  masa rekod + butiran batch serahan tunai
 echo         record times + cash hand-over batch details (32 号单)
+echo    28.  20260906000000  link batch-derma + glosari 3 bahasa + templat
+echo         hand-over row links + trilingual glossary + templates
 echo.
 echo     0.  Keluar / Quit
 echo.
@@ -115,6 +117,7 @@ if "%pick%"=="24" set f=20260902000000_invites_and_org_type.sql& goto copy
 if "%pick%"=="25" set f=20260903000000_final_sprint.sql& goto copy
 if "%pick%"=="26" set f=20260904000000_payment_method.sql& goto copy
 if "%pick%"=="27" set f=20260905000000_record_times_and_custody_batches.sql& goto copy
+if "%pick%"=="28" set f=20260906000000_custody_ids_glossary_langs_templates.sql& goto copy
 
 echo.
 echo    Nombor tak sah / not a valid number.

@@ -19,6 +19,8 @@ import { formatRm } from "@/lib/minutes-draft";
 import { handExpensePhoto } from "@/lib/expense-handoff";
 import { PaymentMethodToggle } from "./payment-method-toggle";
 import { TypeDonations } from "./type-donations";
+import { ManualIncomeForm } from "./manual-income";
+import { RoundList } from "./round-list";
 import { useRegister } from "./register-store";
 
 // ---------------------------------------------------------------------------
@@ -47,9 +49,10 @@ export function LedgerReview() {
     mutateLedger,
     addConfirmedRowsToRegister,
     rowsReadyToAdd,
-    donations,
+    addManualDonation,
     addManualDonations,
     registerCollector,
+    roundDonations,
   } = useRegister();
   const router = useRouter();
 
@@ -136,17 +139,17 @@ export function LedgerReview() {
   return (
     <PageSection
       step={1}
-      titleBm="Ambil gambar halaman lejar & semak"
-      titleZh="拍下账页并核对"
-      titleEn="Photo of the ledger page, then check it"
+      titleBm="Rekod wang masuk"
+      titleZh="收钱记账"
+      titleEn="Record money in"
       summary={
         ledgerSourceLabel ? (
           <>📄 {ledgerSourceLabel}</>
         ) : (
           <Tri
-            bm="MinitAI membaca setiap baris. Baris yang kabur perlu anda sahkan sebelum boleh dapat resit."
-            zh="MinitAI 会把每一行读出来。写得模糊的行要您确认之后才能开收据。"
-            en="MinitAI reads every line. Smudged lines need your confirmation before they can get a receipt."
+            bm="Wang sudah di tangan → rekod di sini (gambar lejar, taip senarai, atau satu baris manual) → semak → jana resit. Satu pusingan, satu aliran."
+            zh="钱到手了 → 在这里记下来（拍账页、打字名单、或手动加一笔）→ 核对 → 开收据。一轮一个流程，不跳来跳去。"
+            en="Money in hand → record it here (ledger photo, typed list, or one manual row) → check → issue receipts. One round, one flow."
           />
         )
       }
@@ -609,22 +612,36 @@ export function LedgerReview() {
             </Button>
           </div>
         )}
+
+        {/* The single-gift form lives HERE with the other entry doors (#3) —
+            recording income is step 1's job, all of it. */}
+        <ManualIncomeForm
+          onAdd={addManualDonation}
+          defaultCollector={registerCollector}
+          onSlipPhoto={(file, category) =>
+            onLedgerPicked(file, "auto", { fillPurpose: category })
+          }
+          slipBusy={aiBusy}
+        />
+
+        {/* #3: THE ROUND — everything recorded this sitting, visible right
+            here for the double-check, before the flow moves on. */}
+        <RoundList />
       </div>
 
-      {/* Where this page hands off to. Before the split these two steps shared
-          one scroll, so "where did my rows go?" answered itself. Now it has to
-          be said out loud. */}
+      {/* Where this page hands off to: receipts for THIS ROUND (#3) — the
+          full register and old rows live on the management page instead. */}
       <NextStepLink
-        href="/money/receipts"
-        labelBm="Ke daftar derma & resit"
-        labelZh="去捐款登记与收据"
-        labelEn="On to the register and receipts"
+        href="/money/issue"
+        labelBm={`Jana resit untuk pusingan ini (${roundDonations.length})`}
+        labelZh={`下一步：为这一轮开收据（${roundDonations.length} 笔）`}
+        labelEn={`Next: issue receipts for this round (${roundDonations.length})`}
         blockedReason={
-          donations.length === 0 ? (
+          roundDonations.length === 0 ? (
             <Tri
-              bm="Belum ada derma dalam daftar. Sahkan baris di atas dan masukkannya dahulu — resit dibuat daripada daftar."
-              zh="登记簿里还没有捐款。请先确认上面的行，把它们加进登记簿 —— 收据是根据登记簿开的。"
-              en="Nothing in the register yet. Confirm the rows above and add them first — receipts are made from the register."
+              bm="Belum ada baris dalam pusingan ini. Rekod wang masuk di atas dahulu — resit dibuat daripada apa yang direkodkan."
+              zh="这一轮还没有记录。请先在上面记收入 —— 收据是根据记好的款项开的。"
+              en="Nothing recorded in this round yet. Record the income above first — receipts are made from what was recorded."
             />
           ) : undefined
         }
