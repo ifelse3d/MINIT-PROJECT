@@ -562,4 +562,30 @@ draft-minutes 路）」或「自己改」——不背著人自動翻譯。機構
 
 ---
 
-*Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C) · D16 appended 2026-08-25 (Stage D) · D17 appended 2026-08-27 (work order 27, the overnight sprint) · D18–D21 appended 2026-08-27 (work order 31 §0, J's post-launch rulings) · D22–D23 appended 2026-08-27 (work order 32 §0, launch-day feedback rulings) · D24–D25 appended 2026-08-27 (the afternoon rulings: violet redesign + BM guard)*
+### D26 — 錢先動，收據跟著（2026-08-27 晚，J 20 條 #4：「都是先交錢才開收據……先拿到錢才開收據才對」）
+
+交現金**不再要求先開收據**。交接批次本身（捐款人＋金額＋日期＋經手人）就是憑據；
+已有收據號的行照樣帶號。批次改用 `client_donation_ids`（migration 28）直接連行，
+不再只靠收據號解析；pre-28 資料庫遇到含未開收據行的批次會誠實拒寫（「只在這台
+設備」），絕不無聲丟行。custody 狀態機 forward-only 照舊（D19 不動）。
+
+### D27 — 一輪一個流程（2026-08-27 晚，J 20 條 #3：「那一輪就是那一輪的東西，不會跳來跳去」）
+
+錢的流程以「本輪」為單位：/money（收錢記賬：拍賬頁＋打字＋手動，全部入口在這）
+→ 本輪清單就地雙重核對 → /money/issue 只為**這一輪**開收據 → 完成開新一輪。
+/money/receipts 退為**管理頁**（篩選有無收據、多選開、重新下載）。捨棄的舊形：
+「下一步」跳到混著全部記錄的開收據頁。
+
+### D28 — 導航與詞庫的三條（2026-08-27 晚，J 20 條 #2/#7/#10/#12/#15）
+
+① 側欄組是 **dropdown、預設收起**，所在組自動展開，手動開合記在設備上；
+② 日曆是頂級行（活動＋提醒，不屬申報）——覆蓋 §1-9 的「收回申報組」；
+③ /settings 內**主側欄隱藏**，設置欄自帶「返回」＝唯一側欄；系統檢查只給
+manage_org；④ 詞庫改「原文＋它是什麼語言＋另外兩種語言的叫法」（任何語言都可
+以是原文；兩個叫法全空＝保持原字）——舊 action/translation 照寫（BM 叫法＝
+translate），prompt 路一字不動；⑤ 副歷（農曆／伊斯蘭曆）**opt-in**，格子預設
+純西曆；農曆初一/十五重複活動由程式展開（lunar-parse），標題用社團自己的字。
+
+---
+
+*Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C) · D16 appended 2026-08-25 (Stage D) · D17 appended 2026-08-27 (work order 27, the overnight sprint) · D18–D21 appended 2026-08-27 (work order 31 §0, J's post-launch rulings) · D22–D23 appended 2026-08-27 (work order 32 §0, launch-day feedback rulings) · D24–D25 appended 2026-08-27 (the afternoon rulings: violet redesign + BM guard) · D26–D28 appended 2026-08-27 (the launch-evening 20-point list)*

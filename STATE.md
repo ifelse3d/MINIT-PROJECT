@@ -5,115 +5,118 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-27 傍晚（MYT）· Fable 5（同日第二场：D24 紫色全套改版 W1–W7＋D25 马来语把关。早上是 32 号单 P0–P5）**
-**🔴 32 号单全部 ✅；下午 J 又拍板两件也全部 ✅：①紫色 logo＋tester 规格书全套改版（icon rail/分屏登入/Poppins/头像选单/设置 13 子页——功能用我们自己的，绿色版做完当天即被覆盖、从未上线）②eROSES 文件马来语把关（挡保存＋用户选「AI 译/自己改」）。见 D24/D25 与 `34-報告-20260827-紫色改版與馬來語把關.md`。**
-**J 照 34 号报告 §1 走：贴 migration 26＋27 → push（一次 15 支）→ 五分钟验收。31 号单场次 5（D-7/D-8/B-7/G-3，要 J 在场）仍然待开。**
+**最后更新：2026-08-27 深夜（MYT）· Fable 5（同日第三场：J 上线晚的 20 条反馈全部做完）**
+**🔴 20 条全部 ✅（35 号报告逐条）。J 照 35 号报告 §1 走：贴 migration 28 → push（一次 7 支）→ 五分钟验收 → J 自己的测试。31 号单场次 5（D-7/D-8/B-7/G-3，要 J 在场）仍然待开。**
 
 ---
 
-## 🌙 现在在哪里（2026-08-27 傍晚，两场都收工）
+## 🌙 现在在哪里（2026-08-27 深夜，第三场收工）
 
-> **已上线**：https://minit-project.vercel.app（Vercel 专案 if-else/minit-project）——
-> 线上还是**旧紫**（8/27 早上那版）；本机已经是**新紫全套**，push 后一步到位。
-> push 到 main 自动重新部署——**push 是 J 的事**（push-cabang.bat，账号已钉 ifelse3d）。
-> 线上资料库两个 org（15「J」、58「avocado」），migration 1–25 APPLIED；
-> 🔴 **migration 26（payment_method）与 27（20260905000000 记录时间＋交接批次细节）都已写好、尚未套用**——J 照 34 号报告贴（salin-migration.bat 选 26、再选 27）。
-> **未 push 共 15 支 commit**：早上 32 号单 8 支（P0–P5＋导览＋文书）＋下午 7 支
-> （W1 tokens/radius/Poppins/紫 logo · W2+W3 tooltip/彈窗/icon rail/頂欄 ·
-> W4 分屏登入 · W5 设置 13 子页 · W6 马来语把关＋财报签名栏 · 导览重拍 · 收工文书）。
+> **已上线**：https://minit-project.vercel.app —— 线上是下午的紫色版（15 支已 push）；
+> 本机再领先 **7 支未 push**（20 条反馈那一场）。push 是 J 的事（push-cabang.bat）。
+> 线上资料库两个 org（15「J」、58「avocado」），migration 1–27 APPLIED（27 的
+> 「记录于」时间戳已出现在 J 的截图里）；🔴 **migration 28
+> （20260906000000 交接行連結＋詞庫三語＋模板表）已写好、尚未套用**——J 照
+> 35 号报告贴（salin-migration.bat 选 28）。
+
+### 这一场做了什么（J 上线晚的 20 条，35 号报告逐条对照）
+
+- **品牌/文案**：用户可见 Minit→MinitAI 全站扫清（58 档 367 行；BM 的
+  "Minit mesyuarat"=会议记录 受保护；MIN- 字首/prompts/法律文照规不动）；
+  隐私句删身份证段；报销两个 tab 改「社团付的钱／我垫付的要拿回」。
+- **壳**：侧栏组=dropdown 默认收起（所在组自动开、手动记住）；日历升顶级行
+  改名「日历与提醒」；/settings 内主侧栏隐藏、设置栏自带「返回」；系统检查
+  只给 manage_org；问一问的回答/开场白/试试问/输入框全部改实底有框。
+- **钱区重构（D26/D27）**：/money=收钱记账（拍照＋打字＋手动all in）＋
+  「这一轮已记」就地核对清单 → 新页 /money/issue 只为本轮开收据（共用
+  IssueControls）→ /money/receipts 退为管理页（筛选＋多选开＋重新下载）。
+  交现金不再要求先开收据（批次用 client_donation_ids 连行，pre-28 含未开
+  收据行的批次拒写并明说「只在本机」）。模板（org_templates＋TemplateChips）
+  接进用途/说明三处。开支加「选一个档案（照片或 PDF）」门。
+- **成员**：任期日期随便打（20260101/1/1/2026→自动整理，toIsoDate 扩 8 位
+  数字并有测试）；任期已结束→灰色「已卸任」区、不算 eROSES 缺 IC 统计；
+  分组「从名单一次过选多人」弹窗（addManyToGroup 一笔 upsert）。
+- **日历**：lunar-parse（纯函数＋测试）在送 AI 之前认出「农历每月初一/十五」
+  类规则→零额度面板（标题用社团自己的字，J 的两句原话都测过）；固定献供
+  toggle 升级为可配置重复规则（旧 boolean key 收编）；副历 opt-in（＋副历
+  弹窗：农历/伊斯兰历 Umm al-Qura via Intl，缺 ICU 时静默不显示）；每个活动
+  「📣 WhatsApp 文案」邀请/提醒两种（程式模板、可编辑、复制/wa.me）。
+- **词库（D28④）**：一条=原文＋原文语言＋另两种语言的叫法（任何语言可为原
+  文；全空=保持原字）。BM 叫法映射旧 translation（prompt 路一字不动）；
+  pre-28 退回旧形并明说。
+- **管理台**：四张总数卡＋六个月成本柱＋本月各机构用量横条（含 per-org 成
+  本）；收入/毛利卡诚实写「等配套定价」（priceRm 全 null 是拍板）。
+- **AI 用量页**：本期起讫＋刷新日＋机构注册日。
 
 ### 现场量到的（不是听说的）
 
-- 四道关（两场每波收尾都跑，最终态）：`tsc` **0** · `eslint` **21（与基准
-  逐字同）** · `vitest` **814 全过（66 档；早上 +10 custody/time，下午 +6
-  bm-guard）** · `build` ✓
-- `e2e:money` **15/15、page errors 0**（最终跑于全部改动之后）；
-  `e2e:minutes` **ALL PASSED、page errors 0**（venue fixture 改成 BM——
-  马来语把关把它的旧中文 fixture 正确地挡下来了，脚本的职责是测保存路）。
-- **紫主色对比照 tester 规格书（他算的）落地**：#7029E5 白字 6.69:1（亮）、
-  #7C3AED 5.70:1（暗 fill）；#A855F7 只做图标/大字、#C47CF9 只做装饰。
-  输入框边框刻意偏离规格（#8B84A6 ≈3.6:1），不让 C-5 的「看不到框」还魂。
-- **QA grep 实测**：旧紫/绿 hex（5b4bd6/eceafc/6f5ef2/8d80f0）＝0；
-  rounded-2xl/3xl＝0（codemod 单趟扫 293 处）。
-- **导览四格是紫色新壳现拍的**（icon rail＋玻璃顶栏＋头像都在图里；
-  高亮坐标由脚本量出回填）。财报 PDF 签名栏 smoke 过（能 load、1 页）。
-- ⚠ **没能验证的**：migration 26/27 是否套用（等 J 贴完 status.bat 看探针）；
-  「AI 译成正式马来文」的真实译文品质（走现成 /api/draft-minutes，本场零真实
-  厂商呼叫——J 验收第 5 步就是第一跑）；iOS Safari 的渐层背景（写法就是为它
-  选的，但手上没有 iPhone）；线上部署效果（push 是 J 的手）。
+- 四道关（每批收尾都跑，最终态）：`tsc` **0** · `eslint` **21（与基准逐字
+  同）** · `vitest` **824 全过（66 档；+6 lunar-parse、+3 date-input 8位、
+  +2 custody 未开收据交接）** · `build` ✓
+- **e2e:money 重写到新流程后 19/19 全过、page errors 0**（真 dev server＋
+  真资料库、ZZZ 测试 org 用完即删）：含三条新检查——打字后「这一轮已记 9 笔」
+  可见（#3）、/money/issue 只显示本轮（#3）、未开收据现金勾选→交接→总会
+  确认全通（#4）。
+- 五张 headless 截图人眼看过：侧栏收起组/日历顶级行、记收入的本轮清单、
+  /money/issue、设置单侧栏＋返回、日历「＋副历」。
+- ⚠ **没能验证的**：migration 28 是否套用（等 J status.bat）；线上部署效果
+  （push 是 J 的手）；伊斯兰历在 iOS Safari；模板/词库三语/未开收据交接的
+  **跨设备**共用（28 未套用前只能验本机路）。
 
-### 这一场做了什么（细节都勾在 32 号单 §1/§2B/§3 各条目里）
+### 🔴 J 的事（写在 35 号报告 §1）
 
-- **P0**：BRAND_NAME="MinitAI"（D23）；pdpa-note 三语去「训练」（/privacy 法律文
-  没动，等 J 拍板）；必填红星规范 D22（共用 `<Req/>`，全站「可选」尾巴清零，
-  收款人空白改报错不再默默补预设名）；财报预设今年到今天＋空期间跳最近月；
-  收据历史「未开收据 N 笔」横幅（读 register store）；日历回申报组（§1-9 翻
-  拍板 30，nav 测试跟改）。
-- **P1**：`scripts/brand-icons.mjs` 从 `scripts/assets/minit-logo.png` 生成
-  icon-192/512、brand-logo-96、favicon.ico（PNG 式 ICO）——裁白边＋圆角透明；
-  侧栏/手机/登入/重设密码换 logo 图、名字跟 BRAND_NAME；globals.css 主色
-  紫→绿（两 token 结构照旧：text accent 亮、fill 深）；全部硬编码紫色渐层/阴影
-  扫清（button.tsx 默认款、step-card、ai-panel、ai-dock、ask-box、org-chip、
-  history-feed）；manifest 改 MinitAI。
-- **P2**：/history、/search 全名（D18 补完）；ActivityRecord.atIso＋timeMytOf；
-  收据历史印开出时间；RegisterDonation.createdAtIso 三个创建点盖章＋显示
-  「记录于」；feed 深连结逐类指对；demo 戳显示层改标；**migration 27 写好**
-  （donations.created_at 先加栏后设 default——旧列诚实 NULL；issue_receipts v7；
-  remittance_batches recorded_at/confirmed_at/note＋status 'cancelled'）＋
-  salin 选项 27＋check:migrations 两探针；所有 select 有 pre-27 退阶。
-- **P3**（拍板 0-6）：lib/custody.ts 纯函数 createRemittanceBatchFromIds／
-  updatePendingBatch／cancelRemittanceBatch（作废「记录」不是钱倒流——
-  批次留档 'cancelled'，捐款回 collected；settled 永远锁死）；store 的
-  handOver 换成 handOverSelected＋updateBatch＋cancelBatch；cash-custody.tsx
-  整页重写（逐笔清单列表/卡片可切、彈窗、口径统一）；custody-actions 存读新栏
-  ＋退阶（cancelled 在 pre-27 库拒写不静默降级）；共用 `<Modal>` 新建。
-- **P4**：页面底绿 tint 渐层（暗模式自己一套，否则会继承亮的）；管理台剩余
-  英文清零（grant 卡三语＋说明、配套印名、明细标签、feedback 状态、
-  platform_admins 段）；设置拆四页（/settings、/settings/org、/settings/plan
-  收编用量分布、/settings/feedback；nav 设置组四行；ai-usage-rows.tsx 退役）；
-  钱区示范入口删除＝导览是唯一示范＋「清空这批草稿」钮（只清未开收据）。
-- **P5**：登出确认弹窗（signOutToLogin 抽到 v3/sign-out.ts 防循环引用）；
-  顶栏 sticky（实底不用 backdrop-blur）；--radius 0.625→0.5rem＋v2-glass
-  1rem→0.75rem（avocado 的五级 radius 系统仍属赛后整套）。
-- 🔴 **没动的**：prompts 一字未碰；MIN- 字首、RLS、org 15/58 未碰；
-  icon rail／分屏登入／Poppins／头像选单／命令面板（§4 明确不做）；
-  /privacy 法律文的「训练」句（要人审，见 33 号报告 §4-1）。
-
-### 🔴 J 的事（写在 34 号报告 §1；33 号报告的 push 步骤已被它取代）
-
-1. 贴 migration **26**、再贴 **27**（salin-migration.bat 选号）→ status.bat 看探针。
-2. **双击 push-cabang.bat**（本机领先 **15 支**）→ 线上从旧紫直接换新紫
-   （旧样先 Ctrl+Shift+R，再想 §6 的 build-cache 坑）。
-3. 照 34 号报告 §4 五分钟验收（重点：icon rail/头像选单/分屏登入/设置子侧栏/
-   BM 挡保存＋「AI 译」第一跑；另有 33 号报告 §3 的交现金逐笔剧本）。
+1. 贴 migration **28**（salin-migration.bat 选 28）→ status.bat 看三个探针。
+2. **双击 push-cabang.bat**（本机领先 **7 支**）→ 线上换新（旧样先
+   Ctrl+Shift+R，再想 §6 的 build-cache 坑）。
+3. 照 35 号报告 §3 十三步验收 → 开始 J 自己的测试。
    之后：31 号单**场次 5**（十大观音照片→D-7/D-8、MyInvois 模板→B-7、bench 实跑 G-3）。
    ⚠ **8/31 23:59 竞赛截止（内部 cutoff 18:00）**；one-pager 的 [YOU] 两处还空着。
 
 ### ❓ 未决问题
 
 1. 🔴 Vercel/Supabase region 是否同区 —— 等 J 抄来两个值
-2. 助手用哪个模型 —— G-2 已印成数字（nano vs luna 3.6×），等 G-3 真手写 bench 后定
+2. 助手用哪个模型 —— G-2 已印成数字，等 G-3 真手写 bench 后定
 3. 法律实体（金流前置，D12），试点前要答
 4. 真实手写 eval：92.9% 量的仍是印刷体，等 J 照片（场次 5）
 5. Supabase 邮件模板＋Site URL 还停 localhost（J 一分钟改）
-6. /privacy 法律文的「不用於訓練」句去不去 —— 拍板 0-2 只动了 App 界面句，
-   法律文要人审（33 号报告 §4-1），J 一句话
-7. 竞赛首页主图重拍（拍板 0-9）—— 等 push 完用真机构画面拍（scripts/screenshots.mjs）
-8. （旧，小）打字格每行的转账不能附截图——真有人要再说
-9. （旧，小）MyInvois 官方模板逐栏对齐（B-7 后半）等 J 给原档
-10. （旧，小）competition/screenshots 60 张是旧配色（拍板 0-9：接受并存，不重拍）
-11. （旧，小）check-ai.bat 还 cd 到旧资料夹 C:\dev\minit——改天一行修
+6. /privacy 法律文的「不用於訓練」句去不去 —— 法律文要人审，J 一句话
+7. 竞赛首页主图重拍（拍板 0-9）—— 等 push 完用真机构画面拍
+8. 问一问的 prompt 智能上限（35 号报告 §4-1）—— 动 prompt 要专场拍板
+9. 配套定价（管理台毛利卡等它）—— 拍板是先量成本；bench/真用量之后
+10. （旧，小）打字格每行的转账不能附截图——真有人要再说
+11. （旧，小）MyInvois 官方模板逐栏对齐（B-7 后半）等 J 给原档
+12. （旧，小）check-ai.bat 还 cd 到旧资料夹 C:\dev\minit——改天一行修
 
 ### ⏭ 下一个 session 从哪开始
 
-**31 号单场次 5（J 在场）：D-7 决议归类（J 照片进 golden case→改后处理→
-npm run eval 对比过了才上）＋ D-8 正式报告版式 ＋ D-9 四道关＋e2e:minutes ＋
-B-7 后半（MyInvois 官方模板逐栏对齐）＋ G-3（J 双击 bench-models.bat 实跑）＋
-当日验收修尾。** 32 号单已全勾，不重做；若 J 验收有翻案，另开小场。
+**J 验收 20 条（35 号报告）→ 若有翻案开小场修；否则 31 号单场次 5（J 在场）：
+D-7 决议归类＋D-8 正式报告版式＋B-7 后半＋G-3 bench 实跑。**
+8/31 前还要：竞赛首页主图重拍、one-pager [YOU] 两处。
 
 ---
 
 ## 6. 已知陷阱（踩过的，别再踩）
+
+### 2026-08-27 深夜新增（20 条那一场）
+
+- 🔴 **大小写敏感的品牌替换在 BM 里会误杀语言本身。** "Minit" 在马来文里就是
+  「会议记录」（Minit mesyuarat / Minit baru / Sejarah Minit / Minit AGM /
+  Minit belum disahkan…）。**修法：替换脚本带保护清单（这些搭配先换哨兵再
+  全局替换）；判断方法：凡「把品牌词全局替换」先问这词在产品语言里是不是
+  普通词。**
+- 🔴 **把入口从 A 页搬到 B 页，e2e 里按旧按钮文案找门的步骤会全场连锁 FAIL
+  ——第一条 FAIL 才是根因。** 打字格搬去 /money 后，e2e 还在 /money/receipts
+  点「打字输入整份名单」，后面 10 条全红。**判断方法：e2e 大面积红先看第一
+  个失败的「门」，别逐条修尾巴。**
+- ⚠ **usePersistentState 的 default 若在 render 里读 localStorage，会 SSR/
+  CSR 不一致。** 旧 key 收编（boolean 献供 toggle → 结构化 repeat）要放进
+  loaded 之后的 effect，不能放 default 初始值。
+- ⚠ **Intl 的非公历（islamic-umalqura）在缺 ICU 的环境会静默退回公历。**
+  用一个已知日期探针（2024-03-15＝Ramadan）验一次再信它；验不过就整个隐藏。
+- 💡 **「AI 不智能」的单子先问是不是规则性输入。** 「农历每月初一十五」是
+  算术不是提取——lunar-parse 在送 AI 之前拦下，零额度、永远对（既有教训
+  「能用程式解析的，不要送去 AI」再次生效）。
+
 
 ### 2026-08-27 下午第二场新增（紫色改版＋马来语把关那一场）
 
@@ -271,7 +274,7 @@ B-7 后半（MyInvois 官方模板逐栏对齐）＋ G-3（J 双击 bench-models
 - 🔴 **一份文件写着「刻意还没动」，那件事的时机就会由使用者替你决定。**
 - 🔴 **「先讨论，还不要开工」就是不要开工——包括「只是先改一点点」。**
 - ⚠️ **一支未批准的 migration 留在 `supabase/migrations/` 可以，但要确认没有任何
-  东西指向它。**（26、27 两支都处于此状态：探针/salin 指向它们是「等待套用」，
+  东西指向它。**（现在轮到 28：探针/salin 指向它是「等待套用」，
   不是「已在用」。）
 
 ### 关于「事实」怎么腐坏
@@ -332,7 +335,7 @@ B-7 后半（MyInvois 官方模板逐栏对齐）＋ G-3（J 双击 bench-models
 ### 关于 git 与环境
 
 - **在沙盒／非互动环境不要跑任何会等待输入的指令。**
-- **「已 commit」不等于「已 push」。**（本轮：**全部已 commit、未 push 共 8 支。**）
+- **「已 commit」不等于「已 push」。**（本轮：**全部已 commit、未 push 共 7 支。**）
 - **卡住的 `git push` 会留下僵尸行程与 stale `index.lock`。**
 - **沙盒的挂载点删不掉档案。**
 - **Windows 上不要用 `| head`；长 commit 讯息写成档案再 `git commit -F <path>`，
@@ -388,13 +391,13 @@ J 手贴 migration 的步骤：记事本开档 → `Ctrl+A` `Ctrl+C` → Supabas
 | 位置 | 放什么 |
 |---|---|
 | 根目录 | `CLAUDE.md`（规则）· `STATE.md`（这份）· `BUILD_PLAN.md` · `PROMPTS.md` · `DEPLOY.md`（⚠ 过期，上线照 `docs/上线与截图-给J的步骤.md`）· `README.md` · `AGENTS.md` |
-| `docs/` | `DECISIONS.md`（D1–**D23**）· `功能盤點-計劃vs實作.md` · `产品缺口盘点.md` · `上线与截图-给J的步骤.md` · `换模型手册.md` · `AI-API-选型与成本.md` · 其余照旧 |
+| `docs/` | `DECISIONS.md`（D1–**D28**）· `功能盤點-計劃vs實作.md` · `产品缺口盘点.md` · `上线与截图-给J的步骤.md` · `换模型手册.md` · `AI-API-选型与成本.md` · 其余照旧 |
 | 品牌 | `src/lib/brand.ts`（BRAND_NAME="MinitAI"，D23）· **紫色**（D24）：logo 原图 `scripts/assets/minit-logo.png`、向量版 `src/components/brand-logo.tsx` · 重生图标：`node scripts/brand-icons.mjs` · tokens 都在 `globals.css` 的 `.v2-root` |
 | 定价／毛利 | `src/lib/unit-economics.ts` + `npm run economics`（价目表查证日 `PRICES_CHECKED_ON`） |
 | AI 分流设定 | `.env.example` 的 AI 段 + `npm run check:ai` |
 | 模型对比 | `npm run bench`（--dry-run / --mock）· `bench-models.bat` · 报告在 `eval/reports/model-bench-<日期>.md` |
 | 「到底做了没有」 | `npm run status` / `status.bat` |
-| migration | `supabase/migrations/`（**27 支；26、27 未套用**）· `salin-migration.bat`（27 项）· `npm run check:migrations` |
+| migration | `supabase/migrations/`（**28 支；28 未套用**）· `salin-migration.bat`（28 项）· `npm run check:migrations` |
 | 给 J 双击的 `.bat` | `status.bat` · `salin-migration.bat` · `salin-env-vercel.bat` · `push-cabang.bat` · `bench-models.bat`。🔴 `push-to-github.bat` 不能用；⚠ `check-ai.bat` 还指旧资料夹 |
 | `competition/` | 顶层＝当前版（**[YOU] 两处还空着**）；`screenshots/` 60 张旧配色（拍板 0-9：只重拍首页主图，未拍——未决 7） |
 | `eval/reports/` | 整夹 gitignore；只有 `SUMMARY.md` 例外 |
