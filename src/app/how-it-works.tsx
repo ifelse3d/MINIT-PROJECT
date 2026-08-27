@@ -48,8 +48,8 @@ const FRAMES: readonly {
     zh: "拍下手写的会议笔记 —— 也可以自己打字。",
     en: "Photograph the handwritten notes — or type them in.",
     hi: {
-      left: "29.5%",
-      top: "69.0%",
+      left: "10.9%",
+      top: "64.0%",
       width: "9.4%",
       height: "6.4%",
       labelBm: "Tekan di sini",
@@ -64,9 +64,9 @@ const FRAMES: readonly {
     zh: `${BRAND_NAME} 逐行读出来。读不准的会标黄，等您核对。`,
     en: `${BRAND_NAME} reads every line. Smudged ones are flagged for you to check.`,
     hi: {
-      left: "29.6%",
+      left: "11.1%",
       top: "44.8%",
-      width: "65.5%",
+      width: "84.0%",
       height: "10.5%",
       labelBm: "Semak baris kuning di sini",
       labelZh: "标黄的在这里核对",
@@ -82,9 +82,9 @@ const FRAMES: readonly {
     // §1-4: the frame now points at the CONFIRM button itself (the sample
     // rows are gone from the real page — the walkthrough IS the demo).
     hi: {
-      left: "29.5%",
-      top: "69.1%",
-      width: "24.3%",
+      left: "10.9%",
+      top: "69.2%",
+      width: "24.7%",
       height: "6.9%",
       labelBm: "Sahkan di sini",
       labelZh: "在这里确认加入登记",
@@ -98,9 +98,9 @@ const FRAMES: readonly {
     zh: "成品出来：正式会议记录、eROSES 粘贴包、您的截止日期。",
     en: "The finished pieces: official minutes, the eROSES pack, your deadlines.",
     hi: {
-      left: "29.5%",
-      top: "5.6%",
-      width: "65.8%",
+      left: "10.9%",
+      top: "5.7%",
+      width: "84.4%",
       height: "40%",
       labelBm: "Dokumen siap anda",
       labelZh: "做好的文件在这里",
