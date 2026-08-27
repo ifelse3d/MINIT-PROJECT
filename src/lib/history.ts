@@ -46,9 +46,15 @@ export type ActivityRecord = {
   href: string;
   /** Money rows only — summed in TypeScript, never by an LLM. */
   amountCents?: number;
-  /** PDPA: masked display value only (donor_masked, deadline label, event
-   *  title). NEVER a full donor name, IC, or document contents. */
+  /** D18 + §1-10 (work order 32): the display value MAY be the full donor
+   *  name — in-app views show whose record it is; masking belongs to the
+   *  moments data leaves the app. Still NEVER an IC number or document
+   *  contents, and none of this ever reaches an AI model or a log. */
   detail?: string;
+  /** §1-11 (work order 32): the record's full timestamp, when its table has
+   *  one, so the feed can print the TIME as well as the day. Optional —
+   *  date-only tables (donated_at, spent_at) may have nothing better. */
+  atIso?: string;
   /** WHO did it, where the table records it (confirmed_by, collector name,
    *  confirmed_by_hq). Committee/office-bearer names only — never donors. */
   actor?: string;
@@ -117,6 +123,20 @@ export function formatMytDateTime(timestamp: string | null | undefined): string 
   if (Number.isNaN(ms)) return "—";
   const shifted = new Date(ms + MALAYSIA_UTC_OFFSET_HOURS * 3_600_000);
   return `${shifted.toISOString().slice(0, 16).replace("T", " ")} MYT`;
+}
+
+/**
+ * §1-11 (work order 32): just the CLOCK TIME of a timestamptz, Malaysian,
+ * "14:05" — for lists already grouped under a day heading, where repeating
+ * the date on every row is noise. Returns null when there is no usable
+ * timestamp, so callers can simply not render anything.
+ */
+export function timeMytOf(timestamp: string | null | undefined): string | null {
+  if (!timestamp) return null;
+  const ms = Date.parse(timestamp);
+  if (Number.isNaN(ms)) return null;
+  const shifted = new Date(ms + MALAYSIA_UTC_OFFSET_HOURS * 3_600_000);
+  return shifted.toISOString().slice(11, 16);
 }
 
 // --- month math (all UTC, deterministic) --------------------------------------

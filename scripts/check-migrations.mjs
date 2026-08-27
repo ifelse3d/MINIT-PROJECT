@@ -65,6 +65,8 @@ const probes = [
   ["20260903000000 final sprint: platform admins", "credit_grants", "granted_by"],
   ["20260904000000 payment method", "donations", "payment_method"],
   ["20260904000000 payment method: transfer proof", "donations", "transfer_proof_path"],
+  ["20260905000000 record times: donations.created_at", "donations", "created_at"],
+  ["20260905000000 custody batch details", "remittance_batches", "recorded_at"],
 ];
 
 const headers = { apikey: key, Authorization: `Bearer ${key}` };

@@ -11,6 +11,7 @@ import {
   filterByCategory,
   nextMonth,
   prevMonth,
+  timeMytOf,
   HISTORY_CATEGORIES,
   type ActivityRecord,
   type HistoryFilter,
@@ -249,11 +250,17 @@ export function HistoryFeed({
 function FeedRow({ record }: { record: ActivityRecord }) {
   const s = CATEGORY_STYLE[record.category];
   const text = LINE_TEXT[`${record.category}/${record.kind}`]?.(1);
+  // §1-11: the clock time, where the table records one (issued_at,
+  // handed_over_at, …). Date-only rows honestly show nothing.
+  const time = timeMytOf(record.atIso);
+  // §1-12: "HQ Admin (Demo)" is a demo-era data stamp (pre-B-3 rows). The
+  // stored value stays (it is the audit trail); the DISPLAY says what it was.
+  const demoActor = record.actor === "HQ Admin (Demo)";
   return (
     <li>
       <Link
         href={record.href}
-        className="flex min-h-16 items-center gap-3 rounded-2xl border-2 border-[color:var(--v2-border)] bg-white/70 p-3.5 transition-colors hover:border-[#7c6cf5]/50 hover:bg-white dark:bg-white/5 dark:hover:bg-white/10"
+        className="flex min-h-16 items-center gap-3 rounded-2xl border-2 border-[color:var(--v2-border)] bg-white/70 p-3.5 transition-colors hover:border-[#22c55e]/60 hover:bg-white dark:bg-white/5 dark:hover:bg-white/10"
       >
         <span
           aria-hidden
@@ -270,12 +277,28 @@ function FeedRow({ record }: { record: ActivityRecord }) {
               </span>
             )}
           </span>
-          {/* Line 2 — the supporting detail, out of the way of line 1. */}
+          {/* Line 2 — the supporting detail, out of the way of line 1.
+              D18 + §1-10: detail may be the FULL donor name (never an IC). */}
           <span className="mt-0.5 block text-base text-muted-foreground">
+            {time && <span className="tabular-nums">{time} · </span>}
             <Tri bm={s.bm} zh={s.zh} en={s.en} />
-            {/* PDPA: detail is only ever donor_masked / upload kind / category */}
             {record.detail ? ` · ${record.detail}` : ""}
-            {record.actor ? ` · ${record.actor}` : ""}
+            {record.actor ? (
+              demoActor ? (
+                <>
+                  {" · "}
+                  <Tri
+                    bm="Disahkan HQ (data zaman demo)"
+                    zh="总会确认（示范时期资料）"
+                    en="HQ confirmed (demo-era data)"
+                  />
+                </>
+              ) : (
+                ` · ${record.actor}`
+              )
+            ) : (
+              ""
+            )}
           </span>
         </span>
         <span aria-hidden className="shrink-0 text-xl text-muted-foreground">

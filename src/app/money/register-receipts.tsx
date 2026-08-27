@@ -15,6 +15,7 @@ import {
   type RegisterDonation,
 } from "@/lib/receipts";
 import { formatRm } from "@/lib/minutes-draft";
+import { formatMytDateTime } from "@/lib/history";
 import { maskName } from "@/lib/mask";
 import { downloadFromApi } from "@/lib/download-file";
 import { chooseReceiptPrefix } from "./actions";
@@ -915,7 +916,17 @@ function ListRegister({
                   <td className="px-3 py-2 font-mono text-sm text-muted-foreground">
                     {d.receiptNo ?? "—"}
                   </td>
-                  <td className="px-3 py-2 text-sm tabular-nums">{d.donatedAtIso}</td>
+                  <td className="px-3 py-2 text-sm tabular-nums">
+                    {d.donatedAtIso}
+                    {/* §1-11 (拍板 0-5): when the row was RECORDED — distinct
+                        from the donation date. Absent on old rows. */}
+                    {d.createdAtIso && (
+                      <span className="block text-xs text-muted-foreground">
+                        <Tri bm="direkod" zh="记录于" en="recorded" />{" "}
+                        {formatMytDateTime(d.createdAtIso)}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-3 py-2 text-right font-semibold tabular-nums">
                     {/* D-1: goods rows show the goods, never RM0.00. */}
                     {d.kind === "in_kind" ? (

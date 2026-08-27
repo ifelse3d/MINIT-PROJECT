@@ -107,6 +107,10 @@ export type RegisterDonation = {
   /** Transfer only, OPTIONAL: Storage path of the transfer screenshot the
    *  member attached. Storage, never AI. */
   transferProofPath?: string | null;
+  /** §1-11 (work order 32, 拍板 0-5): WHEN this row was recorded (full ISO
+   *  timestamp), as opposed to donatedAtIso (when the money changed hands).
+   *  Absent on rows recorded before this field existed — display nothing. */
+  createdAtIso?: string;
 };
 
 /** True for a goods (Derma Barangan) row — the one question money code asks. */

@@ -516,6 +516,9 @@ export function RegisterProvider({
         // D19: the reviewer's answer, default cash. The AI never decides how
         // the money arrived.
         paymentMethod: ledgerPayments[i] ?? ("cash" as const),
+        // §1-11: when the row was recorded (the moment the human confirmed
+        // it into the register, not when the AI read it).
+        createdAtIso: new Date(stamp).toISOString(),
       })),
     ]);
     setAddedRows((prev) => {
@@ -585,6 +588,8 @@ export function RegisterProvider({
           // D19: how the money arrived rides along to the database.
           paymentMethod: d.paymentMethod,
           transferProofPath: d.transferProofPath ?? null,
+          // §1-11: the record time travels with the row.
+          createdAtIso: d.createdAtIso,
         })),
         opts,
       );

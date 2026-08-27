@@ -19,6 +19,11 @@ import { getActiveOrg } from "@/lib/active-org";
 import type { RegisterDonation } from "@/lib/receipts";
 
 const SELECT =
+  "id, client_id, donor_name, donor_phone, amount_cents, purpose, donated_at, created_at, custody_status, source, collector_name, kind, item_desc, est_value_cents, payment_method, transfer_proof_path, receipt:receipts!donations_receipt_id_fkey (receipt_no)" as const;
+/** While migration 27 (donations.created_at) is not applied — retry without
+ *  it, keeping every younger column. Each tier drops ONE migration's columns
+ *  so a database at any age still returns everything it truthfully has. */
+const SELECT_NO_CREATED =
   "id, client_id, donor_name, donor_phone, amount_cents, purpose, donated_at, custody_status, source, collector_name, kind, item_desc, est_value_cents, payment_method, transfer_proof_path, receipt:receipts!donations_receipt_id_fkey (receipt_no)" as const;
 /** While migration 26 (donations.payment_method) is not applied — retry
  *  without the payment columns (rows come back as cash, which is what a
@@ -42,6 +47,7 @@ type Row = {
   amount_cents: number;
   purpose: string | null;
   donated_at: string | null;
+  created_at?: string | null;
   custody_status: "collected" | "pending_remittance" | "settled";
   source: string | null;
   collector_name?: string | null;
@@ -71,6 +77,11 @@ export async function loadRegisterDonations(): Promise<RegisterDonation[]> {
       .order("donated_at", { ascending: true });
 
   let { data, error } = await query(SELECT).returns<Row[]>();
+  if (error) {
+    const retry = await query(SELECT_NO_CREATED).returns<Row[]>();
+    data = retry.data;
+    error = retry.error;
+  }
   if (error) {
     const retry = await query(SELECT_NO_PAYMENT).returns<Row[]>();
     data = retry.data;
@@ -110,5 +121,7 @@ export async function loadRegisterDonations(): Promise<RegisterDonation[]> {
     paymentMethod:
       d.payment_method === "transfer" ? ("transfer" as const) : ("cash" as const),
     transferProofPath: d.transfer_proof_path ?? null,
+    // §1-11: pre-migration-27 rows have no stored record time — honest absence.
+    createdAtIso: d.created_at ?? undefined,
   }));
 }

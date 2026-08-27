@@ -11,11 +11,13 @@ import {
 // ---------------------------------------------------------------------------
 // One month of org activity → ActivityRecord[]. SHARED by /calendar and
 // /history (moved out of the calendar page so the query logic exists once).
-// Every query is org_id-scoped and RLS applies on top. PDPA (Hard Rule 5):
-// only ids, dates, amounts, MASKED donor values, and committee member names
-// (the actor columns: confirmed_by, collector, confirmed_by_hq) are selected
-// — never donor names, IC numbers, question text, or document contents.
-// Nothing here is logged.
+// Every query is org_id-scoped and RLS applies on top. PDPA (Hard Rule 5, as
+// revised by D18 + §1-10, work order 32): ids, dates, amounts, FULL donor
+// names (in-app views show whose record it is — masking belongs to the
+// moments data LEAVES the app), and committee member names (the actor
+// columns: confirmed_by, collector, confirmed_by_hq). Still never IC
+// numbers, question text, or document contents. Nothing here is logged, and
+// none of it reaches an AI model (org-tools has its own selects).
 //
 // timestamptz columns are windowed in UTC (the Malaysian month shifted back
 // 8h); plain date columns use the month's first/last day directly.
@@ -52,7 +54,7 @@ export async function fetchMonthActivity(
       supabase
         .from("receipts")
         .select(
-          "id, issued_at, donation:donations!receipts_donation_id_fkey (amount_cents, donor_masked, collector:members_roles!donations_collector_member_id_fkey (name))",
+          "id, issued_at, donation:donations!receipts_donation_id_fkey (amount_cents, donor_name, donor_masked, collector:members_roles!donations_collector_member_id_fkey (name))",
         )
         .eq("org_id", orgId)
         .gte("issued_at", startUtc)
@@ -62,7 +64,7 @@ export async function fetchMonthActivity(
       supabase
         .from("donations")
         .select(
-          "id, donated_at, amount_cents, donor_masked, collector:members_roles!donations_collector_member_id_fkey (name)",
+          "id, donated_at, amount_cents, donor_name, donor_masked, collector:members_roles!donations_collector_member_id_fkey (name)",
         )
         .eq("org_id", orgId)
         .is("receipt_id", null)
@@ -146,6 +148,7 @@ export async function fetchMonthActivity(
       dayIso: day,
       href: `/minutes/history#minutes-${m.id}`,
       actor: m.confirmed_by ?? undefined,
+      atIso: m.confirmed_at ?? undefined,
     });
   }
 
@@ -154,6 +157,7 @@ export async function fetchMonthActivity(
     issued_at: string;
     donation: {
       amount_cents: number;
+      donor_name: string | null;
       donor_masked: string | null;
       collector: { name: string } | null;
     } | null;
@@ -167,8 +171,11 @@ export async function fetchMonthActivity(
       dayIso: day,
       href: `/money/history#receipt-${r.id}`,
       amountCents: r.donation?.amount_cents ?? 0,
-      detail: r.donation?.donor_masked ?? undefined,
+      // D18 + §1-10: the full name the treasurer typed; mask only as a
+      // fallback for rows that never stored one.
+      detail: r.donation?.donor_name ?? r.donation?.donor_masked ?? undefined,
       actor: r.donation?.collector?.name ?? undefined,
+      atIso: r.issued_at,
     });
   }
 
@@ -176,6 +183,7 @@ export async function fetchMonthActivity(
     id: number;
     donated_at: string | null;
     amount_cents: number;
+    donor_name: string | null;
     donor_masked: string | null;
     collector: { name: string } | null;
   };
@@ -185,10 +193,14 @@ export async function fetchMonthActivity(
       category: "money",
       kind: "donation",
       dayIso: d.donated_at,
-      href: "/money/history",
+      // §1-12: an UNRECEIPTED donation is not in the receipt history — the
+      // register on the receipts page is where this row can be seen.
+      href: "/money/receipts",
       amountCents: d.amount_cents,
-      detail: d.donor_masked ?? undefined,
+      detail: d.donor_name ?? d.donor_masked ?? undefined,
       actor: d.collector?.name ?? undefined,
+      // donated_at is a plain date; donations has no created_at column, so
+      // there is honestly no clock time to print for these rows.
     });
   }
 
@@ -212,16 +224,19 @@ export async function fetchMonthActivity(
       category: "money",
       kind: "remittance",
       dayIso: day,
-      href: "/money",
+      // §1-12: hand-overs live on the custody page — /money landed J on the
+      // ledger reader with nothing about the batch he tapped.
+      href: "/money/custody",
       amountCents: b.total_cents,
       actor: b.confirmed_by_hq ?? undefined,
+      atIso: b.handed_over_at ?? undefined,
     });
   }
 
   for (const p of einvois.data ?? []) {
     const day = dayIsoMalaysia(p.generated_at);
     if (!day) continue;
-    records.push({ category: "filings", kind: "einvois", dayIso: day, href: "/filings" });
+    records.push({ category: "filings", kind: "einvois", dayIso: day, href: "/filings", atIso: p.generated_at });
   }
 
   type PastePackRow = {
@@ -246,6 +261,7 @@ export async function fetchMonthActivity(
       dayIso: day,
       href: "/inbox",
       detail: u.kind ?? undefined,
+      atIso: u.uploaded_at,
     });
   }
 

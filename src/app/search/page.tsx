@@ -28,12 +28,14 @@ export default async function SearchPage({
     if (active) {
       const supabase = await getSupabaseServer();
 
-      // Receipts: donor stays MASKED (PDPA) — we search the stored masked
-      // value plus receipt no / purpose, never raw personal data.
+      // Receipts: FULL donor name (D18 + §1-10, work order 32 — the record
+      // system must show whose record it is; the treasurer could not find
+      // "Lim" because the list said "L•••••"). Masking now belongs to the
+      // moments data LEAVES the app (print/share/export), not to this list.
       const { data: receipts } = await supabase
         .from("receipts")
         .select(
-          "id, receipt_no, donation:donations!receipts_donation_id_fkey (donor_masked, amount_cents, purpose, donated_at)",
+          "id, receipt_no, donation:donations!receipts_donation_id_fkey (donor_name, donor_masked, amount_cents, purpose, donated_at)",
         )
         .eq("org_id", active.id)
         .limit(200);
@@ -41,6 +43,7 @@ export default async function SearchPage({
         id: number;
         receipt_no: string;
         donation: {
+          donor_name: string | null;
           donor_masked: string | null;
           amount_cents: number;
           purpose: string | null;
@@ -50,6 +53,7 @@ export default async function SearchPage({
         .filter((r) => {
           const hay = [
             r.receipt_no,
+            r.donation?.donor_name ?? "",
             r.donation?.donor_masked ?? "",
             r.donation?.purpose ?? "",
             r.donation?.donated_at ?? "",
@@ -62,7 +66,7 @@ export default async function SearchPage({
         .map((r) => ({
           id: r.id,
           receiptNo: r.receipt_no,
-          donorMasked: r.donation?.donor_masked ?? "—",
+          donorName: r.donation?.donor_name ?? r.donation?.donor_masked ?? "—",
           amountCents: r.donation?.amount_cents ?? 0,
           purpose: r.donation?.purpose ?? "",
           dateIso: r.donation?.donated_at ?? "",

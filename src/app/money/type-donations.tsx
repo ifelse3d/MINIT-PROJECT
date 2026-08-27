@@ -280,6 +280,8 @@ export function TypeDonations({
           r.inKind && r.estValue.trim() !== ""
             ? parseRmToCents(r.estValue)
             : null,
+        // §1-11: when the row was recorded.
+        createdAtIso: new Date().toISOString(),
       })),
     );
     setAdded(ready.length);

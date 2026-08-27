@@ -54,6 +54,8 @@ export type RowToIssue = {
   paymentMethod?: "cash" | "transfer";
   /** Transfer only, optional: Storage path of the attached proof screenshot. */
   transferProofPath?: string | null;
+  /** §1-11 (拍板 0-5): when the row was recorded on the device. */
+  createdAtIso?: string;
 };
 
 export type IssueResult =
@@ -217,6 +219,9 @@ export async function issueAndSaveReceipts(
       // land recorded as cash.
       paymentMethod: r.paymentMethod === "transfer" ? "transfer" : "cash",
       transferProofPath: r.transferProofPath ?? null,
+      // §1-11: when the row was recorded. Pre-migration-27 RPC versions
+      // ignore the key; post-27, missing/empty falls back to now() in SQL.
+      createdAt: r.createdAtIso ?? null,
     })),
   });
 

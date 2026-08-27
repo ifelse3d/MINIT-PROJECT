@@ -6,6 +6,7 @@ import {
   dayCategories,
   dayIsoMalaysia,
   formatMytDateTime,
+  timeMytOf,
   todayIsoMalaysia,
   daySummary,
   feedDays,
@@ -360,5 +361,24 @@ describe("formatMytDateTime", () => {
   it("agrees with dayIsoMalaysia about which day it is", () => {
     const ts = "2026-08-22T17:30:00Z"; // 01:30 on the 23rd in Malaysia
     expect(formatMytDateTime(ts).slice(0, 10)).toBe(dayIsoMalaysia(ts));
+  });
+});
+
+// §1-11 (work order 32): the clock-time-only variant, for rows already
+// grouped under a day heading.
+describe("timeMytOf", () => {
+  it("shifts UTC to UTC+8 and keeps only the clock time", () => {
+    expect(timeMytOf("2026-08-27T06:05:00Z")).toBe("14:05");
+  });
+
+  it("answers null, never a crash, for missing or bad input", () => {
+    expect(timeMytOf(null)).toBeNull();
+    expect(timeMytOf(undefined)).toBeNull();
+    expect(timeMytOf("not a timestamp")).toBeNull();
+  });
+
+  it("agrees with formatMytDateTime about the minute", () => {
+    const ts = "2026-08-26T18:30:00Z";
+    expect(formatMytDateTime(ts)).toContain(timeMytOf(ts)!);
   });
 });

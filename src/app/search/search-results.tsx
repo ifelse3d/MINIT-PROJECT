@@ -18,7 +18,6 @@ import {
   type ClauseMatch,
   type ConfirmedClause,
 } from "@/lib/constitution";
-import { maskName } from "@/lib/mask";
 import { formatRm } from "@/lib/minutes-draft";
 import type { RegisterDonation } from "@/lib/receipts";
 
@@ -26,14 +25,16 @@ import type { RegisterDonation } from "@/lib/receipts";
 // Search results (client half of /search). Adds the LOCAL sources on top of
 // the server's DB hits: the register saved in this browser (same localStorage
 // key the /money page uses) and the constitution clauses (same data +
-// filterClauses the /constitution page uses). PDPA: donor names are masked.
-// Pure keyword matching — no AI, no chatbot.
+// filterClauses the /constitution page uses). D18 + §1-10 (work order 32):
+// donor names show IN FULL — a search page that prints "L•••••" cannot tell
+// you whether it found the person you searched for. Masking belongs to the
+// moments data LEAVES the app. Pure keyword matching — no AI, no chatbot.
 // ---------------------------------------------------------------------------
 
 export type DbReceiptHit = {
   id: number;
   receiptNo: string;
-  donorMasked: string;
+  donorName: string;
   amountCents: number;
   purpose: string;
   dateIso: string;
@@ -74,7 +75,7 @@ function loadOwnClauses(): ConfirmedClause[] {
 }
 
 type LocalDonationHit = {
-  donorMasked: string;
+  donorName: string;
   amountCents: number;
   purpose: string;
   dateIso: string;
@@ -117,7 +118,7 @@ export function SearchResults({
           )
           .slice(0, 20)
           .map((d) => ({
-            donorMasked: maskName(d.donorName),
+            donorName: d.donorName,
             amountCents: d.amountCents,
             purpose: d.purpose,
             dateIso: d.donatedAtIso,
@@ -232,7 +233,7 @@ export function SearchResults({
                 className="flex flex-wrap items-center gap-2 rounded-md border p-3 text-sm hover:bg-muted/40"
               >
                 <span className="font-mono">{r.receiptNo}</span>
-                <span>{r.donorMasked}</span>
+                <span>{r.donorName}</span>
                 <span className="tabular-nums font-medium">{formatRm(r.amountCents)}</span>
                 <span className="text-muted-foreground">{r.purpose}</span>
                 <span className="text-muted-foreground">{r.dateIso}</span>
@@ -247,7 +248,7 @@ export function SearchResults({
                 <span className="font-mono">
                   {d.receiptNo ?? t("belum ada resit", "还没有收据", "no receipt yet")}
                 </span>
-                <span>{d.donorMasked}</span>
+                <span>{d.donorName}</span>
                 <span className="tabular-nums font-medium">{formatRm(d.amountCents)}</span>
                 <span className="text-muted-foreground">{d.purpose}</span>
                 <span className="text-muted-foreground">{d.dateIso}</span>

@@ -9,8 +9,9 @@ import { HistoryFeed } from "./history-feed";
 // ingested). Constitution Q&A is deliberately NOT here — see
 // HISTORY_CATEGORIES in lib/history.ts. Month-
 // scoped via ?month=, reusing the SAME query module as /calendar
-// (src/db/activity.ts) — the two pages can never disagree. PDPA (Hard Rule
-// 5): only masked donor values and committee member names reach the feed.
+// (src/db/activity.ts) — the two pages can never disagree. D18 + §1-10 (work
+// order 32): donor names show IN FULL here; masking belongs to the moments
+// data leaves the app. Never IC numbers or document contents.
 export const dynamic = "force-dynamic";
 
 type Search = { month?: string };

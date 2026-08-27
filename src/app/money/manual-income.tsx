@@ -171,6 +171,9 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
       source: "manual",
       paymentMethod: method,
       transferProofPath,
+      // §1-11: when the row was RECORDED (donatedAtIso is when the money
+      // changed hands — the two differ whenever entry happens later).
+      createdAtIso: new Date().toISOString(),
     });
     reset();
     setOpen(false);

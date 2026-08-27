@@ -19,6 +19,7 @@ import { Tri } from "@/components/language-provider";
 import { getSupabaseServer } from "@/db/supabase-server";
 import { getActiveOrg } from "@/lib/active-org";
 import { formatRm } from "@/lib/minutes-draft";
+import { formatMytDateTime } from "@/lib/history";
 import { isIsoDate } from "@/lib/date-input";
 import { PAGE_SIZE, pageRange, pageSummary, parsePage } from "@/lib/list-page";
 import { Pager } from "@/components/pager";
@@ -304,7 +305,15 @@ export default async function MoneyHistoryPage({
                 {rows.map((r) => (
                   // id anchor: the activity calendar deep-links to #receipt-N
                   <TableRow key={r.id} id={`receipt-${r.id}`} className="scroll-mt-24 target:bg-amber-50">
-                    <TableCell className="font-mono">{r.receipt_no}</TableCell>
+                    <TableCell>
+                      <span className="font-mono">{r.receipt_no}</span>
+                      {/* §1-11 (拍板 0-5): WHEN the receipt was issued, not
+                          just the donation date two columns over. */}
+                      <span className="block text-sm text-muted-foreground">
+                        <Tri bm="dikeluarkan" zh="开出于" en="issued" />{" "}
+                        {formatMytDateTime(r.issued_at)}
+                      </span>
+                    </TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
