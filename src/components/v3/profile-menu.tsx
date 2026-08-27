@@ -82,9 +82,9 @@ export function ProfileMenu() {
             <p className="truncate text-sm text-[color:var(--v2-text-soft)]">{email}</p>
           </div>
 
-          <Link href="/settings" role="menuitem" onClick={() => setOpen(false)} className={row}>
+          <Link href="/settings/profile" role="menuitem" onClick={() => setOpen(false)} className={row}>
             <UserRound className="h-4 w-4 shrink-0" strokeWidth={1.8} />
-            <Tri bm="Akaun saya" zh="我的账号" en="My account" />
+            <Tri bm="Profil saya" zh="我的账号" en="My profile" />
           </Link>
           <Link href="/settings" role="menuitem" onClick={() => setOpen(false)} className={row}>
             <Settings className="h-4 w-4 shrink-0" strokeWidth={1.8} />

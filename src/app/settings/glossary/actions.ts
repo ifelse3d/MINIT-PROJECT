@@ -76,7 +76,7 @@ export async function addGlossaryTerm(
     return { error: ERR.failed, ok: false };
   }
 
-  revalidatePath("/glossary");
+  revalidatePath("/settings/glossary");
   return { error: null, ok: true };
 }
 
@@ -104,7 +104,7 @@ export async function deleteGlossaryTerm(
 
   if (error) return { error: ERR.failed, ok: false };
 
-  revalidatePath("/glossary");
+  revalidatePath("/settings/glossary");
   return { error: null, ok: true };
 }
 
@@ -171,7 +171,7 @@ export async function importGlossary(
     return { error: ERR.failed, ok: false };
   }
 
-  revalidatePath("/glossary");
+  revalidatePath("/settings/glossary");
   return { error: null, ok: true };
 }
 

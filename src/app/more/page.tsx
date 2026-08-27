@@ -10,7 +10,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { LogOut } from "lucide-react";
+import { LogOut, Settings as SettingsIcon } from "lucide-react";
 import { LanguageSwitcher, Tri } from "@/components/language-provider";
 import { SIDEBAR_NAV, visibleGroupChildren } from "@/components/nav-items";
 import { useActiveOrg } from "@/components/v3/org-chip";
@@ -101,6 +101,26 @@ export default function MorePage() {
           </section>
         );
       })}
+
+      {/* §7.2: settings became a sub-sectioned family — one door from here;
+          the tab strip on the settings pages does the rest on a phone. */}
+      <section className="flex flex-col gap-2">
+        <h2 className="flex items-center gap-2 px-1 text-sm font-semibold uppercase tracking-wide text-[color:var(--v2-text-soft)]">
+          <SettingsIcon className="h-4 w-4 shrink-0" strokeWidth={1.8} />
+          <Tri bm="Tetapan" zh="设置" en="Settings" />
+        </h2>
+        <ul className="v2-glass flex flex-col overflow-hidden p-0">
+          <li>
+            <Link
+              href="/settings"
+              className="flex min-h-14 items-center gap-3 px-4 text-base font-medium transition-colors hover:bg-[color:var(--v2-primary-soft)]"
+            >
+              <SettingsIcon className="h-5 w-5 shrink-0 text-[color:var(--v2-primary)]" strokeWidth={1.8} />
+              <Tri bm="Buka tetapan" zh="打开设置" en="Open settings" />
+            </Link>
+          </li>
+        </ul>
+      </section>
 
       <div className="flex items-center justify-between gap-3">
         <div className="flex flex-col gap-1">

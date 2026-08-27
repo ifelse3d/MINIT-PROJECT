@@ -311,9 +311,8 @@ async function run() {
   }
 
   // --- delete the org through Settings (typed confirmation) ----------------
-  // §1-13 (work order 32): the danger zones live on /settings/org since the
-  // settings split — /settings is account & display only now.
-  await page.goto(`${BASE}/settings/org`, { waitUntil: "networkidle2" });
+  // §7.5 (violet redesign): the danger zone is its own settings route.
+  await page.goto(`${BASE}/settings/danger`, { waitUntil: "networkidle2" });
   // EXACT text: "删除…" is the org-delete opener; a loose match hits the
   // register-delete opener ("删除登记簿…") that sits above it.
   const openers = await page.$$("button");

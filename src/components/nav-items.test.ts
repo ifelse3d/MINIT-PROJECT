@@ -73,12 +73,11 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
       "/filings",
       "/agm-pack",
     ]);
-    // 组织: 成员 · 章程 · 条文全文 · 词库 · 组织与分会.
+    // 组织: 成员 · 章程 · 条文全文 · 组织与分会 (词库 → /settings/glossary, §3.2).
     expect(byId("organisation").children.map((c) => c.href)).toEqual([
       "/members",
       "/constitution",
       "/constitution/clauses",
-      "/glossary",
       "/orgs",
     ]);
     // 记录: 历史 · 原始照片.
@@ -86,12 +85,23 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
       "/history",
       "/inbox",
     ]);
-    // 设置家族 (violet redesign §7): lives in SETTINGS_NAV, not the rail.
+    // 设置家族 (violet redesign §7.2): the root + thirteen sub-screens in
+    // the sub-sidebar, not the rail.
     expect(SETTINGS_NAV.map((c) => c.href)).toEqual([
       "/settings",
-      "/settings/org",
+      "/settings/profile",
+      "/settings/display",
+      "/settings/security",
+      "/settings/general",
+      "/settings/members",
+      "/settings/receipts",
+      "/settings/glossary",
+      "/settings/einvois",
+      "/settings/ai",
       "/settings/plan",
+      "/settings/system",
       "/settings/feedback",
+      "/settings/danger",
     ]);
   });
 
@@ -164,11 +174,12 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
       "/constitution",
       "/constitution/clauses",
       "/members",
-      "/glossary",
+      "/settings/glossary",
       "/inbox",
       "/history",
       "/orgs",
       "/settings",
+      "/settings/danger",
     ]) {
       expect(hrefs).toContain(href);
     }

@@ -1,4 +1,5 @@
 import {
+  Activity,
   Banknote,
   BarChart3,
   BookOpen,
@@ -15,13 +16,18 @@ import {
   Home,
   Landmark,
   Languages,
+  Lock,
   MessageSquare,
   MoreHorizontal,
+  Palette,
   Receipt,
   ScrollText,
   ClipboardCheck,
   Settings,
+  Sparkles,
+  TriangleAlert,
   Upload,
+  UserRound,
   Users,
   Wallet,
   type LucideIcon,
@@ -106,24 +112,29 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/constitution", icon: ScrollText, bm: "Perlembagaan", zh: "章程", en: "Constitution", exact: true },
   { href: "/constitution/clauses", icon: BookOpen, bm: "Fasal penuh", zh: "条文全文", en: "All clauses" },
   { href: "/members", icon: Users, bm: "Ahli", zh: "成员", en: "Members" },
-  { href: "/glossary", icon: Languages, bm: "Perkataan kami", zh: "我们的词库", en: "Our words" },
   { href: "/inbox", icon: Upload, bm: "Gambar asal", zh: "原始照片", en: "Original photos" },
   { href: "/history", icon: History, bm: "Sejarah", zh: "历史", en: "History" },
   // e-Invois: optional (org switch, default off). The >RM10,000 individual
   // e-invois warning inside the money pages stays regardless of this flag.
   { href: "/money/einvois", icon: Banknote, bm: "Fail cukai (e-Invois)", zh: "税务文件（e-Invois）", en: "Tax file (e-Invois)", einvoisOnly: true },
   { href: "/orgs", icon: Building2, bm: "Pertubuhan & cawangan", zh: "组织与分会", en: "Organisations & branches" },
-  // C-3: the plan-and-usage page gets its own sidebar row (settings group).
-  // /settings is `exact` so standing on /settings/plan lights ONE row.
-  { href: "/settings/plan", icon: Gauge, bm: "Pelan & penggunaan", zh: "方案与用量", en: "Plan & usage" },
-  // C-1 (work order 31, J #4): the row was "Settings" INSIDE a group called
-  // "Settings" — 設置>設置. The group keeps the section name; the row says what
-  // is actually on the page: your account and how the app looks.
-  { href: "/settings", icon: Settings, bm: "Akaun & paparan", zh: "账号与显示", en: "Account & display", exact: true },
-  // §1-13 (work order 32): the settings split — the org's own settings and
-  // the feedback channel became real pages with real rows.
-  { href: "/settings/org", icon: Building2, bm: "Pertubuhan & resit", zh: "机构与收据", en: "Organisation & receipts" },
+  // THE SETTINGS FAMILY (violet redesign §7.2, 8/27 下午 — supersedes the
+  // morning's four-page split): /settings redirects to /settings/display;
+  // thirteen directly-linkable screens behind a sub-sidebar.
+  { href: "/settings", icon: Settings, bm: "Tetapan", zh: "设置", en: "Settings", exact: true },
+  { href: "/settings/profile", icon: UserRound, bm: "Profil saya", zh: "我的账号", en: "My profile" },
+  { href: "/settings/display", icon: Palette, bm: "Paparan & bahasa", zh: "显示与语言", en: "Display & language" },
+  { href: "/settings/security", icon: Lock, bm: "Kata laluan & keselamatan", zh: "密码与安全", en: "Password & security" },
+  { href: "/settings/general", icon: Building2, bm: "Pertubuhan", zh: "机构", en: "Organisation" },
+  { href: "/settings/members", icon: Users, bm: "Ahli & jemputan", zh: "成员与邀请", en: "Members & invites" },
+  { href: "/settings/receipts", icon: Receipt, bm: "Nombor resit", zh: "收据字号", en: "Receipt numbers" },
+  { href: "/settings/glossary", icon: Languages, bm: "Perkataan kami", zh: "我们的词库", en: "Our words" },
+  { href: "/settings/einvois", icon: Banknote, bm: "e-Invois (LHDN)", zh: "e-Invois（LHDN）", en: "e-Invois (LHDN)" },
+  { href: "/settings/ai", icon: Sparkles, bm: "Penggunaan AI", zh: "AI 用量", en: "AI usage" },
+  { href: "/settings/plan", icon: Gauge, bm: "Pelan & langganan", zh: "方案与订阅", en: "Plan & subscription" },
+  { href: "/settings/system", icon: Activity, bm: "Semakan sistem", zh: "系统检查", en: "System check" },
   { href: "/settings/feedback", icon: MessageSquare, bm: "Maklum balas", zh: "反馈", en: "Feedback" },
+  { href: "/settings/danger", icon: TriangleAlert, bm: "Zon bahaya", zh: "危险区", en: "Danger zone" },
   // G-4 (8/26): back in the menus — the pack builds from the REAL roster now.
   // Spelled out, no bare abbreviation (G-4).
   { href: "/agm-pack", icon: Landmark, bm: "Pek Mesyuarat Agung (AGM)", zh: "常年大会文件包", en: "AGM pack" },
@@ -206,15 +217,27 @@ export const PRIMARY_NAV: NavEntry[] = [
       byHref("/constitution"),
       byHref("/constitution/clauses"),
       byHref("/members"),
-      byHref("/glossary"),
       byHref("/inbox"),
       byHref("/history"),
       byHref("/money/einvois"),
       byHref("/orgs"),
-      byHref("/settings/plan"),
+      // The whole settings family (§7.2) — reached from /more's Settings
+      // entry; listed here so the coverage guard knows the phone can reach
+      // every one of them.
       byHref("/settings"),
-      byHref("/settings/org"),
+      byHref("/settings/profile"),
+      byHref("/settings/display"),
+      byHref("/settings/security"),
+      byHref("/settings/general"),
+      byHref("/settings/members"),
+      byHref("/settings/receipts"),
+      byHref("/settings/glossary"),
+      byHref("/settings/einvois"),
+      byHref("/settings/ai"),
+      byHref("/settings/plan"),
+      byHref("/settings/system"),
       byHref("/settings/feedback"),
+      byHref("/settings/danger"),
     ],
   },
 ];
@@ -280,11 +303,11 @@ export const SIDEBAR_NAV: NavEntry[] = [
     bm: "Pertubuhan",
     zh: "组织",
     en: "Organisation",
+    // "Our words" moved to /settings/glossary (§3.2 — one route, one entry).
     children: [
       byHref("/members"),
       byHref("/constitution"),
       byHref("/constitution/clauses"),
-      byHref("/glossary"),
       byHref("/orgs"),
     ],
   },
@@ -300,16 +323,70 @@ export const SIDEBAR_NAV: NavEntry[] = [
 ];
 
 /**
- * THE SETTINGS FAMILY (violet redesign §3.2/§7): settings screens left the
- * scrolling rail — the rail pins ONE Settings entry at its bottom, and these
- * pages live in the settings sub-sidebar. Still part of the coverage guard:
- * a page may live on the rail OR here, never nowhere.
+ * THE SETTINGS SUB-SIDEBAR (violet redesign §7.2): four groups, thirteen
+ * directly-linkable screens. Rendered by settings/layout.tsx as a second
+ * column ≥1024px and a horizontal tab strip below.
+ */
+export const SETTINGS_SUBNAV: {
+  id: string;
+  bm: string;
+  zh: string;
+  en: string;
+  children: NavItem[];
+}[] = [
+  {
+    id: "account",
+    bm: "Akaun",
+    zh: "账号",
+    en: "Account",
+    children: [
+      byHref("/settings/profile"),
+      byHref("/settings/display"),
+      byHref("/settings/security"),
+    ],
+  },
+  {
+    id: "organisation",
+    bm: "Pertubuhan",
+    zh: "机构",
+    en: "Organisation",
+    children: [
+      byHref("/settings/general"),
+      byHref("/settings/members"),
+      byHref("/settings/receipts"),
+      byHref("/settings/glossary"),
+      byHref("/settings/einvois"),
+    ],
+  },
+  {
+    id: "usage",
+    bm: "Penggunaan",
+    zh: "用量",
+    en: "Usage",
+    children: [byHref("/settings/ai"), byHref("/settings/plan")],
+  },
+  {
+    id: "system",
+    bm: "Sistem",
+    zh: "系统",
+    en: "System",
+    children: [
+      byHref("/settings/system"),
+      byHref("/settings/feedback"),
+      byHref("/settings/danger"),
+    ],
+  },
+];
+
+/**
+ * THE SETTINGS FAMILY, flat (§3.2/§7): settings screens left the scrolling
+ * rail — the rail pins ONE Settings entry at its bottom, and these pages
+ * live in the settings sub-sidebar. Still part of the coverage guard: a
+ * page may live on the rail OR here, never nowhere.
  */
 export const SETTINGS_NAV: NavItem[] = [
   byHref("/settings"),
-  byHref("/settings/org"),
-  byHref("/settings/plan"),
-  byHref("/settings/feedback"),
+  ...SETTINGS_SUBNAV.flatMap((g) => g.children),
 ];
 
 /** Every page the phone nav links to, groups flattened. */
