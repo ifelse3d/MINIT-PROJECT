@@ -233,22 +233,17 @@ async function run() {
     console.log("step-2 saved");
   }
 
-  // --- frame 3: the money example rows (confirm → register → receipts) -----
+  // --- frame 3: the confirm step on the money page --------------------------
+  // §1-4 (work order 32): the in-page sample rows are GONE (the walkthrough
+  // IS the demo now), so this frame highlights the CONFIRM action itself —
+  // "把已确认的行加入登记" — which is what the caption describes.
   await page.goto(`${BASE}/money`, { waitUntil: "networkidle2" });
-  await sleep(800);
-  const openedLedger = await clickByText(page, "看一个示范");
-  console.log("ledger sample opened:", openedLedger);
   await sleep(1200);
   {
-    // Highlight the sample rows table ("示范 —— 只能看").
     const target = await page.evaluateHandle(() => {
-      const all = Array.from(document.querySelectorAll("table, section, div"));
       const t =
-        all.find(
-          (e) =>
-            (e.textContent ?? "").includes("只能看") &&
-            e.getBoundingClientRect().height > 60 &&
-            e.getBoundingClientRect().height < 700,
+        Array.from(document.querySelectorAll("button")).find((e) =>
+          (e.textContent ?? "").includes("加入登记"),
         ) ?? null;
       if (t) t.scrollIntoView({ block: "center" });
       return t;
