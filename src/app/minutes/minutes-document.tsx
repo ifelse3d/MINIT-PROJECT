@@ -39,6 +39,7 @@ export function MinutesDocument() {
     nothingYet,
     typedByHand,
     allReviewed,
+    attendanceMissing,
     outstanding,
     shownDocument,
     docLang,
@@ -365,6 +366,27 @@ export function MinutesDocument() {
                 </p>
               </div>
             )}
+            {/* D30 (J #33): a report with zero attendance cannot be
+                confirmed — eROSES needs "Bilangan Ahli Hadir". Deferring on
+                the attendance page unblocked the REVIEW; the save waits here
+                until at least one name exists. */}
+            {attendanceMissing && allReviewed && (
+              <div className="flex flex-wrap items-center gap-3 rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-base text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+                <span className="min-w-56 flex-1 font-medium">
+                  <Tri
+                    bm="Kehadiran masih kosong — minit tidak boleh disahkan tanpa sekurang-kurangnya seorang hadir (eROSES perlukan bilangannya)."
+                    zh="出席名单还是空的 —— 至少要记一个人出席才能确认保存（eROSES 要这个人数）。"
+                    en="Attendance is still empty — the minutes cannot be confirmed without at least one attendee (eROSES needs the number)."
+                  />
+                </span>
+                <Link
+                  href="/minutes/attendance"
+                  className="font-medium underline underline-offset-4"
+                >
+                  <Tri bm="Isi kehadiran" zh="去补名单" en="Fill in attendance" /> →
+                </Link>
+              </div>
+            )}
             <div className="flex flex-wrap items-center gap-3">
               <Button
                 size="lg"
@@ -382,8 +404,10 @@ export function MinutesDocument() {
                 // must not store it twice (S0-3 — found by e2e-minutes.mjs).
                 // Editing anything unlocks the button again. The BM guard
                 // (above) blocks while Chinese remains in the BM version.
+                // D30: and zero attendance blocks (the server re-checks).
                 disabled={
                   !allReviewed ||
+                  attendanceMissing ||
                   saveBusy ||
                   !isReal ||
                   alreadySaved ||

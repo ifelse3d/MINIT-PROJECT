@@ -212,10 +212,12 @@ export function AttendanceReview() {
             />
           </p>
           <p className="text-base text-amber-900 dark:text-amber-100">
+            {/* D30 (J #33, 2026-08-28): zero attendance can NEVER become a
+                confirmed report — the escape hatch is now only a deferral. */}
             <Tri
-              bm="Bilangan ini masuk ke penyata tahunan eROSES (“Bilangan Ahli Hadir”), jadi MinitAI tidak boleh menganggap sifar bermakna anda sudah semak. Tambah nama di bawah — atau beritahu MinitAI yang nota mesyuarat memang tidak mencatat kehadiran."
-              zh="这个人数会进 eROSES 年度报告的「出席人数」，所以 MinitAI 不能把「0 个」当成您已经核对好了。请在下面加名字 —— 或者告诉 MinitAI，这份笔记本来就没有记出席。"
-              en="This number goes into the eROSES annual return (“Bilangan Ahli Hadir”), so MinitAI cannot treat zero as checked. Add names below — or tell MinitAI that the notes simply do not record attendance."
+              bm="Bilangan ini masuk ke penyata tahunan eROSES (“Bilangan Ahli Hadir”), jadi minit TIDAK boleh disahkan selagi tiada seorang pun direkodkan hadir. Tambah nama di bawah — atau tangguhkan dahulu dan isi kemudian."
+              zh="这个人数会进 eROSES 年度报告的「出席人数」，所以出席是 0 的会议记录不能确认保存。请在下面加名字 —— 或者先跳过、稍后再补。"
+              en="This number goes into the eROSES annual return (“Bilangan Ahli Hadir”), so the minutes CANNOT be confirmed while nobody is recorded as attending. Add names below — or defer it and fill it in later."
             />
           </p>
           <Button
@@ -225,9 +227,9 @@ export function AttendanceReview() {
             onClick={() => setNoAttendeesRecorded(true)}
           >
             <Tri
-              bm="Nota ini tidak mencatat kehadiran"
-              zh="这份笔记没有记出席"
-              en="These notes do not record attendance"
+              bm="Isi kehadiran kemudian"
+              zh="出席名单稍后补上"
+              en="I will insert the attendance later"
             />
           </Button>
         </div>
@@ -236,16 +238,16 @@ export function AttendanceReview() {
       {/* Said, and reversible. Somebody who ticked it and then found the list
           on the back of the page must be able to take it back. */}
       {noAttendeesRecorded && groups.attendees.total === 0 && (
-        <div className="flex flex-wrap items-center gap-3 rounded-md border-2 border-[color:var(--v2-border)] bg-white/60 p-3 dark:bg-white/5">
-          <p className="min-w-56 flex-1 text-base">
+        <div className="flex flex-wrap items-center gap-3 rounded-md border-2 border-amber-300 bg-amber-50/70 p-3 dark:bg-amber-400/10">
+          <p className="min-w-56 flex-1 text-base text-amber-900 dark:text-amber-100">
             <Tri
-              bm="Anda beritahu MinitAI yang nota ini tidak mencatat kehadiran."
-              zh="您告诉了 MinitAI：这份笔记没有记出席。"
-              en="You told MinitAI these notes do not record attendance."
+              bm="Kehadiran ditangguhkan — minit ini TIDAK boleh disahkan sehingga sekurang-kurangnya seorang direkodkan hadir (eROSES perlukan bilangannya)."
+              zh="出席名单还没补 —— 至少要记一个人出席，这份会议记录才能确认保存（eROSES 要这个人数）。"
+              en="Attendance deferred — these minutes CANNOT be confirmed until at least one person is recorded as attending (eROSES needs the number)."
             />
           </p>
           <Button variant="outline" onClick={() => setNoAttendeesRecorded(false)}>
-            <Tri bm="Sebenarnya ada" zh="其实有记" en="They do, actually" />
+            <Tri bm="Isi sekarang" zh="现在就补" en="Fill it in now" />
           </Button>
         </div>
       )}

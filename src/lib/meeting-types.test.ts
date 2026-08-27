@@ -57,7 +57,7 @@ describe("naming a meeting", () => {
 
   it("says a gap is a gap rather than inventing a type", () => {
     expect(meetingTypeLabel("", "zh")).toBe("笔记里没写");
-    expect(meetingTypeLabel("other", "zh", "   ")).toBe("其他 —— 自己写名称");
+    expect(meetingTypeLabel("other", "zh", "   ")).toBe("其他 —— 会议名称在下面填");
   });
 
   it("prints an unknown stored value as written instead of guessing", () => {

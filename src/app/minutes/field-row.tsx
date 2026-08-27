@@ -97,6 +97,9 @@ export function FieldRow({
    * the person needs to look at page 1 to know that.
    */
   const [comparePage, setComparePage] = useState(0);
+  /** #28 (J review 27-evening, 2026-08-28): the compare photo can be OPENED
+   *  full-screen — a 320px card is not enough to read handwriting against. */
+  const [compareZoom, setCompareZoom] = useState(false);
 
   const isMissing = field.confidence === "missing";
 
@@ -334,6 +337,44 @@ export function FieldRow({
               </span>
             )}
           </figcaption>
+          {/* #28: tap to enlarge — handwriting is unreadable at card size. */}
+          <button
+            type="button"
+            onClick={() => setCompareZoom(true)}
+            className="cursor-zoom-in"
+            title={t("Tekan untuk besarkan", "点一下放大", "Tap to enlarge")}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={photoPages[comparePage].dataUrl}
+              alt={t(
+                `Gambar asal halaman ${comparePage + 1}`,
+                `第 ${comparePage + 1} 页原始照片`,
+                `Original photo, page ${comparePage + 1}`,
+              )}
+              className="max-h-72 w-full rounded-sm bg-black/5 object-contain"
+            />
+          </button>
+          <p className="text-xs text-muted-foreground">
+            <Tri bm="Tekan gambar untuk besarkan" zh="点图片可以放大" en="Tap the photo to enlarge" />
+          </p>
+          {field.source_ref && (
+            <p className="text-xs text-muted-foreground">
+              <Tri bm="AI baca di" zh="AI 读到的位置" en="The AI read this at" />{" "}
+              {field.source_ref.location}
+            </p>
+          )}
+        </figure>
+      )}
+
+      {/* #28: the full-screen viewer for the compare photo. */}
+      {compareZoom && photoPages[comparePage] && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-black/80 p-4"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setCompareZoom(false)}
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={photoPages[comparePage].dataUrl}
@@ -342,15 +383,12 @@ export function FieldRow({
               `第 ${comparePage + 1} 页原始照片`,
               `Original photo, page ${comparePage + 1}`,
             )}
-            className="max-h-72 w-full rounded-sm bg-black/5 object-contain"
+            className="max-h-[85vh] max-w-full rounded-sm object-contain"
           />
-          {field.source_ref && (
-            <p className="text-xs text-muted-foreground">
-              <Tri bm="AI baca di" zh="AI 读到的位置" en="The AI read this at" />{" "}
-              {field.source_ref.location}
-            </p>
-          )}
-        </figure>
+          <Button size="lg" variant="secondary" onClick={() => setCompareZoom(false)}>
+            <Tri bm="Tutup" zh="关闭" en="Close" />
+          </Button>
+        </div>
       )}
 
       {/* What MinitAI understood, in words, BEFORE it is saved. 2/2/2026 and

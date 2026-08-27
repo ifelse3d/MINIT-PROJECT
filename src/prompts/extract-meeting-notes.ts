@@ -40,7 +40,7 @@ Respond with ONLY JSON in exactly this shape:
   "meeting_date": { "value": "YYYY-MM-DD" | "", "confidence": "...", "source_ref": ... },
   "meeting_venue": { "value": "...", "confidence": "...", "source_ref": ... },
   "attendees": [ { "name": { ...field } } ],
-  "resolutions": [ { "text": { ...field } } ],
+  "resolutions": [ { "text": { ...field }, "kind": "decision" | "task" | "duty" | "info" } ],
   "figures": [ { "description": { ...field }, "amount_cents": { "value": <integer sen> | null, ...field } } ],
   "office_bearers": [ { "position": { ...field }, "person_name": { ...field } } ]
 }
@@ -70,6 +70,12 @@ RESOLUTIONS — use "resolutions" for what was decided, agreed, planned or is to
 - Duty assignments: one entry per duty, written so a reader can see it is an assignment for this activity — e.g. "游行队伍带头：嘉益、柔依", "青少年班主持：嘉益". Keep the original wording and script.
 - If a heading applies to several rows (e.g. a 主持 heading followed by 青:A 少:B 小小:C), combine the heading with each row's own label so two duties never read the same: "青班主持：A", "少班主持：B", "小小班主持：C".
 - Keep each item's own wording; do not merge unrelated items into one entry.
+- Label each entry with "kind" — this only classifies the text you already extracted, it never changes the text:
+  - "decision" = the meeting decided/agreed/approved something (通过/决定/同意/diluluskan/bersetuju)
+  - "task"     = something to be done, prepared, bought or brought (with or without a name attached)
+  - "duty"     = a role-for-this-activity paired with people (主持/带队/司仪/负责人 + names) — the one-off assignments kept out of office_bearers
+  - "info"     = a recorded fact with no action: times, programme order, headcounts, notes
+  If unsure between two kinds, prefer "task" over "decision" and "info" over everything.
 
 Amounts: extract as integer sen (RM 3,500.00 => 350000). Extract ONLY numbers you can see — never total, never compute; all arithmetic is done by our code, not by you.
 Dates: normalise to YYYY-MM-DD; resolve 2-digit years to the most recent past date relative to today; if the date is not written anywhere, it is missing.

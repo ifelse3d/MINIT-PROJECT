@@ -146,9 +146,29 @@ export const attendeeSchema = z.object({
   name: textFieldSchema,
 });
 
+/**
+ * D-7 / J review 27-evening #30 (2026-08-28, D29 unfreeze): what KIND of line
+ * this is, so the review can group decisions, tasks and duty assignments
+ * instead of printing one flat wall of transcription.
+ *
+ *   decision  something the meeting decided or agreed
+ *   task      something to be done/prepared/brought (may name who)
+ *   duty      a one-off duty ASSIGNMENT pairing a role with people
+ *             (班主持/带队/司仪 for one activity — NEVER office_bearers,
+ *             which is a government filing)
+ *   info      a fact recorded without an action (times, programme notes)
+ *
+ * Same failure posture as D16's compose kinds: a bad or missing kind only
+ * costs the grouping — the line itself always survives (catch → undefined).
+ */
+export const resolutionKindSchema = z.enum(["decision", "task", "duty", "info"]);
+export type ResolutionKind = z.infer<typeof resolutionKindSchema>;
+
 export const resolutionSchema = z.object({
   /** The decision, normalised to BM/English; original stays in source_ref */
   text: textFieldSchema,
+  /** Optional so every document and fixture written before today parses. */
+  kind: resolutionKindSchema.optional().catch(undefined),
 });
 
 export const figureSchema = z.object({

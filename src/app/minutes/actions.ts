@@ -133,6 +133,20 @@ export async function saveConfirmedMinutes(input: {
     };
   }
 
+  // D30 (2026-08-28, J #33): a confirmed set of minutes with NOBODY recorded
+  // as attending would flow a zero into the eROSES annual return's "Bilangan
+  // Ahli Hadir". The client blocks this too; this is the authority.
+  const hasAttendee = extraction.attendees.some(
+    (a) => a.name.value.trim() !== "",
+  );
+  if (!hasAttendee) {
+    return {
+      error:
+        "Kehadiran masih kosong — rekod sekurang-kurangnya seorang hadir dahulu / 出席名单还是空的 —— 请先记至少一个出席者 / Attendance is empty — record at least one attendee first",
+      ok: false,
+    };
+  }
+
   const todayIso = dayIsoMalaysia(new Date().toISOString())!;
   const aiDraft = (input.aiDraftMd ?? "").trim();
   const lang: MinutesLang = isMinutesLang(input.language ?? "")

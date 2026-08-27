@@ -18,6 +18,34 @@ import { BeforeReading } from "./before-reading";
 import { FieldRow } from "./field-row";
 import { AddRowButton, DeletableRow } from "./row-controls";
 import { useMinutes, type TextLikeField } from "./minutes-store";
+import type { ResolutionKind } from "@/lib/extraction";
+
+// D-7 / J review 27-evening #30 (2026-08-28): the review GROUPS what was
+// decided instead of printing one flat transcription wall. The model labels
+// each line (decision/task/duty/info); a human can re-label; a line with no
+// label falls into "other" and nothing about it is lost. Duty assignments get
+// their own section — the answer to J's #32 ("有 position 却没 detect 到"):
+// one-off duties ARE detected, they just must never enter office_bearers,
+// which is a government filing (the prompt's false-filing rule stands).
+const RESOLUTION_SECTIONS: {
+  kind: ResolutionKind | "other";
+  bm: string;
+  zh: string;
+  en: string;
+}[] = [
+  { kind: "decision", bm: "Keputusan mesyuarat", zh: "会议决定", en: "Decisions" },
+  { kind: "task", bm: "Tugasan — siapa buat apa", zh: "任务 — 谁做什么", en: "Tasks — who does what" },
+  { kind: "duty", bm: "Jawatan untuk aktiviti ini", zh: "这次活动的岗位", en: "Duties for this activity" },
+  { kind: "info", bm: "Catatan", zh: "备注", en: "Notes" },
+  { kind: "other", bm: "Lain-lain", zh: "其他", en: "Other" },
+];
+
+const RESOLUTION_KIND_LABEL: Record<ResolutionKind, { bm: string; zh: string; en: string }> = {
+  decision: { bm: "Keputusan", zh: "决定", en: "Decision" },
+  task: { bm: "Tugasan", zh: "任务", en: "Task" },
+  duty: { bm: "Jawatan aktiviti", zh: "岗位", en: "Duty" },
+  info: { bm: "Catatan", zh: "备注", en: "Info" },
+};
 
 // ---------------------------------------------------------------------------
 // /minutes — take a photo of the handwritten notes, then check what Minit read.
@@ -640,6 +668,9 @@ export function NotesReview() {
               <input
                 value={extraction.meeting_type_label ?? ""}
                 maxLength={120}
+                // #29: the box the "Other" option promises — put the caret in
+                // it the moment it appears.
+                autoFocus={!extraction.meeting_type_label}
                 onChange={(ev) => {
                   const v = ev.target.value;
                   updateField((e) => {
@@ -733,39 +764,107 @@ export function NotesReview() {
           total={groups.resolutions.total}
           defaultOpen={firstUnfinishedHere === "resolutions"}
         >
-          {extraction.resolutions.map((r, i) => (
-            <DeletableRow
-              key={`res-${i}`}
-              onDelete={() => removeExtractionRow("resolutions", i)}
-              hasContent={rowHasContent("resolutions", i)}
-              what={t(`Keputusan ${i + 1}`, `决议 ${i + 1}`, `Resolution ${i + 1}`)}
-            >
-            <FieldRow
-              labelBm={`Keputusan ${i + 1}`}
-              labelZh={`决议 ${i + 1}`}
-              labelEn={`Resolution ${i + 1}`}
-              field={r.text}
-              onConfirm={() =>
-                updateField((e) => {
-                  confirm(e.resolutions[i].text);
-                  return e;
-                })
-              }
-              onEdit={(v) =>
-                updateField((e) => {
-                  edit(e.resolutions[i].text, v);
-                  return e;
-                })
-              }
-              onMarkAbsent={() =>
-                updateField((e) => {
-                  markAbsent(e.resolutions[i].text);
-                  return e;
-                })
-              }
-            />
-            </DeletableRow>
-          ))}
+          {/* #30: grouped by kind when the model (or a human) labelled the
+              lines; a wholly unlabelled extraction renders exactly as the old
+              flat list. The row's index into extraction.resolutions is kept,
+              so every edit callback stays honest through the grouping. */}
+          {(() => {
+            const rows = extraction.resolutions.map((r, i) => ({ r, i }));
+            const anyKind = rows.some(({ r }) => r.kind !== undefined);
+            const sections = anyKind
+              ? RESOLUTION_SECTIONS
+              : ([{ kind: "other", bm: "", zh: "", en: "" }] as typeof RESOLUTION_SECTIONS);
+            return sections.map((section) => {
+              const inSection = rows.filter(
+                ({ r }) => (r.kind ?? "other") === section.kind,
+              );
+              if (inSection.length === 0) return null;
+              return (
+                <div key={section.kind} className="flex flex-col gap-3">
+                  {anyKind && (
+                    <p className="mt-1 border-b pb-1 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                      <Tri bm={section.bm} zh={section.zh} en={section.en} />{" "}
+                      <span className="font-normal">({inSection.length})</span>
+                    </p>
+                  )}
+                  {anyKind && section.kind === "duty" && (
+                    <p className="text-sm text-muted-foreground">
+                      <Tri
+                        bm="Jawatan untuk SATU aktiviti sahaja — ia tidak masuk senarai AJK eROSES (itu jawatan tetap pertubuhan, di bahagian bawah)."
+                        zh="这些是单次活动的岗位安排 —— 不会进 eROSES 的委员会名单（常任职位在下面那一区）。"
+                        en="Duties for ONE activity only — they never enter the eROSES committee list (standing positions live in the section below)."
+                      />
+                    </p>
+                  )}
+                  {inSection.map(({ r, i }) => (
+                    <DeletableRow
+                      key={`res-${i}`}
+                      onDelete={() => removeExtractionRow("resolutions", i)}
+                      hasContent={rowHasContent("resolutions", i)}
+                      what={t(`Keputusan ${i + 1}`, `决议 ${i + 1}`, `Resolution ${i + 1}`)}
+                    >
+                      <FieldRow
+                        labelBm={`Keputusan ${i + 1}`}
+                        labelZh={`决议 ${i + 1}`}
+                        labelEn={`Resolution ${i + 1}`}
+                        field={r.text}
+                        onConfirm={() =>
+                          updateField((e) => {
+                            confirm(e.resolutions[i].text);
+                            return e;
+                          })
+                        }
+                        onEdit={(v) =>
+                          updateField((e) => {
+                            edit(e.resolutions[i].text, v);
+                            return e;
+                          })
+                        }
+                        onMarkAbsent={() =>
+                          updateField((e) => {
+                            markAbsent(e.resolutions[i].text);
+                            return e;
+                          })
+                        }
+                      />
+                      {/* The human can re-label a line the model filed wrong —
+                          the label only moves the line between sections. */}
+                      <label className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                        <Tri bm="Jenis" zh="类型" en="Kind" />
+                        <select
+                          value={r.kind ?? ""}
+                          onChange={(ev) => {
+                            const v = ev.target.value;
+                            updateField((e) => {
+                              e.resolutions[i].kind =
+                                v === "" ? undefined : (v as ResolutionKind);
+                              return e;
+                            });
+                          }}
+                          className="w-full min-w-0 max-w-48 rounded-md border border-input bg-background px-2 py-1 text-sm"
+                        >
+                          <option value="">
+                            {t("(belum dilabel)", "（未分类）", "(unlabelled)")}
+                          </option>
+                          {(Object.keys(RESOLUTION_KIND_LABEL) as ResolutionKind[]).map(
+                            (k) => (
+                              <option key={k} value={k}>
+                                {t(
+                                  RESOLUTION_KIND_LABEL[k].bm,
+                                  RESOLUTION_KIND_LABEL[k].zh,
+                                  RESOLUTION_KIND_LABEL[k].en,
+                                )}
+                              </option>
+                            ),
+                          )}
+                        </select>
+                      </label>
+                    </DeletableRow>
+                  ))}
+                </div>
+              );
+            });
+          })()}
           <AddRowButton
             onClick={() => addExtractionRow("resolutions")}
             labelBm="Tambah keputusan"

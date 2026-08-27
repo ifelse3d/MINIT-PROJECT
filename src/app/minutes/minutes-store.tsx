@@ -157,6 +157,8 @@ export type MinutesStore = {
   setNoAttendeesRecorded: (value: boolean) => void;
   /** True while nobody has said whether the notes record attendance at all. */
   attendanceUnsettled: boolean;
+  /** D30: no attendee with a name yet — the confirmed save stays locked. */
+  attendanceMissing: boolean;
   openSample: () => void;
   backToEmpty: () => void;
 
@@ -821,6 +823,17 @@ export function MinutesProvider({
   // the sake of reusing one `.length`.
   const attendanceUnsettled = extraction.attendees.length === 0 && !noAttendeesRecorded;
   const allReviewed = outstanding === 0 && !attendanceUnsettled;
+  /**
+   * D30 (2026-08-28, J review 27-evening #33): the eROSES annual return needs
+   * "Bilangan Ahli Hadir", so a report with NOBODY recorded as attending must
+   * not become a confirmed document. "The notes do not record attendance" is
+   * now only a DEFERRAL ("will insert later") — it unblocks the review, never
+   * the save. This flag is what the save gate reads (and the server action
+   * re-checks it; the client is not the authority).
+   */
+  const attendanceMissing = !extraction.attendees.some(
+    (a) => a.name.value.trim() !== "",
+  );
 
   /**
    * Outstanding / total per GROUP.
@@ -1048,6 +1061,7 @@ export function MinutesProvider({
         noAttendeesRecorded,
         setNoAttendeesRecorded,
         attendanceUnsettled,
+        attendanceMissing,
         openSample,
         backToEmpty,
         updateField,

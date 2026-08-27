@@ -91,9 +91,12 @@ export const MEETING_TYPE_LABEL: Record<MeetingType, TriText> = {
     en: "Event / Activity Meeting",
   },
   other: {
-    bm: "Lain-lain — tulis nama sendiri",
-    zh: "其他 —— 自己写名称",
-    en: "Other — write your own name",
+    // #29 (J review 27-evening, 2026-08-28): "write your own name" read like
+    // "type YOUR name". Say what actually happens: a box for the MEETING's
+    // name appears below once this is chosen.
+    bm: "Lain-lain — taip nama mesyuarat di bawah",
+    zh: "其他 —— 会议名称在下面填",
+    en: "Other — type the meeting's name below",
   },
 };
 
