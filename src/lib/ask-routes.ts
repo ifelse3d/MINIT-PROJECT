@@ -96,6 +96,59 @@ export const ASK_ROUTES: Record<AskRouteKey, AskRoute> = {
   },
 };
 
+// ---------------------------------------------------------------------------
+// F-6 (work order 31, J's old #16): ACTION deep links. The section map above
+// answers "where does X live"; these answer "I want to DO X right now" — the
+// button lands on the page with the form on it, not the section front door.
+// A separate map on purpose: ask-core.test pins ASK_ROUTES to exactly the
+// sidebar's user-facing sections, and these are deeper addresses inside them.
+// ---------------------------------------------------------------------------
+
+export type AskActionKey =
+  | "calendar_add"
+  | "money_receipts"
+  | "money_einvois"
+  | "money_expenses";
+
+export const ASK_ACTION_ROUTES: Record<AskActionKey, AskRoute> = {
+  calendar_add: {
+    href: "/calendar/add",
+    bm: "Tambah acara ke kalendar pertubuhan.",
+    zh: "把活动加进组织日历。",
+    en: "Add an event to the organisation calendar.",
+  },
+  money_receipts: {
+    href: "/money/receipts",
+    bm: "Keluarkan resit bernombor untuk derma yang disahkan.",
+    zh: "为已确认的捐款开出编号收据。",
+    en: "Issue numbered receipts for confirmed donations.",
+  },
+  money_einvois: {
+    href: "/money/einvois",
+    bm: "Jana fail e-Invois hujung bulan untuk dimuat naik.",
+    zh: "生成月底 e-Invois 上传文件。",
+    en: "Generate the month-end e-Invois upload file.",
+  },
+  money_expenses: {
+    href: "/money/expenses",
+    bm: "Rekod perbelanjaan atau tuntutan sendiri.",
+    zh: "记录开支或自己的报销。",
+    en: "Record an expense or your own claim.",
+  },
+};
+
+export const ASK_ACTION_KEYS = Object.keys(ASK_ACTION_ROUTES) as AskActionKey[];
+
+export function isAskActionKey(v: string): v is AskActionKey {
+  return (ASK_ACTION_KEYS as string[]).includes(v);
+}
+
+/** F-6: mark an href as "the AI sent me here", so the landing page can greet
+ *  the person with one orienting line (`<FromAiNote>` reads this). */
+export function withAiMarker(href: string): string {
+  return href.includes("?") ? `${href}&dari=ai` : `${href}?dari=ai`;
+}
+
 export const ASK_ROUTE_KEYS = Object.keys(ASK_ROUTES) as AskRouteKey[];
 
 export function isAskRouteKey(v: string): v is AskRouteKey {

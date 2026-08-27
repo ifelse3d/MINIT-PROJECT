@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tri } from "@/components/language-provider";
 import { SectionTabs, type SectionTab } from "@/components/section-tabs";
-import { SAMPLE_LEDGER_LABEL } from "@/lib/sample-ledger";
 import { useEinvoisVisible } from "@/lib/einvois-pref";
 import { useRegister } from "./register-store";
 
@@ -134,8 +133,8 @@ export function MoneyChrome({ children }: { children: ReactNode }) {
         </div>
         <p className="text-sm text-muted-foreground">
           {documentOrgName}
+          {/* F-8: one sample badge, not badge + suffix (see minutes-chrome). */}
           {ledgerSourceLabel ? ` · ${ledgerSourceLabel}` : ""}
-          {isSampleLedger ? ` · ${SAMPLE_LEDGER_LABEL}` : ""}
         </p>
       </div>
 

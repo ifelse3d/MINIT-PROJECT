@@ -157,3 +157,45 @@ export function isSpecialLunarDay(iso: string): boolean {
   const l = gregorianToLunar(iso);
   return l !== null && (l.lunarDay === 1 || l.lunarDay === 15);
 }
+
+// ---------------------------------------------------------------------------
+// F-9 (work order 31, derived from J's old #15): the 初一/十五 offering days as
+// DERIVED calendar events. Computed, never stored — storing a derivable list
+// is a second copy that can disagree with the first (STATE trap: deadlines).
+// The calendar shell merges these into the display list when the offering
+// toggle is on; `derived: true` tells the UI they cannot be deleted.
+// ---------------------------------------------------------------------------
+
+export type LunarOfferingEvent = {
+  id: string;
+  title: string;
+  dateIso: string;
+  timeText: string;
+  note?: string;
+  /** Computed, not stored: no delete button, never persisted or synced. */
+  derived: true;
+};
+
+/**
+ * Every lunar 1st and 15th in [fromIso, toIso] (inclusive), as pseudo-events.
+ * Range is walked day by day — callers pass windows of weeks, not years.
+ */
+export function lunarOfferingEvents(fromIso: string, toIso: string): LunarOfferingEvent[] {
+  const start = Date.parse(`${fromIso}T00:00:00Z`);
+  const end = Date.parse(`${toIso}T00:00:00Z`);
+  if (Number.isNaN(start) || Number.isNaN(end)) return [];
+  const out: LunarOfferingEvent[] = [];
+  for (let ms = start; ms <= end; ms += 86_400_000) {
+    const iso = new Date(ms).toISOString().slice(0, 10);
+    const l = gregorianToLunar(iso);
+    if (!l || (l.lunarDay !== 1 && l.lunarDay !== 15)) continue;
+    out.push({
+      id: `lunar-${iso}`,
+      title: `${l.lunarDay === 1 ? "初一" : "十五"} · 献供 / persembahan`,
+      dateIso: iso,
+      timeText: "",
+      derived: true,
+    });
+  }
+  return out;
+}

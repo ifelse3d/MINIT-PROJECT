@@ -27,6 +27,12 @@ export type SimpleEvent = {
    * event stored before this change still loads.
    */
   note?: string;
+  /**
+   * F-9: true for COMPUTED events (lunar offering days). Never stored, never
+   * synced, no delete button — they exist only in the merged display list the
+   * calendar shell builds when the offering toggle is on.
+   */
+  derived?: boolean;
 };
 
 import { adoptLegacyKey, scopedKey } from "@/lib/storage-scope-core";

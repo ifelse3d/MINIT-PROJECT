@@ -2,6 +2,7 @@ import { getActiveOrg } from "@/lib/active-org";
 import Link from "next/link";
 import { Tri } from "@/components/language-provider";
 import { ExpensesView } from "./expenses-view";
+import { FromAiNote } from "@/components/from-ai-note";
 
 // ---------------------------------------------------------------------------
 // /money/expenses — the society's spending, and the claim flow (Stage E,
@@ -30,5 +31,15 @@ export default async function MoneyExpensesPage() {
       </div>
     );
   }
-  return <ExpensesView role={active.role} />;
+  return (
+    <>
+      {/* F-6: the assistant's expenses/claim button lands here with ?dari=ai. */}
+      <FromAiNote
+        bm="di sinilah anda merekod perbelanjaan atau tuntutan sendiri."
+        zh="在这里记录开支或自己的报销。"
+        en="this is where expenses and your own claims are recorded."
+      />
+      <ExpensesView role={active.role} />
+    </>
+  );
 }

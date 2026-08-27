@@ -245,6 +245,9 @@ export function UpcomingSidebar({
             >
               <div className="flex flex-wrap items-center gap-2">
                 <span className="flex-1 text-sm font-semibold">{ev.title}</span>
+                {/* F-9: derived (lunar offering) events are computed, not
+                    stored — nothing to delete, so no button. */}
+                {!ev.derived && (
                 <button
                   type="button"
                   onClick={() => {
@@ -269,6 +272,7 @@ export function UpcomingSidebar({
                 >
                   ✕
                 </button>
+                )}
               </div>
               <div className="text-sm tabular-nums">
                 {ev.dateIso}

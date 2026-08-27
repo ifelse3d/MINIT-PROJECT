@@ -118,6 +118,19 @@ export default async function PlanPage() {
             totalRemaining={usage.totalRemaining}
           />
         )}
+        {/* F-1 (work order 31, 拍板 40): an organisation whose metered quota is
+            HIGHER than its plan's standard (J's org: 100 vs trial 15) is an
+            early account, and the two numbers must not look like a bug. Say
+            which is which, in one line, only when they differ this way. */}
+        {usage && usage.monthlyFreeQuota > plan.monthlyAiQuota && (
+          <p className="text-sm text-[color:var(--v2-text-soft)]">
+            <Tri
+              bm={`Kuota pertubuhan ini ialah ${usage.monthlyFreeQuota}/bulan (akaun awal); standard untuk pertubuhan baharu ialah ${plan.monthlyAiQuota}/bulan.`}
+              zh={`您这个机构的额度是 ${usage.monthlyFreeQuota}/月（早期账号）；新机构标准为 ${plan.monthlyAiQuota}/月。`}
+              en={`This organisation's allowance is ${usage.monthlyFreeQuota}/month (early account); the standard for new organisations is ${plan.monthlyAiQuota}/month.`}
+            />
+          </p>
+        )}
         {/* C-1 (拍板⑤): a chosen-but-not-activated plan is said out loud.
             The tell is honest arithmetic: the plan says standard/hq but the
             metered quota is still at the trial level — activation (J's admin

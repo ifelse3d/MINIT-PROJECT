@@ -20,8 +20,12 @@
 // and in the opener below outlived that change by five days. It still answers
 // with a "go to this page" button wherever the real work happens on a page.
 //
-// PDPA: the transcript lives in this component's state only. Closing the panel
-// forgets it; nothing is logged or stored.
+// PDPA + persistence (F-4, work order 31, J's #17): the transcript is saved in
+// SCOPED localStorage (`minit:<user>:<org>:chat.panel.v1`) so switching pages
+// or reopening the browser does not eat the conversation. Scoped means another
+// member on the same laptop never sees it, and sign-out/delete-org clears it
+// (storage-scope.tsx). Nothing is ever logged server-side. The home box keeps
+// its OWN key — two usePersistentState on one key silently fight (STATE trap).
 // ---------------------------------------------------------------------------
 
 import { useEffect, useRef, useState } from "react";
@@ -33,6 +37,8 @@ import { GlassBadge } from "./surfaces";
 import { AnswerSources, type AnswerSource } from "./answer-sources";
 import { tidyReply } from "@/lib/tidy-reply";
 import { ASSISTANT_NAME } from "@/lib/brand";
+import { usePersistentState } from "@/lib/use-persistent-state";
+import { useScopedKey } from "@/lib/storage-scope";
 
 type Turn = {
   role: "user" | "assistant";
@@ -42,6 +48,22 @@ type Turn = {
   sources?: AnswerSource[] | null;
   lookups?: string[] | null;
 };
+
+/** Shape guard for a stored transcript (usePersistentState contract). */
+export function isTurnArray(parsed: unknown): boolean {
+  return (
+    Array.isArray(parsed) &&
+    parsed.every(
+      (x) =>
+        typeof x === "object" &&
+        x !== null &&
+        ((x as Turn).role === "user" || (x as Turn).role === "assistant") &&
+        typeof (x as Turn).text === "string",
+    )
+  );
+}
+
+const EMPTY_TURNS: Turn[] = [];
 
 type ChatOk = {
   reply: string;
@@ -96,7 +118,14 @@ export function AIPanel({
   const t = useTriText();
   const router = useRouter();
   const [question, setQuestion] = useState("");
-  const [turns, setTurns] = useState<Turn[]>([]);
+  // F-4: the transcript survives page changes and browser restarts, per
+  // user+org scope. See the header comment for the PDPA reasoning.
+  const chatKey = useScopedKey("chat.panel.v1");
+  const [turns, setTurns] = usePersistentState<Turn[]>(
+    chatKey,
+    EMPTY_TURNS,
+    isTurnArray,
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [remaining, setRemaining] = useState<number | null>(initialRemaining);
@@ -343,31 +372,44 @@ export function AIPanel({
         <div ref={endRef} />
       </div>
 
-      {/* Never while an answer is on its way — see ask-box.tsx. */}
+      {/* Never while an answer is on its way — see ask-box.tsx.
+          F-4: "Start again" became "Clear conversation" — the transcript is
+          saved now, so throwing it away deserves a name that says so, plus
+          the honest reason to do it (long transcripts slow every answer).
+          F-1: the turn counter says what resets and what does not. */}
       {turns.length > 0 && !busy && (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              askSeq.current++;
-              setTurns([]);
-              setTurnsLeft(null);
-              setError(null);
-            }}
-            className="inline-flex min-h-11 items-center gap-2 rounded-full border-2 border-[color:var(--v2-outline-border)] bg-white/80 px-4 text-base font-medium dark:bg-white/10"
-          >
-            <RotateCcw className="h-5 w-5" strokeWidth={2} />
-            <Tri bm="Mula semula" zh="重新开始" en="Start again" />
-          </button>
-          {turnsLeft !== null && (
-            <span className="text-base text-[color:var(--v2-text-soft)]">
-              <Tri
-                bm={`${turnsLeft} soalan lagi`}
-                zh={`还可以问 ${turnsLeft} 次`}
-                en={`${turnsLeft} more questions`}
-              />
-            </span>
-          )}
+        <div className="mt-3 flex flex-col gap-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                askSeq.current++;
+                setTurns([]);
+                setTurnsLeft(null);
+                setError(null);
+              }}
+              className="inline-flex min-h-11 items-center gap-2 rounded-full border-2 border-[color:var(--v2-outline-border)] bg-white/80 px-4 text-base font-medium dark:bg-white/10"
+            >
+              <RotateCcw className="h-5 w-5" strokeWidth={2} />
+              <Tri bm="Padam perbualan" zh="清除对话" en="Clear conversation" />
+            </button>
+            {turnsLeft !== null && (
+              <span className="text-base text-[color:var(--v2-text-soft)]">
+                <Tri
+                  bm={`Boleh tanya ${turnsLeft} soalan lagi dalam perbualan ini · perbualan baharu bermula semula, kuota bulanan tidak terjejas`}
+                  zh={`这轮对话还能问 ${turnsLeft} 题 · 换新对话会重置，不影响本月用量`}
+                  en={`${turnsLeft} questions left in this conversation · a new conversation resets this, the monthly allowance is unaffected`}
+                />
+              </span>
+            )}
+          </div>
+          <p className="text-sm text-[color:var(--v2-text-soft)]">
+            <Tri
+              bm="Perbualan yang terlalu panjang jadi perlahan — padamkannya bila satu topik selesai."
+              zh="对话太长会变慢，告一段落建议清除。"
+              en="A very long conversation gets slow — clear it when a topic is done."
+            />
+          </p>
         </div>
       )}
 

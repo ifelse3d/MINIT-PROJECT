@@ -26,6 +26,7 @@ import {
 } from "@/lib/local-events";
 import { saveEvent } from "../actions";
 import { EventsSection } from "../events-section";
+import { FromAiNote } from "@/components/from-ai-note";
 
 export default function AddEventsPage() {
   const [events, setEvents] = useState<SimpleEvent[]>([]);
@@ -51,6 +52,12 @@ export default function AddEventsPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 pb-10">
+      {/* F-6: the assistant's "add an event" button lands here with ?dari=ai. */}
+      <FromAiNote
+        bm="di sinilah anda menambah acara ke kalendar. Isi borang di bawah."
+        zh="在这里把活动加进日历，填下面的表格就行。"
+        en="this is where you add events to the calendar. Fill in the form below."
+      />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <Link

@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
 import { SectionTabs, type SectionTab } from "@/components/section-tabs";
-import { SAMPLE_UPLOAD_LABEL } from "@/lib/sample-data";
 import { useMinutes } from "./minutes-store";
 
 // ---------------------------------------------------------------------------
@@ -156,8 +155,10 @@ export function MinutesChrome({ children }: { children: ReactNode }) {
         <p className="text-base text-muted-foreground">
           {documentOrgName ||
             t("Pilih pertubuhan dahulu", "请先选择机构", "Choose an organisation first")}
+          {/* F-8 (work order 31, J's old #8): sample mode used to be marked
+              TWICE up here (badge + this suffix) — one badge is enough. The
+              suffix now only names a real upload. */}
           {sourceLabel ? ` · ${sourceLabel}` : ""}
-          {isSample ? ` · ${SAMPLE_UPLOAD_LABEL}` : ""}
         </p>
         {/* Shown ONLY to someone who asked for the example — and it has a way
             out, instead of just telling them they are in the wrong place. */}

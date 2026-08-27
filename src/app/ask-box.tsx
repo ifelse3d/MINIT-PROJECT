@@ -37,6 +37,9 @@ import {
   AnswerSources,
   type AnswerSource,
 } from "@/components/v3/answer-sources";
+import { isTurnArray } from "@/components/v3/ai-panel";
+import { usePersistentState } from "@/lib/use-persistent-state";
+import { useScopedKey } from "@/lib/storage-scope";
 
 type Turn = {
   role: "user" | "assistant";
@@ -107,7 +110,12 @@ export function AskBox({
   const sendSeq = useRef(0);
 
   const [question, setQuestion] = useState("");
-  const [turns, setTurns] = useState<Turn[]>([]);
+  // F-4 (work order 31, J's #17): the conversation survives page changes and
+  // browser restarts, in user+org-scoped localStorage. Its OWN key, distinct
+  // from the floating panel's — two usePersistentState on one key silently
+  // overwrite each other (STATE trap).
+  const chatKey = useScopedKey("chat.home.v1");
+  const [turns, setTurns] = usePersistentState<Turn[]>(chatKey, [], isTurnArray);
   const [busy, setBusy] = useState<"chat" | "file" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [remaining, setRemaining] = useState<number | null>(initialRemaining);
@@ -341,9 +349,9 @@ export function AskBox({
           >
             <Paperclip className="h-5 w-5" strokeWidth={2} />
             <Tri
-              bm="Pilih gambar atau PDF"
-              zh="选照片或 PDF"
-              en="Choose a photo or PDF"
+              bm="Pilih gambar, PDF atau Word/Excel"
+              zh="选照片、PDF 或 Word/Excel"
+              en="Choose a photo, PDF or Word/Excel"
             />
           </Button>
         </div>
@@ -362,7 +370,7 @@ export function AskBox({
         <input
           ref={fileInput}
           type="file"
-          accept="image/*,application/pdf"
+          accept="image/*,application/pdf,.docx,.xlsx"
           className="hidden"
           onChange={(e) => {
             stageFile(e.target.files?.[0] ?? null);
@@ -637,30 +645,39 @@ export function AskBox({
           {/* Offered only once there is an answer to start again FROM, and
               never while one is on its way. */}
           {busy === null && turns.some((x) => x.role === "assistant") && (
-            <div className="flex flex-wrap items-center gap-3">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  // Anything still in flight belongs to the conversation being
-                  // thrown away — make sure it cannot land in the new one.
-                  sendSeq.current++;
-                  setTurns([]);
-                  setTurnsLeft(null);
-                  setError(null);
-                }}
-              >
-                <RotateCcw className="h-5 w-5" strokeWidth={2} />
-                <Tri bm="Mula semula" zh="重新开始" en="Start again" />
-              </Button>
-              {turnsLeft !== null && (
-                <span className="text-base text-muted-foreground">
-                  <Tri
-                    bm={`${turnsLeft} soalan lagi dalam perbualan ini`}
-                    zh={`这个对话还可以问 ${turnsLeft} 次`}
-                    en={`${turnsLeft} more questions in this conversation`}
-                  />
-                </span>
-              )}
+            <div className="flex flex-col gap-1">
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    // Anything still in flight belongs to the conversation being
+                    // thrown away — make sure it cannot land in the new one.
+                    sendSeq.current++;
+                    setTurns([]);
+                    setTurnsLeft(null);
+                    setError(null);
+                  }}
+                >
+                  <RotateCcw className="h-5 w-5" strokeWidth={2} />
+                  <Tri bm="Padam perbualan" zh="清除对话" en="Clear conversation" />
+                </Button>
+                {turnsLeft !== null && (
+                  <span className="text-base text-muted-foreground">
+                    <Tri
+                      bm={`Boleh tanya ${turnsLeft} soalan lagi dalam perbualan ini · perbualan baharu bermula semula, kuota bulanan tidak terjejas`}
+                      zh={`这轮对话还能问 ${turnsLeft} 题 · 换新对话会重置，不影响本月用量`}
+                      en={`${turnsLeft} questions left in this conversation · a new conversation resets this, the monthly allowance is unaffected`}
+                    />
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                <Tri
+                  bm="Perbualan yang terlalu panjang jadi perlahan — padamkannya bila satu topik selesai."
+                  zh="对话太长会变慢，告一段落建议清除。"
+                  en="A very long conversation gets slow — clear it when a topic is done."
+                />
+              </p>
             </div>
           )}
         </div>

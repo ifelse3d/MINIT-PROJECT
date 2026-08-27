@@ -110,6 +110,19 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
       setError(t("Isi tarikh.", "请填写日期。", "Enter a date."));
       return;
     }
+    // F-7 (work order 31, J's old #10): "Other" with no note is a register row
+    // that says nothing — the auditor (and the treasurer in December) cannot
+    // tell what the money was. One sentence is required.
+    if (category === "Lain-lain" && !note.trim()) {
+      setError(
+        t(
+          "Untuk “Lain-lain”, tulis satu ayat tentang pendapatan apa ini.",
+          "选了「其他」，请在备注写一句这是什么收入。",
+          "For “Other”, write one sentence saying what this income is.",
+        ),
+      );
+      return;
+    }
     const purpose = note.trim() ? `${category} — ${note.trim()}` : category;
 
     // D19: the optional transfer screenshot goes to Storage FIRST, so the
@@ -402,8 +415,23 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
               </label>
               <label className="flex flex-col gap-1 sm:col-span-2">
                 <span className="text-base font-semibold">
-                  <Tri bm="Catatan (pilihan)" zh="备注（可选）" en="Note (optional)" />
+                  {/* F-7: for "Other" the note is REQUIRED — the label says so
+                      the moment the category is picked, not only on submit. */}
+                  {category === "Lain-lain" ? (
+                    <Tri bm="Catatan (wajib untuk Lain-lain)" zh="备注（选「其他」时必填）" en="Note (required for Other)" />
+                  ) : (
+                    <Tri bm="Catatan (pilihan)" zh="备注（可选）" en="Note (optional)" />
+                  )}
                 </span>
+                {category === "Lain-lain" && (
+                  <span className="text-sm text-muted-foreground">
+                    <Tri
+                      bm="Tulis satu ayat tentang pendapatan apa ini — juruaudit perlu tahu."
+                      zh="请写一句这是什么收入 —— 审计要看得懂。"
+                      en="Write one sentence saying what this income is — the auditor needs to know."
+                    />
+                  </span>
+                )}
                 <span className="flex items-center gap-1">
                   <input
                     className={inputClass}

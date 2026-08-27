@@ -19,13 +19,43 @@ import { BRAND_NAME } from "@/lib/brand";
 // in public/how-it-works then.
 // ---------------------------------------------------------------------------
 
-const FRAMES = [
+// F-3 (work order 31): each frame carries a "press here / look here" rectangle
+// drawn by CSS over the screenshot (percent coordinates of the image, measured
+// by scripts/howitworks-shots.mjs when the frames were shot) — never baked
+// into the PNG, so a re-shoot only replaces the images.
+type FrameHighlight = {
+  left: string;
+  top: string;
+  width: string;
+  height: string;
+  labelBm: string;
+  labelZh: string;
+  labelEn: string;
+};
+
+const FRAMES: readonly {
+  src: string;
+  icon: string;
+  bm: string;
+  zh: string;
+  en: string;
+  hi: FrameHighlight;
+}[] = [
   {
     src: "/how-it-works/step-1.png",
     icon: "📷",
     bm: "Ambil gambar nota tulisan tangan — atau taip sendiri.",
     zh: "拍下手写的会议笔记 —— 也可以自己打字。",
     en: "Photograph the handwritten notes — or type them in.",
+    hi: {
+      left: "28.5%",
+      top: "66.5%",
+      width: "11.5%",
+      height: "10%",
+      labelBm: "Tekan di sini",
+      labelZh: "现在按这里",
+      labelEn: "Press here",
+    },
   },
   {
     src: "/how-it-works/step-2.png",
@@ -33,6 +63,15 @@ const FRAMES = [
     bm: `${BRAND_NAME} membaca setiap baris. Yang kabur ditanda untuk anda semak.`,
     zh: `${BRAND_NAME} 逐行读出来。读不准的会标黄，等您核对。`,
     en: `${BRAND_NAME} reads every line. Smudged ones are flagged for you to check.`,
+    hi: {
+      left: "29%",
+      top: "43.5%",
+      width: "67%",
+      height: "13%",
+      labelBm: "Semak baris kuning di sini",
+      labelZh: "标黄的在这里核对",
+      labelEn: "Check the flagged lines here",
+    },
   },
   {
     src: "/how-it-works/step-3.png",
@@ -40,6 +79,15 @@ const FRAMES = [
     bm: "Anda sahkan — barulah ia masuk daftar dan resit bernombor dijana.",
     zh: "您确认之后，才会进登记簿、开出连号收据。",
     en: "You confirm — only then does it enter the register and get numbered receipts.",
+    hi: {
+      left: "29%",
+      top: "66.5%",
+      width: "67%",
+      height: "30%",
+      labelBm: "Baris yang disahkan",
+      labelZh: "确认好的行在这里",
+      labelEn: "The confirmed rows",
+    },
   },
   {
     src: "/how-it-works/step-4.png",
@@ -47,8 +95,17 @@ const FRAMES = [
     bm: "Dokumen siap: minit rasmi, pek eROSES, tarikh akhir anda.",
     zh: "成品出来：正式会议记录、eROSES 粘贴包、您的截止日期。",
     en: "The finished pieces: official minutes, the eROSES pack, your deadlines.",
+    hi: {
+      left: "29%",
+      top: "10%",
+      width: "67%",
+      height: "40%",
+      labelBm: "Dokumen siap anda",
+      labelZh: "做好的文件在这里",
+      labelEn: "Your finished document",
+    },
   },
-] as const;
+];
 
 /** The entry button + the modal it opens. Drop it on any page. */
 export function HowItWorksButton({
@@ -127,12 +184,30 @@ function HowItWorksModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={frame.src}
-          alt={t(frame.bm, frame.zh, frame.en)}
-          className="w-full rounded-2xl border border-[color:var(--v2-border)]"
-        />
+        {/* F-3: the screenshot with its CSS "look here" box on top. The box is
+            positioned in percent of the image, so it survives any modal size. */}
+        <div className="relative">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={frame.src}
+            alt={t(frame.bm, frame.zh, frame.en)}
+            className="w-full rounded-2xl border border-[color:var(--v2-border)]"
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute rounded-lg border-4 border-red-500 shadow-[0_0_0_3px_rgba(255,255,255,0.7)]"
+            style={{
+              left: frame.hi.left,
+              top: frame.hi.top,
+              width: frame.hi.width,
+              height: frame.hi.height,
+            }}
+          >
+            <span className="absolute -top-8 left-0 whitespace-nowrap rounded-md bg-red-600 px-2 py-1 text-sm font-semibold text-white">
+              {t(frame.hi.labelBm, frame.hi.labelZh, frame.hi.labelEn)}
+            </span>
+          </div>
+        </div>
 
         <div className="flex items-center justify-between gap-3">
           <Button variant="outline" size="lg" disabled={i === 0} onClick={prev}>

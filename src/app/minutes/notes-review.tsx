@@ -385,14 +385,15 @@ export function NotesReview() {
             </Button>
           )}
         </div>
-        {/* D-6 (work order 31, J #22, 拍板 41): Word/Excel cannot be read yet —
-            say the PDF workaround HERE, at the gate, before somebody picks a
-            .docx and gets refused. Real conversion is Stage F. */}
+        {/* D-6 → F-10 (拍板 41): Word/Excel now goes through the HOME page's
+            box, which converts it to text on the server (no AI charge for the
+            conversion). This gate still takes photos/PDFs only, so keep the
+            PDF workaround as the second half of the sentence. */}
         <p className="text-sm text-muted-foreground">
           <Tri
-            bm="Fail Word/Excel: sila simpan sebagai PDF dahulu, kemudian muat naik PDF itu (telefon: Kongsi → Cetak → Simpan sebagai PDF)."
-            zh="Word/Excel 档：请先另存为 PDF 再上传（手机：分享 → 列印 → 存成 PDF）。"
-            en="Word/Excel files: save as PDF first, then upload the PDF (on a phone: Share → Print → Save as PDF)."
+            bm="Fail Word/Excel: masukkannya ke dalam kotak di halaman Utama — Minit membacanya terus. Di sini, sila simpan sebagai PDF dahulu (telefon: Kongsi → Cetak → Simpan sebagai PDF)."
+            zh="Word/Excel 档：放进主页的框，Minit 可以直接读；在这一页则请先另存为 PDF（手机：分享 → 列印 → 存成 PDF）。"
+            en="Word/Excel files: drop them in the Home page box — Minit reads them directly. Here, save as PDF first (on a phone: Share → Print → Save as PDF)."
           />
         </p>
         {/* The step between choosing a file and spending a credit on it. */}

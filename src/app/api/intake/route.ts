@@ -33,6 +33,7 @@ import { recordUpload } from "@/lib/record-upload";
 import { checkPageLimit } from "@/lib/pdf-pages";
 import { ROUTE_AI_DEADLINE_MS, VendorTimeoutError } from "@/lib/ai/http";
 import { vendorFailureResponse } from "@/lib/ai/vendor-failure";
+import { isOfficeFile, officeFileToText } from "@/lib/office-text";
 
 // ---------------------------------------------------------------------------
 // ONE DOOR: drop any page of society paperwork here and Minit works out what it
@@ -103,7 +104,11 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
-    if (!ALLOWED_MIME.has(file.type)) {
+    // F-10 (拍板 41): .docx / .xlsx are welcome at this door — their text is
+    // pulled out DETERMINISTICALLY below (no AI, no quota) and then read by
+    // the same extract prompts as labelled text instead of an image.
+    const officeFile = isOfficeFile(file.name, file.type);
+    if (!officeFile && !ALLOWED_MIME.has(file.type)) {
       return NextResponse.json(
         { error: joinUserError(USER_ERRORS.unsupportedLedgerFile) },
         { status: 400 },
@@ -120,7 +125,34 @@ export async function POST(req: Request) {
     // is one tap and a large part of a month's AI quota, and there is no
     // confirmation screen between the two. See src/lib/pdf-pages.ts.
     const bytes = await file.arrayBuffer();
-    const pages = await checkPageLimit(bytes, file.type, "unknown");
+    // F-10: an Office file is converted BEFORE anything is charged — a file
+    // that cannot be converted costs nothing, and the person is told exactly
+    // what to do instead (the old D-6 advice: save it as a PDF).
+    let officeText: string | null = null;
+    if (officeFile) {
+      const converted = await officeFileToText(file.name, file.type, bytes);
+      if (!converted.ok) {
+        const msg =
+          converted.reason === "too_long"
+            ? {
+                bm: "Fail Word/Excel ini terlalu panjang untuk dibaca sekali gus. Pecahkannya, atau simpan bahagian yang perlu sebagai PDF dan muat naik itu.",
+                zh: "这个 Word/Excel 文件太长，没办法一次读完。请拆小一点，或把需要的部分另存为 PDF 再上传。",
+                en: "This Word/Excel file is too long to read in one go. Split it up, or save the needed part as a PDF and upload that.",
+              }
+            : {
+                bm: "Fail Word/Excel ini tidak dapat dibaca. Buka fail itu, simpan sebagai PDF, dan muat naik PDF itu.",
+                zh: "这个 Word/Excel 文件读不出来。请打开文件另存为 PDF，再上传那个 PDF。",
+                en: "This Word/Excel file could not be read. Open it, save it as a PDF, and upload that PDF.",
+              };
+        return NextResponse.json({ error: joinUserError(msg) }, { status: 400 });
+      }
+      officeText = converted.text;
+    }
+    // The page-count guard only understands images and PDFs; Office files are
+    // bounded by the converter's own character cap instead.
+    const pages = officeFile
+      ? ({ ok: true } as const)
+      : await checkPageLimit(bytes, file.type, "unknown");
     if (!pages.ok) {
       return NextResponse.json(
         {
@@ -167,7 +199,20 @@ export async function POST(req: Request) {
     }
     const orgName = gate.org.name;
     const todayIso = dayIsoMalaysia(new Date().toISOString())!;
-    const imageBase64 = Buffer.from(bytes).toString("base64");
+    // F-10: an Office file reaches the model as LABELLED TEXT, not an image.
+    // Same untrusted framing as the person's own notes — document content is
+    // data, never instructions.
+    const officeBlock =
+      officeText === null
+        ? ""
+        : `\n\n${untrustedBlock(
+            "THE DOCUMENT'S FULL TEXT (converted from a Word/Excel file on the server — there is no photo; read this text as the page itself)",
+            officeText,
+          )}`;
+    const media =
+      officeText === null
+        ? { imageBase64: Buffer.from(bytes).toString("base64"), mimeType: file.type }
+        : {};
     // Two tiers on purpose (2026-08-03): "which of three kinds of page is
     // this?" is a trivial question and a small model answers it as well as a
     // large one — but it is ~30% of all AI calls. Step 2 below, reading the
@@ -188,9 +233,8 @@ export async function POST(req: Request) {
       // --- step 1: what IS this page? -------------------------------------
       try {
         const raw = await classifier.extractJson({
-          prompt: classifyPrompt({ filename: file.name }),
-          imageBase64,
-          mimeType: file.type,
+          prompt: classifyPrompt({ filename: file.name }) + officeBlock,
+          ...media,
           onUsage: onClassifyUsage,
           deadlineAt,
         });
@@ -235,11 +279,13 @@ export async function POST(req: Request) {
     // charged, which is the whole point: a 40-page "meeting record" is a
     // scanner left on the wrong setting, and reading it is the expensive half.
     // (2026-08-22, J: minutes are 5 pages; a constitution gets more.)
-    const kindLimit = await checkPageLimit(
-      bytes,
-      file.type,
-      kind === "meeting_notes" ? "minutes" : kind === "ledger_page" ? "ledger" : "constitution",
-    );
+    const kindLimit = officeFile
+      ? ({ ok: true } as const) // bounded by the converter's character cap
+      : await checkPageLimit(
+          bytes,
+          file.type,
+          kind === "meeting_notes" ? "minutes" : kind === "ledger_page" ? "ledger" : "constitution",
+        );
     if (!kindLimit.ok) {
       // 26 号报告 2-2: on the forced-kind path the gate charged the EXTRACT
       // action up front, and this rejection happens before any vendor call —
@@ -310,11 +356,15 @@ export async function POST(req: Request) {
         ? glossaryPromptBlockForReading(await loadGlossary(gate.org.id))
         : "";
     const prompt =
-      kind === "meeting_notes"
+      (kind === "meeting_notes"
         ? extractMeetingNotesPrompt({ orgName, todayIso, glossaryBlock, contextBlock })
         : kind === "ledger_page"
           ? extractLedgerPrompt({ orgName, todayIso, contextBlock })
-          : extractConstitutionPrompt({ orgName, contextBlock });
+          : extractConstitutionPrompt({ orgName, contextBlock })) +
+      // F-10: the converted Word/Excel text rides AFTER the prompt, exactly
+      // like the person's own typed context — the prompt file itself is not
+      // touched (拍板 42: no golden case, no prompt edits).
+      officeBlock;
 
     const validate =
       kind === "meeting_notes"
@@ -327,8 +377,7 @@ export async function POST(req: Request) {
     try {
       raw = await provider.extractJson({
         prompt,
-        imageBase64,
-        mimeType: file.type,
+        ...media,
         onUsage: onExtractUsage,
         deadlineAt,
       });
@@ -355,8 +404,7 @@ export async function POST(req: Request) {
 
 YOUR PREVIOUS ATTEMPT FAILED VALIDATION with these errors — fix them and respond with ONLY the corrected JSON:
 ${issues}`,
-          imageBase64,
-          mimeType: file.type,
+          ...media,
           onUsage: onExtractUsage,
           deadlineAt,
         });

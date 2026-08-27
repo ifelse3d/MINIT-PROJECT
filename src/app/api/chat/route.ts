@@ -21,7 +21,13 @@ import { cariMinit, formatHitsForPrompt, type MinutesHit } from "@/lib/ai/cari-m
 import { getToolProvider, parseModelJson } from "@/lib/ai/provider";
 import { ORG_TOOL_SPECS, runOrgTool } from "@/lib/ai/org-tools";
 import { runToolConversation } from "@/lib/ai/tool-runner";
-import { ASK_ROUTES, type AskRouteKey } from "@/lib/ask-routes";
+import {
+  ASK_ACTION_ROUTES,
+  ASK_ROUTES,
+  isAskActionKey,
+  withAiMarker,
+  type AskRouteKey,
+} from "@/lib/ask-routes";
 import { chatPrompt, type ChatTurn } from "@/prompts/chat";
 import { dayIsoMalaysia } from "@/lib/history";
 import { ROUTE_AI_DEADLINE_MS } from "@/lib/ai/http";
@@ -135,9 +141,16 @@ function citedSources(hits: MinutesHit[], used?: number[]): ChatSource[] {
 }
 
 function routeFor(key: string): { href: string; bm: string; zh: string; en: string } | null {
+  // F-6: action keys land on the page with the form on it (/calendar/add),
+  // not the section front door — and carry ?dari=ai so the landing page can
+  // say "the AI sent you here" (FromAiNote).
+  if (isAskActionKey(key)) {
+    const a = ASK_ACTION_ROUTES[key];
+    return { href: withAiMarker(a.href), bm: a.bm, zh: a.zh, en: a.en };
+  }
   if (key === "none" || !(key in ASK_ROUTES)) return null;
   const route = ASK_ROUTES[key as AskRouteKey];
-  return { href: route.href, bm: route.bm, zh: route.zh, en: route.en };
+  return { href: withAiMarker(route.href), bm: route.bm, zh: route.zh, en: route.en };
 }
 
 export async function POST(req: Request) {

@@ -359,6 +359,9 @@ export function ActivityCalendar({
                         🎉 {ev.title}
                         {ev.timeText ? ` · ${ev.timeText}` : ""}
                       </span>
+                      {/* F-9: derived (lunar offering) events are computed,
+                          not stored — nothing to delete, so no button. */}
+                      {!ev.derived && (
                       <button
                         type="button"
                         onClick={() => {
@@ -380,6 +383,7 @@ export function ActivityCalendar({
                       >
                         ✕
                       </button>
+                      )}
                     </div>
                     {ev.note && (
                       <p className="mt-1 text-base whitespace-pre-line text-muted-foreground">
