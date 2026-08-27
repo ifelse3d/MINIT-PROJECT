@@ -8,7 +8,6 @@ import { BRAND_NAME } from "@/lib/brand";
 import { getSupabaseBrowser } from "@/db/supabase-browser";
 import { PasswordInput } from "@/components/password-input";
 import {
-  AUTH_CARD,
   MIN_PASSWORD_LENGTH,
   authInputClass,
   passwordRequirementProblem,
@@ -140,13 +139,17 @@ export default function ResetPasswordPage() {
   return (
     <>
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center gap-7 px-4 py-10 sm:py-16">
-        <div className="flex items-center gap-3">
-          {/* P1 (拍板 0-8): the green logo; the name follows BRAND_NAME. */}
-          <BrandLogo size={48} className="h-12 w-12" />
-          <span className="text-4xl font-bold leading-none tracking-tight">{BRAND_NAME}</span>
-        </div>
-
-        <div className={`flex w-full flex-col gap-5 ${AUTH_CARD}`}>
+        {/* §6/§10: matches the sign-in card family — gradient strip + white
+            form in one card. */}
+        <div className="flex w-full flex-col overflow-hidden rounded-lg border border-[color:var(--v2-border)] bg-[color:var(--v2-card)] shadow-[var(--v2-shadow-lg)]">
+          <div
+            className="flex items-center gap-2.5 p-5 text-white"
+            style={{ background: "var(--v2-grad-brand)" }}
+          >
+            <BrandLogo size={32} white className="h-8 w-8" />
+            <span className="text-xl font-bold leading-none tracking-tight">{BRAND_NAME}</span>
+          </div>
+          <div className="flex w-full flex-col gap-5 p-6 sm:p-8">
           <h1 className="text-center text-2xl font-bold leading-tight tracking-tight">
             <Tri bm="Tetapkan Kata Laluan Baharu" zh="设定新密码" en="Set a new password" />
           </h1>
@@ -253,6 +256,7 @@ export default function ResetPasswordPage() {
               </button>
             </form>
           )}
+          </div>
         </div>
       </div>
     </>

@@ -10,7 +10,6 @@ import { getSupabaseBrowser } from "@/db/supabase-browser";
 import { stashInviteCode } from "@/lib/invite-stash";
 import { LEGAL_VERSIONS } from "@/legal/documents";
 import {
-  AUTH_CARD,
   MIN_PASSWORD_LENGTH,
   authInputClass,
   passwordRequirementProblem,
@@ -247,26 +246,42 @@ export default function LoginPage() {
   const labelCls = "text-sm font-semibold text-[color:var(--v2-text-soft)]";
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center gap-7 px-4 py-10 sm:py-16">
-      {/* Brand block */}
-      <div className="flex flex-col items-center gap-3">
-        <div className="flex items-center gap-3">
-          {/* P1 (拍板 0-8): the green logo; the name follows BRAND_NAME. */}
-          <BrandLogo size={48} className="h-12 w-12" />
-          <span className="text-4xl font-bold leading-none tracking-tight">{BRAND_NAME}</span>
+    // §6 (violet redesign): a centred SPLIT card on the gradient canvas —
+    // brand gradient left, white form right. The form's logic is untouched;
+    // only the frame changed.
+    <div className="flex min-h-screen w-full flex-col items-center justify-center gap-5 p-4 py-10 sm:p-6">
+      <div className="flex w-full max-w-[880px] flex-col overflow-hidden rounded-lg border border-[color:var(--v2-border)] bg-[color:var(--v2-card)] shadow-[var(--v2-shadow-lg)] md:min-h-[480px] md:flex-row">
+        {/* Brand panel — 42%, dark→light gradient; every word sits over the
+            DARK end (§2.2 rule 4: no small text on the light end). On <md it
+            collapses to a slim strip. */}
+        <div
+          className="flex items-center gap-2.5 p-6 text-white md:w-[42%] md:flex-col md:items-start md:justify-start md:gap-0 md:p-10"
+          style={{ background: "var(--v2-grad-brand)" }}
+        >
+          <div className="flex items-center gap-2.5">
+            <BrandLogo size={36} white className="h-9 w-9" />
+            <span className="text-2xl font-bold leading-none tracking-tight">
+              {BRAND_NAME}
+            </span>
+          </div>
+          <div className="hidden md:mt-10 md:block">
+            <p className="text-3xl font-bold leading-tight">
+              <Tri bm="Selamat datang" zh="欢迎回来" en="Welcome" />
+            </p>
+            <p className="mt-3 text-pretty text-base text-white/90">
+              <Tri
+                bm="Pembantu pematuhan untuk persatuan & NGO"
+                zh="社团与非政府组织的合规助手"
+                en="Compliance assistant for societies & NGOs"
+              />
+            </p>
+            <div aria-hidden className="mt-8 h-px w-12 bg-white/40" />
+          </div>
         </div>
-        <p className="text-pretty text-center text-base text-[color:var(--v2-text-soft)]">
-          <Tri
-            bm="Pembantu pematuhan untuk persatuan & NGO"
-            zh="社团与非政府组织的合规助手"
-            en="Compliance assistant for societies & NGOs"
-          />
-        </p>
-      </div>
 
-      {/* The one card */}
-      <div className={`flex w-full flex-col gap-5 ${AUTH_CARD}`}>
-        <h1 className="text-center text-2xl font-bold leading-tight tracking-tight">
+        {/* The form — 58%, pure white, contents vertically centred. */}
+        <div className="flex w-full flex-col justify-center gap-5 p-6 sm:p-8 md:w-[58%] md:px-12 md:py-10">
+        <h1 className="text-2xl font-bold leading-tight tracking-tight">
           {mode === "signin" ? (
             <Tri bm="Log Masuk" zh="登录" en="Sign in" />
           ) : mode === "signup" ? (
@@ -277,7 +292,7 @@ export default function LoginPage() {
         </h1>
 
         {mode === "forgot" && (
-          <p className="text-pretty text-center text-base leading-relaxed text-[color:var(--v2-text-soft)]">
+          <p className="text-pretty text-base leading-relaxed text-[color:var(--v2-text-soft)]">
             <Tri
               bm="Masukkan e-mel anda. Kami hantar pautan untuk menetapkan kata laluan baharu."
               zh="输入你的电邮。我们会寄一条连结给你，让你设定新密码。"
@@ -522,6 +537,7 @@ export default function LoginPage() {
             )}
           </button>
         </p>
+        </div>
       </div>
 
       <p className="text-center text-sm text-[color:var(--v2-text-soft)]">
