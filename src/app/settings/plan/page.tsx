@@ -226,7 +226,7 @@ export default async function PlanPage() {
       <div className="flex flex-wrap items-center gap-3">
         {contactEmail !== "" ? (
           <a
-            href={`mailto:${contactEmail}?subject=Minit%20plan%20upgrade%20-%20${encodeURIComponent(active.name)}`}
+            href={`mailto:${contactEmail}?subject=MinitAI%20plan%20upgrade%20-%20${encodeURIComponent(active.name)}`}
             className="inline-flex min-h-11 items-center rounded-md bg-[color:var(--v2-primary-fill)] px-5 text-base font-semibold text-white"
           >
             <Tri bm="Hubungi kami" zh="联络我们" en="Contact us" />
@@ -234,9 +234,9 @@ export default async function PlanPage() {
         ) : (
           <p className="text-base text-[color:var(--v2-text-soft)]">
             <Tri
-              bm="Untuk menaik taraf, hubungi orang yang memasang Minit untuk pertubuhan anda."
-              zh="想升级，请联系帮您安装 Minit 的人。"
-              en="To upgrade, contact whoever set Minit up for your organisation."
+              bm="Untuk menaik taraf, hubungi orang yang memasang MinitAI untuk pertubuhan anda."
+              zh="想升级，请联系帮您安装 MinitAI 的人。"
+              en="To upgrade, contact whoever set MinitAI up for your organisation."
             />
           </p>
         )}

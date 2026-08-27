@@ -129,9 +129,9 @@ export function CreateOrgForm({
           setReadFailed(
             json.error ??
               t(
-                "Minit tidak dapat membaca fail itu.",
-                "Minit 读不了这个档案。",
-                "Minit could not read that file.",
+                "MinitAI tidak dapat membaca fail itu.",
+                "MinitAI 读不了这个档案。",
+                "MinitAI could not read that file.",
               ),
           );
           return;
@@ -205,7 +205,7 @@ export function CreateOrgForm({
         <input name="yourName" className={inputCls} maxLength={120} />
         {/* This name really is used: it becomes members_roles.name, and
             doc-identity.ts prints it on every confirmed document's audit line
-            ("Drafted by Minit, confirmed by …"). Say so BEFORE they type —
+            ("Drafted by MinitAI, confirmed by …"). Say so BEFORE they type —
             J's ask, 2026-08-25. Blank falls back to the login email. */}
         <span className="text-sm text-muted-foreground">
           <Tri
@@ -247,9 +247,9 @@ export function CreateOrgForm({
           </span>
           <span className="pl-7 text-sm text-muted-foreground">
             <Tri
-              bm="Didaftarkan dengan Jabatan Pendaftaran Pertubuhan — Minit mengingatkan Penyata Tahunan eROSES."
-              zh="在社团注册局注册的社团 —— Minit 会提醒 eROSES 年度呈报。"
-              en="Registered with the Registrar of Societies — Minit reminds you about the eROSES Annual Return."
+              bm="Didaftarkan dengan Jabatan Pendaftaran Pertubuhan — MinitAI mengingatkan Penyata Tahunan eROSES."
+              zh="在社团注册局注册的社团 —— MinitAI 会提醒 eROSES 年度呈报。"
+              en="Registered with the Registrar of Societies — MinitAI reminds you about the eROSES Annual Return."
             />
           </span>
         </label>
@@ -334,9 +334,9 @@ export function CreateOrgForm({
                 bm: "Baru ditubuhkan",
                 zh: "新成立的",
                 en: "Newly formed",
-                subBm: "Bermula dari kosong — Minit mengiringi dari hari pertama",
-                subZh: "从零开始 —— Minit 从第一天陪着记",
-                subEn: "Starting fresh — Minit records from day one",
+                subBm: "Bermula dari kosong — MinitAI mengiringi dari hari pertama",
+                subZh: "从零开始 —— MinitAI 从第一天陪着记",
+                subEn: "Starting fresh — MinitAI records from day one",
               },
             ]
           ).map((opt) => (
@@ -491,9 +491,9 @@ export function CreateOrgForm({
           </span>
           <p className="text-base text-muted-foreground">
             <Tri
-              bm="Kalau ada, muat naik di sini. Minit membacanya dan menunjukkan nama berdaftar serta apa yang perlembagaan anda kata tentang mesyuarat — anda cuma perlu betulkan yang salah."
-              zh="有的话就放进来。Minit 会读出注册名称，也会告诉您章程里怎么写开会那些规矩 —— 您只需要改错的地方。"
-              en="Upload it here if you have it. Minit reads the registered name and what your constitution says about meetings — you only correct what is wrong."
+              bm="Kalau ada, muat naik di sini. MinitAI membacanya dan menunjukkan nama berdaftar serta apa yang perlembagaan anda kata tentang mesyuarat — anda cuma perlu betulkan yang salah."
+              zh="有的话就放进来。MinitAI 会读出注册名称，也会告诉您章程里怎么写开会那些规矩 —— 您只需要改错的地方。"
+              en="Upload it here if you have it. MinitAI reads the registered name and what your constitution says about meetings — you only correct what is wrong."
             />
           </p>
           <input
@@ -556,17 +556,17 @@ export function CreateOrgForm({
           <p className="text-lg font-semibold text-green-900">
             ✓{" "}
             <Tri
-              bm="Siap. Pertubuhan anda sudah didaftarkan dalam Minit."
-              zh="好了。您的机构已经登记在 Minit 里。"
-              en="Done. Your organisation is now set up in Minit."
+              bm="Siap. Pertubuhan anda sudah didaftarkan dalam MinitAI."
+              zh="好了。您的机构已经登记在 MinitAI 里。"
+              en="Done. Your organisation is now set up in MinitAI."
             />
           </p>
           {reading ? (
             <p className="text-base text-green-900">
               <Tri
-                bm="Minit sedang membaca perlembagaan anda… ini boleh mengambil masa seminit untuk dokumen yang panjang."
-                zh="Minit 正在读您的章程……文件长的话可能要等一分钟。"
-                en="Minit is reading your constitution… a long document can take a minute."
+                bm="MinitAI sedang membaca perlembagaan anda… ini boleh mengambil masa seminit untuk dokumen yang panjang."
+                zh="MinitAI 正在读您的章程……文件长的话可能要等一分钟。"
+                en="MinitAI is reading your constitution… a long document can take a minute."
               />
             </p>
           ) : readFailed ? (

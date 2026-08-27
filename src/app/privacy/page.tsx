@@ -6,7 +6,7 @@ import { PRIVACY_MARKDOWN, PRIVACY_VERSION } from "@/legal/documents";
 // given in Bahasa Malaysia AND English, in writing, before personal data is
 // collected — which means before the sign-up form is submitted, not after.
 export const metadata: Metadata = {
-  title: "Notis Privasi / Privacy Notice — Minit",
+  title: "Notis Privasi / Privacy Notice — MinitAI",
 };
 
 export default function PrivacyPage() {

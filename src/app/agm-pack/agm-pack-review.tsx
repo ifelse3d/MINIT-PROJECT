@@ -330,9 +330,9 @@ export function AgmPackReview({
             <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
               ⚠{" "}
               <Tri
-                bm={`Tempoh notis ${NOTICE_DAYS_DEFAULT} hari ialah nilai lalai Minit, BUKAN daripada perlembagaan anda — semak fasal notis perlembagaan sendiri. Notis terakhir yang dibenarkan:`}
-                zh={`${NOTICE_DAYS_DEFAULT} 天通知期是 Minit 的预设值，不是从您的章程读的 —— 请自行核对章程的通知条文。最迟发通知日期：`}
-                en={`The ${NOTICE_DAYS_DEFAULT}-day notice period is Minit's default, NOT read from your constitution — check your own notice clause. Latest permitted notice date:`}
+                bm={`Tempoh notis ${NOTICE_DAYS_DEFAULT} hari ialah nilai lalai MinitAI, BUKAN daripada perlembagaan anda — semak fasal notis perlembagaan sendiri. Notis terakhir yang dibenarkan:`}
+                zh={`${NOTICE_DAYS_DEFAULT} 天通知期是 MinitAI 的预设值，不是从您的章程读的 —— 请自行核对章程的通知条文。最迟发通知日期：`}
+                en={`The ${NOTICE_DAYS_DEFAULT}-day notice period is MinitAI's default, NOT read from your constitution — check your own notice clause. Latest permitted notice date:`}
               />{" "}
               <span className="font-semibold">
                 {formatDateBm(latestNoticeDateIso(dateIso, NOTICE_DAYS_DEFAULT))}

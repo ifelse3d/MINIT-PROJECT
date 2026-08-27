@@ -80,9 +80,9 @@ export function OrgIdentityPanel({
       <p className="text-lg font-semibold">
         📋{" "}
         <Tri
-          bm="Apa yang Minit baca tentang pertubuhan anda"
-          zh="Minit 从章程读到的机构资料"
-          en="What Minit read about your organisation"
+          bm="Apa yang MinitAI baca tentang pertubuhan anda"
+          zh="MinitAI 从章程读到的机构资料"
+          en="What MinitAI read about your organisation"
         />
       </p>
 
@@ -122,9 +122,9 @@ function NameRow({
           coverage={coverage}
           absent={
             <Tri
-              bm="Tiada fasal NAMA dalam perlembagaan yang Minit pegang. Taip nama berdaftar sendiri di Tetapan → Pertubuhan."
-              zh="Minit 手上这份章程里没有「名称」那一条。注册名称请到 设置 → 机构 自己填。"
-              en="There is no NAMA clause in the constitution Minit holds. Type the registered name yourself in Settings → Organisation."
+              bm="Tiada fasal NAMA dalam perlembagaan yang MinitAI pegang. Taip nama berdaftar sendiri di Tetapan → Pertubuhan."
+              zh="MinitAI 手上这份章程里没有「名称」那一条。注册名称请到 设置 → 机构 自己填。"
+              en="There is no NAMA clause in the constitution MinitAI holds. Type the registered name yourself in Settings → Organisation."
             />
           }
         />
@@ -152,9 +152,9 @@ function NameRow({
             />
           ) : matches ? (
             <Tri
-              bm="Sama dengan nama yang Minit guna sekarang."
-              zh="和 Minit 现在用的名字一样。"
-              en="Same as the name Minit is using."
+              bm="Sama dengan nama yang MinitAI guna sekarang."
+              zh="和 MinitAI 现在用的名字一样。"
+              en="Same as the name MinitAI is using."
             />
           ) : (
             <Tri
@@ -168,17 +168,17 @@ function NameRow({
         <div className="mt-3 flex flex-col gap-2 rounded-md border-2 border-amber-300 bg-amber-50 p-3 dark:border-amber-400/40 dark:bg-amber-400/10">
           <p className="text-base font-medium text-amber-900 dark:text-amber-100">
             <Tri
-              bm="Nama ini tidak sama dengan nama yang Minit guna sekarang:"
-              zh="这个名字跟 Minit 现在用的不一样："
-              en="This is not the name Minit is using at the moment:"
+              bm="Nama ini tidak sama dengan nama yang MinitAI guna sekarang:"
+              zh="这个名字跟 MinitAI 现在用的不一样："
+              en="This is not the name MinitAI is using at the moment:"
             />{" "}
             <span className="font-semibold">{orgName ?? "—"}</span>
           </p>
           <p className="text-sm text-amber-900 dark:text-amber-100">
             <Tri
-              bm="Nama yang Minit guna dicetak pada setiap resit dan dokumen rasmi, jadi ia patut sama dengan perlembagaan."
-              zh="Minit 用的名字会印在每一张收据和官方文件上，所以应该跟章程一样。"
-              en="The name Minit uses is printed on every receipt and official document, so it should match the constitution."
+              bm="Nama yang MinitAI guna dicetak pada setiap resit dan dokumen rasmi, jadi ia patut sama dengan perlembagaan."
+              zh="MinitAI 用的名字会印在每一张收据和官方文件上，所以应该跟章程一样。"
+              en="The name MinitAI uses is printed on every receipt and official document, so it should match the constitution."
             />
           </p>
           {state.error && (
@@ -246,9 +246,9 @@ function AmendmentRow({
           coverage={coverage}
           absent={
             <Tri
-              bm="Perlembagaan yang Minit pegang tiada fasal pindaan. Itu jarang berlaku — perlembagaan contoh ROS ada satu. Kalau memang tiada, tanya ROS bagaimana pertubuhan anda patut meminda undang-undangnya sebelum anda menukar apa-apa."
-              zh="Minit 手上这份章程里没有「修改章程」这一条。这不常见 —— ROS 的样本章程是有的。如果真的没有，改任何东西之前先去问 ROS，你们社团要怎样修改章程。"
-              en="The constitution Minit holds has no amendment clause. That is unusual — the ROS model constitution has one. If yours genuinely does not, ask ROS how your society is meant to amend its rules before you change anything."
+              bm="Perlembagaan yang MinitAI pegang tiada fasal pindaan. Itu jarang berlaku — perlembagaan contoh ROS ada satu. Kalau memang tiada, tanya ROS bagaimana pertubuhan anda patut meminda undang-undangnya sebelum anda menukar apa-apa."
+              zh="MinitAI 手上这份章程里没有「修改章程」这一条。这不常见 —— ROS 的样本章程是有的。如果真的没有，改任何东西之前先去问 ROS，你们社团要怎样修改章程。"
+              en="The constitution MinitAI holds has no amendment clause. That is unusual — the ROS model constitution has one. If yours genuinely does not, ask ROS how your society is meant to amend its rules before you change anything."
             />
           }
         />
@@ -322,9 +322,9 @@ function AmendmentRow({
             !needsRegistrarApproval && (
               <li>
                 <Tri
-                  bm="Baca fasal di bawah — Minit tidak mahu meringkaskan syarat undang-undang."
-                  zh="请看下面那一条 —— 法律条件，Minit 不敢帮您简化。"
-                  en="Read the clause below — Minit will not summarise a legal condition."
+                  bm="Baca fasal di bawah — MinitAI tidak mahu meringkaskan syarat undang-undang."
+                  zh="请看下面那一条 —— 法律条件，MinitAI 不敢帮您简化。"
+                  en="Read the clause below — MinitAI will not summarise a legal condition."
                 />
               </li>
             )}
@@ -333,13 +333,13 @@ function AmendmentRow({
         <Source clause={clause} showText />
 
         {/* "Then ask if they need help." The paperwork this clause just
-            demanded is paperwork Minit already knows how to make. */}
+            demanded is paperwork MinitAI already knows how to make. */}
         <div className="flex flex-col gap-2 border-t-2 border-amber-300 pt-3 dark:border-amber-400/40">
           <p className="text-base font-medium text-amber-900 dark:text-amber-100">
             <Tri
-              bm="Mahu Minit tolong?"
-              zh="要 Minit 帮忙吗？"
-              en="Would you like Minit to help?"
+              bm="Mahu MinitAI tolong?"
+              zh="要 MinitAI 帮忙吗？"
+              en="Would you like MinitAI to help?"
             />
           </p>
           <div className="flex flex-wrap gap-2">
@@ -364,13 +364,13 @@ function AmendmentRow({
               </Link>
             </Button>
           </div>
-          {/* The same disclaimer the clause Q&A carries. Minit shows people
+          {/* The same disclaimer the clause Q&A carries. MinitAI shows people
               their own rules; it does not tell them what the law requires. */}
           <p className="text-sm text-amber-900/80 dark:text-amber-100/80">
             <Tri
-              bm="Minit menunjukkan apa yang perlembagaan anda sendiri tulis. Ia bukan nasihat undang-undang."
-              zh="Minit 只是把你们自己章程写的东西显示出来，这不是法律意见。"
-              en="Minit shows what your own constitution says. This is not legal advice."
+              bm="MinitAI menunjukkan apa yang perlembagaan anda sendiri tulis. Ia bukan nasihat undang-undang."
+              zh="MinitAI 只是把你们自己章程写的东西显示出来，这不是法律意见。"
+              en="MinitAI shows what your own constitution says. This is not legal advice."
             />
           </p>
         </div>
@@ -411,9 +411,9 @@ function NotFound({
     return (
       <p className="text-base">
         <Tri
-          bm={`Belum ada dalam apa yang Minit pegang — fasal ${list} masih tiada. Ambil gambar muka surat itu.`}
-          zh={`Minit 手上这份还差第 ${list} 条 —— 请把那几页拍下来。`}
-          en={`Not in what Minit holds — clause ${list} is still missing. Photograph those pages.`}
+          bm={`Belum ada dalam apa yang MinitAI pegang — fasal ${list} masih tiada. Ambil gambar muka surat itu.`}
+          zh={`MinitAI 手上这份还差第 ${list} 条 —— 请把那几页拍下来。`}
+          en={`Not in what MinitAI holds — clause ${list} is still missing. Photograph those pages.`}
         />
       </p>
     );
@@ -424,9 +424,9 @@ function NotFound({
       {coverage.highest > 0 && (
         <p className="text-sm text-muted-foreground">
           <Tri
-            bm={`Minit membaca fasal 1 hingga ${coverage.highest}, tiada yang tertinggal di antaranya. Kalau perlembagaan anda ada fasal selepas ${coverage.highest}, ambil gambar muka surat terakhir.`}
-            zh={`Minit 读到第 1 到第 ${coverage.highest} 条，中间没有漏。如果你们章程在第 ${coverage.highest} 条后面还有，请把最后几页拍下来。`}
-            en={`Minit read clauses 1 to ${coverage.highest} with none missing in between. If your constitution has clauses after ${coverage.highest}, photograph the last pages.`}
+            bm={`MinitAI membaca fasal 1 hingga ${coverage.highest}, tiada yang tertinggal di antaranya. Kalau perlembagaan anda ada fasal selepas ${coverage.highest}, ambil gambar muka surat terakhir.`}
+            zh={`MinitAI 读到第 1 到第 ${coverage.highest} 条，中间没有漏。如果你们章程在第 ${coverage.highest} 条后面还有，请把最后几页拍下来。`}
+            en={`MinitAI read clauses 1 to ${coverage.highest} with none missing in between. If your constitution has clauses after ${coverage.highest}, photograph the last pages.`}
           />
         </p>
       )}

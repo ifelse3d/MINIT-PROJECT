@@ -24,6 +24,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
+  ChevronDown,
   PanelLeftClose,
   PanelLeftOpen,
   Settings as SettingsIcon,
@@ -64,6 +65,10 @@ function isBareRoute(pathname: string | null): boolean {
 }
 
 const RAIL_KEY = "minit.rail.collapsed";
+/** J's launch feedback #2 (2026-08-27 evening): the sidebar groups are
+ *  DROPDOWNS, closed by default — only the group holding the current page
+ *  opens itself. A person's own toggles are remembered per device. */
+const GROUPS_KEY = "minit.nav.groups.v1";
 
 export function AppShell({
   children,
@@ -108,11 +113,16 @@ export function AppShell({
     );
   }
 
+  // J's launch feedback #12: inside /settings the MAIN rail hides — two
+  // sidebars side by side read as clutter. The settings sub-sidebar becomes
+  // THE left column, with its own "back to the app" row (settings-nav.tsx).
+  const inSettings = (pathname ?? "").startsWith("/settings");
+
   return (
     <AppTooltipProvider>
       <div className="v2-root v2-safe min-h-screen">
         {/* Desktop icon rail — fixed, full height, ≥1024px. */}
-        <Rail pathname={pathname ?? "/"} showAdmin={showAdmin} />
+        {!inSettings && <Rail pathname={pathname ?? "/"} showAdmin={showAdmin} />}
 
         {/* Overlay drawer for <1024px — the expanded rail, floating. */}
         {drawerOpen && (
@@ -128,7 +138,8 @@ export function AppShell({
             no card hides behind it. */}
         <div
           className={cn(
-            "rail-anim lg:ml-[var(--rail-w)]",
+            "rail-anim",
+            !inSettings && "lg:ml-[var(--rail-w)]",
             dock.dragging ? "" : "transition-[padding] duration-300 ease-out",
           )}
           style={{ paddingRight: dock.push || undefined }}
@@ -228,6 +239,36 @@ function RailNav({
   collapsed: boolean;
 }) {
   const [einvoisVisible] = useEinvoisVisible();
+  // #2: which groups the person has opened/closed BY HAND on this device.
+  // null until read — before that, only the active group is open, which is
+  // also what the server renders, so hydration always agrees.
+  const [chosen, setChosen] = useState<Record<string, boolean> | null>(null);
+  useEffect(() => {
+    // External mailbox read, deferred a tick (frozen eslint baseline).
+    const id = setTimeout(() => {
+      try {
+        const raw = localStorage.getItem(GROUPS_KEY);
+        const parsed = raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
+        setChosen(typeof parsed === "object" && parsed !== null ? parsed : {});
+      } catch {
+        setChosen({});
+      }
+    }, 0);
+    return () => clearTimeout(id);
+  }, []);
+
+  function toggleGroup(id: string, isOpen: boolean) {
+    setChosen((prev) => {
+      const next = { ...(prev ?? {}), [id]: !isOpen };
+      try {
+        localStorage.setItem(GROUPS_KEY, JSON.stringify(next));
+      } catch {
+        /* storage disabled: the session still works, it just forgets */
+      }
+      return next;
+    });
+  }
+
   return (
     <ul className="flex flex-col gap-0.5">
       {SIDEBAR_NAV.map((entry) => {
@@ -240,32 +281,50 @@ function RailNav({
         }
         const children = railEntryChildren(entry, einvoisVisible);
         const groupActive = groupHasActiveChild(entry, pathname);
+        // Closed by default; the active group opens itself; a hand toggle
+        // (remembered) wins. In icon-rail mode there is no room for a
+        // dropdown — every icon stays visible, as before.
+        const isOpen =
+          collapsed || (chosen?.[entry.id] ?? groupActive);
         return (
           <li key={entry.id} className="mt-1.5">
-            {/* Expanded: an uppercase heading. Collapsed: a 1px divider —
+            {/* Expanded: a dropdown header. Collapsed: a 1px divider —
                 never truncated initials (§3.2). Both stay in the DOM; CSS
                 decides which shows. */}
-            <p
+            <button
+              type="button"
+              onClick={() => toggleGroup(entry.id, isOpen)}
+              aria-expanded={isOpen}
               className={cn(
-                "rail-group-label px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.06em]",
+                "rail-group-label flex w-full items-center justify-between rounded-sm px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.06em] transition-colors hover:bg-[color:var(--v2-card-nested)]",
                 groupActive
                   ? "text-[color:var(--v2-primary)]"
                   : "text-[color:var(--v2-text-soft)]",
               )}
             >
               <Tri bm={entry.bm} zh={entry.zh} en={entry.en} />
-            </p>
+              <ChevronDown
+                aria-hidden
+                className={cn(
+                  "h-3.5 w-3.5 shrink-0 transition-transform",
+                  isOpen ? "" : "-rotate-90",
+                )}
+                strokeWidth={2.2}
+              />
+            </button>
             <div
               aria-hidden
               className="rail-group-divider mx-2 my-2 border-t border-[color:var(--v2-border)]"
             />
-            <ul className="flex flex-col gap-0.5">
-              {children.map((child) => (
-                <li key={child.href}>
-                  <RailItem item={child} pathname={pathname} collapsed={collapsed} />
-                </li>
-              ))}
-            </ul>
+            {isOpen && (
+              <ul className="flex flex-col gap-0.5">
+                {children.map((child) => (
+                  <li key={child.href}>
+                    <RailItem item={child} pathname={pathname} collapsed={collapsed} />
+                  </li>
+                ))}
+              </ul>
+            )}
           </li>
         );
       })}

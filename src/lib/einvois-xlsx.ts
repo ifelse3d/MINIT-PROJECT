@@ -63,7 +63,7 @@ export async function buildEInvoisXlsxFiles(
     }
 
     const wb = new ExcelJS.Workbook();
-    wb.creator = "Minit";
+    wb.creator = "MinitAI";
 
     // D21: the data sheet is FIRST and ONLY. Instructions live on the page.
     const ws = wb.addWorksheet("Dokumen");

@@ -97,7 +97,7 @@ export function buildIcs(items: CalendarExportItem[]): string {
   const lines: string[] = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Minit//Minit Calendar//MS",
+    "PRODID:-//MinitAI//MinitAI Calendar//MS",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
   ];

@@ -184,9 +184,9 @@ export function AttendanceReview() {
       summary={
         groups.attendees.total === 0 ? (
           <Tri
-            bm="Minit belum membaca sebarang nama. Anda boleh menambah sendiri di bawah."
-            zh="Minit 还没读到任何名字。您可以在下面自己加。"
-            en="Minit has not read any names yet. You can add them yourself below."
+            bm="MinitAI belum membaca sebarang nama. Anda boleh menambah sendiri di bawah."
+            zh="MinitAI 还没读到任何名字。您可以在下面自己加。"
+            en="MinitAI has not read any names yet. You can add them yourself below."
           />
         ) : (
           <Tri
@@ -213,9 +213,9 @@ export function AttendanceReview() {
           </p>
           <p className="text-base text-amber-900 dark:text-amber-100">
             <Tri
-              bm="Bilangan ini masuk ke penyata tahunan eROSES (“Bilangan Ahli Hadir”), jadi Minit tidak boleh menganggap sifar bermakna anda sudah semak. Tambah nama di bawah — atau beritahu Minit yang nota mesyuarat memang tidak mencatat kehadiran."
-              zh="这个人数会进 eROSES 年度报告的「出席人数」，所以 Minit 不能把「0 个」当成您已经核对好了。请在下面加名字 —— 或者告诉 Minit，这份笔记本来就没有记出席。"
-              en="This number goes into the eROSES annual return (“Bilangan Ahli Hadir”), so Minit cannot treat zero as checked. Add names below — or tell Minit that the notes simply do not record attendance."
+              bm="Bilangan ini masuk ke penyata tahunan eROSES (“Bilangan Ahli Hadir”), jadi MinitAI tidak boleh menganggap sifar bermakna anda sudah semak. Tambah nama di bawah — atau beritahu MinitAI yang nota mesyuarat memang tidak mencatat kehadiran."
+              zh="这个人数会进 eROSES 年度报告的「出席人数」，所以 MinitAI 不能把「0 个」当成您已经核对好了。请在下面加名字 —— 或者告诉 MinitAI，这份笔记本来就没有记出席。"
+              en="This number goes into the eROSES annual return (“Bilangan Ahli Hadir”), so MinitAI cannot treat zero as checked. Add names below — or tell MinitAI that the notes simply do not record attendance."
             />
           </p>
           <Button
@@ -239,9 +239,9 @@ export function AttendanceReview() {
         <div className="flex flex-wrap items-center gap-3 rounded-md border-2 border-[color:var(--v2-border)] bg-white/60 p-3 dark:bg-white/5">
           <p className="min-w-56 flex-1 text-base">
             <Tri
-              bm="Anda beritahu Minit yang nota ini tidak mencatat kehadiran."
-              zh="您告诉了 Minit：这份笔记没有记出席。"
-              en="You told Minit these notes do not record attendance."
+              bm="Anda beritahu MinitAI yang nota ini tidak mencatat kehadiran."
+              zh="您告诉了 MinitAI：这份笔记没有记出席。"
+              en="You told MinitAI these notes do not record attendance."
             />
           </p>
           <Button variant="outline" onClick={() => setNoAttendeesRecorded(false)}>
@@ -285,9 +285,9 @@ export function AttendanceReview() {
               {batchCount > 0 && batchCount < ordered.needsYou.length && (
                 <p className="text-sm text-muted-foreground">
                   <Tri
-                    bm="Butang itu hanya mengesahkan nama yang Minit sudah baca. Nama yang langsung tidak terbaca (merah) tetap perlu anda isi satu-satu."
-                    zh="那个按钮只会确认 Minit 已经读到的名字。完全读不出来的（红色）还是要您一个一个填。"
-                    en="That button only confirms names Minit did read. Ones it could not read at all (red) still need you, one by one."
+                    bm="Butang itu hanya mengesahkan nama yang MinitAI sudah baca. Nama yang langsung tidak terbaca (merah) tetap perlu anda isi satu-satu."
+                    zh="那个按钮只会确认 MinitAI 已经读到的名字。完全读不出来的（红色）还是要您一个一个填。"
+                    en="That button only confirms names MinitAI did read. Ones it could not read at all (red) still need you, one by one."
                   />
                 </p>
               )}

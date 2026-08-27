@@ -90,9 +90,9 @@ export default async function InboxPage() {
       </h1>
       <p className="mb-1 text-base text-muted-foreground">
         <Tri
-          bm="Setiap gambar yang pernah anda ambil untuk Minit. Buka mana-mana satu untuk melihat tulisan tangan asal di sebalik apa yang Minit baca."
-          zh="您为 Minit 拍过的每一张照片。点开任何一张，就能看到 Minit 所读内容背后的原始手写字。"
-          en="Every photo you have taken for Minit. Open any one to see the original handwriting behind what Minit read."
+          bm="Setiap gambar yang pernah anda ambil untuk MinitAI. Buka mana-mana satu untuk melihat tulisan tangan asal di sebalik apa yang MinitAI baca."
+          zh="您为 MinitAI 拍过的每一张照片。点开任何一张，就能看到 MinitAI 所读内容背后的原始手写字。"
+          en="Every photo you have taken for MinitAI. Open any one to see the original handwriting behind what MinitAI read."
         />
       </p>
       <p className="mb-6 text-sm text-[color:var(--v2-text-soft)]">

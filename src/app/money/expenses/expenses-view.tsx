@@ -339,9 +339,9 @@ export function ExpensesView({ role }: { role: string }) {
       {/* --- record / claim ---------------------------------------------- */}
       {submitter && (
         <PageSection
-          titleBm={mode === "record" ? "Rekod perbelanjaan" : "Hantar tuntutan (claim)"}
-          titleZh={mode === "record" ? "记开支" : "交报销（Claim）"}
-          titleEn={mode === "record" ? "Record spending" : "Submit a claim"}
+          titleBm={mode === "record" ? "Rekod perbelanjaan" : "Tuntut balik wang yang saya bayar dulu"}
+          titleZh={mode === "record" ? "记开支" : "报销：拿回我垫付的钱"}
+          titleEn={mode === "record" ? "Record spending" : "Claim back money I paid out of pocket"}
           summary={
             mode === "record" ? (
               <Tri
@@ -366,21 +366,26 @@ export function ExpensesView({ role }: { role: string }) {
                     variant={mode === "record" ? "default" : "outline"}
                     onClick={() => setMode("record")}
                   >
-                    <Tri bm="Perbelanjaan pertubuhan" zh="社团开支" en="Society spending" />
+                    <Tri bm="Pertubuhan yang bayar" zh="社团付的钱" en="The society paid" />
                   </Button>
                   <Button
                     variant={mode === "claim" ? "default" : "outline"}
                     onClick={() => setMode("claim")}
                   >
-                    <Tri bm="Tuntutan saya sendiri" zh="我自己的报销" en="My own claim" />
+                    <Tri
+                      bm="Saya bayar dulu — tuntut balik"
+                      zh="我垫付的 — 要拿回（报销）"
+                      en="I paid first — claim it back"
+                    />
                   </Button>
                 </div>
-                {/* B-8 (J #9): the difference, in one plain sentence. */}
+                {/* B-8 (J #9) + #6 (launch feedback): the difference, in one
+                    plain sentence — the tabs themselves now SAY who paid. */}
                 <p className="text-sm text-muted-foreground">
                   <Tri
-                    bm="Anda keluarkan wang sendiri untuk pertubuhan dan mahu dituntut balik → “Tuntutan saya sendiri”. Pertubuhan yang bayar terus → “Perbelanjaan pertubuhan”."
-                    zh="帮社团垫了钱、要跟社团拿回来 → 用「我自己的报销」；社团直接付的 → 用「社团开支」。"
-                    en="You paid out of your own pocket and want it back → “My own claim”. The society paid directly → “Society spending”."
+                    bm="Bil dibayar terus dari wang pertubuhan → “Pertubuhan yang bayar”. Anda keluarkan wang poket sendiri dahulu dan mahu pertubuhan bayar balik → “Saya bayar dulu”; bendahari meluluskan, kemudian membayar balik."
+                    zh="账单是社团的钱直接付的 → 选「社团付的钱」。您先用自己的钱垫、之后要社团还您 → 选「我垫付的」；交上去后由财政批准、付还。"
+                    en="The bill was paid straight from the society's money → “The society paid”. You paid out of your own pocket first and want it back → “I paid first”; the treasurer approves, then pays you back."
                   />
                 </p>
               </div>
@@ -420,7 +425,9 @@ export function ExpensesView({ role }: { role: string }) {
             )}
 
             {/* Photo first (the eROSES law): the receipt in the hand beats
-                seven fields. Cost said ON the button. */}
+                seven fields. Cost said ON the button. #19 (J's launch
+                feedback): camera and file picker are TWO doors — suppliers
+                send PDFs, and "photograph" hid the upload path. */}
             <div className="flex flex-wrap items-center gap-3 rounded-sm border bg-muted/20 p-4">
               <label
                 className={`inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-4 py-2 text-base font-medium text-primary-foreground shadow hover:bg-primary/90 ${
@@ -434,7 +441,8 @@ export function ExpensesView({ role }: { role: string }) {
                 )}
                 <input
                   type="file"
-                  accept="image/*,application/pdf"
+                  accept="image/*"
+                  capture="environment"
                   className="hidden"
                   disabled={reading}
                   onChange={(e) => {
@@ -443,6 +451,25 @@ export function ExpensesView({ role }: { role: string }) {
                   }}
                 />
               </label>
+              {!reading && (
+                <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-md border-2 border-[color:var(--v2-border)] px-4 text-base font-medium hover:bg-accent">
+                  📄{" "}
+                  <Tri
+                    bm="Pilih fail (gambar atau PDF · 1 tindakan AI)"
+                    zh="选一个档案（照片或 PDF · 用 1 次 AI 额度）"
+                    en="Choose a file (photo or PDF · 1 AI action)"
+                  />
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    className="hidden"
+                    onChange={(e) => {
+                      void readReceipt(e.target.files?.[0] ?? null);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+              )}
               <span className="text-sm text-muted-foreground">
                 {mode === "claim" ? (
                   /* B-8: a claim WANTS its receipt attached — say so here,

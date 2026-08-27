@@ -171,9 +171,9 @@ export function ChangePasswordRows({ email }: { email: string }) {
         label={<Tri bm="Kata laluan" zh="密码" en="Password" />}
         help={
           <Tri
-            bm="Tukar kata laluan yang anda guna untuk log masuk ke Minit. Anda perlu tahu kata laluan sekarang. Kalau anda terlupa, log keluar dan guna “Terlupa kata laluan?” di skrin log masuk."
-            zh="更改您登入 Minit 用的密码。要先知道现在的密码。如果忘记了，请登出，在登录页用「忘记密码？」。"
-            en="Change the password you use to sign in to Minit. You need to know the current one. If you have forgotten it, sign out and use “Forgot password?” on the sign-in screen."
+            bm="Tukar kata laluan yang anda guna untuk log masuk ke MinitAI. Anda perlu tahu kata laluan sekarang. Kalau anda terlupa, log keluar dan guna “Terlupa kata laluan?” di skrin log masuk."
+            zh="更改您登入 MinitAI 用的密码。要先知道现在的密码。如果忘记了，请登出，在登录页用「忘记密码？」。"
+            en="Change the password you use to sign in to MinitAI. You need to know the current one. If you have forgotten it, sign out and use “Forgot password?” on the sign-in screen."
           />
         }
       >

@@ -41,21 +41,21 @@ export const USER_ERRORS = {
    * it, which is useless to someone who has never opened a settings screen.
    */
   unsupportedImage: {
-    bm: "Minit tidak dapat membaca jenis fail gambar ini. Cara paling mudah: buka gambar itu dalam album telefon, tekan Kongsi → Salin/Simpan sebagai JPEG, kemudian pilih semula. Atau ambil gambar baharu terus dari Minit menggunakan butang kamera.",
-    zh: "Minit 读不了这种格式的图片。最简单的办法：在手机相册里打开这张照片，按「分享」→ 存成／复制成 JPEG，再重新选一次。或者直接在 Minit 里用相机按钮重新拍一张。",
-    en: "Minit cannot read this kind of image file. Easiest fix: open the photo in your phone's album, tap Share → Copy/Save as JPEG, then choose it again. Or just take a fresh photo from inside Minit using the camera button.",
+    bm: "MinitAI tidak dapat membaca jenis fail gambar ini. Cara paling mudah: buka gambar itu dalam album telefon, tekan Kongsi → Salin/Simpan sebagai JPEG, kemudian pilih semula. Atau ambil gambar baharu terus dari MinitAI menggunakan butang kamera.",
+    zh: "MinitAI 读不了这种格式的图片。最简单的办法：在手机相册里打开这张照片，按「分享」→ 存成／复制成 JPEG，再重新选一次。或者直接在 MinitAI 里用相机按钮重新拍一张。",
+    en: "MinitAI cannot read this kind of image file. Easiest fix: open the photo in your phone's album, tap Share → Copy/Save as JPEG, then choose it again. Or just take a fresh photo from inside MinitAI using the camera button.",
   },
 
   unsupportedLedgerFile: {
-    bm: "Minit hanya boleh membaca gambar (JPG, PNG) atau fail PDF di sini. Kalau anda ada gambar dari telefon, ambil semula terus dari Minit menggunakan butang kamera.",
-    zh: "这里只能读图片（JPG、PNG）或 PDF 文件。如果是手机里的照片，最好直接在 Minit 里用相机按钮重新拍一张。",
-    en: "Minit can only read images (JPG, PNG) or PDF files here. If it is a photo from your phone, take a fresh one from inside Minit with the camera button.",
+    bm: "MinitAI hanya boleh membaca gambar (JPG, PNG) atau fail PDF di sini. Kalau anda ada gambar dari telefon, ambil semula terus dari MinitAI menggunakan butang kamera.",
+    zh: "这里只能读图片（JPG、PNG）或 PDF 文件。如果是手机里的照片，最好直接在 MinitAI 里用相机按钮重新拍一张。",
+    en: "MinitAI can only read images (JPG, PNG) or PDF files here. If it is a photo from your phone, take a fresh one from inside MinitAI with the camera button.",
   },
 
   unsupportedEventFile: {
-    bm: "Minit hanya boleh membaca gambar, fail Excel (.xlsx), .csv atau teks di sini. Anda juga boleh taip atau tampal senarai acara ke dalam kotak di atas.",
+    bm: "MinitAI hanya boleh membaca gambar, fail Excel (.xlsx), .csv atau teks di sini. Anda juga boleh taip atau tampal senarai acara ke dalam kotak di atas.",
     zh: "这里只能读图片、Excel 文件（.xlsx）、.csv 或文字。您也可以直接把活动清单打字或贴进上面的框里。",
-    en: "Minit can only read images, Excel files (.xlsx), .csv or text here. You can also type or paste the list of events into the box above.",
+    en: "MinitAI can only read images, Excel files (.xlsx), .csv or text here. You can also type or paste the list of events into the box above.",
   },
 
   /**
@@ -89,9 +89,9 @@ export const USER_ERRORS = {
    * on a path that really did refund.
    */
   aiTimeout: {
-    bm: "AI mengambil masa terlalu lama, jadi Minit berhenti menunggu. Tindakan ini TIDAK ditolak daripada kuota anda — ia sudah dipulangkan. Tunggu seminit dan cuba sekali lagi.",
-    zh: "AI 这次用的时间太长，Minit 停止了等待。这一次不算进您的用量——已经自动退回。请等一分钟再试一次。",
-    en: "The AI took too long, so Minit stopped waiting. This attempt was NOT taken from your quota — it has been returned. Wait a minute and try again.",
+    bm: "AI mengambil masa terlalu lama, jadi MinitAI berhenti menunggu. Tindakan ini TIDAK ditolak daripada kuota anda — ia sudah dipulangkan. Tunggu seminit dan cuba sekali lagi.",
+    zh: "AI 这次用的时间太长，MinitAI 停止了等待。这一次不算进您的用量——已经自动退回。请等一分钟再试一次。",
+    en: "The AI took too long, so MinitAI stopped waiting. This attempt was NOT taken from your quota — it has been returned. Wait a minute and try again.",
   },
 
   /**
@@ -123,9 +123,9 @@ export const USER_ERRORS = {
 
   /** The text road's version of aiCouldNotRead. No camera advice. */
   rosterTextCouldNotRead: {
-    bm: "Minit tidak dapat mengenal pasti sesiapa dalam teks itu. Pastikan setiap orang berada pada baris sendiri, dengan jawatan dan nama pada baris yang sama — contohnya “Setiausaha, Lim Siew Mei”. Anda juga boleh menaipnya sendiri dalam borang di atas.",
-    zh: "Minit 在这段文字里认不出任何一位理事。请让每个人各占一行，职位和姓名写在同一行 —— 例如「秘书, 林小美」。您也可以直接用上面的表格自己打进去。",
-    en: "Minit could not make out anyone in that text. Put each person on their own line with the position and the name together — for example “Setiausaha, Lim Siew Mei”. You can also type them in yourself using the form above.",
+    bm: "MinitAI tidak dapat mengenal pasti sesiapa dalam teks itu. Pastikan setiap orang berada pada baris sendiri, dengan jawatan dan nama pada baris yang sama — contohnya “Setiausaha, Lim Siew Mei”. Anda juga boleh menaipnya sendiri dalam borang di atas.",
+    zh: "MinitAI 在这段文字里认不出任何一位理事。请让每个人各占一行，职位和姓名写在同一行 —— 例如「秘书, 林小美」。您也可以直接用上面的表格自己打进去。",
+    en: "MinitAI could not make out anyone in that text. Put each person on their own line with the position and the name together — for example “Setiausaha, Lim Siew Mei”. You can also type them in yourself using the form above.",
   },
 
   aiCouldNotUnderstandQuestion: {
@@ -136,9 +136,9 @@ export const USER_ERRORS = {
 
   /** Anything unexpected on the server. Never leak the cause. */
   serverError: {
-    bm: "Ada masalah di pihak Minit, bukan pada anda. Tiada apa-apa yang hilang. Tunggu seminit dan cuba sekali lagi.",
-    zh: "是 Minit 这边出了问题，不是您的操作有错，也没有东西丢掉。请等一分钟再试一次。",
-    en: "Something went wrong on Minit's side, not yours. Nothing has been lost. Wait a minute and try again.",
+    bm: "Ada masalah di pihak MinitAI, bukan pada anda. Tiada apa-apa yang hilang. Tunggu seminit dan cuba sekali lagi.",
+    zh: "是 MinitAI 这边出了问题，不是您的操作有错，也没有东西丢掉。请等一分钟再试一次。",
+    en: "Something went wrong on MinitAI's side, not yours. Nothing has been lost. Wait a minute and try again.",
   },
 
   downloadFailed: {
@@ -166,9 +166,9 @@ export const USER_ERRORS = {
    * "wait a minute and try again" would have them waiting forever.
    */
   databaseBehind: {
-    bm: "Jenis mesyuarat ini belum dibenarkan oleh pangkalan data. Minit sudah bersedia, cuma kemas kini pangkalan data (20260820000000) belum dijalankan. Beritahu orang yang menguruskan sistem — kerja anda tidak hilang; simpan sebagai Mesyuarat Jawatankuasa buat sementara jika perlu.",
-    zh: "资料库还不接受这个会议类型。Minit 这边已经准备好了，只差那支资料库更新（20260820000000）还没有跑。请告诉负责系统的人 —— 您的东西没有丢；真的急的话可以先选「理事会议」保存。",
-    en: "The database does not allow this meeting type yet. Minit is ready; the database update (20260820000000) has not been run. Tell whoever looks after the system — nothing you typed has been lost, and you can save it as a Committee Meeting for now if you need to.",
+    bm: "Jenis mesyuarat ini belum dibenarkan oleh pangkalan data. MinitAI sudah bersedia, cuma kemas kini pangkalan data (20260820000000) belum dijalankan. Beritahu orang yang menguruskan sistem — kerja anda tidak hilang; simpan sebagai Mesyuarat Jawatankuasa buat sementara jika perlu.",
+    zh: "资料库还不接受这个会议类型。MinitAI 这边已经准备好了，只差那支资料库更新（20260820000000）还没有跑。请告诉负责系统的人 —— 您的东西没有丢；真的急的话可以先选「理事会议」保存。",
+    en: "The database does not allow this meeting type yet. MinitAI is ready; the database update (20260820000000) has not been run. Tell whoever looks after the system — nothing you typed has been lost, and you can save it as a Committee Meeting for now if you need to.",
   },
 } satisfies Record<string, UserError>;
 
@@ -220,16 +220,16 @@ export function inputProblemError(fieldKey: string): UserError {
   const hint = FIELD_HINT[fieldKey];
   if (!label) {
     return {
-      bm: "Ada satu maklumat di langkah 2 yang Minit tidak dapat terima. Buka langkah 2, semak setiap medan sekali lagi, dan betulkan yang bertanda merah atau kuning.",
-      zh: "第 2 步里有一项 Minit 收不下。请打开第 2 步，把每一格再看一次，红色和黄色的那几格改一改。",
+      bm: "Ada satu maklumat di langkah 2 yang MinitAI tidak dapat terima. Buka langkah 2, semak setiap medan sekali lagi, dan betulkan yang bertanda merah atau kuning.",
+      zh: "第 2 步里有一项 MinitAI 收不下。请打开第 2 步，把每一格再看一次，红色和黄色的那几格改一改。",
       en: "One of the entries in step 2 could not be accepted. Open step 2, look through the fields again, and correct the ones marked red or amber.",
     };
   }
   const tail = (k: keyof UserError) => (hint ? ` ${hint[k]}` : "");
   return {
-    bm: `Minit tidak dapat menerima apa yang ditulis dalam “${label.bm}”.${tail("bm")}`,
-    zh: `「${label.zh}」这一格填的内容，Minit 收不下。${tail("zh")}`,
-    en: `Minit could not accept what is in “${label.en}”.${tail("en")}`,
+    bm: `MinitAI tidak dapat menerima apa yang ditulis dalam “${label.bm}”.${tail("bm")}`,
+    zh: `「${label.zh}」这一格填的内容，MinitAI 收不下。${tail("zh")}`,
+    en: `MinitAI could not accept what is in “${label.en}”.${tail("en")}`,
   };
 }
 
@@ -244,8 +244,8 @@ export function inputProblemError(fieldKey: string): UserError {
  */
 export function tooManyPagesError(pages: number, limit: number): UserError {
   return {
-    bm: `Fail ini ada ${pages} muka surat. Minit membaca sehingga ${limit} muka surat sekali baca, supaya satu bacaan tidak menghabiskan kuota AI anda. Cara paling mudah: ambil gambar muka surat yang anda perlukan sahaja, atau pecahkan fail ini kepada beberapa bahagian dan hantar satu demi satu.`,
-    zh: `这个文件有 ${pages} 页。Minit 一次最多读 ${limit} 页，这样一次读取才不会用掉您大部分的 AI 用量。最简单的办法：只拍您需要的那几页，或者把文件分成几份，一份一份地传。`,
-    en: `This file has ${pages} pages. Minit reads up to ${limit} pages at a time, so that one read cannot use up your AI quota. Easiest fix: photograph only the pages you need, or split the file into parts and send them one at a time.`,
+    bm: `Fail ini ada ${pages} muka surat. MinitAI membaca sehingga ${limit} muka surat sekali baca, supaya satu bacaan tidak menghabiskan kuota AI anda. Cara paling mudah: ambil gambar muka surat yang anda perlukan sahaja, atau pecahkan fail ini kepada beberapa bahagian dan hantar satu demi satu.`,
+    zh: `这个文件有 ${pages} 页。MinitAI 一次最多读 ${limit} 页，这样一次读取才不会用掉您大部分的 AI 用量。最简单的办法：只拍您需要的那几页，或者把文件分成几份，一份一份地传。`,
+    en: `This file has ${pages} pages. MinitAI reads up to ${limit} pages at a time, so that one read cannot use up your AI quota. Easiest fix: photograph only the pages you need, or split the file into parts and send them one at a time.`,
   };
 }

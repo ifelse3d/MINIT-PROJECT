@@ -99,24 +99,24 @@ export function MinutesDocument() {
   /** Minit must not write an official document from unconfirmed facts. */
   const notReady = nothingYet ? (
     <Tri
-      bm="Ambil gambar nota mesyuarat dahulu. Minit tidak menulis dokumen rasmi daripada halaman yang kosong."
-      zh="请先拍下会议笔记。空白的内容，Minit 不会拿去写正式文件。"
-      en="Take a photo of the notes first. Minit does not write an official document from an empty page."
+      bm="Ambil gambar nota mesyuarat dahulu. MinitAI tidak menulis dokumen rasmi daripada halaman yang kosong."
+      zh="请先拍下会议笔记。空白的内容，MinitAI 不会拿去写正式文件。"
+      en="Take a photo of the notes first. MinitAI does not write an official document from an empty page."
     />
   ) : !allReviewed ? (
     // D-4: "still to be CHECKED" is review language. Somebody typing has
     // nothing to check — they have blanks to fill.
     typedByHand ? (
       <Tri
-        bm={`Masih ada ${outstanding} perkara belum diisi. Minit tidak akan menulis dokumen rasmi daripada borang yang belum lengkap.`}
-        zh={`还有 ${outstanding} 项没填。还没填完的内容，Minit 不会拿去写正式文件。`}
-        en={`${outstanding} item(s) still to fill in. Minit will not write an official document from an unfinished form.`}
+        bm={`Masih ada ${outstanding} perkara belum diisi. MinitAI tidak akan menulis dokumen rasmi daripada borang yang belum lengkap.`}
+        zh={`还有 ${outstanding} 项没填。还没填完的内容，MinitAI 不会拿去写正式文件。`}
+        en={`${outstanding} item(s) still to fill in. MinitAI will not write an official document from an unfinished form.`}
       />
     ) : (
       <Tri
-        bm={`Masih ada ${outstanding} perkara untuk disemak. Minit tidak akan menulis dokumen rasmi daripada maklumat yang belum anda sahkan.`}
-        zh={`还有 ${outstanding} 项要核对。您还没确认的内容，Minit 不会拿去写正式文件。`}
-        en={`${outstanding} item(s) still need checking. Minit will not write an official document from anything you have not confirmed.`}
+        bm={`Masih ada ${outstanding} perkara untuk disemak. MinitAI tidak akan menulis dokumen rasmi daripada maklumat yang belum anda sahkan.`}
+        zh={`还有 ${outstanding} 项要核对。您还没确认的内容，MinitAI 不会拿去写正式文件。`}
+        en={`${outstanding} item(s) still need checking. MinitAI will not write an official document from anything you have not confirmed.`}
       />
     )
   ) : null;
@@ -130,9 +130,9 @@ export function MinutesDocument() {
         titleEn="The finished minutes (in Malay)"
         summary={
           <Tri
-            bm="Minit menulis dokumen rasmi dalam Bahasa Malaysia daripada perkara yang anda sahkan. Baca sekali, kemudian simpan."
-            zh="Minit 会用您确认过的内容，写成马来文的正式文件。看一遍，然后保存。"
-            en="Minit writes the official Malay document from what you confirmed. Read it once, then save."
+            bm="MinitAI menulis dokumen rasmi dalam Bahasa Malaysia daripada perkara yang anda sahkan. Baca sekali, kemudian simpan."
+            zh="MinitAI 会用您确认过的内容，写成马来文的正式文件。看一遍，然后保存。"
+            en="MinitAI writes the official Malay document from what you confirmed. Read it once, then save."
           />
         }
       >
@@ -154,15 +154,15 @@ export function MinutesDocument() {
           <p className="text-base text-muted-foreground">
             {aiDraft ? (
               <Tri
-                bm="Minit telah menyusun perkara yang anda sahkan menjadi dokumen rasmi dalam Bahasa Malaysia. Sila baca sekali sebelum simpan."
-                zh="Minit 已经把您确认的内容整理成马来文的正式文件。保存前请看一遍。"
-                en="Minit has organised what you confirmed into the formal Malay document. Please read it once before saving."
+                bm="MinitAI telah menyusun perkara yang anda sahkan menjadi dokumen rasmi dalam Bahasa Malaysia. Sila baca sekali sebelum simpan."
+                zh="MinitAI 已经把您确认的内容整理成马来文的正式文件。保存前请看一遍。"
+                en="MinitAI has organised what you confirmed into the formal Malay document. Please read it once before saving."
               />
             ) : allReviewed ? (
               <Tri
-                bm="Ini paparan ringkas — perkara anda mengikut susunan asal nota. Tekan butang di bawah dan Minit akan menyusunnya menjadi dokumen rasmi Bahasa Malaysia."
-                zh="这只是快速预览 —— 内容还是照笔记原本的顺序排。按下面的按钮，Minit 会把它整理成正式的马来文文件。"
-                en="This is the quick preview — your items in the order they were written. Tap the button below and Minit will organise them into the formal Malay document."
+                bm="Ini paparan ringkas — perkara anda mengikut susunan asal nota. Tekan butang di bawah dan MinitAI akan menyusunnya menjadi dokumen rasmi Bahasa Malaysia."
+                zh="这只是快速预览 —— 内容还是照笔记原本的顺序排。按下面的按钮，MinitAI 会把它整理成正式的马来文文件。"
+                en="This is the quick preview — your items in the order they were written. Tap the button below and MinitAI will organise them into the formal Malay document."
               />
             ) : (
               <Tri
@@ -215,17 +215,17 @@ export function MinutesDocument() {
                 >
                   {draftBusy ? (
                     <Tri
-                      bm="Minit sedang menulis…"
-                      zh="Minit 正在写…"
-                      en="Minit is writing…"
+                      bm="MinitAI sedang menulis…"
+                      zh="MinitAI 正在写…"
+                      en="MinitAI is writing…"
                     />
                   ) : aiDraft ? (
                     <Tri bm="Tulis semula" zh="重写一次" en="Write it again" />
                   ) : (
                     <Tri
-                      bm="✍️ Minta Minit tulis dokumen rasmi"
-                      zh="✍️ 让 Minit 写成正式记录"
-                      en="✍️ Have Minit write the official document"
+                      bm="✍️ Minta MinitAI tulis dokumen rasmi"
+                      zh="✍️ 让 MinitAI 写成正式记录"
+                      en="✍️ Have MinitAI write the official document"
                     />
                   )}
                 </Button>
@@ -275,9 +275,9 @@ export function MinutesDocument() {
               />
               <p className="text-sm text-muted-foreground">
                 <Tri
-                  bm="Baris tajuk dan baris audit sentiasa ditulis semula oleh Minit semasa menyimpan, jadi nama pertubuhan dan nama pengesah tidak boleh salah."
-                  zh="抬头那一行和最下面的审计行，保存时 Minit 一定会重写一次 —— 机构名和确认人不会写错。"
-                  en="The letterhead and the audit line are always rewritten by Minit when you save, so the organisation and the confirming name cannot be wrong."
+                  bm="Baris tajuk dan baris audit sentiasa ditulis semula oleh MinitAI semasa menyimpan, jadi nama pertubuhan dan nama pengesah tidak boleh salah."
+                  zh="抬头那一行和最下面的审计行，保存时 MinitAI 一定会重写一次 —— 机构名和确认人不会写错。"
+                  en="The letterhead and the audit line are always rewritten by MinitAI when you save, so the organisation and the confirming name cannot be wrong."
                 />
               </p>
               {edited !== null && (
@@ -335,7 +335,7 @@ export function MinutesDocument() {
                 <div className="flex flex-wrap items-center gap-2">
                   <Button size="lg" onClick={writeWithAi} disabled={draftBusy}>
                     {draftBusy ? (
-                      <Tri bm="Minit sedang menulis…" zh="Minit 正在写…" en="Minit is writing…" />
+                      <Tri bm="MinitAI sedang menulis…" zh="MinitAI 正在写…" en="MinitAI is writing…" />
                     ) : (
                       <Tri
                         bm="✍️ Biar AI tulis versi BM (guna kuota AI)"
@@ -547,9 +547,9 @@ export function MinutesDocument() {
         titleEn="Events mentioned in these minutes"
         summary={
           <Tri
-            bm="Kalau mesyuarat menyebut tarikh akan datang, Minit boleh masukkannya ke kalendar untuk anda. Pilihan sahaja."
-            zh="如果会议里提到将来的日期，Minit 可以帮您加进日历。这一步可以不做。"
-            en="If the meeting mentioned a future date, Minit can put it in your calendar. Optional."
+            bm="Kalau mesyuarat menyebut tarikh akan datang, MinitAI boleh masukkannya ke kalendar untuk anda. Pilihan sahaja."
+            zh="如果会议里提到将来的日期，MinitAI 可以帮您加进日历。这一步可以不做。"
+            en="If the meeting mentioned a future date, MinitAI can put it in your calendar. Optional."
           />
         }
       >

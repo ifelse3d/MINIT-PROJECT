@@ -2,33 +2,56 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { Tri } from "@/components/language-provider";
+import { BRAND_NAME } from "@/lib/brand";
 import { SETTINGS_SUBNAV, isActivePath } from "@/components/nav-items";
 import { cn } from "@/components/v3/surfaces";
 
 // ---------------------------------------------------------------------------
-// The settings sub-sidebar (violet redesign §7.3): a 240px second column on
-// ≥1024px, a horizontally scrolling tab strip below. Active item = tint +
-// violet (NO edge bar — that belongs to the main rail; keeping it exclusive
-// is what makes the two nav levels readable as different levels). The one
-// exception: Danger zone's active colour is red on a red tint.
+// The settings sub-sidebar (violet redesign §7.3; reshaped 2026-08-27 evening
+// for J's launch feedback #12): inside /settings the MAIN rail is hidden by
+// the shell, so this 240px column is the ONLY sidebar. Its first row is the
+// way back to the app. On <1024px it stays a horizontal tab strip.
+//
+// #11: `showSystem` (decided server-side in layout.tsx from manage_org) hides
+// the System check entry from ordinary members — /health itself keeps its own
+// server-side gate whatever this renders.
 // ---------------------------------------------------------------------------
 
-export function SettingsNav() {
+export function SettingsNav({ showSystem }: { showSystem: boolean }) {
   const pathname = usePathname() ?? "/settings";
+  const groups = SETTINGS_SUBNAV.map((group) => ({
+    ...group,
+    children: group.children.filter(
+      (item) => showSystem || item.href !== "/settings/system",
+    ),
+  })).filter((group) => group.children.length > 0);
 
   return (
     <>
-      {/* ≥1024px: the second column. */}
+      {/* ≥1024px: the one settings column. */}
       <nav
         aria-label="Settings"
         className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-[var(--subnav-w)] shrink-0 overflow-y-auto border-r border-[color:var(--v2-border)] bg-[color:var(--v2-card)] px-3 pb-6 lg:block"
       >
-        <p className="px-3 pb-2 pt-5 text-lg font-semibold">
+        {/* #12: the way back — the main rail is hidden inside settings. */}
+        <Link
+          href="/"
+          className="mt-3 flex min-h-9 items-center gap-2.5 rounded-sm px-3 text-base text-[color:var(--v2-text)] transition-colors hover:bg-[color:var(--v2-card-nested)]"
+        >
+          <ArrowLeft className="h-4 w-4 shrink-0" strokeWidth={2} />
+          <Tri
+            bm={`Kembali ke ${BRAND_NAME}`}
+            zh={`返回 ${BRAND_NAME}`}
+            en={`Back to ${BRAND_NAME}`}
+          />
+        </Link>
+        <p className="px-3 pb-2 pt-3 text-lg font-semibold">
           <Tri bm="Tetapan" zh="设置" en="Settings" />
         </p>
         <div className="mb-2 border-t border-[color:var(--v2-border)]" />
-        {SETTINGS_SUBNAV.map((group) => (
+        {groups.map((group) => (
           <div key={group.id} className="mb-2">
             <p className="px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-[color:var(--v2-text-soft)]">
               <Tri bm={group.bm} zh={group.zh} en={group.en} />
@@ -68,7 +91,7 @@ export function SettingsNav() {
         aria-label="Settings"
         className="v2-scroll sticky top-14 z-30 -mx-4 flex gap-1 overflow-x-auto border-b border-[color:var(--v2-border)] bg-[color:var(--v2-card)] px-4 py-2 sm:-mx-6 sm:px-6 lg:hidden"
       >
-        {SETTINGS_SUBNAV.flatMap((g) => g.children).map((item) => {
+        {groups.flatMap((g) => g.children).map((item) => {
           const active = isActivePath(pathname, item.href, item.exact);
           const danger = item.href === "/settings/danger";
           return (

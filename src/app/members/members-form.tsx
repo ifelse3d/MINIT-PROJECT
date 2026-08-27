@@ -282,9 +282,9 @@ export function ImportCommittee() {
                   the promise that matters: you will be told which lines. */}
               <p className="text-sm text-muted-foreground">
                 <Tri
-                  bm="Atau tampal terus: satu orang satu baris, jawatan dahulu, kemudian nama — kalau ada baris yang tidak difahami, Minit akan beritahu yang mana satu."
-                  zh="或者直接贴：一行一个人，先职位后姓名 —— 看不懂的行，Minit 会告诉您是哪几行。"
-                  en="Or paste it straight in: one person per line, position first, then name — if any line is not understood, Minit will tell you which."
+                  bm="Atau tampal terus: satu orang satu baris, jawatan dahulu, kemudian nama — kalau ada baris yang tidak difahami, MinitAI akan beritahu yang mana satu."
+                  zh="或者直接贴：一行一个人，先职位后姓名 —— 看不懂的行，MinitAI 会告诉您是哪几行。"
+                  en="Or paste it straight in: one person per line, position first, then name — if any line is not understood, MinitAI will tell you which."
                 />
               </p>
               <pre className="rounded-sm bg-black/5 p-3 text-sm dark:bg-white/10">
@@ -314,17 +314,17 @@ Setiausaha, 林小美
               {aiBusy && (
                 <p className="text-base">
                   <Tri
-                    bm="Minit sedang membacanya…"
-                    zh="Minit 正在读…"
-                    en="Minit is reading it…"
+                    bm="MinitAI sedang membacanya…"
+                    zh="MinitAI 正在读…"
+                    en="MinitAI is reading it…"
                   />
                 </p>
               )}
               <p className="text-sm text-muted-foreground">
                 <Tri
-                  bm="Minit menaip apa yang dilihatnya ke dalam kotak di bawah. Ia TIDAK menyimpan apa-apa — baca dahulu, betulkan, kemudian tekan Import."
-                  zh="Minit 会把它读到的打进下面那个框。它不会自己保存 —— 您先看一遍、改好，再按「加进名单」。"
-                  en="Minit types what it sees into the box below. It saves nothing by itself — read it, fix it, then press Import."
+                  bm="MinitAI menaip apa yang dilihatnya ke dalam kotak di bawah. Ia TIDAK menyimpan apa-apa — baca dahulu, betulkan, kemudian tekan Import."
+                  zh="MinitAI 会把它读到的打进下面那个框。它不会自己保存 —— 您先看一遍、改好，再按「加进名单」。"
+                  en="MinitAI types what it sees into the box below. It saves nothing by itself — read it, fix it, then press Import."
                 />
               </p>
               {aiError && <p className={errorCls}>{aiError}</p>}
@@ -397,23 +397,23 @@ Setiausaha, 林小美
                     >
                       {aiBusy ? (
                         <Tri
-                          bm="Minit sedang membacanya…"
-                          zh="Minit 正在读…"
-                          en="Minit is reading it…"
+                          bm="MinitAI sedang membacanya…"
+                          zh="MinitAI 正在读…"
+                          en="MinitAI is reading it…"
                         />
                       ) : (
                         <Tri
-                          bm="Tak difahami? Biar Minit yang baca · guna kuota AI"
-                          zh="看不懂？让 Minit 帮你读 · 会用 AI 用量"
-                          en="Not understood? Let Minit read it · uses the AI allowance"
+                          bm="Tak difahami? Biar MinitAI yang baca · guna kuota AI"
+                          zh="看不懂？让 MinitAI 帮你读 · 会用 AI 用量"
+                          en="Not understood? Let MinitAI read it · uses the AI allowance"
                         />
                       )}
                     </Button>
                     <p className="text-sm text-muted-foreground">
                       <Tri
-                        bm="Minit akan menaip semula apa yang difahaminya ke dalam kotak yang sama. Ia tidak menyimpan apa-apa — baca dahulu, betulkan, kemudian tekan “Import senarai”."
-                        zh="Minit 会把它读懂的内容重新打进上面同一个框。它不会自己保存 —— 您先看一遍、改好，再按「加进名单」。"
-                        en="Minit retypes what it makes out into the same box above. It saves nothing by itself — read it, fix it, then press “Import the list”."
+                        bm="MinitAI akan menaip semula apa yang difahaminya ke dalam kotak yang sama. Ia tidak menyimpan apa-apa — baca dahulu, betulkan, kemudian tekan “Import senarai”."
+                        zh="MinitAI 会把它读懂的内容重新打进上面同一个框。它不会自己保存 —— 您先看一遍、改好，再按「加进名单」。"
+                        en="MinitAI retypes what it makes out into the same box above. It saves nothing by itself — read it, fix it, then press “Import the list”."
                       />
                     </p>
                   </>

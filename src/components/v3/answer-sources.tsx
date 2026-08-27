@@ -76,7 +76,7 @@ export function AnswerSources({
       {known.length > 0 && (
         <>
           <p className="text-sm font-semibold text-[color:var(--v2-text-soft)]">
-            <Tri bm="Minit menyemak" zh="Minit 查了" en="Minit checked" />
+            <Tri bm="MinitAI menyemak" zh="MinitAI 查了" en="MinitAI checked" />
           </p>
           <ul className="mb-1 flex flex-wrap gap-x-3 gap-y-1">
             {known.map((name) => {

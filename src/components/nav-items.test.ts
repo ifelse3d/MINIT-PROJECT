@@ -31,14 +31,16 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
     expect(PRIMARY_NAV.filter((e) => e.kind === "group")).toHaveLength(3);
   });
 
-  // SIX rail entries (violet redesign §3.2, 8/27 下午): Home + five groups.
-  // The settings family left the scrolling rail — the rail pins ONE Settings
-  // entry at its bottom and SETTINGS_NAV owns those pages (asserted below).
-  it("keeps the desktop rail to Home + five groups, as J listed them", () => {
-    expect(SIDEBAR_NAV).toHaveLength(6);
+  // SEVEN rail entries (J's launch feedback #7, 2026-08-27 evening): Home,
+  // the Calendar as its own top-level row (activities, not a filing chore),
+  // then five groups. The settings family left the scrolling rail — the rail
+  // pins ONE Settings entry at its bottom and SETTINGS_NAV owns those pages
+  // (asserted below).
+  it("keeps the desktop rail to Home + Calendar + five groups", () => {
+    expect(SIDEBAR_NAV).toHaveLength(7);
     expect(SIDEBAR_NAV[0].kind).toBe("item");
     const items = SIDEBAR_NAV.flatMap((e) => (e.kind === "item" ? [e.item.href] : []));
-    expect(items).toEqual(["/"]);
+    expect(items).toEqual(["/", "/calendar"]);
     const ids = SIDEBAR_NAV.flatMap((e) => (e.kind === "group" ? [e.id] : []));
     expect(ids).toEqual([
       "minutes",
@@ -66,10 +68,9 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
       "/money/einvois",
       "/money/history",
     ]);
-    // 申报: 日历与死线 · eROSES · 常年大会文件包 (§1-9: the calendar came
-    // back into this group, first row — deadlines ARE filing dates).
+    // 申报: eROSES · 常年大会文件包. (Launch feedback #7 overturned §1-9:
+    // the calendar is the society's own activities, a top-level row.)
     expect(byId("filings").children.map((c) => c.href)).toEqual([
-      "/calendar",
       "/filings",
       "/agm-pack",
     ]);

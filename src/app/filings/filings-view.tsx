@@ -135,9 +135,9 @@ export function FilingsView({
         <p className="rounded-md border-2 border-[color:var(--v2-border)] bg-[color:var(--v2-card)] p-4 text-base">
           ℹ️{" "}
           <Tri
-            bm="Pertubuhan ini didaftarkan dalam Minit sebagai jawatankuasa dalaman/sementara — ia tidak memfailkan Penyata Tahunan eROSES. Bahagian di bawah kekal untuk rujukan."
-            zh="这个机构在 Minit 里登记为内部／临时委员会 —— 不需要向 eROSES 提交年度呈报。下面的内容仅供参考。"
-            en="This organisation is set up in Minit as an internal/ad-hoc committee — it does not file an eROSES Annual Return. The sections below stay for reference."
+            bm="Pertubuhan ini didaftarkan dalam MinitAI sebagai jawatankuasa dalaman/sementara — ia tidak memfailkan Penyata Tahunan eROSES. Bahagian di bawah kekal untuk rujukan."
+            zh="这个机构在 MinitAI 里登记为内部／临时委员会 —— 不需要向 eROSES 提交年度呈报。下面的内容仅供参考。"
+            en="This organisation is set up in MinitAI as an internal/ad-hoc committee — it does not file an eROSES Annual Return. The sections below stay for reference."
           />
         </p>
       )}

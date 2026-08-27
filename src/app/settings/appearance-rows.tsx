@@ -133,9 +133,9 @@ export function AppearanceRows() {
         label={<Tri bm="Bahasa" zh="语言" en="Language" />}
         help={
           <Tri
-            bm="Minit dipaparkan dalam SATU bahasa yang anda pilih. Dokumen rasmi yang dijana tetap dalam BM."
-            zh="Minit 会以您选的「一种」语言显示。生成的官方文件仍然是马来文。"
-            en="Minit shows ONE language of your choice. Generated official documents remain in BM."
+            bm="MinitAI dipaparkan dalam SATU bahasa yang anda pilih. Dokumen rasmi yang dijana tetap dalam BM."
+            zh="MinitAI 会以您选的「一种」语言显示。生成的官方文件仍然是马来文。"
+            en="MinitAI shows ONE language of your choice. Generated official documents remain in BM."
           />
         }
       >

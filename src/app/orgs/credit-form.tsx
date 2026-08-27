@@ -57,9 +57,9 @@ export function CreditForm({
       {runningLow && extraCredits === 0 && (
         <span className="text-xs text-muted-foreground">
           <Tri
-            bm="Nak tambah kredit? Hubungi Minit."
-            zh="需要增加额度，请联络 Minit。"
-            en="Need more? Contact Minit."
+            bm="Nak tambah kredit? Hubungi MinitAI."
+            zh="需要增加额度，请联络 MinitAI。"
+            en="Need more? Contact MinitAI."
           />
         </span>
       )}

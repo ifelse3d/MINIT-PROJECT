@@ -214,9 +214,9 @@ export function FieldRow({
                   setProblem(
                     editor.kind === "date" ? (
                       <Tri
-                        bm="Minit tidak faham tarikh itu. Tulis hari/bulan/tahun — contohnya 2/2/2026 untuk 2 Februari 2026."
-                        zh="Minit 看不懂这个日期。请写「日/月/年」—— 例如 2/2/2026 就是 2026 年 2 月 2 日。"
-                        en="Minit could not read that date. Write day/month/year — 2/2/2026 means 2 February 2026."
+                        bm="MinitAI tidak faham tarikh itu. Tulis hari/bulan/tahun — contohnya 2/2/2026 untuk 2 Februari 2026."
+                        zh="MinitAI 看不懂这个日期。请写「日/月/年」—— 例如 2/2/2026 就是 2026 年 2 月 2 日。"
+                        en="MinitAI could not read that date. Write day/month/year — 2/2/2026 means 2 February 2026."
                       />
                     ) : (
                       <Tri
@@ -353,7 +353,7 @@ export function FieldRow({
         </figure>
       )}
 
-      {/* What Minit understood, in words, BEFORE it is saved. 2/2/2026 and
+      {/* What MinitAI understood, in words, BEFORE it is saved. 2/2/2026 and
           3/12/2026 are both day-first here (the Malaysian convention) and no
           parser can prove that is what was meant — so the month is spelled out
           where a wrong reading is still one tap from being fixed. */}

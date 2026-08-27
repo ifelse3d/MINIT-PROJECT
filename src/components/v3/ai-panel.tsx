@@ -280,7 +280,7 @@ export function AIPanel({
       {/* Conversation */}
       <div className="v2-scroll mt-4 flex flex-1 flex-col gap-3 overflow-y-auto">
         {turns.length === 0 && (
-          <div className="rounded-md rounded-tl-sm bg-white/60 p-4 text-base leading-relaxed text-[color:var(--v2-text)] ring-1 ring-white/60 dark:bg-white/10 dark:ring-white/10">
+          <div className="rounded-md rounded-tl-sm border border-[color:var(--v2-border)] bg-[color:var(--v2-card-nested)] p-4 text-base leading-relaxed text-[color:var(--v2-text)]">
             {/* A-3 (work order 31): the "I cannot see your records" opener was
                 written BEFORE 2026-08-22, when the assistant got its six
                 lookup tools — it has been able to read the org's confirmed
@@ -305,7 +305,10 @@ export function AIPanel({
           ) : (
             <div
               key={i}
-              className="max-w-[92%] self-start rounded-md rounded-tl-sm bg-white/70 p-4 ring-1 ring-white/60 dark:bg-white/10 dark:ring-white/10"
+              // #1 (J's launch feedback): the reply gets a REAL box — the old
+              // white-on-white ring was invisible in light mode, so answers
+              // looked like loose text while the question had its bubble.
+              className="max-w-[92%] self-start rounded-md rounded-tl-sm border border-[color:var(--v2-border)] bg-[color:var(--v2-card-nested)] p-4"
             >
               <p className="text-base leading-relaxed whitespace-pre-line text-[color:var(--v2-text)]">
                 {turn.text}
@@ -330,7 +333,7 @@ export function AIPanel({
         )}
 
         {busy && (
-          <p className="self-start rounded-md rounded-tl-sm bg-white/50 p-4 text-base text-[color:var(--v2-text-soft)] ring-1 ring-white/50 dark:bg-white/5 dark:ring-white/10">
+          <p className="self-start rounded-md rounded-tl-sm border border-[color:var(--v2-border)] bg-[color:var(--v2-card-nested)] p-4 text-base text-[color:var(--v2-text-soft)]">
             <Tri bm="Sedang berfikir…" zh="想一下…" en="Thinking…" />
           </p>
         )}
@@ -361,7 +364,7 @@ export function AIPanel({
                 key={i}
                 type="button"
                 onClick={() => setQuestion(t(s.bm, s.zh, s.en))}
-                className="min-h-12 rounded-md bg-white/50 px-4 py-3 text-left text-base text-[color:var(--v2-text)] ring-1 ring-white/50 hover:bg-white/70 dark:bg-white/5 dark:ring-white/10 dark:hover:bg-white/10"
+                className="min-h-12 rounded-md border border-[color:var(--v2-border)] bg-[color:var(--v2-card)] px-4 py-3 text-left text-base text-[color:var(--v2-text)] hover:bg-[color:var(--v2-card-nested)]"
               >
                 {t(s.bm, s.zh, s.en)}
               </button>
@@ -414,7 +417,7 @@ export function AIPanel({
       )}
 
       {/* Input */}
-      <div className="mt-3 flex items-end gap-2 rounded-md bg-white/60 p-2 pl-4 ring-1 ring-white/60 dark:bg-white/10 dark:ring-white/10">
+      <div className="mt-3 flex items-end gap-2 rounded-md border border-[color:var(--v2-border)] bg-[color:var(--v2-card)] p-2 pl-4">
         <textarea
           value={question}
           rows={1}

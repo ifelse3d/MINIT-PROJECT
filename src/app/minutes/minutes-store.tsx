@@ -508,9 +508,9 @@ export function MinutesProvider({
         {
           location: t("diisi oleh anda", "由您填写", "entered by you"),
           snippet: t(
-            "sebelum Minit membaca halaman ini",
-            "在 Minit 读这一页之前",
-            "before Minit read this page",
+            "sebelum MinitAI membaca halaman ini",
+            "在 MinitAI 读这一页之前",
+            "before MinitAI read this page",
           ),
         },
       );

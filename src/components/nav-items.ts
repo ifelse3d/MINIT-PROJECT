@@ -105,8 +105,10 @@ export const NAV_ITEMS: NavItem[] = [
   // Stage F: the financial statement — computed, never typed.
   { href: "/money/report", icon: BarChart3, bm: "Penyata kewangan", zh: "财报", en: "Financial statement" },
   { href: "/money/history", icon: ClipboardList, bm: "Sejarah resit", zh: "收据历史", en: "Receipt history" },
-  // Filings & dates.
-  { href: "/calendar", icon: CalendarClock, bm: "Kalendar & tarikh akhir", zh: "日历与死线", en: "Calendar & deadlines" },
+  // The calendar: the society's OWN activities (plus statutory deadlines as
+  // reminders). J's launch feedback #7 (2026-08-27 evening): it is not a
+  // filing tool, so it does not live in the 申报 group.
+  { href: "/calendar", icon: CalendarClock, bm: "Kalendar & peringatan", zh: "日历与提醒", en: "Calendar & reminders" },
   { href: "/filings", icon: FileCheck, bm: "Pemfailan eROSES", zh: "eROSES 申报", en: "eROSES filings" },
   // The organisation's own facts.
   { href: "/constitution", icon: ScrollText, bm: "Perlembagaan", zh: "章程", en: "Constitution", exact: true },
@@ -253,6 +255,11 @@ export const PRIMARY_NAV: NavEntry[] = [
  */
 export const SIDEBAR_NAV: NavEntry[] = [
   { kind: "item", item: byHref("/") },
+  // J's launch feedback #7 (overturns §1-9's "back into 申报"): the calendar
+  // is the society's own activities, not a filing chore — a top-level row.
+  // With the groups now closed-by-default dropdowns (#2), a lone row no
+  // longer clashes with the column.
+  { kind: "item", item: byHref("/calendar") },
   {
     kind: "group",
     id: "minutes",
@@ -284,9 +291,6 @@ export const SIDEBAR_NAV: NavEntry[] = [
       byHref("/money/history"),
     ],
   },
-  // §1-9 (work order 32, 2026-08-27 — J overturned his own 拍板 30): the
-  // lone top-level calendar row sat oddly against a column of groups, and a
-  // deadline IS a filing date. Back into the 申报 group, first row.
   {
     kind: "group",
     id: "filings",
@@ -294,7 +298,7 @@ export const SIDEBAR_NAV: NavEntry[] = [
     bm: "Pemfailan",
     zh: "申报",
     en: "Filings",
-    children: [byHref("/calendar"), byHref("/filings"), byHref("/agm-pack")],
+    children: [byHref("/filings"), byHref("/agm-pack")],
   },
   {
     kind: "group",

@@ -93,9 +93,9 @@ export function ClauseBook({
       <div className="rounded-md border-2 border-dashed p-6 text-base">
         <p className="text-lg font-semibold">
           <Tri
-            bm="Minit belum membaca perlembagaan anda."
-            zh="Minit 还没有读过您的章程。"
-            en="Minit has not read your constitution yet."
+            bm="MinitAI belum membaca perlembagaan anda."
+            zh="MinitAI 还没有读过您的章程。"
+            en="MinitAI has not read your constitution yet."
           />
         </p>
         <p className="mt-2 text-muted-foreground">

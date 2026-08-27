@@ -203,9 +203,9 @@ export default async function HealthPage() {
             </CardTitle>
             <CardDescription>
               <Tri
-                bm="Tiada apa-apa yang salah dengan akaun anda. Halaman ini hanya menunjukkan keadaan pemasangan Minit, dan hanya pentadbir pertubuhan boleh membukanya. Kalau ada sesuatu yang tidak berfungsi, beritahu orang yang menguruskan sistem anda."
-                zh="您的帐号没有任何问题。这一页只是显示 Minit 这套系统本身的状态，只有机构管理员打得开。如果有东西不能用，请告诉负责管理系统的人。"
-                en="There is nothing wrong with your account. This page only shows the state of the Minit installation itself, and only an organisation administrator can open it. If something is not working, tell whoever looks after your system."
+                bm="Tiada apa-apa yang salah dengan akaun anda. Halaman ini hanya menunjukkan keadaan pemasangan MinitAI, dan hanya pentadbir pertubuhan boleh membukanya. Kalau ada sesuatu yang tidak berfungsi, beritahu orang yang menguruskan sistem anda."
+                zh="您的帐号没有任何问题。这一页只是显示 MinitAI 这套系统本身的状态，只有机构管理员打得开。如果有东西不能用，请告诉负责管理系统的人。"
+                en="There is nothing wrong with your account. This page only shows the state of the MinitAI installation itself, and only an organisation administrator can open it. If something is not working, tell whoever looks after your system."
               />
             </CardDescription>
           </CardHeader>

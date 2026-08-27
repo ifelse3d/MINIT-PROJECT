@@ -35,16 +35,16 @@ export function NewOrgBanner() {
       <p className="text-lg font-semibold text-green-900 dark:text-green-100">
         ✓{" "}
         <Tri
-          bm="Siap. Pertubuhan anda sudah didaftarkan dalam Minit."
-          zh="好了。您的机构已经登记在 Minit 里。"
-          en="Done. Your organisation is now set up in Minit."
+          bm="Siap. Pertubuhan anda sudah didaftarkan dalam MinitAI."
+          zh="好了。您的机构已经登记在 MinitAI 里。"
+          en="Done. Your organisation is now set up in MinitAI."
         />
       </p>
       <p className="text-base text-green-900 dark:text-green-100">
         <Tri
-          bm="Kalau perlembagaan anda ada di tangan sekarang, ambil gambar setiap halaman di bawah. Minit membacanya sekali sahaja, dan selepas itu setiap jawapan memetik fasal anda sendiri. Kalau tiada — langkau, ia boleh dibuat bila-bila masa."
-          zh="如果章程现在就在手上，请在下面把每一页拍下来。Minit 只需要读一次，之后每个答案都会引用您自己的条文。如果不在手上 —— 先跳过，随时可以再做。"
-          en="If your constitution is in front of you now, photograph each page below. Minit reads it once, and after that every answer quotes your own clauses. If it is not — skip it, this can be done any time."
+          bm="Kalau perlembagaan anda ada di tangan sekarang, ambil gambar setiap halaman di bawah. MinitAI membacanya sekali sahaja, dan selepas itu setiap jawapan memetik fasal anda sendiri. Kalau tiada — langkau, ia boleh dibuat bila-bila masa."
+          zh="如果章程现在就在手上，请在下面把每一页拍下来。MinitAI 只需要读一次，之后每个答案都会引用您自己的条文。如果不在手上 —— 先跳过，随时可以再做。"
+          en="If your constitution is in front of you now, photograph each page below. MinitAI reads it once, and after that every answer quotes your own clauses. If it is not — skip it, this can be done any time."
         />
       </p>
       {/* R-3 (2026-08-25): the last wizard step — "what do you want to do

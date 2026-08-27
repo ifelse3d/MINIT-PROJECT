@@ -103,11 +103,11 @@ export default async function Home() {
         <WelcomeCard />
       </Suspense>
 
-      {/* 1 — the four task cards: what Minit makes, one tap each (A-1). */}
+      {/* 1 — the four task cards: what MinitAI makes, one tap each (A-1). */}
       <TaskCards />
 
       {/* 2 — THE box: photo / file / typing, mixed; type first, then
-          confirm to send; Minit asks back when unsure. Card ④ focuses it. */}
+          confirm to send; MinitAI asks back when unsure. Card ④ focuses it. */}
       <AskBox
         hasOrg
         initialRemaining={usage?.totalRemaining ?? null}

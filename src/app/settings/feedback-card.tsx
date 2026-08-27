@@ -42,9 +42,9 @@ export function FeedbackCard() {
         </p>
         <p className="text-sm text-muted-foreground">
           <Tri
-            bm="Terus kepada orang yang membina Minit. Percuma — tiada AI terlibat, tiada kuota digunakan."
-            zh="直接送到做 Minit 的人手上。免费 —— 不经 AI、不用额度。"
-            en="Goes straight to the people building Minit. Free — no AI involved, no quota used."
+            bm="Terus kepada orang yang membina MinitAI. Percuma — tiada AI terlibat, tiada kuota digunakan."
+            zh="直接送到做 MinitAI 的人手上。免费 —— 不经 AI、不用额度。"
+            en="Goes straight to the people building MinitAI. Free — no AI involved, no quota used."
           />
         </p>
         <textarea

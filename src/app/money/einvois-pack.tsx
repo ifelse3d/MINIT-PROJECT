@@ -99,9 +99,9 @@ export function EInvoisPack() {
       titleEn="Month-end tax file (e-Invois)"
       summary={
         <Tri
-          bm="Sekali sebulan sahaja. Minit gabungkan semua resit bulan itu jadi SATU fail Excel — anda salin angkanya ke dalam templat rasmi LHDN sebelum muat naik."
-          zh="一个月只需要做一次。Minit 把当月所有收据合并成一个 Excel 文件 —— 您再把里面的数字抄进税务局的官方模板后上传。"
-          en="Once a month only. Minit combines that month's receipts into ONE Excel file — you copy its figures into LHDN's official template before uploading."
+          bm="Sekali sebulan sahaja. MinitAI gabungkan semua resit bulan itu jadi SATU fail Excel — anda salin angkanya ke dalam templat rasmi LHDN sebelum muat naik."
+          zh="一个月只需要做一次。MinitAI 把当月所有收据合并成一个 Excel 文件 —— 您再把里面的数字抄进税务局的官方模板后上传。"
+          en="Once a month only. MinitAI combines that month's receipts into ONE Excel file — you copy its figures into LHDN's official template before uploading."
         />
       }
     >
@@ -115,9 +115,9 @@ export function EInvoisPack() {
             is: download the official Batch Upload template from MyInvois, copy
             these figures into it, and upload THAT. */}
         <Tri
-          bm="Setiap bulan, semua resit bulan itu digabungkan menjadi SATU fail Excel (.xlsx). Muat turun fail itu di sini, kemudian log masuk ke laman MyInvois LHDN (jabatan cukai), muat turun templat rasmi 'Batch Upload' mereka, salin angka daripada fail Minit ke dalam templat itu, dan muat naik templat rasmi tersebut. Minit tidak menghantarnya untuk anda."
-          zh="每个月，Minit 会把当月所有收据合并成一个 Excel 文件（.xlsx）。您在这里下载它，然后登入税务局（LHDN）的 MyInvois 网站，下载他们的官方「Batch Upload」模板，把 Minit 文件里的数字抄进官方模板，再上传那份官方模板。Minit 不会替您送出。"
-          en="Each month all that month's receipts are combined into ONE Excel file (.xlsx). Download it here, then sign in to LHDN's MyInvois site, download their official 'Batch Upload' template, copy the figures from Minit's file into that template, and upload the official one. Minit does not submit it for you."
+          bm="Setiap bulan, semua resit bulan itu digabungkan menjadi SATU fail Excel (.xlsx). Muat turun fail itu di sini, kemudian log masuk ke laman MyInvois LHDN (jabatan cukai), muat turun templat rasmi 'Batch Upload' mereka, salin angka daripada fail MinitAI ke dalam templat itu, dan muat naik templat rasmi tersebut. MinitAI tidak menghantarnya untuk anda."
+          zh="每个月，MinitAI 会把当月所有收据合并成一个 Excel 文件（.xlsx）。您在这里下载它，然后登入税务局（LHDN）的 MyInvois 网站，下载他们的官方「Batch Upload」模板，把 MinitAI 文件里的数字抄进官方模板，再上传那份官方模板。MinitAI 不会替您送出。"
+          en="Each month all that month's receipts are combined into ONE Excel file (.xlsx). Download it here, then sign in to LHDN's MyInvois site, download their official 'Batch Upload' template, copy the figures from MinitAI's file into that template, and upload the official one. MinitAI does not submit it for you."
         />
       </p>
 
@@ -253,9 +253,9 @@ export function EInvoisPack() {
               <li>
                 4️⃣{" "}
                 <Tri
-                  bm="Semak setiap nilai, kemudian muat naik templat rasmi itu. Minit tidak menghantarnya untuk anda."
-                  zh="逐项核对后，上传那份官方模板。Minit 不会替您送出。"
-                  en="Check every value, then upload the official template. Minit does not submit it for you."
+                  bm="Semak setiap nilai, kemudian muat naik templat rasmi itu. MinitAI tidak menghantarnya untuk anda."
+                  zh="逐项核对后，上传那份官方模板。MinitAI 不会替您送出。"
+                  en="Check every value, then upload the official template. MinitAI does not submit it for you."
                 />
               </li>
             </ol>

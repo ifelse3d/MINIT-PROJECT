@@ -261,20 +261,20 @@ export function searchClauses(
 // --- answer / refusal text (deterministic, BM-first) ------------------------
 
 export const QA_DISCLAIMER_BM =
-  "Minit hanya menunjukkan apa yang TERTULIS dalam perlembagaan anda — ini bukan nasihat undang-undang.";
+  "MinitAI hanya menunjukkan apa yang TERTULIS dalam perlembagaan anda — ini bukan nasihat undang-undang.";
 // 2026-07-28 audit: the Chinese variant was missing, so a 中文-only reader got
 // the disclaimer in two languages they may not read.
 export const QA_DISCLAIMER_ZH =
-  "Minit 只会把您章程里「写着的」内容显示出来 —— 这不是法律意见。";
+  "MinitAI 只会把您章程里「写着的」内容显示出来 —— 这不是法律意见。";
 export const QA_DISCLAIMER_EN =
-  "Minit only shows what is WRITTEN in your constitution — this is not legal advice.";
+  "MinitAI only shows what is WRITTEN in your constitution — this is not legal advice.";
 
 /** Polite refusal when no clause supports an answer. Never guesses. */
 export function buildRefusalBm(question: string): string {
   return [
-    `Maaf — perlembagaan anda tidak menyentuh perkara ini, jadi Minit tidak boleh menjawab soalan "${question.trim()}".`,
-    "抱歉——您的章程没有提到这件事，Minit 不能猜测答案。",
-    "Sorry — your constitution does not cover this, so Minit will not guess an answer.",
+    `Maaf — perlembagaan anda tidak menyentuh perkara ini, jadi MinitAI tidak boleh menjawab soalan "${question.trim()}".`,
+    "抱歉——您的章程没有提到这件事，MinitAI 不能猜测答案。",
+    "Sorry — your constitution does not cover this, so MinitAI will not guess an answer.",
     "",
     QA_DISCLAIMER_BM,
     QA_DISCLAIMER_ZH,

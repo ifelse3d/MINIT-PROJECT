@@ -56,9 +56,9 @@ export default async function GlossaryPage() {
         </h1>
         <p className="text-base text-muted-foreground">
           <Tri
-            bm="Ajar Minit sekali — ia membaca lebih tepat dan menulis sama setiap kali."
-            zh="教 Minit 一次 —— 读的时候不容易认错，写出来每次都一样。"
-            en="Teach Minit once — it reads them more accurately and writes them the same way every time."
+            bm="Ajar MinitAI sekali — ia membaca lebih tepat dan menulis sama setiap kali."
+            zh="教 MinitAI 一次 —— 读的时候不容易认错，写出来每次都一样。"
+            en="Teach MinitAI once — it reads them more accurately and writes them the same way every time."
           />
         </p>
       </div>

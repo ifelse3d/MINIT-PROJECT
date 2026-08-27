@@ -90,13 +90,13 @@ const SPEC: Record<
       "第二栏留空 = 保持原字，永远不要翻译。",
       "Leaving the second column EMPTY means: keep the word exactly as written.",
       "",
-      "Isi lajur kedua untuk memberitahu Minit cara ia patut ditulis setiap kali.",
-      "第二栏填了，就是告诉 Minit 每次都要写成那样。",
-      "Fill the second column to tell Minit how it should be written every time.",
+      "Isi lajur kedua untuk memberitahu MinitAI cara ia patut ditulis setiap kali.",
+      "第二栏填了，就是告诉 MinitAI 每次都要写成那样。",
+      "Fill the second column to tell MinitAI how it should be written every time.",
       "",
-      "Lajur ketiga tidak wajib — ia membantu Minit membezakan perkataan seakan.",
-      "第三栏可以不填 —— 填了 Minit 比较不会认错相似的词。",
-      "The third column is optional — it helps Minit tell similar words apart.",
+      "Lajur ketiga tidak wajib — ia membantu MinitAI membezakan perkataan seakan.",
+      "第三栏可以不填 —— 填了 MinitAI 比较不会认错相似的词。",
+      "The third column is optional — it helps MinitAI tell similar words apart.",
     ],
   },
 };
@@ -105,7 +105,7 @@ const SPEC: Record<
 export async function buildTemplateXlsx(kind: TemplateKind): Promise<Buffer> {
   const spec = SPEC[kind];
   const wb = new ExcelJS.Workbook();
-  wb.creator = "Minit";
+  wb.creator = "MinitAI";
 
   const ws = wb.addWorksheet(spec.sheet);
   ws.columns = spec.columns.map((c) => ({ header: c.header, width: c.width }));
@@ -190,6 +190,6 @@ function looksLikeOurHeader(line: string): boolean {
 }
 
 export const TEMPLATE_FILENAME: Record<TemplateKind, string> = {
-  committee: "Minit-Senarai-Jawatankuasa-理事名单.xlsx",
-  glossary: "Minit-Perkataan-Kami-词库.xlsx",
+  committee: "MinitAI-Senarai-Jawatankuasa-理事名单.xlsx",
+  glossary: "MinitAI-Perkataan-Kami-词库.xlsx",
 };

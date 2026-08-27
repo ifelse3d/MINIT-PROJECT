@@ -113,9 +113,9 @@ export default async function OrgsPage() {
       {orgs.length > 0 && (
         <p className="mb-5 max-w-prose text-sm leading-relaxed text-muted-foreground">
           <Tri
-            bm="Di sini semua pertubuhan yang anda ada akses. Satu induk boleh ada cawangan di bawahnya. Minit hanya bekerja pada SATU pertubuhan pada satu masa — yang bertanda “Sedang guna”. Tekan “Tukar ke sini” untuk bertukar."
-            zh="这里是您有权限的所有机构。一个总部底下可以有分会。Minit 一次只在「一个」机构里工作 —— 就是标着「正在用」的那一个。要换，按「切换到这里」。"
-            en="Everything you have access to. A head office can have branches under it. Minit works in ONE organisation at a time — the one marked “In use”. Press “Switch to this” to change it."
+            bm="Di sini semua pertubuhan yang anda ada akses. Satu induk boleh ada cawangan di bawahnya. MinitAI hanya bekerja pada SATU pertubuhan pada satu masa — yang bertanda “Sedang guna”. Tekan “Tukar ke sini” untuk bertukar."
+            zh="这里是您有权限的所有机构。一个总部底下可以有分会。MinitAI 一次只在「一个」机构里工作 —— 就是标着「正在用」的那一个。要换，按「切换到这里」。"
+            en="Everything you have access to. A head office can have branches under it. MinitAI works in ONE organisation at a time — the one marked “In use”. Press “Switch to this” to change it."
           />
         </p>
       )}
@@ -132,9 +132,9 @@ export default async function OrgsPage() {
             </CardTitle>
             <CardDescription>
               <Tri
-                bm="Tekan butang di atas untuk mencipta satu. (Kalau pertubuhan anda sudah ada di Minit, minta orang yang menguruskannya menambah anda — buat masa ini itu perlu dilakukan oleh mereka.)"
+                bm="Tekan butang di atas untuk mencipta satu. (Kalau pertubuhan anda sudah ada di MinitAI, minta orang yang menguruskannya menambah anda — buat masa ini itu perlu dilakukan oleh mereka.)"
                 zh="点上面的按钮创建一个，或请管理员把您加进去"
-                en="Use the button above to create one. (If your organisation is already on Minit, ask whoever manages it to add you — for now that has to be done by them.)"
+                en="Use the button above to create one. (If your organisation is already on MinitAI, ask whoever manages it to add you — for now that has to be done by them.)"
               />
             </CardDescription>
           </CardHeader>

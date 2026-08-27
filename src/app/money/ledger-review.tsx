@@ -144,9 +144,9 @@ export function LedgerReview() {
           <>📄 {ledgerSourceLabel}</>
         ) : (
           <Tri
-            bm="Minit membaca setiap baris. Baris yang kabur perlu anda sahkan sebelum boleh dapat resit."
-            zh="Minit 会把每一行读出来。写得模糊的行要您确认之后才能开收据。"
-            en="Minit reads every line. Smudged lines need your confirmation before they can get a receipt."
+            bm="MinitAI membaca setiap baris. Baris yang kabur perlu anda sahkan sebelum boleh dapat resit."
+            zh="MinitAI 会把每一行读出来。写得模糊的行要您确认之后才能开收据。"
+            en="MinitAI reads every line. Smudged lines need your confirmation before they can get a receipt."
           />
         )
       }

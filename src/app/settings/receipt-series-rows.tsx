@@ -70,19 +70,19 @@ export function ReceiptSeriesRows({
       help={
         <Tri
           bm={
-            "Setiap resit diberi nombor sendiri oleh Minit, mengikut urutan dan tanpa nombor terlewat: " +
+            "Setiap resit diberi nombor sendiri oleh MinitAI, mengikut urutan dan tanpa nombor terlewat: " +
             `${prefix}-${year}-0001, ${prefix}-${year}-0002, dan seterusnya. Nombor bermula semula dari 0001 setiap tahun baharu. ` +
             "Huruf di hadapan itu milik pertubuhan anda — setiap cawangan guna hurufnya sendiri, supaya resit itu sendiri memberitahu siapa yang mengeluarkannya. " +
             "Ia hanya boleh ditetapkan SEKALI, sebelum resit pertama: nombor pada resit yang sudah dikeluarkan tidak berubah, jadi menukarnya kemudian memecahkan siri itu."
           }
           zh={
-            "每一张收据的号码都是 Minit 自己给的，一张接一张，中间不会跳号：" +
+            "每一张收据的号码都是 MinitAI 自己给的，一张接一张，中间不会跳号：" +
             `${prefix}-${year}-0001、${prefix}-${year}-0002，依此类推。每逢新的一年，号码从 0001 重新开始。` +
             "前面那几个字母是你们自己的 —— 每个分会用自己的字母，这样单看收据就知道是谁开的。" +
             "只能设定一次，而且要在开第一张收据之前：已经开出去的收据号码不会跟着改，之后再改就等于把一套号码拆成两套。"
           }
           en={
-            "Minit numbers every receipt itself, in order and with no gaps: " +
+            "MinitAI numbers every receipt itself, in order and with no gaps: " +
             `${prefix}-${year}-0001, ${prefix}-${year}-0002, and so on. The count restarts at 0001 each new year. ` +
             "The letters in front are your organisation's own — each branch uses its own, so the receipt itself says who issued it. " +
             "They can be set ONCE, before the first receipt: numbers already printed do not change, so changing the letters later splits one series into two."

@@ -153,9 +153,9 @@ export async function POST(req: Request) {
       return NextResponse.json({
         intent: "out_of_scope",
         summary: {
-          bm: "Maaf — Minit hanya menjawab soalan tentang rekod, perlembagaan dan halaman aplikasi pertubuhan anda. Minit terpaksa membaca soalan ini untuk mengetahuinya, jadi ia mengambil 1 daripada kuota AI anda. Cuba tanya tentang derma, resit, minit mesyuarat atau perlembagaan.",
-          zh: "抱歉 — Minit 只回答关于贵组织的记录、章程和应用页面的问题。Minit 必须先读过这个问题才知道它超出范围，所以也占用了少量本月 AI 用量。可以试试问捐款、收据、会议记录或章程。",
-          en: "Sorry — Minit only answers questions about your organisation's records, constitution and app pages. Minit had to read the question to know that, so it used 1 of your AI quota. Try asking about donations, receipts, meeting minutes or the constitution.",
+          bm: "Maaf — MinitAI hanya menjawab soalan tentang rekod, perlembagaan dan halaman aplikasi pertubuhan anda. MinitAI terpaksa membaca soalan ini untuk mengetahuinya, jadi ia mengambil 1 daripada kuota AI anda. Cuba tanya tentang derma, resit, minit mesyuarat atau perlembagaan.",
+          zh: "抱歉 — MinitAI 只回答关于贵组织的记录、章程和应用页面的问题。MinitAI 必须先读过这个问题才知道它超出范围，所以也占用了少量本月 AI 用量。可以试试问捐款、收据、会议记录或章程。",
+          en: "Sorry — MinitAI only answers questions about your organisation's records, constitution and app pages. MinitAI had to read the question to know that, so it used 1 of your AI quota. Try asking about donations, receipts, meeting minutes or the constitution.",
         },
         button: null,
         ...(await usageFields(org.id)),

@@ -35,9 +35,9 @@ export default async function GeneralSettingsPage() {
           label={<Tri bm="Pertubuhan aktif" zh="当前机构" en="Active organisation" />}
           help={
             <Tri
-              bm="Nama ini dicetak pada setiap resit, minit dan dokumen rasmi yang Minit hasilkan untuk anda."
-              zh="这个名字会印在 Minit 帮您做的每一张收据、每一份会议记录和每一份官方文件上。"
-              en="This name is printed on every receipt, minutes document and official document Minit makes for you."
+              bm="Nama ini dicetak pada setiap resit, minit dan dokumen rasmi yang MinitAI hasilkan untuk anda."
+              zh="这个名字会印在 MinitAI 帮您做的每一张收据、每一份会议记录和每一份官方文件上。"
+              en="This name is printed on every receipt, minutes document and official document MinitAI makes for you."
             />
           }
         >
@@ -100,9 +100,9 @@ export default async function GeneralSettingsPage() {
                 <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-sm font-medium leading-relaxed text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
                   ⚠{" "}
                   <Tri
-                    bm="Tiada status s.44(6), jadi resit anda TIDAK boleh menyebut pelepasan cukai — dan Minit tidak akan mencetaknya. s.44(6) ialah kelulusan LHDN yang mesti diluluskan dahulu."
-                    zh="没有 s.44(6) 身份，所以您的收据不可以写「可扣税」—— Minit 也不会印上去。s.44(6) 是税务局（LHDN）的批准，必须先获批。"
-                    en="No s.44(6) status, so your receipts must NOT mention tax relief — and Minit will not print it. s.44(6) is an LHDN approval that has to be granted first."
+                    bm="Tiada status s.44(6), jadi resit anda TIDAK boleh menyebut pelepasan cukai — dan MinitAI tidak akan mencetaknya. s.44(6) ialah kelulusan LHDN yang mesti diluluskan dahulu."
+                    zh="没有 s.44(6) 身份，所以您的收据不可以写「可扣税」—— MinitAI 也不会印上去。s.44(6) 是税务局（LHDN）的批准，必须先获批。"
+                    en="No s.44(6) status, so your receipts must NOT mention tax relief — and MinitAI will not print it. s.44(6) is an LHDN approval that has to be granted first."
                   />
                 </p>
               )}

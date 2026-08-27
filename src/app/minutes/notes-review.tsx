@@ -272,9 +272,9 @@ export function NotesReview() {
             />
           ) : (
             <Tri
-              bm="Gambar atau PDF (paling banyak 5 muka surat). Minit membaca tulisan tangan Bahasa Malaysia, Cina dan Inggeris. Atau taip sendiri."
-              zh="照片或 PDF（最多 5 页）。Minit 能读马来文、中文和英文的手写字。也可以自己打字。"
-              en="A photo or a PDF (up to 5 pages). Minit reads handwriting in Malay, Chinese and English. Or type it in yourself."
+              bm="Gambar atau PDF (paling banyak 5 muka surat). MinitAI membaca tulisan tangan Bahasa Malaysia, Cina dan Inggeris. Atau taip sendiri."
+              zh="照片或 PDF（最多 5 页）。MinitAI 能读马来文、中文和英文的手写字。也可以自己打字。"
+              en="A photo or a PDF (up to 5 pages). MinitAI reads handwriting in Malay, Chinese and English. Or type it in yourself."
             />
           )
         }
@@ -341,7 +341,7 @@ export function NotesReview() {
               />
             </label>
           )}
-          {/* J's UX list N1: Minit only took photos. Typing costs no credit, no
+          {/* J's UX list N1: MinitAI only took photos. Typing costs no credit, no
               upload and no model — and it is the answer when the photo will not
               read, when the notes are already on a laptop, or when four people
               met in a kopitiam and nobody wrote anything down. */}
@@ -391,9 +391,9 @@ export function NotesReview() {
             PDF workaround as the second half of the sentence. */}
         <p className="text-sm text-muted-foreground">
           <Tri
-            bm="Fail Word/Excel: masukkannya ke dalam kotak di halaman Utama — Minit membacanya terus. Di sini, sila simpan sebagai PDF dahulu (telefon: Kongsi → Cetak → Simpan sebagai PDF)."
-            zh="Word/Excel 档：放进主页的框，Minit 可以直接读；在这一页则请先另存为 PDF（手机：分享 → 列印 → 存成 PDF）。"
-            en="Word/Excel files: drop them in the Home page box — Minit reads them directly. Here, save as PDF first (on a phone: Share → Print → Save as PDF)."
+            bm="Fail Word/Excel: masukkannya ke dalam kotak di halaman Utama — MinitAI membacanya terus. Di sini, sila simpan sebagai PDF dahulu (telefon: Kongsi → Cetak → Simpan sebagai PDF)."
+            zh="Word/Excel 档：放进主页的框，MinitAI 可以直接读；在这一页则请先另存为 PDF（手机：分享 → 列印 → 存成 PDF）。"
+            en="Word/Excel files: drop them in the Home page box — MinitAI reads them directly. Here, save as PDF first (on a phone: Share → Print → Save as PDF)."
           />
         </p>
         {/* The step between choosing a file and spending a credit on it. */}
@@ -517,7 +517,7 @@ export function NotesReview() {
 
           D-4 (2026-08-25, J #6): NOT for typing mode. Somebody who chose
           "type it in" was greeted by an empty DRAF document and a red badge
-          counting things "Minit could not read" — Minit had read nothing,
+          counting things "MinitAI could not read" — MinitAI had read nothing,
           there was nothing to preview, and the form was below the fold. In
           typing mode this section renders AFTER the fill-in form, and only
           once something has actually been typed. The photo flow is unchanged.
@@ -526,9 +526,9 @@ export function NotesReview() {
 
       <PageSection
         step={2}
-        titleBm={typedByHand ? "Isi butiran mesyuarat" : "Semak apa yang Minit baca"}
-        titleZh={typedByHand ? "填写会议内容" : "核对 Minit 读到的内容"}
-        titleEn={typedByHand ? "Fill in the meeting" : "Check what Minit read"}
+        titleBm={typedByHand ? "Isi butiran mesyuarat" : "Semak apa yang MinitAI baca"}
+        titleZh={typedByHand ? "填写会议内容" : "核对 MinitAI 读到的内容"}
+        titleEn={typedByHand ? "Fill in the meeting" : "Check what MinitAI read"}
         summary={
           typedByHand ? (
             /* Nothing was read, so there is nothing to agree or disagree with —
@@ -541,9 +541,9 @@ export function NotesReview() {
             />
           ) : (
             <Tri
-              bm="Untuk setiap perkara: “Betul” kalau Minit baca dengan tepat, “Ubah” kalau salah, atau “Tiada dalam nota” kalau memang tidak ditulis."
+              bm="Untuk setiap perkara: “Betul” kalau MinitAI baca dengan tepat, “Ubah” kalau salah, atau “Tiada dalam nota” kalau memang tidak ditulis."
               zh="每一项请按：读对了按「没错」，读错了按「修改」，笔记里本来就没写就按「笔记里没写」。"
-              en="For each item: “Correct” if Minit read it right, “Edit” if not, or “Not in the notes” if it was never written down."
+              en="For each item: “Correct” if MinitAI read it right, “Edit” if not, or “Not in the notes” if it was never written down."
             />
           )
         }
@@ -551,9 +551,9 @@ export function NotesReview() {
         {nothingYet ? (
           <p className="rounded-md border-2 border-dashed p-4 text-base text-muted-foreground">
             <Tri
-              bm="Ambil gambar nota mesyuarat di atas dahulu — Minit hanya boleh menyemak perkara yang ia sudah baca."
-              zh="请先在上面拍下会议笔记 —— Minit 只能核对它已经读到的内容。"
-              en="Take a photo of the notes above first — Minit can only check what it has read."
+              bm="Ambil gambar nota mesyuarat di atas dahulu — MinitAI hanya boleh menyemak perkara yang ia sudah baca."
+              zh="请先在上面拍下会议笔记 —— MinitAI 只能核对它已经读到的内容。"
+              en="Take a photo of the notes above first — MinitAI can only check what it has read."
             />
           </p>
         ) : (

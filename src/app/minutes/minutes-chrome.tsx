@@ -206,9 +206,9 @@ export function MinutesChrome({ children }: { children: ReactNode }) {
       <p className="rounded-md border-2 border-[color:var(--v2-border)] bg-white/60 p-4 text-base font-medium dark:bg-white/5">
         {!isReal ? (
           <Tri
-            bm="Mula di sini: ambil gambar nota mesyuarat tulisan tangan anda dan Minit akan membacanya — atau taip sendiri kalau tiada gambar."
-            zh="从这里开始：拍下您手写的会议笔记，Minit 会读出来 —— 没有照片的话，也可以自己打字。"
-            en="Start here: take a photo of your handwritten meeting notes and Minit reads it — or type it in yourself if there is no photo."
+            bm="Mula di sini: ambil gambar nota mesyuarat tulisan tangan anda dan MinitAI akan membacanya — atau taip sendiri kalau tiada gambar."
+            zh="从这里开始：拍下您手写的会议笔记，MinitAI 会读出来 —— 没有照片的话，也可以自己打字。"
+            en="Start here: take a photo of your handwritten meeting notes and MinitAI reads it — or type it in yourself if there is no photo."
           />
         ) : outstanding === 0 && attendanceUnsettled ? (
           <Tri
@@ -218,8 +218,8 @@ export function MinutesChrome({ children }: { children: ReactNode }) {
           />
         ) : !allReviewed ? (
           <Tri
-            bm={`Ada ${outstanding} perkara yang Minit mahu anda semak — ${outstandingHereOutsideAttendance} di halaman ini, ${groups.attendees.outstanding} dalam senarai kehadiran.`}
-            zh={`有 ${outstanding} 项 Minit 希望您核对 —— 这一页 ${outstandingHereOutsideAttendance} 项，出席者名单 ${groups.attendees.outstanding} 项。`}
+            bm={`Ada ${outstanding} perkara yang MinitAI mahu anda semak — ${outstandingHereOutsideAttendance} di halaman ini, ${groups.attendees.outstanding} dalam senarai kehadiran.`}
+            zh={`有 ${outstanding} 项 MinitAI 希望您核对 —— 这一页 ${outstandingHereOutsideAttendance} 项，出席者名单 ${groups.attendees.outstanding} 项。`}
             en={`${outstanding} item(s) need your check — ${outstandingHereOutsideAttendance} on this page, ${groups.attendees.outstanding} in the attendance list.`}
           />
         ) : alreadySaved ? (

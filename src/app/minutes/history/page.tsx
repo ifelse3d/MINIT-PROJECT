@@ -148,7 +148,7 @@ export default async function MinutesHistoryPage({
                 </CardTitle>
                 <CardDescription>
                   <Tri
-                    bm='Sahkan medan di Minit, tekan "Simpan ke Sejarah"'
+                    bm='Sahkan medan di MinitAI, tekan "Simpan ke Sejarah"'
                     zh="在会议记录页确认字段后，点「保存到历史」"
                     en='Confirm the fields on Minutes, press "Save to History"'
                   />

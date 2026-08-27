@@ -37,9 +37,9 @@ import { useActiveOrg } from "@/components/v3/org-chip";
 // ---------------------------------------------------------------------------
 
 const LANG_OPTIONS: { key: LangKey; label: string; sub: string }[] = [
-  { key: "zh", label: "中文", sub: "以中文使用 Minit" },
-  { key: "bm", label: "Bahasa Malaysia", sub: "Guna Minit dalam BM" },
-  { key: "en", label: "English", sub: "Use Minit in English" },
+  { key: "zh", label: "中文", sub: "以中文使用 MinitAI" },
+  { key: "bm", label: "Bahasa Malaysia", sub: "Guna MinitAI dalam BM" },
+  { key: "en", label: "English", sub: "Use MinitAI in English" },
 ];
 
 export function FirstRunFlow() {
@@ -178,9 +178,9 @@ export function FirstRunFlow() {
               <>
                 <p className="mt-2 text-base text-[color:var(--v2-text-soft)]">
                   <Tri
-                    bm="Beritahu Minit nama anda dan nama pertubuhan anda — nama yang betul akan tercetak pada resit dan minit."
-                    zh="告诉 Minit 您的名字和机构的名字 —— 收据和会议记录上才会印出正确的名字。"
-                    en="Tell Minit your name and your organisation's name — so the right names print on receipts and minutes."
+                    bm="Beritahu MinitAI nama anda dan nama pertubuhan anda — nama yang betul akan tercetak pada resit dan minit."
+                    zh="告诉 MinitAI 您的名字和机构的名字 —— 收据和会议记录上才会印出正确的名字。"
+                    en="Tell MinitAI your name and your organisation's name — so the right names print on receipts and minutes."
                   />
                 </p>
                 <div className="mt-4 flex flex-col gap-2">
@@ -198,9 +198,9 @@ export function FirstRunFlow() {
             ) : (
               <p className="mt-2 text-base text-[color:var(--v2-text-soft)]">
                 <Tri
-                  bm="Selepas log masuk, Minit akan tanya nama anda dan nama pertubuhan anda — kemudian semuanya sedia."
-                  zh="登入之后，Minit 会问您的名字和机构的名字 —— 然后就都准备好了。"
-                  en="After you sign in, Minit asks for your name and your organisation's name — then everything is ready."
+                  bm="Selepas log masuk, MinitAI akan tanya nama anda dan nama pertubuhan anda — kemudian semuanya sedia."
+                  zh="登入之后，MinitAI 会问您的名字和机构的名字 —— 然后就都准备好了。"
+                  en="After you sign in, MinitAI asks for your name and your organisation's name — then everything is ready."
                 />
               </p>
             )}

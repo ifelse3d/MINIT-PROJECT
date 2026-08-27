@@ -188,7 +188,7 @@ export function AIDock({
       {!open && (
         <button
           type="button"
-          aria-label="Minit AI"
+          aria-label="MinitAI"
           aria-expanded={false}
           onClick={() => setOpen(true)}
           // bottom-20 on phones: the v3 tab bar owns the bottom edge (Stage R),

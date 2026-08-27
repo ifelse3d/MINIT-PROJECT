@@ -438,7 +438,7 @@ export function ActivityCalendar({
                     ? {
                         title: label!.bm,
                         dateIso: r.dayIso,
-                        description: `${label!.zh} / ${label!.en} — Minit`,
+                        description: `${label!.zh} / ${label!.en} — MinitAI`,
                         uidKey: `deadline-${r.kind}-${r.dayIso}`,
                       }
                     : {

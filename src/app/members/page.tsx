@@ -261,7 +261,7 @@ export default async function MembersPage() {
           <Card>
             <CardHeader className="gap-2">
               <CardTitle>
-                <Tri bm="Siapa boleh guna Minit" zh="谁可以用 Minit" en="Who can use Minit" />
+                <Tri bm="Siapa boleh guna MinitAI" zh="谁可以用 MinitAI" en="Who can use MinitAI" />
               </CardTitle>
               <p className="text-sm text-muted-foreground">
                 <Tri

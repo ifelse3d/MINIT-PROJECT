@@ -363,7 +363,7 @@ export function receiptWhatsAppMessageBm(params: {
     // S0-6 honesty fix (2026-08-25): a wa.me link can only carry TEXT — it
     // cannot attach a file, so the old "(PDF receipt attached)" line was
     // simply false. Tell the sender what actually has to happen instead.
-    `(Resit PDF: muat turun dari Minit, kemudian lampirkan dalam WhatsApp / PDF receipt: download it from Minit, then attach it in WhatsApp)`,
+    `(Resit PDF: muat turun dari MinitAI, kemudian lampirkan dalam WhatsApp / PDF receipt: download it from MinitAI, then attach it in WhatsApp)`,
   ]
     .filter((line, i, arr) => !(line === `` && arr[i - 1] === ``))
     .join("\n");

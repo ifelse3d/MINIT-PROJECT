@@ -53,9 +53,9 @@ export function DeleteOrgSection({
       </h3>
       <p className="mt-1 text-base font-medium text-red-900">
         <Tri
-          bm="TIDAK BOLEH DIUNDUR. Semua minit, derma, resit, gambar dan rekod lain untuk pertubuhan ini akan dipadam selama-lamanya — daripada Minit dan daripada storan. Tiada salinan tinggal."
-          zh="此操作无法撤销。这个机构的所有会议记录、捐款、收据、照片和其他记录都会被永久删除 —— Minit 里和储存空间里都会删掉，不留备份。"
-          en="CANNOT BE UNDONE. Every minutes document, donation, receipt, photo and other record for this organisation will be permanently deleted — from Minit and from storage. No copy is kept."
+          bm="TIDAK BOLEH DIUNDUR. Semua minit, derma, resit, gambar dan rekod lain untuk pertubuhan ini akan dipadam selama-lamanya — daripada MinitAI dan daripada storan. Tiada salinan tinggal."
+          zh="此操作无法撤销。这个机构的所有会议记录、捐款、收据、照片和其他记录都会被永久删除 —— MinitAI 里和储存空间里都会删掉，不留备份。"
+          en="CANNOT BE UNDONE. Every minutes document, donation, receipt, photo and other record for this organisation will be permanently deleted — from MinitAI and from storage. No copy is kept."
         />
       </p>
 

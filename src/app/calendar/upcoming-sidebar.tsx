@@ -176,7 +176,7 @@ export function UpcomingSidebar({
                   item={{
                     title: label.bm,
                     dateIso: d.dueDateIso,
-                    description: `${label.zh} / ${label.en} — Minit`,
+                    description: `${label.zh} / ${label.en} — MinitAI`,
                     uidKey: `deadline-${d.kind}-${d.dueDateIso}`,
                   }}
                 />

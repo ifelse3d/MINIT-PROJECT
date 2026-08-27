@@ -177,9 +177,9 @@ export function AskBox({
         setError(
           body.error ??
             t(
-              "Ada masalah di pihak Minit. Cuba sekali lagi.",
-              "Minit 这边出了点问题。请再试一次。",
-              "Something went wrong on Minit's side. Please try again.",
+              "Ada masalah di pihak MinitAI. Cuba sekali lagi.",
+              "MinitAI 这边出了点问题。请再试一次。",
+              "Something went wrong on MinitAI's side. Please try again.",
             ),
         );
         // Drop the question we optimistically added: it was never answered, and
@@ -273,9 +273,9 @@ export function AskBox({
         setError(
           body.error ??
             t(
-              "Minit tidak dapat membaca fail itu. Cuba sekali lagi.",
-              "Minit 读不了这个文件。请再试一次。",
-              "Minit could not read that file. Please try again.",
+              "MinitAI tidak dapat membaca fail itu. Cuba sekali lagi.",
+              "MinitAI 读不了这个文件。请再试一次。",
+              "MinitAI could not read that file. Please try again.",
             ),
         );
         return;
@@ -313,16 +313,16 @@ export function AskBox({
         />
       </h2>
       {/* 2026-07-28 — the long paragraph that used to sit here ("send a photo of
-          it here and Minit will work out what it is…") is gone. It explained in
+          it here and MinitAI will work out what it is…") is gone. It explained in
           words what the two buttons and the question box below it already say,
           and it read like notes to ourselves rather than something a user needs. */}
 
       {!hasOrg && (
         <p className="mt-4 rounded-md border-2 border-amber-300 bg-amber-50 p-4 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
           <Tri
-            bm="Beritahu Minit nama pertubuhan anda dahulu — barulah ia tahu dokumen ini untuk siapa."
-            zh="请先告诉 Minit 您机构的名字 —— 它才知道这些文件是属于谁的。"
-            en="Tell Minit your organisation's name first — then it knows who these documents belong to."
+            bm="Beritahu MinitAI nama pertubuhan anda dahulu — barulah ia tahu dokumen ini untuk siapa."
+            zh="请先告诉 MinitAI 您机构的名字 —— 它才知道这些文件是属于谁的。"
+            en="Tell MinitAI your organisation's name first — then it knows who these documents belong to."
           />{" "}
           <Link href="/orgs" className="underline underline-offset-4">
             <Tri bm="Buat sekarang" zh="现在填写" en="Do it now" /> →
@@ -409,21 +409,21 @@ export function AskBox({
           </div>
         )}
 
-        {/* Minit could not place the page → it asks, with one-tap answers.
+        {/* MinitAI could not place the page → it asks, with one-tap answers.
             Only the read is charged after the person answers. */}
         {askKind && staged && (
           <div className="flex flex-col gap-3 rounded-md border-2 border-[color:var(--v2-border)] bg-white/80 p-4 dark:bg-white/10">
             <p className="text-lg">
               🤔{" "}
               <Tri
-                bm={`Minit tidak pasti "${staged.name}" ini halaman jenis apa. Beritahu Minit — ia jenis yang mana?`}
-                zh={`Minit 看不出「${staged.name}」是哪一种文件。告诉 Minit —— 这是哪一种？`}
-                en={`Minit is not sure what kind of page "${staged.name}" is. Tell Minit — which is it?`}
+                bm={`MinitAI tidak pasti "${staged.name}" ini halaman jenis apa. Beritahu MinitAI — ia jenis yang mana?`}
+                zh={`MinitAI 看不出「${staged.name}」是哪一种文件。告诉 MinitAI —— 这是哪一种？`}
+                en={`MinitAI is not sure what kind of page "${staged.name}" is. Tell MinitAI — which is it?`}
               />
             </p>
             <div className="flex flex-wrap gap-2">
               {/* I-4① (26 号报告 §3-6): send what is in the box NOW — the
-                  person often types more hints AFTER Minit asks, and the old
+                  person often types more hints AFTER MinitAI asks, and the old
                   snapshot silently threw those away. */}
               <Button
                 size="lg"
@@ -471,9 +471,9 @@ export function AskBox({
           <p className="rounded-md border-2 border-[#a855f7]/40 bg-white/70 p-4 text-lg font-medium dark:bg-white/10">
             ⏳{" "}
             <Tri
-              bm={`Minit sedang tengok "${reading}" — ia akan kenal ini kertas apa, kemudian bacanya. Tunggu sekejap.`}
-              zh={`Minit 正在看「${reading}」—— 它会先认出这是什么纸，再读里面的内容。请稍等。`}
-              en={`Minit is looking at "${reading}" — it will work out what kind of page this is, then read it. One moment.`}
+              bm={`MinitAI sedang tengok "${reading}" — ia akan kenal ini kertas apa, kemudian bacanya. Tunggu sekejap.`}
+              zh={`MinitAI 正在看「${reading}」—— 它会先认出这是什么纸，再读里面的内容。请稍等。`}
+              en={`MinitAI is looking at "${reading}" — it will work out what kind of page this is, then read it. One moment.`}
             />
           </p>
         )}
@@ -634,9 +634,9 @@ export function AskBox({
               <p className="text-lg">
                 ⏳{" "}
                 <Tri
-                  bm="Minit sedang berfikir… tunggu sekejap."
-                  zh="Minit 正在想…… 请稍等。"
-                  en="Minit is thinking… one moment."
+                  bm="MinitAI sedang berfikir… tunggu sekejap."
+                  zh="MinitAI 正在想…… 请稍等。"
+                  en="MinitAI is thinking… one moment."
                 />
               </p>
             </div>

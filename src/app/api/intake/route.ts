@@ -258,9 +258,9 @@ export async function POST(req: Request) {
           {
             kind: "unknown",
             error: joinUserError({
-              bm: "Minit tidak pasti halaman ini jenis apa. Kalau ia nota mesyuarat, buka halaman Minit Mesyuarat dan ambil gambar di sana. Kalau ia halaman lejar derma, buka halaman Wang & Resit. Kalau ia perlembagaan, buka halaman Perlembagaan.",
-              zh: "Minit 不太确定这一页是什么。如果是会议笔记，请到「会议记录」页拍；如果是捐款账页，请到「财务与收据」页；如果是章程，请到「章程」页。",
-              en: "Minit is not sure what this page is. If it is meeting notes, open the Meeting Minutes page and take the photo there. If it is a donation ledger page, open Money & Receipts. If it is your constitution, open the Constitution page.",
+              bm: "MinitAI tidak pasti halaman ini jenis apa. Kalau ia nota mesyuarat, buka halaman Minit Mesyuarat dan ambil gambar di sana. Kalau ia halaman lejar derma, buka halaman Wang & Resit. Kalau ia perlembagaan, buka halaman Perlembagaan.",
+              zh: "MinitAI 不太确定这一页是什么。如果是会议笔记，请到「会议记录」页拍；如果是捐款账页，请到「财务与收据」页；如果是章程，请到「章程」页。",
+              en: "MinitAI is not sure what this page is. If it is meeting notes, open the Meeting Minutes page and take the photo there. If it is a donation ledger page, open Money & Receipts. If it is your constitution, open the Constitution page.",
             }),
           },
           { status: 422 },
@@ -336,9 +336,9 @@ export async function POST(req: Request) {
         {
           kind,
           error: joinUserError({
-            bm: "Minit kenal halaman ini, tetapi bantuan AI untuk bulan ini sudah habis sebelum ia dapat membacanya. Ia bermula semula pada 1 hari bulan depan.",
-            zh: "Minit 认出这一页了，但这个月的 AI 用量在读完之前刚好用尽。下个月 1 号会重新开始。",
-            en: "Minit recognised the page, but this month's AI help ran out before it could read it. It starts again on the 1st of next month.",
+            bm: "MinitAI kenal halaman ini, tetapi bantuan AI untuk bulan ini sudah habis sebelum ia dapat membacanya. Ia bermula semula pada 1 hari bulan depan.",
+            zh: "MinitAI 认出这一页了，但这个月的 AI 用量在读完之前刚好用尽。下个月 1 号会重新开始。",
+            en: "MinitAI recognised the page, but this month's AI help ran out before it could read it. It starts again on the 1st of next month.",
           }),
         },
         { status: 402 },

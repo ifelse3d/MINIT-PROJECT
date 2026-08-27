@@ -32,7 +32,7 @@ export const CATEGORY_STYLE: Record<
   // B-1 (8/26): the sidebar row is named "Calendar & deadlines" — the feed
   // chip carries the same three words so the section never changes name
   // between screens (the consistency rule this file exists for).
-  calendar: { dot: "bg-sky-500", ring: "", bm: "Kalendar & tarikh akhir", zh: "日历与死线", en: "Calendar & deadlines", future: false },
+  calendar: { dot: "bg-sky-500", ring: "", bm: "Kalendar & peringatan", zh: "日历与提醒", en: "Calendar & reminders", future: false },
   qa: { dot: "bg-rose-500", ring: "", bm: "Soal jawab", zh: "提问与回答", en: "Q&A", future: false },
   deadline: { dot: "", ring: "border-red-500", bm: "Tarikh akhir", zh: "截止", en: "Deadline", future: true },
   event: { dot: "", ring: "border-sky-500", bm: "Acara", zh: "活动", en: "Event", future: true },

@@ -55,9 +55,9 @@ export function BeforeReading({
       <div>
         <p className="text-lg font-semibold">
           <Tri
-            bm="Sebelum Minit membaca — ada apa-apa yang anda sudah tahu?"
-            zh="在 Minit 读之前 —— 有没有您本来就知道的？"
-            en="Before Minit reads it — is there anything you already know?"
+            bm="Sebelum MinitAI membaca — ada apa-apa yang anda sudah tahu?"
+            zh="在 MinitAI 读之前 —— 有没有您本来就知道的？"
+            en="Before MinitAI reads it — is there anything you already know?"
           />
         </p>
         <p className="mt-1 text-base text-muted-foreground">📄 {fileName}</p>
@@ -65,9 +65,9 @@ export function BeforeReading({
 
       <p className="text-base text-muted-foreground">
         <Tri
-          bm="Semua ini boleh dibiarkan kosong — Minit akan cuba membacanya sendiri. Isi yang anda pasti sahaja: apa yang anda tulis di sini menang, jadi Minit tidak perlu meneka."
-          zh="全部都可以留空 —— Minit 会自己去读。只填您确定的：您在这里写的会盖过 Minit 读到的，它就不用猜。"
-          en="You can leave all of this blank — Minit will try to read it. Fill in only what you are sure of: what you put here wins, so Minit does not have to guess."
+          bm="Semua ini boleh dibiarkan kosong — MinitAI akan cuba membacanya sendiri. Isi yang anda pasti sahaja: apa yang anda tulis di sini menang, jadi MinitAI tidak perlu meneka."
+          zh="全部都可以留空 —— MinitAI 会自己去读。只填您确定的：您在这里写的会盖过 MinitAI 读到的，它就不用猜。"
+          en="You can leave all of this blank — MinitAI will try to read it. Fill in only what you are sure of: what you put here wins, so MinitAI does not have to guess."
         />
       </p>
 
@@ -82,7 +82,7 @@ export function BeforeReading({
             className={field}
           >
             <option value="">
-              {t("Biar Minit baca", "让 Minit 自己读", "Let Minit read it")}
+              {t("Biar MinitAI baca", "让 MinitAI 自己读", "Let MinitAI read it")}
             </option>
             {MEETING_TYPES.map((mt) => {
               const l = meetingTypeUiLabelTri(mt);
@@ -142,9 +142,9 @@ export function BeforeReading({
       <label className="flex flex-col gap-1">
         <span className="text-sm font-medium text-muted-foreground">
           <Tri
-            bm="Ada singkatan, nama atau tarikh yang Minit patut tahu?"
-            zh="有缩写、人名、日期要补充给 Minit 吗？"
-            en="Any abbreviations, names or dates Minit should know?"
+            bm="Ada singkatan, nama atau tarikh yang MinitAI patut tahu?"
+            zh="有缩写、人名、日期要补充给 MinitAI 吗？"
+            en="Any abbreviations, names or dates MinitAI should know?"
           />
         </span>
         <span className="flex items-start gap-2">

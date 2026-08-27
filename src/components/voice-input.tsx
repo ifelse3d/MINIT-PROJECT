@@ -139,7 +139,7 @@ export function VoiceButton({
         onClick={toggle}
         aria-pressed={listening}
         title={
-          t("Cakap, Minit taip", "开口说，Minit 帮您打字", "Speak, Minit types") +
+          t("Cakap, MinitAI taip", "开口说，MinitAI 帮您打字", "Speak, MinitAI types") +
           " · " +
           t("percubaan", "试验中", "experimental")
         }

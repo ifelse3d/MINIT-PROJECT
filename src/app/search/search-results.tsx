@@ -174,9 +174,9 @@ export function SearchResults({
             </CardTitle>
             <CardDescription>
               <Tri
-                bm="Untuk soalan (cth. “bila AGM perlu diadakan?”), guna Tanya Minit."
-                zh="如果是问题（例如“AGM 何时召开？”），请使用 Tanya Minit。"
-                en="For question-style queries (e.g. “when must the AGM be held?”), use Tanya Minit."
+                bm="Untuk soalan (cth. “bila AGM perlu diadakan?”), guna Tanya MinitAI."
+                zh="如果是问题（例如“AGM 何时召开？”），请使用 Tanya MinitAI。"
+                en="For question-style queries (e.g. “when must the AGM be held?”), use Tanya MinitAI."
               />
             </CardDescription>
           </CardHeader>

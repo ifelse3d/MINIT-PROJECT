@@ -442,9 +442,9 @@ export default function LoginPage() {
                 </a>
                 .{" "}
                 <Tri
-                  bm="Saya faham Minit menghasilkan DRAF yang mesti disemak oleh manusia, dan bahawa saya bertanggungjawab mendapatkan kebenaran penderma dan ahli sebelum memasukkan data peribadi mereka."
-                  zh="我明白 Minit 产生的是草稿，必须由人核对；也明白在输入捐款人和会员的个人资料之前，要先取得他们的同意。"
-                  en="I understand Minit produces DRAFTS that a human must check, and that I am responsible for obtaining the consent of donors and members before entering their personal data."
+                  bm="Saya faham MinitAI menghasilkan DRAF yang mesti disemak oleh manusia, dan bahawa saya bertanggungjawab mendapatkan kebenaran penderma dan ahli sebelum memasukkan data peribadi mereka."
+                  zh="我明白 MinitAI 产生的是草稿，必须由人核对；也明白在输入捐款人和会员的个人资料之前，要先取得他们的同意。"
+                  en="I understand MinitAI produces DRAFTS that a human must check, and that I am responsible for obtaining the consent of donors and members before entering their personal data."
                 />
               </span>
             </label>

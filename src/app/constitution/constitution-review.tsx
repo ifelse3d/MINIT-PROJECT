@@ -353,7 +353,7 @@ export function ConstitutionReview({
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 pb-10 text-base">
       {/* Only for the person who has just created an organisation, and only
           until they have a constitution of their own — congratulating someone
-          on an org they made last month, over clauses Minit has already read,
+          on an org they made last month, over clauses MinitAI has already read,
           is noise. */}
       {justCreatedOrg && !hasOwn && <NewOrgBanner />}
 
@@ -421,24 +421,24 @@ export function ConstitutionReview({
         ) : (
           <p className="text-base text-muted-foreground">
             <Tri
-              bm="Minit belum membaca perlembagaan anda. Ambil gambar setiap halaman di bawah — selepas itu setiap jawapan akan memetik fasal anda sendiri."
-              zh="Minit 还没读过您的章程。请在下面把每一页拍下来 —— 之后每个答案都会引用您自己的条文。"
-              en="Minit has not read your constitution yet. Photograph each page below — after that, every answer quotes your own clauses."
+              bm="MinitAI belum membaca perlembagaan anda. Ambil gambar setiap halaman di bawah — selepas itu setiap jawapan akan memetik fasal anda sendiri."
+              zh="MinitAI 还没读过您的章程。请在下面把每一页拍下来 —— 之后每个答案都会引用您自己的条文。"
+              en="MinitAI has not read your constitution yet. Photograph each page below — after that, every answer quotes your own clauses."
             />
           </p>
         )}
         {storeMeta.corrupt && (
           <p className="rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900 dark:bg-red-400/10 dark:text-red-100">
             <Tri
-              bm="Perlembagaan yang tersimpan pada peranti ini tidak dapat dibaca, jadi Minit tiada fasal sekarang. Ambil gambar halaman-halaman itu semula."
-              zh="这台设备上暂存的章程读不出来，所以 Minit 现在手上没有条文。请重新把章程的每一页拍一次。"
-              en="The constitution saved on this device could not be read, so Minit has no clauses right now. Please take photos of the pages again."
+              bm="Perlembagaan yang tersimpan pada peranti ini tidak dapat dibaca, jadi MinitAI tiada fasal sekarang. Ambil gambar halaman-halaman itu semula."
+              zh="这台设备上暂存的章程读不出来，所以 MinitAI 现在手上没有条文。请重新把章程的每一页拍一次。"
+              en="The constitution saved on this device could not be read, so MinitAI has no clauses right now. Please take photos of the pages again."
             />
           </p>
         )}
       </div>
 
-      {/* What Minit read about the society itself: the registered name, and
+      {/* What MinitAI read about the society itself: the registered name, and
           what this constitution says about changing itself.
 
           🔴 `hasOwn ? clauses : []` and not `clauses`: when the sample is on
@@ -464,9 +464,9 @@ export function ConstitutionReview({
           </CardTitle>
           <CardDescription>
             <Tri
-              bm="Satu gambar untuk setiap halaman. Ambil gambar halaman pertama, tunggu Minit membacanya, kemudian ambil halaman berikutnya — halaman baharu ditambah, tidak menggantikan yang lama. Minit menyalin setiap fasal perkataan demi perkataan; ia tidak meringkaskan dan tidak mengarang."
-              zh="一页拍一张。先拍第一页，等 Minit 读完，再拍下一页 —— 新的页会加上去，不会盖掉之前的。Minit 会逐字抄下每一条条文，不会自己总结，也不会自己编。"
-              en="One photo per page. Take the first page, wait for Minit to read it, then take the next — new pages are added, not replaced. Minit copies each clause word for word; it does not summarise and it does not invent."
+              bm="Satu gambar untuk setiap halaman. Ambil gambar halaman pertama, tunggu MinitAI membacanya, kemudian ambil halaman berikutnya — halaman baharu ditambah, tidak menggantikan yang lama. MinitAI menyalin setiap fasal perkataan demi perkataan; ia tidak meringkaskan dan tidak mengarang."
+              zh="一页拍一张。先拍第一页，等 MinitAI 读完，再拍下一页 —— 新的页会加上去，不会盖掉之前的。MinitAI 会逐字抄下每一条条文，不会自己总结，也不会自己编。"
+              en="One photo per page. Take the first page, wait for MinitAI to read it, then take the next — new pages are added, not replaced. MinitAI copies each clause word for word; it does not summarise and it does not invent."
             />
           </CardDescription>
         </CardHeader>
@@ -483,9 +483,9 @@ export function ConstitutionReview({
                 <>
                   ⏳{" "}
                   <Tri
-                    bm="Minit sedang membaca halaman ini…"
-                    zh="Minit 正在读这一页…"
-                    en="Minit is reading this page…"
+                    bm="MinitAI sedang membaca halaman ini…"
+                    zh="MinitAI 正在读这一页…"
+                    en="MinitAI is reading this page…"
                   />
                 </>
               ) : (
@@ -518,7 +518,7 @@ export function ConstitutionReview({
                     t(
                       "Buang perlembagaan yang sudah dibaca dan mula semula? Anda perlu ambil gambar semua halaman semula.",
                       "要删掉已经读入的章程、重新开始吗？之后每一页都要重新拍一次。",
-                      "Discard the constitution Minit has read and start again? You would have to photograph every page again.",
+                      "Discard the constitution MinitAI has read and start again? You would have to photograph every page again.",
                     ),
                   );
                   if (ok) storeMeta.reset();
@@ -586,21 +586,21 @@ export function ConstitutionReview({
                 fictional sample. Say which source is in use. */}
             {nothingYet ? (
               <Tri
-                bm="Belum boleh — Minit hanya menjawab daripada fasal yang ia sudah baca. Ambil gambar perlembagaan anda di atas dahulu."
-                zh="还不能问 —— Minit 只会用它已经读到的条文回答。请先在上面拍下您的章程。"
-                en="Not yet — Minit only answers from clauses it has read. Photograph your constitution above first."
+                bm="Belum boleh — MinitAI hanya menjawab daripada fasal yang ia sudah baca. Ambil gambar perlembagaan anda di atas dahulu."
+                zh="还不能问 —— MinitAI 只会用它已经读到的条文回答。请先在上面拍下您的章程。"
+                en="Not yet — MinitAI only answers from clauses it has read. Photograph your constitution above first."
               />
             ) : isSample ? (
               <Tri
-                bm="Minit sentiasa memetik fasal yang menjadi asas jawapan — tetapi buat masa ini fasal itu daripada perlembagaan CONTOH, bukan milik anda."
-                zh="Minit 每次都会引出答案所依据的条文 —— 但目前引的是示范章程的条文，不是您机构的。"
-                en="Minit always quotes the clause an answer rests on — but right now that clause comes from the EXAMPLE constitution, not yours."
+                bm="MinitAI sentiasa memetik fasal yang menjadi asas jawapan — tetapi buat masa ini fasal itu daripada perlembagaan CONTOH, bukan milik anda."
+                zh="MinitAI 每次都会引出答案所依据的条文 —— 但目前引的是示范章程的条文，不是您机构的。"
+                en="MinitAI always quotes the clause an answer rests on — but right now that clause comes from the EXAMPLE constitution, not yours."
               />
             ) : (
               <Tri
-                bm="Setiap jawapan memetik fasal daripada perlembagaan anda sendiri, perkataan demi perkataan. Kalau tiada fasal yang menjawabnya, Minit akan berkata ia tidak tahu."
-                zh="每个答案都会逐字引用您自己章程里的条文。如果没有条文能回答，Minit 会直接说它不知道。"
-                en="Every answer quotes a clause from your own constitution, word for word. If no clause answers it, Minit says it does not know."
+                bm="Setiap jawapan memetik fasal daripada perlembagaan anda sendiri, perkataan demi perkataan. Kalau tiada fasal yang menjawabnya, MinitAI akan berkata ia tidak tahu."
+                zh="每个答案都会逐字引用您自己章程里的条文。如果没有条文能回答，MinitAI 会直接说它不知道。"
+                en="Every answer quotes a clause from your own constitution, word for word. If no clause answers it, MinitAI says it does not know."
               />
             )}
           </CardDescription>
@@ -611,9 +611,9 @@ export function ConstitutionReview({
           {nothingYet ? (
             <p className="rounded-md border-2 border-slate-300 bg-slate-50 p-4 text-base font-medium text-slate-800 dark:bg-white/10 dark:text-slate-100">
               <Tri
-                bm="Selepas Minit membaca perlembagaan anda, tanya di sini — setiap jawapan memetik fasal anda sendiri, perkataan demi perkataan."
-                zh="等 Minit 读过您的章程之后，就可以在这里提问 —— 每个答案都会逐字引用您自己的条文。"
-                en="Once Minit has read your constitution, ask here — every answer quotes your own clause, word for word."
+                bm="Selepas MinitAI membaca perlembagaan anda, tanya di sini — setiap jawapan memetik fasal anda sendiri, perkataan demi perkataan."
+                zh="等 MinitAI 读过您的章程之后，就可以在这里提问 —— 每个答案都会逐字引用您自己的条文。"
+                en="Once MinitAI has read your constitution, ask here — every answer quotes your own clause, word for word."
               />
             </p>
           ) : (
@@ -704,7 +704,7 @@ export function ConstitutionReview({
         <Card>
           <CardHeader>
             <CardTitle className="text-xl">
-              2 · <Tri bm="Minit dah baca untuk anda" zh="Minit 已经帮您读好了" en="Minit already read it for you" />
+              2 · <Tri bm="MinitAI dah baca untuk anda" zh="MinitAI 已经帮您读好了" en="MinitAI already read it for you" />
             </CardTitle>
           </CardHeader>
           <CardContent>

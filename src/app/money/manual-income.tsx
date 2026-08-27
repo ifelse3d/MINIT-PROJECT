@@ -228,9 +228,9 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
               <div className="flex flex-col gap-2 rounded-md border-2 border-[color:var(--v2-outline-border)] bg-muted/20 p-3">
                 <p className="text-sm text-muted-foreground">
                   <Tri
-                    bm="Ada resit / slip di tangan? Pilih jenis di bawah, kemudian ambil gambar — Minit membacanya dan barisnya menunggu di langkah 1 untuk disemak."
-                    zh="手上有单据？先在下面选好收入类型，再拍下来 —— Minit 读出来的行会等在第 1 步给您核对。"
-                    en="Holding a slip or receipt? Pick the income type below, then photograph it — Minit reads it and the rows wait in step 1 for your check."
+                    bm="Ada resit / slip di tangan? Pilih jenis di bawah, kemudian ambil gambar — MinitAI membacanya dan barisnya menunggu di langkah 1 untuk disemak."
+                    zh="手上有单据？先在下面选好收入类型，再拍下来 —— MinitAI 读出来的行会等在第 1 步给您核对。"
+                    en="Holding a slip or receipt? Pick the income type below, then photograph it — MinitAI reads it and the rows wait in step 1 for your check."
                   />
                 </p>
                 <label

@@ -536,7 +536,7 @@ export function RegisterAndReceipts() {
               <Tri
                 bm="Ambil gambar halaman lejar anda di langkah 1 di atas. AI akan membaca setiap baris, anda sahkan, dan baris yang disahkan masuk ke sini."
                 zh="请在上面第 1 步拍下您的账页照片。AI 会逐行读出来，您确认之后，确认过的记录就会进到这里。"
-                en="Take a photo of your ledger page in step 1 above. Minit reads each line, you check it, and the checked lines land here."
+                en="Take a photo of your ledger page in step 1 above. MinitAI reads each line, you check it, and the checked lines land here."
               />
             </p>
           </div>
