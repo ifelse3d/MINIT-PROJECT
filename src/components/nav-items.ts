@@ -20,6 +20,7 @@ import {
   MessageSquare,
   MoreHorizontal,
   Palette,
+  PiggyBank,
   Receipt,
   ScrollText,
   ClipboardCheck,
@@ -107,6 +108,9 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/money/custody", icon: Coins, bm: "Serah tunai", zh: "交现金", en: "Hand over cash" },
   // Stage F: the financial statement — computed, never typed.
   { href: "/money/report", icon: BarChart3, bm: "Penyata kewangan", zh: "财报", en: "Financial statement" },
+  // D31 (J review 27-evening #24, 2026-08-28): "现在还有多少钱" — the running
+  // cash balance, amount hidden behind an eye by default. Not the statement.
+  { href: "/money/balance", icon: PiggyBank, bm: "Baki semasa", zh: "现有资金", en: "Current funds" },
   { href: "/money/history", icon: ClipboardList, bm: "Sejarah resit", zh: "收据历史", en: "Receipt history" },
   // The calendar: the society's OWN activities (plus statutory deadlines as
   // reminders). J's launch feedback #7 (2026-08-27 evening): it is not a
@@ -206,6 +210,7 @@ export const PRIMARY_NAV: NavEntry[] = [
       byHref("/money/receipts"),
       byHref("/money/custody"),
       byHref("/money/report"),
+      byHref("/money/balance"),
       byHref("/money/history"),
     ],
   },
@@ -292,6 +297,7 @@ export const SIDEBAR_NAV: NavEntry[] = [
       byHref("/money/receipts"),
       byHref("/money/custody"),
       byHref("/money/report"),
+      byHref("/money/balance"),
       byHref("/money/einvois"),
       byHref("/money/history"),
     ],

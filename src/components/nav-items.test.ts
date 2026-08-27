@@ -67,6 +67,7 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
       "/money/receipts",
       "/money/custody",
       "/money/report",
+      "/money/balance",
       "/money/einvois",
       "/money/history",
     ]);
@@ -136,6 +137,7 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
       "/money/receipts",
       "/money/custody",
       "/money/report",
+      "/money/balance",
       "/money/history",
     ]);
     // The index page must be `exact`, or standing on /money/receipts lights up
@@ -207,6 +209,7 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
       "/money/receipts",
       "/money/custody",
       "/money/report",
+      "/money/balance",
       "/money/history",
     ]);
 
