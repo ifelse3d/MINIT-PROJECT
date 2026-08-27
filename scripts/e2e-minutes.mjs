@@ -197,9 +197,25 @@ async function run() {
   });
   check("venue set", venueOk);
 
-  // attendance: "the notes do not record attendance"
+  // attendance — D30 (2026-08-28, J #33): zero attendance can no longer be
+  // saved as a confirmed document. The old escape hatch is a DEFERRAL now;
+  // the honest flow types one attendee in, which is what this does. (The
+  // deferral path is exercised below: the save button must stay locked.)
   await page.goto(`${BASE}/minutes/attendance`, { waitUntil: "networkidle2" });
-  await clickByText(page, "button, label", "没有记出席");
+  // First prove the deferral does NOT unlock the save (D30).
+  await clickByText(page, "button, label", "稍后补上");
+  await new Promise((r) => setTimeout(r, 500));
+  await page.goto(`${BASE}/minutes/document`, { waitUntil: "networkidle2" });
+  await new Promise((r) => setTimeout(r, 800));
+  const deferredText = await page.evaluate(() => document.body.innerText);
+  check(
+    "D30: deferred attendance leaves the save locked with the fill-it-in notice",
+    deferredText.includes("出席名单还是空的"),
+  );
+  // Now record a real attendee and continue.
+  await page.goto(`${BASE}/minutes/attendance`, { waitUntil: "networkidle2" });
+  await page.type('input[placeholder*="打一个名字"]', "E2E Hadir");
+  await page.keyboard.press("Enter");
   await new Promise((r) => setTimeout(r, 800));
 
   // hero preview should now say everything is checked (R-4)

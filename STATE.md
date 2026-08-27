@@ -5,97 +5,137 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-27 深夜（MYT）· Fable 5（同日第三场：J 上线晚的 20 条反馈全部做完）**
-**🔴 20 条全部 ✅（35 号报告逐条）。J 照 35 号报告 §1 走：贴 migration 28 → push（一次 7 支）→ 五分钟验收 → J 自己的测试。31 号单场次 5（D-7/D-8/B-7/G-3，要 J 在场）仍然待开。**
+**最后更新：2026-08-28 凌晨（MYT）· Fable 5（两份 review 总攻：27 晚 33 条＋28 半夜 7 条）**
+**🔴 三大严重项已根治：#17 重复交接（D32，含 migration 29）、新用户章程 PDF 必死（我们自己的 8192 输出上限）、会议记录无智能（D29 解冻后第一批：决议分类＋出席门槛 D30）。RESPONSIVE 用 container queries 系统性修掉。J 照 37 号报告 §5 走：贴 migration 29 → push（10 支）→ 清两笔重复交接。**
 
 ---
 
-## 🌙 现在在哪里（2026-08-27 深夜，第三场收工）
+## 🌙 现在在哪里（2026-08-28 凌晨，两份 review 总攻收工）
 
-> **已上线**：https://minit-project.vercel.app —— 线上是下午的紫色版（15 支已 push）；
-> 本机再领先 **7 支未 push**（20 条反馈那一场）。push 是 J 的事（push-cabang.bat）。
-> 线上资料库两个 org（15「J」、58「avocado」），migration 1–27 APPLIED（27 的
-> 「记录于」时间戳已出现在 J 的截图里）；🔴 **migration 28
-> （20260906000000 交接行連結＋詞庫三語＋模板表）已写好、尚未套用**——J 照
-> 35 号报告贴（salin-migration.bat 选 28）。
+> **已上线**：https://minit-project.vercel.app —— J 已把 20 条那批 push 上去；
+> 本机再领先 **10 支未 push**（本场）。push 是 J 的事（push-cabang.bat）。
+> 线上资料库 org：15「J」、58「avocado」、91「TESTING1」（J 的新用户测试）。
+> migration 1–28 APPLIED（28 的模板/未开收据交接已出现在 J 的截图里）；
+> 🔴 **migration 29（20260907000000 save_register_rows＋issue_receipts v8）
+> 已写好、尚未套用**——J 照 37 号报告贴（salin-migration.bat 选 29）。
+> 29 未套用时「记录即入库」自动降级为本机草稿并明说，e2e 已验证降级路。
 
-### 这一场做了什么（J 上线晚的 20 条，35 号报告逐条对照）
+### 这一场做了什么（37 号报告逐条对照；两份 review 共 40 条）
 
-- **品牌/文案**：用户可见 Minit→MinitAI 全站扫清（58 档 367 行；BM 的
-  "Minit mesyuarat"=会议记录 受保护；MIN- 字首/prompts/法律文照规不动）；
-  隐私句删身份证段；报销两个 tab 改「社团付的钱／我垫付的要拿回」。
-- **壳**：侧栏组=dropdown 默认收起（所在组自动开、手动记住）；日历升顶级行
-  改名「日历与提醒」；/settings 内主侧栏隐藏、设置栏自带「返回」；系统检查
-  只给 manage_org；问一问的回答/开场白/试试问/输入框全部改实底有框。
-- **钱区重构（D26/D27）**：/money=收钱记账（拍照＋打字＋手动all in）＋
-  「这一轮已记」就地核对清单 → 新页 /money/issue 只为本轮开收据（共用
-  IssueControls）→ /money/receipts 退为管理页（筛选＋多选开＋重新下载）。
-  交现金不再要求先开收据（批次用 client_donation_ids 连行，pre-28 含未开
-  收据行的批次拒写并明说「只在本机」）。模板（org_templates＋TemplateChips）
-  接进用途/说明三处。开支加「选一个档案（照片或 PDF）」门。
-- **成员**：任期日期随便打（20260101/1/1/2026→自动整理，toIsoDate 扩 8 位
-  数字并有测试）；任期已结束→灰色「已卸任」区、不算 eROSES 缺 IC 统计；
-  分组「从名单一次过选多人」弹窗（addManyToGroup 一笔 upsert）。
-- **日历**：lunar-parse（纯函数＋测试）在送 AI 之前认出「农历每月初一/十五」
-  类规则→零额度面板（标题用社团自己的字，J 的两句原话都测过）；固定献供
-  toggle 升级为可配置重复规则（旧 boolean key 收编）；副历 opt-in（＋副历
-  弹窗：农历/伊斯兰历 Umm al-Qura via Intl，缺 ICU 时静默不显示）；每个活动
-  「📣 WhatsApp 文案」邀请/提醒两种（程式模板、可编辑、复制/wa.me）。
-- **词库（D28④）**：一条=原文＋原文语言＋另两种语言的叫法（任何语言可为原
-  文；全空=保持原字）。BM 叫法映射旧 translation（prompt 路一字不动）；
-  pre-28 退回旧形并明说。
-- **管理台**：四张总数卡＋六个月成本柱＋本月各机构用量横条（含 per-org 成
-  本）；收入/毛利卡诚实写「等配套定价」（priceRm 全 null 是拍板）。
-- **AI 用量页**：本期起讫＋刷新日＋机构注册日。
+- **D32 钱区根治（J #17 重复交接）**：交接/确认只改 localStorage、DB 的
+  custody_status 永远停在开收据那刻、「DB 覆盖本机」合并把已确认的钱复活成
+  可交——三处一起修：①记录即入库（migration 29 的 save_register_rows＋
+  issue_receipts v8，同支出货不留窗口；29 未套用=诚实降级本机草稿）；
+  ②saveRemittanceBatch 同步回写成员行状态（纯 update，任何库龄）；
+  ③合并规则 forward-only＋批次推导 self-heal（reconcileCustodyWithBatches，
+  J 现有坏资料下次载入自动归正；重复 pending 批次确认会被三语拦截、指去取消）。
+  搜寻页同收据双列（this browser 分身）一并修。
+- **新用户章程流（28 半夜 #3/#4/#6）**：ground truth 从线上 app_errors hash
+  比对得出——两次失败都是 MAX_TOKENS（我们自己的 8192 默认上限，8 页章程逐字
+  抄写在 8188 断头，每次白烧 $0.022 还叫人「再试」）。修：EXTRACT_OUTPUT_CEILING
+  按页上限配大小（minutes 16k/ledger 32k/constitution 64k）＋типed
+  VendorOutputTruncatedError→413「分拆文件，重传不会成功」；四家 vendor 全接。
+  三语错误墙：既有 useLocalizedError 补挂到十几个渲染点。章程按钮/文案写明 PDF。
+  28#1（注册回登入页，J 提了两次）：email 确认链接绕过 C-3 的洞堵上
+  （emailRedirectTo→/login?registered=1＋落地 signOut）。
+- **会议记录智能（D29 解冻＋D30）**：extract prompt 给 resolutions 标 kind
+  （decision/task/duty/info，坏标签只丢分组不丢行）；review 分组＋人工改标；
+  duty 区解释为何不进 eROSES 委员会名单（#32 的正解）。D30：出席 0 不能确认
+  保存——逃生口改「稍后补上」，成品页+服务器双重把关。#29 Other 文案+autofocus；
+  #28 原稿对照图全屏放大。⚠ prompt 动了：既有 bench/95.2% 作废，J 重测。
+- **RESPONSIVE（用户点名+#1）**：根因=视口断点在侧栏(248px)+AI dock(≤640px)
+  吃宽后说谎。<main> 挂 @container，宽度敏感格线改 container variants
+  （task-cards @md:2/@4xl:4）。1366×768 面板开/关两态截图人眼过。
+- **导航去重（#11/#12/#16）**：SectionTabs 贴 top-14（不再滑进顶栏消失）、
+  flex-wrap 不横滑、桌面缩一号；money/minutes 的 records/extras 药丸全拆
+  （侧栏已有），SectionTabs 的死 props 删除。
+- **小件批**：#2 搜索出「页面」结果（三语匹配 nav+settings）；#3 语言一律
+  dropdown；#4 「/」提示删；#5 AI 钮圆形+品牌渐变；#6 登出弹窗一行+「是」；
+  #7 头像菜单去 Settings；#8 拍照/选档合并一颗（capture 移除，手机 picker 自
+  带相机）四处；#9 Word/Excel 两行说明整段删（PdpaNote 留着等 J 拍板）；
+  #13 侧栏 label 换行；#14 登入 logo 加大；#15 组标题 13px；#19 已确认交接
+  显示最新 5 笔+折叠；#20 报销「谁垫付的」；#22 其他必填明细；#23 待批列表
+  改 table；#25 分组占位改真实例子；28#5/#7 章程 PDF 文案+示范成卡。
+- **D31 新页 /money/balance**：全记录收入−支出（同财报算法），金额默认
+  RM •••••• 眼睛遮、只给 money_write 角色；侧栏钱组新行，nav 覆盖测试更新。
 
 ### 现场量到的（不是听说的）
 
-- 四道关（每批收尾都跑，最终态）：`tsc` **0** · `eslint` **21（与基准逐字
-  同）** · `vitest` **824 全过（66 档；+6 lunar-parse、+3 date-input 8位、
-  +2 custody 未开收据交接）** · `build` ✓
-- **e2e:money 重写到新流程后 19/19 全过、page errors 0**（真 dev server＋
-  真资料库、ZZZ 测试 org 用完即删）：含三条新检查——打字后「这一轮已记 9 笔」
-  可见（#3）、/money/issue 只显示本轮（#3）、未开收据现金勾选→交接→总会
-  确认全通（#4）。
-- 五张 headless 截图人眼看过：侧栏收起组/日历顶级行、记收入的本轮清单、
-  /money/issue、设置单侧栏＋返回、日历「＋副历」。
-- ⚠ **没能验证的**：migration 28 是否套用（等 J status.bat）；线上部署效果
-  （push 是 J 的手）；伊斯兰历在 iOS Safari；模板/词库三语/未开收据交接的
-  **跨设备**共用（28 未套用前只能验本机路）。
+- 四道关（最终态）：`tsc` **0** · `eslint` **21（基准逐字同）** ·
+  `vitest` **832 全过（+6 D32 合并、+2 截断/上限路由）** · `build` ✓
+- **e2e:money 19/19 全过、page errors 0**——在 29 未套用状态跑，等于把
+  降级路也验了。**e2e:minutes 全过**，新增检查：「稍后补上」不能解锁保存（D30）。
+- 1366×768 截图 5 张人眼看过（login/home 两态/balance/custody）→
+  `eval/reports/shots-20260828/`。
+- 线上 DB 取证：app_errors 两笔 #1c0d0970… 与 MAX_TOKENS 讯息 hash 完全吻合；
+  ai_usage 显示 in=4885/out=8188/cost 21936 micros/refunded=yes ×2。
+- ⚠ **没能验证的**：migration 29 套用后的跨设备记录即入库（只能验降级路）；
+  线上部署效果（push 是 J 的手）；64k 输出上限在真章程上的成功读（要花 J 的
+  额度，等 J 重测）；决议分类的实际准确率（prompt 刚动，无 eval 数字）。
 
-### 🔴 J 的事（写在 35 号报告 §1）
+### 🔴 J 的事（写在 37 号报告 §5/§6）
 
-1. 贴 migration **28**（salin-migration.bat 选 28）→ status.bat 看三个探针。
-2. **双击 push-cabang.bat**（本机领先 **7 支**）→ 线上换新（旧样先
-   Ctrl+Shift+R，再想 §6 的 build-cache 坑）。
-3. 照 35 号报告 §3 十三步验收 → 开始 J 自己的测试。
-   之后：31 号单**场次 5**（十大观音照片→D-7/D-8、MyInvois 模板→B-7、bench 实跑 G-3）。
+1. 贴 migration **29**（salin-migration.bat 选 29）→ status.bat 看新探针。
+2. **push-cabang.bat**（本机领先 **10 支**）→ 线上旧样先 Ctrl+Shift+R。
+3. 交现金页把两笔重复「等待总会确认」按 修改→取消 清掉。
+4. 回答 37 号报告 §6 四题（PdpaNote 删不删、#31 范围、#26/#27 指位、bench 重跑时间）。
+   之后：31 号单**场次 5**（十大观音照片→D-8、MyInvois 模板→B-7、bench G-3）。
    ⚠ **8/31 23:59 竞赛截止（内部 cutoff 18:00）**；one-pager 的 [YOU] 两处还空着。
 
 ### ❓ 未决问题
 
 1. 🔴 Vercel/Supabase region 是否同区 —— 等 J 抄来两个值
-2. 助手用哪个模型 —— G-2 已印成数字，等 G-3 真手写 bench 后定
+2. 助手用哪个模型 —— prompt 已解冻（D29），等 J 重跑 bench 后定
 3. 法律实体（金流前置，D12），试点前要答
-4. 真实手写 eval：92.9% 量的仍是印刷体，等 J 照片（场次 5）
-5. Supabase 邮件模板＋Site URL 还停 localhost（J 一分钟改）
+4. 真实手写 eval：92.9% 量的仍是印刷体，且 prompt 已动、数字作废——等 J 重测
+5. Supabase 邮件模板＋Site URL 还停 localhost（J 一分钟改；28#1 的
+   emailRedirectTo 已在代码里指对，但 Supabase 后台的 redirect 白名单要含
+   正式网址的 /login）
 6. /privacy 法律文的「不用於訓練」句去不去 —— 法律文要人审，J 一句话
 7. 竞赛首页主图重拍（拍板 0-9）—— 等 push 完用真机构画面拍
-8. 问一问的 prompt 智能上限（35 号报告 §4-1）—— 动 prompt 要专场拍板
-9. 配套定价（管理台毛利卡等它）—— 拍板是先量成本；bench/真用量之后
-10. （旧，小）打字格每行的转账不能附截图——真有人要再说
-11. （旧，小）MyInvois 官方模板逐栏对齐（B-7 后半）等 J 给原档
-12. （旧，小）check-ai.bat 还 cd 到旧资料夹 C:\dev\minit——改天一行修
+8. PdpaNote（🔒 照片只交给 AI 服务商）删/缩/留 —— J 拍板（37 号 §6-1）
+9. 配套定价（管理台毛利卡等它）—— 先量成本；bench/真用量之后
+10. #31 逐区块 AI 讨论 —— 等 J 定范围与计费口径
+11. #26「申报怪怪的」/#27「上面那个 bar」—— 太笼统，等 J 指位
+12. （旧，小）MyInvois 官方模板逐栏对齐（B-7 后半）等 J 给原档
+13. （旧，小）check-ai.bat 还 cd 到旧资料夹 C:\dev\minit——改天一行修
+14. #10 全站按钮统一的长尾扫尾（大头已消）
 
 ### ⏭ 下一个 session 从哪开始
 
-**J 验收 20 条（35 号报告）→ 若有翻案开小场修；否则 31 号单场次 5（J 在场）：
-D-7 决议归类＋D-8 正式报告版式＋B-7 后半＋G-3 bench 实跑。**
+**J 验收 37 号报告 → 翻案开小场修；否则：①#31 拍板后做逐区块 AI 讨论、
+②#10 按钮长尾、③31 号单场次 5（J 在场）。**
 8/31 前还要：竞赛首页主图重拍、one-pager [YOU] 两处。
 
 ---
 
 ## 6. 已知陷阱（踩过的，别再踩）
+
+### 2026-08-28 新增（两份 review 总攻那一场）
+
+- 🔴 **「远端覆盖本机」的合并规则遇上 forward-only 状态机＝复活 bug。** DB 从没
+  听说过交接，每次载入就把 settled 盖回 collected——同一张收据交了两次（J #17）。
+  **修法：状态机是 forward-only，合并也要 forward-only（取走得最远的）；而且
+  转移必须写回 DB，不是只写批次。判断方法：凡「本机改状态＋远端 hydrate」并存，
+  先问远端什么时候学会这个状态。**
+- 🔴 **输出上限比页数上限装得下的文件小＝确定性失败，还被包装成「连不上，
+  再试」。** 8192 默认上限 vs 50 页章程；两次白烧 RM0.10。**修法：ceiling 跟
+  page cap 配对（EXTRACT_OUTPUT_CEILING）；确定性失败用 typed error
+  （VendorOutputTruncatedError→413），永不叫人重试。判断方法：任何「上限/配额」
+  常数，先问它装不装得下同一路径上其他上限允许的最大件。**
+- 💡 **app_errors 只存 hash 也能取证：把候选错误讯息本地 hash 了比对。**
+  两笔 #1c0d0970… 直接对上 MAX_TOKENS 讯息——不用猜，不用重现。
+- 🔴 **视口断点在「侧栏+dock 吃宽」的壳里说谎。** 1366px 视口开着 640px 面板，
+  lg: 还是 4 栏——竹竿卡片。**修法：<main> 挂 @container，宽度敏感格线用
+  container variants（@md:/@4xl:）量内容栏本身。新格线一律 container 优先。**
+- ⚠ **vi.mock 一个「route 和它的 helper 都 import」的模组，新增导出没跟上=
+  整档 500。** extract-minutes 测试 mock 了 provider 只给 getVisionProvider，
+  route 新 import 的 EXTRACT_OUTPUT_CEILING 变 undefined——4 测全红（还先
+  commit 了才发现，补了一支修正）。**修法：vi.mock 用 importOriginal 展开真
+  模组、只盖要假的那个；跑完 vitest 再 commit，绿了才算数。**
+- ⚠ **e2e 的「逃生口点击」在产品把逃生口拆掉后会反着断言。** D30 拆了
+  「没有记出席」，e2e-minutes 原地改成「先证明稍后补上锁着保存，再真加一个
+  出席者」——把新契约测进去，而不是把断言删掉。
 
 ### 2026-08-27 深夜新增（20 条那一场）
 
@@ -335,7 +375,7 @@ D-7 决议归类＋D-8 正式报告版式＋B-7 后半＋G-3 bench 实跑。**
 ### 关于 git 与环境
 
 - **在沙盒／非互动环境不要跑任何会等待输入的指令。**
-- **「已 commit」不等于「已 push」。**（本轮：**全部已 commit、未 push 共 7 支。**）
+- **「已 commit」不等于「已 push」。**（本轮：**全部已 commit、未 push 共 10 支。**）
 - **卡住的 `git push` 会留下僵尸行程与 stale `index.lock`。**
 - **沙盒的挂载点删不掉档案。**
 - **Windows 上不要用 `| head`；长 commit 讯息写成档案再 `git commit -F <path>`，
@@ -391,14 +431,14 @@ J 手贴 migration 的步骤：记事本开档 → `Ctrl+A` `Ctrl+C` → Supabas
 | 位置 | 放什么 |
 |---|---|
 | 根目录 | `CLAUDE.md`（规则）· `STATE.md`（这份）· `BUILD_PLAN.md` · `PROMPTS.md` · `DEPLOY.md`（⚠ 过期，上线照 `docs/上线与截图-给J的步骤.md`）· `README.md` · `AGENTS.md` |
-| `docs/` | `DECISIONS.md`（D1–**D28**）· `功能盤點-計劃vs實作.md` · `产品缺口盘点.md` · `上线与截图-给J的步骤.md` · `换模型手册.md` · `AI-API-选型与成本.md` · 其余照旧 |
+| `docs/` | `DECISIONS.md`（D1–**D32**）· `功能盤點-計劃vs實作.md` · `产品缺口盘点.md` · `上线与截图-给J的步骤.md` · `换模型手册.md` · `AI-API-选型与成本.md` · 其余照旧 |
 | 品牌 | `src/lib/brand.ts`（BRAND_NAME="MinitAI"，D23）· **紫色**（D24）：logo 原图 `scripts/assets/minit-logo.png`、向量版 `src/components/brand-logo.tsx` · 重生图标：`node scripts/brand-icons.mjs` · tokens 都在 `globals.css` 的 `.v2-root` |
 | 定价／毛利 | `src/lib/unit-economics.ts` + `npm run economics`（价目表查证日 `PRICES_CHECKED_ON`） |
 | AI 分流设定 | `.env.example` 的 AI 段 + `npm run check:ai` |
 | 模型对比 | `npm run bench`（--dry-run / --mock）· `bench-models.bat` · 报告在 `eval/reports/model-bench-<日期>.md` |
 | 「到底做了没有」 | `npm run status` / `status.bat` |
 | 示范章程（CONTOH） | `public/contoh/undang-undang-tubuh-contoh.pdf`（8 页 BM 完整章程，虚构社团）· 文字版 `docs/contoh-undang-undang-tubuh.md` · 重生 `npm run contoh:constitution`。十条条文与 `src/lib/sample-constitution.ts` **逐字相同**、印出来的页码对得上 `page_ref`，所以拿它测 `/constitution` 上传时**答案是已知的** |
-| migration | `supabase/migrations/`（**28 支；28 未套用**）· `salin-migration.bat`（28 项）· `npm run check:migrations` |
+| migration | `supabase/migrations/`（**29 支；29 未套用**）· `salin-migration.bat`（29 项）· `npm run check:migrations`（含 save_register_rows RPC 探针） |
 | 给 J 双击的 `.bat` | `status.bat` · `salin-migration.bat` · `salin-env-vercel.bat` · `push-cabang.bat` · `bench-models.bat`。🔴 `push-to-github.bat` 不能用；⚠ `check-ai.bat` 还指旧资料夹 |
 | `competition/` | 顶层＝当前版（**[YOU] 两处还空着**）；`screenshots/` 60 张旧配色（拍板 0-9：只重拍首页主图，未拍——未决 7） |
 | `eval/reports/` | 整夹 gitignore；只有 `SUMMARY.md` 例外 |
