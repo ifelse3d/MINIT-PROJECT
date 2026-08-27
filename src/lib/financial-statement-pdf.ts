@@ -2,6 +2,7 @@ import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf
 import fontkit from "@pdf-lib/fontkit";
 import { needsCjkFont, subsetNotoFor, winAnsiSafe } from "@/lib/pdf-fonts";
 import { formatRm } from "@/lib/minutes-draft";
+import { PDF_PRODUCER, draftedByLine } from "@/lib/brand";
 import type { FinancialStatement } from "@/lib/financial-statement";
 
 // ---------------------------------------------------------------------------
@@ -26,7 +27,7 @@ export async function buildStatementPdf(params: StatementPdfParams): Promise<Uin
   const s = params.statement;
   const doc = await PDFDocument.create();
   doc.setTitle(`Penyata ${s.fromIso} – ${s.toIso} — ${params.orgName}`);
-  doc.setProducer("Minit");
+  doc.setProducer(PDF_PRODUCER);
 
   const allText = [
     params.orgName,
@@ -179,7 +180,7 @@ export async function buildStatementPdf(params: StatementPdfParams): Promise<Uin
   }
 
   // ---- Audit line (Hard Rule 8) --------------------------------------------
-  const audit = `Drafted by Minit, confirmed by ${params.confirmedBy} on ${params.confirmedOnIso}. Angka dikira oleh sistem daripada rekod yang disimpan / figures computed by the system from stored records.`;
+  const audit = `${draftedByLine.en(params.confirmedBy, params.confirmedOnIso)}. Angka dikira oleh sistem daripada rekod yang disimpan / figures computed by the system from stored records.`;
   const wrapAudit = (text: string): string[] => {
     const words = text.split(/\s+/);
     const lines: string[] = [];

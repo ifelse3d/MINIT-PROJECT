@@ -4,6 +4,7 @@ import { needsCjkFont, subsetNotoFor, winAnsiSafe } from "@/lib/pdf-fonts";
 
 export { needsCjkFont, winAnsiSafe };
 import { formatRm } from "@/lib/minutes-draft";
+import { PDF_PRODUCER, draftedByLine } from "@/lib/brand";
 import {
   amountInWordsBm,
   taxDeductibilityLineBm,
@@ -112,7 +113,7 @@ function wrap(
 export async function buildReceiptPdf(params: ReceiptPdfParams): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   doc.setTitle(`Resit ${params.receiptNo} — ${params.orgName}`);
-  doc.setProducer("Minit");
+  doc.setProducer(PDF_PRODUCER);
 
   const inKind = params.kind === "in_kind";
 
@@ -271,7 +272,7 @@ export async function buildReceiptPdf(params: ReceiptPdfParams): Promise<Uint8Ar
   }
 
   // ---- Audit line (Hard Rule 8), anchored near the bottom of the page. -----
-  const audit = `Drafted by Minit, confirmed by ${params.confirmedBy} on ${params.confirmedOnIso}. Resit dijana komputer, tiada tandatangan diperlukan / computer-generated, no signature required.`;
+  const audit = `${draftedByLine.en(params.confirmedBy, params.confirmedOnIso)}. Resit dijana komputer, tiada tandatangan diperlukan / computer-generated, no signature required.`;
   const auditLines = wrap(audit, (s) => widthOf(s, 9), width);
   let ay = margin + (auditLines.length - 1) * 12;
   page.drawLine({

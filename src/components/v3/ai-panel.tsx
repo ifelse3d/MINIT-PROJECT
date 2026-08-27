@@ -32,6 +32,7 @@ import { Tri, useTriText } from "@/components/language-provider";
 import { GlassBadge } from "./surfaces";
 import { AnswerSources, type AnswerSource } from "./answer-sources";
 import { tidyReply } from "@/lib/tidy-reply";
+import { ASSISTANT_NAME } from "@/lib/brand";
 
 type Turn = {
   role: "user" | "assistant";
@@ -199,7 +200,11 @@ export function AIPanel({
           <Sparkles className="h-5 w-5" strokeWidth={1.9} />
         </span>
         <p className="min-w-0 flex-1 truncate text-lg font-semibold text-[color:var(--v2-text)]">
-          <Tri bm="Tanya Minit" zh="问一问 Minit" en="Ask Minit" />
+          <Tri
+            bm={`Tanya ${ASSISTANT_NAME}`}
+            zh={`问一问 ${ASSISTANT_NAME}`}
+            en={`Ask ${ASSISTANT_NAME}`}
+          />
         </p>
         {onClose && (
           <button

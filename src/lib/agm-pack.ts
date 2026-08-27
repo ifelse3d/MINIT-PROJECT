@@ -9,6 +9,8 @@
 // came from an org setting instead of the ingested constitution.
 // ---------------------------------------------------------------------------
 
+import { draftedByLine } from "@/lib/brand";
+
 export const DRAFT_WATERMARK_BM = "DRAF — sila semak sebelum guna";
 
 export type CommitteeMember = {
@@ -96,8 +98,8 @@ function headerBm(p: AgmPackParams): string {
 
 function footerBm(p: AgmPackParams): string {
   return p.confirmed
-    ? `Drafted by Minit, confirmed by ${p.confirmed.by} on ${p.confirmed.onIso}.`
-    : `${DRAFT_WATERMARK_BM} · Drafted by Minit.`;
+    ? `${draftedByLine.en(p.confirmed.by, p.confirmed.onIso)}.`
+    : `${DRAFT_WATERMARK_BM} · ${draftedByLine.draftEn()}`;
 }
 
 export function formatDateBm(iso: string): string {
@@ -311,7 +313,7 @@ export function buildBankResolutionExtractBm(m: MinutesForExtract): BankExtractR
     "____________________________        ____________________________",
     "Pengerusi                           Setiausaha",
     "",
-    `Drafted by Minit, confirmed by ${m.confirmedBy ?? "—"} on ${m.confirmedOnIso ?? "—"}.`,
+    `${draftedByLine.en(m.confirmedBy ?? "—", m.confirmedOnIso ?? "—")}.`,
   ].join("\n");
   return { ok: true, text };
 }

@@ -17,6 +17,7 @@ import { EinvoisProvider } from "@/lib/einvois-pref";
 import { StorageScopeProvider } from "@/lib/storage-scope";
 import { isOperatorEmail } from "@/lib/admin-gate";
 import { AppShell } from "@/components/v3/shell";
+import { BRAND_NAME } from "@/lib/brand";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -40,7 +41,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Minit",
+  title: BRAND_NAME,
   manifest: "/manifest.webmanifest",
   icons: { icon: "/icon-192.png", apple: "/icon-192.png" },
   description:

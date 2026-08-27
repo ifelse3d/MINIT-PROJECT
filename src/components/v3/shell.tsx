@@ -23,6 +23,7 @@ import { usePathname } from "next/navigation";
 import { LanguageSwitcher, Tri } from "@/components/language-provider";
 import { FirstRunFlow } from "@/components/first-run-flow";
 import { usePersistentState } from "@/lib/use-persistent-state";
+import { BRAND_INITIAL, BRAND_NAME } from "@/lib/brand";
 import {
   PRIMARY_NAV,
   SIDEBAR_NAV,
@@ -174,9 +175,9 @@ function Rail({ pathname, showAdmin }: { pathname: string; showAdmin: boolean })
     >
       <div className="flex items-center gap-2 px-5 pb-4 pt-5">
         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[color:var(--v2-primary-fill)] text-lg font-bold text-white">
-          M
+          {BRAND_INITIAL}
         </span>
-        <span className="text-xl font-semibold tracking-tight">Minit</span>
+        <span className="text-xl font-semibold tracking-tight">{BRAND_NAME}</span>
       </div>
 
       <nav className="v2-scroll flex-1 overflow-y-auto px-3">
@@ -307,9 +308,9 @@ function MobileTopBar() {
     <header className="flex items-center justify-between gap-3 md:hidden">
       <div className="flex items-center gap-2">
         <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[color:var(--v2-primary-fill)] text-base font-bold text-white">
-          M
+          {BRAND_INITIAL}
         </span>
-        <span className="text-lg font-semibold tracking-tight">Minit</span>
+        <span className="text-lg font-semibold tracking-tight">{BRAND_NAME}</span>
       </div>
       {org && (
         <span className="max-w-[55%] truncate text-sm text-[color:var(--v2-text-soft)]">

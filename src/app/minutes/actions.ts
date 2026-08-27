@@ -27,6 +27,7 @@ import { isSampleMeetingExtraction } from "@/lib/sample-guard";
 import { renderMinutesDraftBm } from "@/lib/minutes-draft";
 import { joinUserError, inputProblemError, USER_ERRORS } from "@/lib/user-errors";
 import { dayIsoMalaysia } from "@/lib/history";
+import { BRAND_NAME } from "@/lib/brand";
 import {
   isMinutesLang,
   minutesAuditLine,
@@ -308,7 +309,7 @@ function stampIdentity(
   while (true) {
     const cut = body.lastIndexOf("\n---\n");
     if (cut === -1) break;
-    if (!body.slice(cut).includes("Disediakan oleh Minit")) break;
+    if (!body.slice(cut).includes(`Disediakan oleh ${BRAND_NAME}`)) break;
     body = body.slice(0, cut).trimEnd();
   }
 

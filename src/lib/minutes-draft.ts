@@ -1,5 +1,6 @@
 import type { MeetingNotesExtraction } from "@/lib/extraction";
 import { meetingTypeLabel } from "@/lib/meeting-types";
+import { draftedByLine } from "@/lib/brand";
 
 // ---------------------------------------------------------------------------
 // DETERMINISTIC BM minutes renderer (template fill, no LLM).
@@ -98,8 +99,9 @@ export function renderMinutesDraftBm(
   if (opts.confirmedBy) {
     lines.push(
       "---",
-      `Disediakan oleh Minit, disahkan oleh ${opts.confirmedBy.name} pada ${opts.confirmedBy.dateIso} / ` +
-        `Drafted by Minit, confirmed by ${opts.confirmedBy.name} on ${opts.confirmedBy.dateIso}`
+      draftedByLine.bm(opts.confirmedBy.name, opts.confirmedBy.dateIso) +
+        " / " +
+        draftedByLine.en(opts.confirmedBy.name, opts.confirmedBy.dateIso)
     );
   }
 

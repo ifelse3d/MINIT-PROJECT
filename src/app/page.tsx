@@ -13,6 +13,7 @@ import { HowItWorksButton } from "./how-it-works";
 import { WelcomeCard } from "./welcome-card";
 import { AskBox } from "./ask-box";
 import { TaskCards } from "./task-cards";
+import { BRAND_NAME } from "@/lib/brand";
 
 // ---------------------------------------------------------------------------
 // HOME = four task cards, then the chat box (A-1, work order 27 — J 8/26 #1).
@@ -47,16 +48,16 @@ export default async function Home() {
         <div className="v2-glass flex flex-col gap-3 border-2 border-[color:var(--v2-primary)]/40 p-6">
           <p className="text-xl font-semibold">
             <Tri
-              bm="Mulakan di sini: beritahu Minit nama pertubuhan anda."
-              zh="从这里开始：告诉 Minit 您机构的名字。"
-              en="Start here: tell Minit your organisation's name."
+              bm={`Mulakan di sini: beritahu ${BRAND_NAME} nama pertubuhan anda.`}
+              zh={`从这里开始：告诉 ${BRAND_NAME} 您机构的名字。`}
+              en={`Start here: tell ${BRAND_NAME} your organisation's name.`}
             />
           </p>
           <p className="text-base text-[color:var(--v2-text-soft)]">
             <Tri
-              bm="Minit perlu tahu dokumen ini untuk pertubuhan yang mana, supaya nama yang betul tercetak pada resit dan minit anda. Ia mengambil masa kira-kira satu minit."
-              zh="Minit 需要知道这些文件属于哪个机构，收据和会议记录上才会印出正确的名字。大约只要一分钟。"
-              en="Minit needs to know which organisation these documents belong to, so the right name is printed on your receipts and minutes. It takes about a minute."
+              bm={`${BRAND_NAME} perlu tahu dokumen ini untuk pertubuhan yang mana, supaya nama yang betul tercetak pada resit dan minit anda. Ia mengambil masa kira-kira satu minit.`}
+              zh={`${BRAND_NAME} 需要知道这些文件属于哪个机构，收据和会议记录上才会印出正确的名字。大约只要一分钟。`}
+              en={`${BRAND_NAME} needs to know which organisation these documents belong to, so the right name is printed on your receipts and minutes. It takes about a minute.`}
             />
           </p>
           <div className="flex flex-wrap items-center gap-3">
@@ -126,7 +127,7 @@ export default async function Home() {
 function Header() {
   return (
     <div>
-      <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Minit</h1>
+      <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{BRAND_NAME}</h1>
       <p className="mt-1 text-lg text-[color:var(--v2-text-soft)]">
         <Tri
           bm="Dokumen persatuan, tanpa borang."

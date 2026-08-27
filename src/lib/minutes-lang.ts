@@ -17,6 +17,8 @@
 // needs it is a registrar or an auditor.
 // ---------------------------------------------------------------------------
 
+import { draftedByLine } from "@/lib/brand";
+
 export const MINUTES_LANGUAGES = ["bm", "zh", "en"] as const;
 export type MinutesLang = (typeof MINUTES_LANGUAGES)[number];
 
@@ -181,11 +183,11 @@ export function minutesAuditLine(
   confirmedBy: string,
   dateIso: string,
 ): string {
-  const bm = `Disediakan oleh Minit, disahkan oleh ${confirmedBy} pada ${dateIso}`;
+  const bm = draftedByLine.bm(confirmedBy, dateIso);
   const second =
     lang === "zh"
-      ? `由 Minit 起草，${confirmedBy} 于 ${dateIso} 确认`
-      : `Drafted by Minit, confirmed by ${confirmedBy} on ${dateIso}`;
+      ? draftedByLine.zh(confirmedBy, dateIso)
+      : draftedByLine.en(confirmedBy, dateIso);
   return `${bm} / ${second}`;
 }
 

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
+import { BRAND_NAME } from "@/lib/brand";
 
 // ---------------------------------------------------------------------------
 // "See how it works" (A-3, 2026-08-25, J's #3): a four-frame walkthrough in a
@@ -29,9 +30,9 @@ const FRAMES = [
   {
     src: "/how-it-works/step-2.png",
     icon: "🔍",
-    bm: "Minit membaca setiap baris. Yang kabur ditanda untuk anda semak.",
-    zh: "Minit 逐行读出来。读不准的会标黄，等您核对。",
-    en: "Minit reads every line. Smudged ones are flagged for you to check.",
+    bm: `${BRAND_NAME} membaca setiap baris. Yang kabur ditanda untuk anda semak.`,
+    zh: `${BRAND_NAME} 逐行读出来。读不准的会标黄，等您核对。`,
+    en: `${BRAND_NAME} reads every line. Smudged ones are flagged for you to check.`,
   },
   {
     src: "/how-it-works/step-3.png",
@@ -101,7 +102,7 @@ function HowItWorksModal({ onClose }: { onClose: () => void }) {
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
       role="dialog"
       aria-modal="true"
-      aria-label={t("Cara Minit berfungsi", "Minit 怎么运作", "How Minit works")}
+      aria-label={t(`Cara ${BRAND_NAME} berfungsi`, `${BRAND_NAME} 怎么运作`, `How ${BRAND_NAME} works`)}
       onClick={onClose}
     >
       <div

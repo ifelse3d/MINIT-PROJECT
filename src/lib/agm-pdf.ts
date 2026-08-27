@@ -1,6 +1,7 @@
 import { PDFDocument, StandardFonts, degrees, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import { needsCjkFont, subsetNotoFor, winAnsiSafe } from "@/lib/pdf-fonts";
+import { PDF_PRODUCER } from "@/lib/brand";
 import {
   attendanceSheetTitleBm,
   buildAgmNoticeBm,
@@ -278,7 +279,7 @@ export async function buildAgmPackPdf(
 ): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   doc.setTitle(`Pek AGM ${p.year} — ${p.orgName}`);
-  doc.setProducer("Minit");
+  doc.setProducer(PDF_PRODUCER);
 
   const notice = buildAgmNoticeBm(p);
   const proxy = buildProxyFormBm(p);
@@ -315,7 +316,7 @@ export async function buildBankExtractPdf(
   if (!res.ok) throw new Error(res.reason);
   const doc = await PDFDocument.create();
   doc.setTitle(`Petikan minit (bank) — ${m.orgName}`);
-  doc.setProducer("Minit");
+  doc.setProducer(PDF_PRODUCER);
   let noto: PDFFont | null = null;
   if (winAnsiSafe(res.text) !== res.text) {
     const sub = await subsetNotoFor(res.text);
