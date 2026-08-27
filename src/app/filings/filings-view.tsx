@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/table";
 import { ConfidenceBadge } from "@/components/confidence-badge";
 import { Tri, useTriText } from "@/components/language-provider";
+import { hasCjk } from "@/lib/bm-guard";
 import { buildPastePack, type FilingRosterEntry } from "@/lib/paste-pack";
 import type { MeetingNotesExtraction } from "@/lib/extraction";
 import {
@@ -182,6 +183,17 @@ export function FilingsView({
                       </TableCell>
                       <TableCell className="max-w-72 whitespace-normal">
                         {row.value}
+                        {/* BM guard (J 8/27): eROSES fields must be BM. */}
+                        {hasCjk(row.value) && (
+                          <div className="mt-1 text-sm font-medium text-red-700 dark:text-red-300">
+                            🛑{" "}
+                            <Tri
+                              bm="Masih berbahasa Cina — eROSES perlukan Bahasa Malaysia. Betulkan pada minit itu."
+                              zh="这一格还有华语 —— eROSES 要马来文。请回到那份会议记录改。"
+                              en="Still contains Chinese — eROSES needs Bahasa Malaysia. Fix it on that minutes document."
+                            />
+                          </div>
+                        )}
                         {row.note && (
                           <div className="mt-1 text-sm text-muted-foreground">{row.note}</div>
                         )}

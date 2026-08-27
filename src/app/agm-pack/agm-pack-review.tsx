@@ -27,6 +27,7 @@ import {
   formatDateBm,
   latestNoticeDateIso,
 } from "@/lib/agm-pack";
+import { hasCjk } from "@/lib/bm-guard";
 import { sampleAgmPackParams, sampleConfirmedMinutes } from "@/lib/sample-roster";
 import { dayIsoMalaysia } from "@/lib/history";
 import { downloadFromApi } from "@/lib/download-file";
@@ -311,6 +312,18 @@ export function AgmPackReview({
                 value={venue}
                 onChange={(e) => setVenue(e.target.value)}
               />
+              {/* BM guard (J 8/27): the notice/agenda/proxy are official BM
+                  documents — a Chinese venue lands verbatim in all of them. */}
+              {hasCjk(venue) && (
+                <span className="text-sm font-medium text-red-700 dark:text-red-300">
+                  🛑{" "}
+                  <Tri
+                    bm="Dokumen pek AGM ialah dokumen rasmi Bahasa Malaysia — tulis tempat dalam BM (cth: Dewan Besar)."
+                    zh="AGM 文件包是马来文正式文件 —— 地点请写马来文（例：Dewan Besar）。"
+                    en="The AGM pack is an official Bahasa Malaysia document — write the venue in BM (e.g. Dewan Besar)."
+                  />
+                </span>
+              )}
             </label>
           </div>
           {factsReady && (

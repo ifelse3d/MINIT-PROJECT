@@ -179,6 +179,34 @@ export async function buildStatementPdf(params: StatementPdfParams): Promise<Uin
     y -= 10;
   }
 
+  // ---- Signature blocks (formality pass, J 8/27: 「所有報告都要正式些」) ----
+  // The preparer is the signed-in person; the endorser is a LABELLED BLANK —
+  // Minit does not know who audits/chairs and must not guess (Hard Rule 1;
+  // same rule as the minutes' PENUTUP block).
+  ensureRoom(120);
+  y -= 24;
+  const colW = (width - 40) / 2;
+  const sigLineY = y - 42;
+  drawAt("Disediakan oleh / Prepared by,", margin, y, 10.5);
+  drawAt("Disahkan oleh / Verified by,", margin + colW + 40, y, 10.5);
+  page.drawLine({
+    start: { x: margin, y: sigLineY },
+    end: { x: margin + colW - 20, y: sigLineY },
+    thickness: 0.8,
+    color: ink,
+  });
+  page.drawLine({
+    start: { x: margin + colW + 40, y: sigLineY },
+    end: { x: margin + colW * 2 + 20, y: sigLineY },
+    thickness: 0.8,
+    color: ink,
+  });
+  drawAt(`( ${params.confirmedBy} )`, margin, sigLineY - 14, 10.5);
+  drawAt("Bendahari / Treasurer", margin, sigLineY - 28, 9, { color: grey });
+  drawAt("(                                )", margin + colW + 40, sigLineY - 14, 10.5);
+  drawAt("Pengerusi / Juruaudit", margin + colW + 40, sigLineY - 28, 9, { color: grey });
+  y = sigLineY - 44;
+
   // ---- Audit line (Hard Rule 8) --------------------------------------------
   const audit = `${draftedByLine.en(params.confirmedBy, params.confirmedOnIso)}. Angka dikira oleh sistem daripada rekod yang disimpan / figures computed by the system from stored records.`;
   const wrapAudit = (text: string): string[] => {

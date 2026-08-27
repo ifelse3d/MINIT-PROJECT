@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ConfidenceBadge } from "@/components/confidence-badge";
 import { Tri } from "@/components/language-provider";
 import { NextStepLink, PageSection } from "@/components/page-section";
+import { cjkSnippets, hasCjk } from "@/lib/bm-guard";
 import { MINUTES_LANGUAGES, type MinutesLang } from "@/lib/minutes-lang";
 import { useMinutes } from "./minutes-store";
 
@@ -30,6 +31,8 @@ const LANGUAGE_CHOICE: Record<MinutesLang, string> = {
 
 export function MinutesDocument() {
   const {
+    documentOrgName,
+    documentSigner,
     extraction,
     isReal,
     isSample,
@@ -66,6 +69,21 @@ export function MinutesDocument() {
   // text by hand. Same paste pack, same helper, same behaviour now.
   const [copiedEroses, setCopiedEroses] = useState<string | null>(null);
   const router = useRouter();
+
+  // BM GUARD (J 8/27 下午): a BM document bound for eROSES must not carry
+  // Chinese. Free, deterministic scan of exactly what would be saved; the
+  // fix is the person's CHOICE — AI (the existing metered draft) or their
+  // own hands. Only the BM version is guarded: 中文/EN versions are for the
+  // organisation's own use.
+  // The org's REGISTERED name and the signer's name print verbatim (never
+  // rewritten) — a Chinese org name must not block its own documents.
+  const bmOffenders = useMemo(
+    () =>
+      docLang === "bm" && isReal && allReviewed
+        ? cjkSnippets(shownDocument, [documentOrgName, documentSigner])
+        : [],
+    [docLang, isReal, allReviewed, shownDocument, documentOrgName, documentSigner],
+  );
 
   async function copyErosesValue(field: string, value: string) {
     try {
@@ -294,6 +312,59 @@ export function MinutesDocument() {
                 />
               </p>
             )}
+            {/* THE BM GUARD: saving is blocked while Chinese remains in the
+                BM document, and the person chooses the way out (J 8/27:
+                「先問 user 要 AI 幫忙還是 user 自己改」). */}
+            {bmOffenders.length > 0 && (
+              <div className="flex flex-col gap-3 rounded-md border-2 border-red-300 bg-red-50 p-4 dark:bg-red-400/10">
+                <p className="text-base font-semibold text-red-900 dark:text-red-100">
+                  🛑{" "}
+                  <Tri
+                    bm={`Dokumen Bahasa Malaysia ini masih mengandungi ${bmOffenders.length} baris berbahasa Cina — eROSES memerlukan Bahasa Malaysia sepenuhnya.`}
+                    zh={`这份要交 eROSES 的马来文文件里还有 ${bmOffenders.length} 行华语 —— eROSES 要全马来文。`}
+                    en={`This Bahasa Malaysia document still contains ${bmOffenders.length} line(s) of Chinese — eROSES requires full Bahasa Malaysia.`}
+                  />
+                </p>
+                <ul className="flex max-h-40 flex-col gap-1 overflow-y-auto text-sm text-red-900/90 dark:text-red-100/90">
+                  {bmOffenders.map((s) => (
+                    <li key={s} className="truncate">
+                      · {s}
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button size="lg" onClick={writeWithAi} disabled={draftBusy}>
+                    {draftBusy ? (
+                      <Tri bm="Minit sedang menulis…" zh="Minit 正在写…" en="Minit is writing…" />
+                    ) : (
+                      <Tri
+                        bm="✍️ Biar AI tulis versi BM (guna kuota AI)"
+                        zh="✍️ 让 AI 译成正式马来文（用 AI 额度）"
+                        en="✍️ Let the AI write the BM version (uses AI allowance)"
+                      />
+                    )}
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    onClick={() => {
+                      const el = document.getElementById("minutes-document");
+                      el?.scrollIntoView({ block: "center" });
+                      el?.focus();
+                    }}
+                  >
+                    ✏️ <Tri bm="Saya betulkan sendiri" zh="我自己改" en="I will fix it myself" />
+                  </Button>
+                </div>
+                <p className="text-sm text-red-900/80 dark:text-red-100/80">
+                  <Tri
+                    bm="Nama ahli hendaklah menggunakan nama rasmi (IC) daripada senarai ahli."
+                    zh="人名请用名册里的官方（IC）姓名顶上。"
+                    en="Member names should use the official (IC) names from the roster."
+                  />
+                </p>
+              </div>
+            )}
             <div className="flex flex-wrap items-center gap-3">
               <Button
                 size="lg"
@@ -309,8 +380,15 @@ export function MinutesDocument() {
                 // organisation's audit trail — hence isReal, not !isSample.
                 // `alreadySaved`: THIS document is stored; a second press
                 // must not store it twice (S0-3 — found by e2e-minutes.mjs).
-                // Editing anything unlocks the button again.
-                disabled={!allReviewed || saveBusy || !isReal || alreadySaved}
+                // Editing anything unlocks the button again. The BM guard
+                // (above) blocks while Chinese remains in the BM version.
+                disabled={
+                  !allReviewed ||
+                  saveBusy ||
+                  !isReal ||
+                  alreadySaved ||
+                  bmOffenders.length > 0
+                }
               >
                 {saveBusy ? (
                   <Tri bm="Menyimpan…" zh="保存中…" en="Saving…" />
@@ -430,6 +508,17 @@ export function MinutesDocument() {
                       </Button>
                     </div>
                     <div className="mt-1 whitespace-normal">{row.value}</div>
+                    {/* BM guard: eROSES fields must be Bahasa Malaysia. */}
+                    {hasCjk(row.value) && (
+                      <div className="mt-1 text-sm font-medium text-red-700 dark:text-red-300">
+                        🛑{" "}
+                        <Tri
+                          bm="Nilai ini masih berbahasa Cina — eROSES perlukan Bahasa Malaysia. Betulkan medan asalnya, atau salin daripada dokumen BM yang ditulis AI."
+                          zh="这一格还有华语 —— eROSES 要马来文。请回去改这一栏，或从 AI 写好的马来文文件里取。"
+                          en="This value still contains Chinese — eROSES needs Bahasa Malaysia. Fix the source field, or take it from the AI-written BM document."
+                        />
+                      </div>
+                    )}
                     {row.note && (
                       <div className="mt-1 text-sm text-muted-foreground">
                         {row.note}

@@ -287,7 +287,7 @@ async function run() {
     }, "2026-08-20");
   });
   await editRow(page, "会议地点", async () => {
-    await page.keyboard.type("Dewan Persatuan 大礼堂");
+    await page.keyboard.type("Dewan Persatuan");
   });
   await page.goto(`${BASE}/minutes/attendance`, { waitUntil: "networkidle2" });
   await clickByText(page, "没有记出席", "button, label");

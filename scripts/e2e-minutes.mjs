@@ -188,10 +188,12 @@ async function run() {
   });
   check("meeting date set", dateOk);
 
-  // venue: text editor
+  // venue: text editor. BM on purpose — the BM guard (W6, J 8/27) blocks
+  // saving a BM document that carries Chinese content, and this script's
+  // job is to test the SAVE path. The guard has its own unit tests.
   const venueOk = await editRow(page, "会议地点", async () => {
     // The row editor autofocuses its input — type into the focused element.
-    await page.keyboard.type("测试礼堂");
+    await page.keyboard.type("Dewan E2E");
   });
   check("venue set", venueOk);
 
