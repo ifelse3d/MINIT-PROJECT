@@ -154,6 +154,13 @@ export type RegisterStore = {
    * hidden the button.
    */
   deleteDonation: (id: string) => void;
+  /**
+   * §1-4 (work order 32): clear EVERY unreceipted draft row in one tap —
+   * "yesterday's test rows are still here" was J's launch-day confusion.
+   * Rows with a receipt number are untouchable, here as everywhere: the
+   * number series is gap-free and the row behind a number never disappears.
+   */
+  clearUnreceiptedDrafts: () => void;
   addManualDonation: (d: RegisterDonation) => void;
   addManualDonations: (rows: RegisterDonation[]) => void;
   issueReceipts: (opts?: { acceptDefaultPrefix?: boolean }) => Promise<void>;
@@ -560,6 +567,13 @@ export function RegisterProvider({
     [setDonations],
   );
 
+  // §1-4: drafts are unreceipted and local-only (rows reach the database at
+  // receipt time), so clearing them clears them for good — the button that
+  // calls this confirms first.
+  const clearUnreceiptedDrafts = useCallback(() => {
+    setDonations((prev) => prev.filter((d) => d.receiptNo !== null));
+  }, [setDonations]);
+
   // Manual income entry (the eROSES-test exception) appends a confirmed row.
   const addManualDonation = useCallback(
     (d: RegisterDonation) => setDonations((prev) => [...prev, d]),
@@ -907,6 +921,7 @@ export function RegisterProvider({
         availableMonths,
         saveDonation,
         deleteDonation,
+        clearUnreceiptedDrafts,
         addManualDonation,
         addManualDonations,
         issueReceipts,

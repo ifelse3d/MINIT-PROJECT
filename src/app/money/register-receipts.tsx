@@ -58,6 +58,7 @@ export function RegisterAndReceipts() {
     unreceipted: unreceiptedCount,
     saveDonation,
     deleteDonation,
+    clearUnreceiptedDrafts,
     addManualDonation,
     addManualDonations,
     issueReceipts,
@@ -278,6 +279,33 @@ export function RegisterAndReceipts() {
                 en="Names hidden — after sharing, tap again to bring them back."
               />
             </span>
+          )}
+          {/* §1-4 (work order 32): "yesterday's test rows are still here" —
+              one button clears every unreceipted draft. Rows with issued
+              receipt numbers are untouchable, as everywhere. */}
+          {unreceiptedCount > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-red-700 hover:bg-red-50 hover:text-red-800 dark:hover:bg-red-400/10"
+              onClick={() => {
+                const ok = window.confirm(
+                  t(
+                    `Kosongkan ${unreceiptedCount} baris draf yang belum ada resit? Baris yang sudah ada nombor resit TIDAK disentuh. Tidak boleh dibatalkan.`,
+                    `要清空这 ${unreceiptedCount} 笔还没开收据的草稿吗？已开收据的记录不会动。清了无法复原。`,
+                    `Clear the ${unreceiptedCount} draft row(s) with no receipt yet? Rows with issued receipt numbers are NOT touched. This cannot be undone.`,
+                  ),
+                );
+                if (ok) clearUnreceiptedDrafts();
+              }}
+            >
+              🧹{" "}
+              <Tri
+                bm="Kosongkan draf"
+                zh="清空这批草稿"
+                en="Clear the drafts"
+              />
+            </Button>
           )}
         </div>
         {issueNotice === "saved" && (

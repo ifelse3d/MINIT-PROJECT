@@ -87,10 +87,12 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
       "/history",
       "/inbox",
     ]);
-    // 设置: 方案与用量 · 设置.
+    // 设置 (§1-13, work order 32): 机构与收据 · 方案与用量 · 账号与显示 · 反馈.
     expect(byId("settings").children.map((c) => c.href)).toEqual([
+      "/settings/org",
       "/settings/plan",
       "/settings",
+      "/settings/feedback",
     ]);
   });
 

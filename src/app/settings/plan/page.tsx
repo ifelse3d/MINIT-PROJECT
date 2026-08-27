@@ -5,6 +5,7 @@ import { getActiveOrg } from "@/lib/active-org";
 import { getUsage } from "@/lib/ai/usage";
 import { PLANS, PLAN_ORDER, planById, type Plan } from "@/lib/plans";
 import { UsageBar } from "@/components/usage-bar";
+import { loadUsageByPerson } from "../usage-by-person";
 
 // ---------------------------------------------------------------------------
 // /settings/plan — which tier this organisation is on (S-4, 2026-08-25).
@@ -66,9 +67,12 @@ export default async function PlanPage() {
     );
   }
 
-  const [plan, usage] = await Promise.all([
+  const [plan, usage, usageByPerson] = await Promise.all([
     loadPlan(active.id),
     getUsage(active.id).catch(() => null),
+    // K-2's by-member split — lived on the old long /settings page; since the
+    // §1-13 split it belongs here with the rest of the usage story.
+    loadUsageByPerson(active.id),
   ]);
   const contactEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "";
 
@@ -104,6 +108,15 @@ export default async function PlanPage() {
               <Tri bm="digunakan" zh="已用" en="used" />
               {" · "}
               <span className="font-semibold tabular-nums">{usage.usedPct}%</span>
+              {/* Moved with the §1-13 split: top-up credits were only ever
+                  shown on the old long settings page. */}
+              {usage.extraCredits > 0 && (
+                <>
+                  {" · "}
+                  <span className="font-semibold tabular-nums">+{usage.extraCredits}</span>{" "}
+                  <Tri bm="kredit tambahan" zh="充值额度" en="extra credits" />
+                </>
+              )}
             </p>
           )}
         </div>
@@ -117,6 +130,15 @@ export default async function PlanPage() {
             blocked={usage.blocked}
             totalRemaining={usage.totalRemaining}
           />
+        )}
+        {/* K-2: who used what this month. Display names only, never contents.
+            "?" = actions from before per-person metering existed. */}
+        {usageByPerson.length > 0 && (
+          <p className="text-sm text-[color:var(--v2-text-soft)]">
+            <Tri bm="Mengikut ahli" zh="按成员" en="By member" />
+            {": "}
+            {usageByPerson.map((p) => `${p.name} ×${p.count}`).join(" · ")}
+          </p>
         )}
         {/* F-1 (work order 31, 拍板 40): an organisation whose metered quota is
             HIGHER than its plan's standard (J's org: 100 vs trial 15) is an

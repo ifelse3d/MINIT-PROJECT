@@ -15,6 +15,7 @@ import {
   Home,
   Landmark,
   Languages,
+  MessageSquare,
   MoreHorizontal,
   Receipt,
   ScrollText,
@@ -119,6 +120,10 @@ export const NAV_ITEMS: NavItem[] = [
   // "Settings" — 設置>設置. The group keeps the section name; the row says what
   // is actually on the page: your account and how the app looks.
   { href: "/settings", icon: Settings, bm: "Akaun & paparan", zh: "账号与显示", en: "Account & display", exact: true },
+  // §1-13 (work order 32): the settings split — the org's own settings and
+  // the feedback channel became real pages with real rows.
+  { href: "/settings/org", icon: Building2, bm: "Pertubuhan & resit", zh: "机构与收据", en: "Organisation & receipts" },
+  { href: "/settings/feedback", icon: MessageSquare, bm: "Maklum balas", zh: "反馈", en: "Feedback" },
   // G-4 (8/26): back in the menus — the pack builds from the REAL roster now.
   // Spelled out, no bare abbreviation (G-4).
   { href: "/agm-pack", icon: Landmark, bm: "Pek Mesyuarat Agung (AGM)", zh: "常年大会文件包", en: "AGM pack" },
@@ -208,6 +213,8 @@ export const PRIMARY_NAV: NavEntry[] = [
       byHref("/orgs"),
       byHref("/settings/plan"),
       byHref("/settings"),
+      byHref("/settings/org"),
+      byHref("/settings/feedback"),
     ],
   },
 ];
@@ -297,7 +304,14 @@ export const SIDEBAR_NAV: NavEntry[] = [
     bm: "Tetapan",
     zh: "设置",
     en: "Settings",
-    children: [byHref("/settings/plan"), byHref("/settings")],
+    // §1-13: four rows — the org's settings and feedback joined when the
+    // 3161px /settings page was split into pages.
+    children: [
+      byHref("/settings/org"),
+      byHref("/settings/plan"),
+      byHref("/settings"),
+      byHref("/settings/feedback"),
+    ],
   },
 ];
 

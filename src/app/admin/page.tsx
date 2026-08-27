@@ -39,7 +39,7 @@ type Subtotal = { label: string; count: number; costMicros: number };
 type OrgRow = {
   id: number;
   name: string;
-  plan: string;
+  plan: { bm: string; zh: string; en: string };
   monthlyQuota: number;
   usedThisMonth: number;
   usedPct: number;
@@ -174,7 +174,8 @@ async function loadRows(): Promise<OrgRow[]> {
     return {
       id: o.id,
       name: o.name,
-      plan: planById(o.plan).id,
+      // §1-1: the display NAME, not the internal id token.
+      plan: planById(o.plan).name,
       monthlyQuota: quota,
       usedThisMonth,
       usedPct: quota > 0 ? Math.round((usedThisMonth / quota) * 100) : 0,
@@ -309,7 +310,9 @@ export default async function AdminPage() {
                 <td className="px-4 py-3 font-medium">
                   {r.name} <span className="text-sm text-[color:var(--v2-text-soft)]">#{r.id}</span>
                 </td>
-                <td className="px-4 py-3">{r.plan}</td>
+                <td className="px-4 py-3">
+                  <Tri bm={r.plan.bm} zh={r.plan.zh} en={r.plan.en} />
+                </td>
                 <td className="px-4 py-3 text-right tabular-nums">
                   {r.usedThisMonth} / {r.monthlyQuota} · {r.usedPct}%
                   {/* K-2: by member (this month). "?" = rows with no person. */}
@@ -352,12 +355,15 @@ export default async function AdminPage() {
                       </summary>
                       <div className="mt-2 flex flex-col gap-1 text-xs text-[color:var(--v2-text-soft)]">
                         {([
-                          ["provider", r.byProvider],
-                          ["model", r.byModel],
-                          ["action", r.byAction],
-                        ] as const).map(([kind, subs]) => (
+                          ["provider", { bm: "Penyedia", zh: "供应商", en: "Provider" }, r.byProvider],
+                          ["model", { bm: "Model", zh: "模型", en: "Model" }, r.byModel],
+                          ["action", { bm: "Tindakan", zh: "动作", en: "Action" }, r.byAction],
+                        ] as const).map(([kind, words, subs]) => (
                           <p key={kind}>
-                            <span className="font-semibold">{kind}:</span>{" "}
+                            <span className="font-semibold">
+                              <Tri bm={words.bm} zh={words.zh} en={words.en} />
+                              :
+                            </span>{" "}
                             {subs
                               .map((s) => `${s.label} ×${s.count} (${usd(s.costMicros)})`)
                               .join(" · ")}
@@ -381,28 +387,42 @@ export default async function AdminPage() {
         </table>
       </div>
 
+      {/* §1-1: internal plumbing (column names, migration numbers) moved off
+          the face of the page into a fold-out for the operator. */}
       <p className="text-sm text-[color:var(--v2-text-soft)]">
         <Tri
-          bm={`Ralat tanpa pertubuhan (30 hari): ${unattributedErrors}. Kos = jumlah ai_usage.cost_micros (dilaporkan vendor, USD; RM ialah anggaran tetap 1 USD ≈ RM${USD_TO_MYR_ESTIMATE.toFixed(2)}). Tukar pelan: jalankan SQL di hujung migrasi 20260830000000.`}
-          zh={`没有机构归属的错误（30 天）：${unattributedErrors}。成本 = ai_usage.cost_micros 的总和（供应商报告，美元；RM 为固定估算 1 USD ≈ RM${USD_TO_MYR_ESTIMATE.toFixed(2)}）。改配套：在 SQL Editor 跑 migration 20260830000000 末尾的 SQL。`}
-          en={`Errors with no organisation (last 30d): ${unattributedErrors}. Cost is the sum of ai_usage.cost_micros (vendor-reported, USD; RM is a fixed estimate, 1 USD ≈ RM${USD_TO_MYR_ESTIMATE.toFixed(2)}). Plan changes: run the SQL at the foot of migration 20260830000000 in the SQL Editor.`}
+          bm={`Ralat tanpa pertubuhan (30 hari): ${unattributedErrors}. Kos dilaporkan oleh vendor dalam USD; RM ialah anggaran tetap 1 USD ≈ RM${USD_TO_MYR_ESTIMATE.toFixed(2)}.`}
+          zh={`没有机构归属的错误（30 天）：${unattributedErrors}。成本是供应商报告的美元数；RM 为固定估算 1 USD ≈ RM${USD_TO_MYR_ESTIMATE.toFixed(2)}。`}
+          en={`Errors with no organisation (last 30d): ${unattributedErrors}. Cost is vendor-reported USD; RM is a fixed estimate, 1 USD ≈ RM${USD_TO_MYR_ESTIMATE.toFixed(2)}.`}
         />
       </p>
+      <details className="text-sm text-[color:var(--v2-text-soft)]">
+        <summary className="cursor-pointer underline underline-offset-4">
+          <Tri bm="Bagaimana tukar pelan?" zh="怎么改配套？" en="How do I change a plan?" />
+        </summary>
+        <p className="mt-1">
+          <Tri
+            bm="Dalam Supabase SQL Editor, jalankan SQL di hujung fail migrasi 20260830000000_orgs_plan.sql."
+            zh="在 Supabase 的 SQL Editor 里，跑 migration 档 20260830000000_orgs_plan.sql 末尾附的那段 SQL。"
+            en="In the Supabase SQL Editor, run the SQL at the foot of migration file 20260830000000_orgs_plan.sql."
+          />
+        </p>
+      </details>
 
       {/* K-3: the audited grant path — only when the DATABASE lists you. */}
       {platformAdmin ? (
         <GrantCreditsCard />
       ) : (
         <p className="rounded-xl border-2 border-dashed p-4 text-sm text-[color:var(--v2-text-soft)]">
-          Grant-credits is hidden: this account is not in platform_admins (or
-          migration 25 has not been applied). To enable it, run in the SQL
-          Editor:{" "}
+          <Tri
+            bm="Borang beri-kredit disembunyikan: akaun ini belum ada dalam senarai pentadbir platform (pangkalan data yang memutuskan, bukan butang). Untuk membukanya, jalankan dalam SQL Editor:"
+            zh="加额度的表单被隐藏了：这个账号还不在平台管理员名单里（是数据库在把关，不是按钮）。要开通，在 SQL Editor 跑："
+            en="The grant-credits form is hidden: this account is not on the platform-admin list (the database is the gate, not the button). To enable it, run in the SQL Editor:"
+          />{" "}
           <code className="rounded bg-muted px-1">
             insert into platform_admins (email) values (&#39;{user?.email}&#39;) on
             conflict (email) do nothing;
-          </code>{" "}
-          The database enforces this list on every call — the button is a
-          convenience, not the gate.
+          </code>
         </p>
       )}
 
@@ -423,7 +443,15 @@ export default async function AdminPage() {
               <li key={f.id} className="rounded-lg border border-[color:var(--v2-border)] p-3">
                 <p className="whitespace-pre-line text-base">{f.message}</p>
                 <p className="mt-1 text-xs text-[color:var(--v2-text-soft)]">
-                  {f.orgName} · {f.page ?? "—"} · {formatMytDateTime(f.createdAt)} · {f.status}
+                  {f.orgName} · {f.page ?? "—"} · {formatMytDateTime(f.createdAt)} ·{" "}
+                  {/* §1-1: the status enum, in words. */}
+                  {f.status === "done" ? (
+                    <Tri bm="selesai" zh="已处理" en="done" />
+                  ) : f.status === "seen" ? (
+                    <Tri bm="sudah dibaca" zh="已看" en="seen" />
+                  ) : (
+                    <Tri bm="baru" zh="新" en="new" />
+                  )}
                 </p>
               </li>
             ))}

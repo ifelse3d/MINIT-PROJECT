@@ -9,7 +9,6 @@ import { NextStepLink, PageSection } from "@/components/page-section";
 import { PageThumbs } from "@/components/page-thumbs";
 import { PdpaNote } from "@/components/pdpa-note";
 import { HowItWorksButton } from "@/app/how-it-works";
-import { sampleLedgerExtraction } from "@/lib/sample-ledger";
 import {
   eligibleForReceipt,
   findDuplicateDonations,
@@ -44,7 +43,6 @@ export function LedgerReview() {
     setLedgerPayment,
     ledgerPages,
     onLedgerPicked,
-    showLedgerSample,
     ledgerBackToEmpty,
     mutateLedger,
     addConfirmedRowsToRegister,
@@ -429,21 +427,13 @@ export function LedgerReview() {
         {/* 0-5: the paid-tier privacy notice beside the upload door. */}
         <PdpaNote />
 
-        {/* Opt-in example, quiet and separate from the camera button. */}
+        {/* §1-4 (work order 32, J's #4): the DEMO is the picture walkthrough
+            now — the sample data rows are gone from the real page. Fake rows
+            that looked real sat next to real ones, and J could not tell
+            yesterday's test data from the example. The walkthrough shows the
+            same flow with zero fake data on any real screen. */}
         {noLedgerYet && !aiBusy && (
           <div className="flex flex-wrap items-center gap-4">
-            <button
-              type="button"
-              onClick={() => showLedgerSample(sampleLedgerExtraction)}
-              className="self-start text-base text-muted-foreground underline underline-offset-4"
-            >
-              <Tri
-                bm="Belum ada lejar di tangan? Lihat contoh"
-                zh="手上还没有账页？看一个示范"
-                en="Ledger not to hand? See an example"
-              />
-            </button>
-            {/* A-3: the walkthrough entry lives on the empty states too. */}
             <HowItWorksButton variant="link" />
           </div>
         )}
