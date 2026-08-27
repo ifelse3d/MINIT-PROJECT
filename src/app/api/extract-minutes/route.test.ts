@@ -33,9 +33,12 @@ vi.mock("@/lib/ai/usage", () => ({
 }));
 
 const extractJson = vi.fn<(req: unknown) => Promise<unknown>>();
-vi.mock("@/lib/ai/provider", () => ({
-  getVisionProvider: () => ({ name: "fake", extractJson }),
-}));
+vi.mock("@/lib/ai/provider", async (importOriginal) => {
+  // Keep the real module (EXTRACT_OUTPUT_CEILING, VendorOutputTruncatedError —
+  // the route and vendor-failure.ts both use them); fake only the provider.
+  const real = await importOriginal<typeof import("@/lib/ai/provider")>();
+  return { ...real, getVisionProvider: () => ({ name: "fake", extractJson }) };
+});
 
 vi.mock("@/lib/pdf-pages", () => ({
   checkPageLimit: async () => ({ ok: true, pages: 1 }),
@@ -50,6 +53,7 @@ vi.mock("@/lib/app-errors", () => ({
 }));
 
 const { VendorTimeoutError } = await import("@/lib/ai/http");
+const { VendorOutputTruncatedError } = await import("@/lib/ai/provider");
 const { POST } = await import("./route");
 
 function photoRequest(): Request {
@@ -110,5 +114,30 @@ describe("extract-minutes vendor failure chain (P-1)", () => {
     expect(res.status).toBe(504);
     expect(refundUsage).toHaveBeenCalledTimes(1);
     expect(captureAppError).toHaveBeenCalledTimes(1);
+  });
+
+  // 2026-08-28 (J's new-user test): a truncated generation is DETERMINISTIC —
+  // the honest answer is "split the document" (413), never "wait a minute and
+  // tap again" (502), which bills the member for an identical failure.
+  it("output truncation: refunds, records, and says 'split the document' (413)", async () => {
+    extractJson.mockRejectedValue(new VendorOutputTruncatedError("TestVendor"));
+    const res = await POST(photoRequest());
+    expect(res.status).toBe(413);
+    expect(refundUsage).toHaveBeenCalledTimes(1);
+    expect(captureAppError).toHaveBeenCalledTimes(1);
+    const body = (await res.json()) as { error: string };
+    // Must tell the person the actionable truth in all three languages…
+    expect(body.error).toContain("Bahagikan");
+    expect(body.error).toContain("分成");
+    // …and must NOT invite a retry of the same file.
+    expect(body.error).not.toContain("tap the button again");
+  });
+
+  it("passes the sized output ceiling to the vendor call", async () => {
+    extractJson.mockResolvedValue({ not: "valid extraction" });
+    await POST(photoRequest());
+    const req = extractJson.mock.calls[0][0] as { maxOutputTokens?: number };
+    // 8192 was the ceiling that killed an 8-page constitution at token 8188.
+    expect(req.maxOutputTokens).toBeGreaterThan(8192);
   });
 });
