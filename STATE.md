@@ -5,13 +5,13 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-28 凌晨（MYT）· Fable 5（31 号单自动接力·场次 2：Stage B 钱区全部 B-1～B-10，含 migration 26）**
-**🔴 31 号单（`C:\dev\_J-要做的事\31-上線後修理總單-20260827.md`）场次 1＋2 已全部勾完；下一场＝场次 3（Stage C 导航外壳＋Stage D-a 会议流程 UX）。**
+**最后更新：2026-08-28 凌晨（MYT）· Fable 5（31 号单自动接力·场次 3：Stage C 全部 C-1～C-9＋Stage D-a 全部 D-1～D-6）**
+**🔴 31 号单（`C:\dev\_J-要做的事\31-上線後修理總單-20260827.md`）场次 1＋2＋3 已全部勾完；下一场＝场次 4（Stage E 品牌杠杆＋Stage F 小修包＋Stage G-1/G-2 bench 工具链·假供应商验证）。**
 **给 J 看的这一轮报告：`C:\dev\_J-要做的事\25-大改造進度報告.md`（固定档名，已覆写）。**
 
 ---
 
-## 🌙 现在在哪里（2026-08-28 凌晨，场次 2 收工）
+## 🌙 现在在哪里（2026-08-28 凌晨，场次 3 收工）
 
 > **已上线**：https://minit-project.vercel.app（Vercel 专案 if-else/minit-project）。
 > push 到 main 自动重新部署——**push 是 J 的事**（push-cabang.bat）。
@@ -19,68 +19,74 @@
 > 🔴 **migration 26（`20260904000000_payment_method.sql`）已写好、尚未套用**——
 > J 早上照 31 号单 §1 贴（salin-migration.bat 选 26）。程式在未套用时诚实降级：
 > 现金流程一切照旧（e2e 实测过），转账批次开收据会被 db_behind 诚实拒绝、零 throw。
-> **未 push 共 12 支 commit**（场次 1 的 7 支＋本场 5 支）。本场：
-> `25de991`（B-1 migration 26＋custody 排除转账）· `09001e7`（B-2 付款方式三入口
-> ＋B-3 保管记录页）· `2d32da5`（B-4 开收据减负＋B-5 记收入不跳页）·
-> `69a36b6`（B-6 历史＋B-7 e-Invois＋B-8 报销＋B-9 专注）· 收工一支（本档＋勾单）。
+> **未 push 共 15 支 commit**（场次 1 的 7 支＋场次 2 的 5 支＋本场 3 支）。本场：
+> `f33f3ef`（Stage C 全部：侧栏可折叠＋日历独立行＋「账号与显示」改名＋语言
+> dropdown＋注册跳登入＋org 名大写＋淺色 3:1＋响应式修爆版＋字级降半档＋法务页
+> 独立）· `6ab661c`（Stage D-a 全部：存档生命周期 v2＋出席行内直打＋缩图共用/
+> 并排原照＋徽章＋「下一步」＋Word 提示）· 收工一支（本档＋勾单＋25 报告）。
 
 ### 现场量到的（不是听说的）
 
-- 四道关（收尾跑全套）：`tsc` **0** · `eslint` **21（与基准逐字相同：20 errors +
-  1 warning）** · `vitest` **790 全过（64 档；本场 +7 个新测试）** · `build` ✓
-- `e2e:money`：**15/15 第一把全绿，page errors 0**——而且是跑在 migration 26
-  **未套用**的线上库上，顺便实证了「未套用时现金流程照旧」这条降级路。
-- ⚠ **没能验证的**：migration 26 本身没跑过（D8：J 手贴；SQL 是照 25 号那支的
-  幂等风格写的，v6 函数与 v5 只差两栏）；转账列「入 DB 后读回来还是转账」要等
-  26 套用后才验得到（选栏降级路已由 e2e 间接验证）；转账截图上传（Storage）没有
-  e2e，只有 server action 的权限/大小/类型检查；保管页的单笔确认在本机 UI 逻辑
-  层面验证（vitest＋build），没起浏览器逐笔点过。
+- 四道关（Stage C 与 Stage D-a 各收尾跑一轮，数字相同）：`tsc` **0** · `eslint`
+  **21（与基准逐字相同：20 errors + 1 warning）** · `vitest` **790 全过（63 档；
+  nav 测试改写、无新增测试档）** · `build` ✓
+- `e2e:minutes`：**ALL CHECKS PASSED（12 条，含两条新 D-1 断言），page errors 0**。
+  中途修了一条 e2e 自身的坑：C-2 之后 `page.$("select")` 抓到的是壳上的语言
+  dropdown、不再是栏位编辑器——改成按选项内容找 meeting-type 那个 select（§6 新坑）。
+- `e2e:money`：**15/15 两把都全绿（Stage C 收尾一把、Stage D-a 收尾一把），
+  page errors 0**（动了钱区入口按钮与缩图共用元件，所以两个 Stage 都跑了）。
+- **C-6 响应式是真量的**：headless Chrome 以真实登入测试用户在 375/768/1024/1280
+  四档跑 **28 个页面**量 `document.scrollWidth`（overflow-x 容器内的横捲不算爆版），
+  抓到并修掉两处真爆版（/minutes/history 的类型 select 被最长选项撑开、
+  /money/receipts 的「打字输入整份名单」长句按钮 nowrap），修后 **0 页横向爆版**；
+  C-1（折叠＋重载记忆）/C-2（375 只见 dropdown）/C-4（打小写存进去是大写）/
+  D-2（行内加名、次序、焦点）也都在真 DOM 里断言过。
+- ⚠ **没能验证的**：本场无人值守、Browser 面板不显示就无法截图，所以「看起来
+  顺不顺眼」没有肉眼过——量的全是 DOM 实宽与行为断言；C-5 的 3:1 是算出来的
+  对比度（--v2-border #888ea0：白卡 3.27:1、页底 3.04:1），不是肉眼校色；
+  问一问面板只验到代码层（手机全屏 sheet、桌面轨 320–640，A-2 已修）；
+  migration 26 照旧未套用、等 J。
 
-### 这一场做了什么（细节都勾在 31 号单 §5 各条目里）
+### 这一场做了什么（细节都勾在 31 号单 §6 §7 各条目里）
 
-- **B-1 migration 26**：`donations.payment_method`（'cash'|'transfer'，default
-  'cash'）＋`transfer_proof_path`；issue_receipts **v6**＝v5 只加这两栏；探针×2＋
-  salin-migration.bat 第 26 项同 commit。lib/receipts 新 `isTransfer()`/`holdsCash()`；
-  custody 的三条现金路（交接批次、每人余额、未交总额）全部排除转账与实物，
-  **状态机 forward-only 语义未动**。转账批次在未套用的库上→db_behind 诚实拒绝。
-- **B-2 现金/转账三入口**：共用双丸 toggle；打字格每行带；手动表单带＋转账可附
-  截图（`transfer-proof-actions.ts` 上传 uploads bucket `{org}/transfer_proof/`，
-  按钮写明「只存档、不吃 AI 额度」，上传失败会说出来不吞）；AI 确认行每行带
-  「收款方式」（store 持有 ledgerPayments，换页不丢；AI 永远不决定钱怎么来的）。
-  登记簿里转账列戴「转账入户」徽章＋📎 已附截图。
-- **B-3 保管记录页**：/money/custody 重写——谁手上多少现金（每人三格卡）、每笔
-  待确认交接**各自**「钱到了—确认」、已确认历史；确认人记**真实登入用户**
-  （「HQ Admin (Demo)」清除）；钱区步骤轨改 **1-2**（读账→开收据），保管/税务/
-  历史变右侧不编号的虚线记录入口（SectionTabs 新 `extras` prop）。
-- **B-4 开收据减负**：字首改**当场弹窗**（解释＋直接输入字母；新
-  `chooseReceiptPrefix` action，同 Settings 的验证与 RLS，冻结触发器照旧管）；
-  生成二次确认收成一个对话框；姓名预设全显（D18）、「隐藏姓名」写明是列印/分享
-  用；生成后绿框写下一步（下载/WhatsApp＋现金去记保管的连结）。
-- **B-5 记收入不跳页**：打字格在读账页当页展开（?taip=1 旧入口保留——e2e 靠它）；
-  「＋自己加一行」可见按钮；**草稿自动保存**（scoped localStorage＋shape guard；
-  「关闭」保留草稿、「清空草稿」要确认；有草稿自动重开）；已上传每页缩图可点
-  回看；黄框问句改人话；**读取前先问「这页是收入还是开支？」**——选开支把照片
-  经记忆体 handoff 带去 /money/expenses，读取仍是标明「1 次 AI 额度」的按钮。
-- **B-6 收据历史**：每行「看收据 PDF」；「方向」栏＋开支簿连结；「保管」改
-  「钱现在在哪」讲人话（现金在 [名] 手上／已交出等总会／已交总会／转账入户）；
-  「用途」改「捐款用途／款项说明」；姓名照 D18 全显；select 补三栏带降级。
-- **B-7 e-Invois 直接可交**（D21）：上传档只剩 Dokumen 表（Arahan 移出，测试
-  钉死）；档上保留一行 DRAF verify 警语等 J 的官方模板逐栏对齐；页面等宽字报告
-  改四张统计卡＋四步骤卡。
-- **B-8 报销讲清楚**：墊钱/社团付一句话分清；claim 卡画 交上去→批准→付款 进度；
-  拍单据入口说明「附上单据更容易批」。
-- **B-9 专注**：手动添加收入折叠成一行；次要入口全部折叠、没删任何东西。
+- **Stage C（导航与外壳）**：C-1 侧栏六组可折叠（默认全开、开合记在本机
+  `minit.sidebar.closed.v1`——只记「关」的，所以将来新组天生是开的；组内含当前页
+  时标题保持高亮）＋ /calendar 搬出申报组成顶层独立行（/more 同步会渲染顶层行）
+  ＋「设置」组里的「设置」行改名「账号与显示」；C-2 语言切换：手机收 dropdown、
+  桌面三颗照旧（同一个 mode，CSS 决定谁上场）；C-3 注册成功 → signOut →
+  /login?registered=1 绿字「✓ 注册成功，请登录」；C-4 org 名输入即时转大写＋小字
+  「官方注册名称一律大写」（三支 e2e 的 ORG_NAME 同步改成大写 E2E）；C-5 淺色
+  border token 全部加深到 WCAG 1.4.11 非文字 3:1；C-6 四档宽度 28 页实测、修掉
+  两处真爆版；C-7 /terms /privacy 进 BARE_ROUTES（无侧栏无搜寻栏，页内自带返回）；
+  C-8 字级四档整体降半档 93.75/106.25/118.75/133.75%（boot script＋CSS fallback
+  同一个 commit，rem 体系没动）。
+- **Stage D-a（会议流程 UX，不碰读取 prompt）**：D-1 保存成功后 app 自己 SPA 回
+  /minutes，只见完成卡「上一场已存好 ✓ · [开始新的会议] [查看做好的文件]」＋
+  小字「重新打开工作区」（这个 reopen 状态刻意不持久化）；/minutes/history 改走
+  独立 chrome：只有标题，无步骤条、无「Done—saved」横幅；D-2 出席加人改成列表尾
+  行内输入格：打名字按 Enter 连打、进来就是 confirmed＋「由您填写」、同名去重、
+  新行留在名单最后、输入格不动（换掉旧「加空白行」按钮——空红行会跳到顶部
+  待核对堆）；D-3 缩图列抽成共用 `src/components/page-thumbs.tsx`（钱区 ledger 与
+  会议同一份），FieldRow 进入编辑时原照浮在右侧卡（手机为行内上下），预设翻到
+  source_ref 写的那一页（halaman N/第 N 页/page N 都认得）、多页可 ‹ ›；D-4
+  待核对徽章改琥珀实心＋「N 项待核对」字样（SectionTabs 共用，钱区跟着变）；
+  D-5 前进按钮统一「下一步」大字＋原长句降为按钮内小字（共用 NextStepLink）；
+  D-6 会议上传门加一行「Word/Excel 请先另存为 PDF 再上传（手机：分享→列印→
+  存成 PDF）」。
+- 🔴 **没动的**：`src/prompts/extract-meeting-notes.ts` 一字未碰（拍板 42，D-b
+  等 J 照片、场次 5）；migration 只有既有的 26 那一支，本场没开新的；Vercel/
+  .env 值/git push/线上资料照旧没碰。
 
-### 🔴 J 的事（场次 2 结束时）
+### 🔴 J 的事（场次 3 结束时——和场次 2 结束时同一份，一件没多）
 
 1. **雙擊 `salin-migration.bat` → 选 26** → Supabase SQL Editor 贴上 → Run →
    「Success. No rows returned」；红字整段贴回给 Claude。
 2. `npm run check:migrations`（或 status.bat）看 26 的两个探针 APPLIED。
-3. **双击 `push-cabang.bat`**（本机 main 领先 origin 12 支 commit）→ 线上自动更新。
+3. **双击 `push-cabang.bat`**（本机 main 领先 origin 15 支 commit）→ 线上自动更新。
    ⚠ 顺序无所谓但最好先贴 26 再 push——反过来也不会坏（程式会诚实降级），只是
    转账功能要等 26 贴完才开始存。
 4. 两个地区核对（场次 1 遗留）：Vercel Functions Region＋Supabase Region 抄给 Claude。
-5. 开新对话贴 31 号单 §10 的灰框 → 场次 3（Stage C＋D-a）。
+5. 开新对话贴 31 号单 §10 的灰框 → 场次 4（Stage E＋F＋G-1/G-2）。
 6. ⚠ **8/31 23:59 竞赛截止（内部 cutoff 18:00）**；one-pager 的 [YOU] 两处还空着。
 
 ### ❓ 未决问题
@@ -98,15 +104,36 @@
 
 ### ⏭ 下一个 session 从哪开始
 
-**31 号单场次 3：Stage C（侧栏可折叠、语言切换、注册后跳登入、org 名自动大写、
-light mode 对比、响应式三档、法务页独立、字级校准）＋ Stage D-a（存档生命周期
-v2、出席可编辑、上传回看对比、徽章、按钮文案、Word 提示）。**
-之后场次 4（E＋F＋G-1/G-2）→ 场次 5（早上 J 在场：D-b 照片、bench 实跑）。
+**31 号单场次 4：Stage E（品牌杠杆 brand.ts，一行改名）＋ Stage F（小修包
+F-1～F-11：额度说法、PDPA 一行、how-it-works 新图、对话保存、教学型回答、
+深连结、其他必填备注、示范徽章、农历初一十五、Word 真转档（做不完可留）＋
+四道关）＋ Stage G-1/G-2（bench 工具链＋bench-models.bat——🔴 只准假供应商
+验证工具链，真跑永远 J 双击）。**
+之后场次 5（早上 J 在场：D-b 照片 golden case、报告版式、bench 实跑）。
 贴 31 号单 §10 的灰框开工即可，单上已勾的不重做。
 
 ---
 
 ## 6. 已知陷阱（踩过的，别再踩）
+
+### 2026-08-28 凌晨新增（31 号单场次 3）
+
+- 🔴 **壳上新增一个全局表单控件，e2e 里所有「抓第一个」的选择器会无声换绑。**
+  C-2 给壳加了语言 `<select>` 之后，e2e:minutes 的 `page.$("select")` 抓到的
+  是语言下拉、不再是栏位编辑器——「会议类型」看似点完存完，其实一格都没进去，
+  后面整串连环红。**修法：按内容找控件（有 "committee" 选项的那个 select），
+  不按标签顺序；判断方法：壳级 UI 改动后，e2e 挂掉先怀疑选择器换绑，再怀疑产品。**
+- ⚠️ **无人值守的 session 里 Browser 面板不显示＝截图必挂（页面不合成画面）。**
+  DOM 工具（read_page/javascript）照常能用。响应式走查改用 headless Chrome 量
+  `document.scrollWidth` vs `clientWidth`＋逐元素越界检测（overflow-x 容器内的
+  不算），一样抓得到真爆版——这场就抓到两处。「量到的」和「看过的」要分开写。
+- ⚠️ **原生 `<select>` 的最小宽度是它最长的那个 option。** G-4 让 BM 官方会议名
+  跟着每种语言走之后，选项变长，/minutes/history 的类型筛选把 375px 页面撑出
+  横捲。flex-wrap 表单里的 select 要给 `w-full min-w-0`（或 max-w），别指望它自己缩。
+- ⚠️ **客户端输入变形（自动大写）会让「后面按原字串查库」的 e2e 全部落空。**
+  C-4 上线后 e2e 打进去 "zzz e2e…"、存进库的是 "ZZZ E2E…"，按旧常量查 org
+  永远 0 行、清理也清不到。**e2e 固定资料要写成「变形后」的形状**（三支脚本的
+  ORG_NAME 已改大写）。
 
 ### 2026-08-28 凌晨新增（31 号单场次 2）
 
