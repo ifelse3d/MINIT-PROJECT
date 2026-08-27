@@ -112,7 +112,32 @@ J 照 25 报告「早上六步」走即可，31 号单上已勾 ✅ 的不重做
 
 ## 6. 已知陷阱（踩过的，别再踩）
 
-### 2026-08-28 凌晨新增（31 号单场次 4）
+### 2026-08-27 上午新增（上线日：push 成功但线上还是旧版，连环两个坑）
+
+- 🔴 **Vercel Hobby ＋ private repo 只部署「专案拥有者本人」的 commit。** 这台电脑
+  存着两套 GitHub 身份（ifelse3d ＝ Vercel/repo 拥有者；nightmarefairy ＝ J 的另一个
+  帐号）。31 号单的 19 支 commit 署名是 nightmarefairy、今早的 push 也用了它的凭证
+  → Vercel 状态 **Blocked**（「commit author did not have contributing access」），而且
+  被挡那笔上的 Redeploy 按钮直接变成 Upgrade to Pro 付费墙。昨天能上是因为当时
+  用对了帐号，不是规则不同。**已修（2026-08-27）：** ① repo 本地
+  `user.email = 291105987+ifelse3d@users.noreply.github.com`（以后 commit 都算拥有者）；
+  ② remote URL 固定成 `https://ifelse3d@github.com/ifelse3d/MINIT-PROJECT.git`
+  （凭证不再看运气抽签，push-cabang.bat 的「跳视窗要选 ifelse3d」警告从此不该再出现）；
+  ③ 解当下的封锁＝用 ifelse3d 署名叠一支空 commit 再 push（cbb8609）。
+  **判断方法：** Vercel Deployments 列表状态 Blocked ＝ 这个；本机
+  `git log -3 --format="%an <%ae>"` 看署名对不对。
+- 🔴 **Vercel「Restored build cache」＋ Turbopack ＝ 新 commit 建出旧 CSS。** 解封后的
+  部署 Source 明明是新 commit、49 秒 Ready，线上 globals 的 token 却还是旧值
+  （`d8dbe2`/112.5% 而不是 `888ea0`/106.25%）——build log 里那行
+  `Restored build cache from previous deployment` 就是元凶。**修法：** 该部署 ⋯ 菜单
+  → Redeploy → **不勾** 「Use existing Build Cache」。**判断方法：** 抓线上
+  `/_next/static/...css` 搜一个这次改过的字面值（例：`888ea0`），和本机 `.next` 的
+  globals css 对比；「部署 Ready」不等于「线上是新的」。
+- ⚠️ **status.bat 是当下快照＋少数写死的人眼注记，不是历史记录。** 11:16 印的
+  「本机多 19 支」在 11:19 push 成功后就过期；D 区旧版把「还没开始」注记印在探针
+  已经变 true 的 ⑤⑥ 下面、② 探的还是退役的 v2/ 路径（其实 v3 里早做了）；E 区
+  「Live URL 还没有」是写死的旧话。**这三处 2026-08-27 已修**（six 改四栏、②指 v3、
+  Live URL 行改真话）。判断方法不变：怀疑时重跑一次，再看时间戳。
 
 - ⚠️ **正则从散文里收割「provider:model」清单，会把句号吃进模型名、把 embedding
   模型当成读取候选。** bench 的候选收割第一版抓到 `text-embedding-3-large.`

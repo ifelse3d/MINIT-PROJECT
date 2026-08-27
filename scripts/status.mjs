@@ -186,22 +186,30 @@ console.log("             详细分流请跑：npm run check:ai");
 // the comment next to it.
 console.log(head("D · J 2026-08-19 点名的六件"));
 
+// Each row: [label, done, undoneNote (printed only while NOT done),
+//            doneCaveat (printed only when done — for half-done truths)].
+// 2026-08-27: the old single `note` printed "还没开始…" under items whose
+// probe had since turned true (⑤⑥), and ② probed the retired v2/ shell path
+// while the code lives in v3/ — three false "没做/还没开始" in one morning.
 const six = [
   ["① 汇入失败给出路", has("src/app/api/import-roster/route.ts", 'form.get("text")') &&
-    has("src/app/members/members-form.tsx", "readPastedWithAi"), ""],
-  ["② 单一机构不讲「切换」", has("src/components/v2/org-chip.tsx", "soleOrg"), ""],
+    has("src/app/members/members-form.tsx", "readPastedWithAi"), "", ""],
+  ["② 单一机构不讲「切换」", has("src/components/v3/org-chip.tsx", "soleOrg"),
+    "v3/org-chip.tsx 没有 soleOrg 分支", ""],
   ["③ 缺 IC 姓名的人数", has("src/app/members/page.tsx", "missingOfficial"),
+    "members/page.tsx 没有 missingOfficial",
     "只做了「数」这一半。「申报前挡下来」没做 —— 没有地方可以挂，见 STATE 第 6 节"],
   ["④ Save as draft", has("src/app/minutes/actions.ts", "saveMinutesDraft") ||
-    has("src/lib/minutes-draft.ts", "saveMinutesDraft"), "还没开始 · 约一天 · 很可能要一支 migration"],
+    has("src/lib/minutes-draft.ts", "saveMinutesDraft"),
+    "还没开始 · 约一天 · 很可能要一支 migration", ""],
   ["⑤ 邀请成员 P1-1", (await dbHas("invites", "id")) === true,
-    "还没开始 · 一天以上 · 要 migration。前置：P0-3 createOrg 数量上限"],
+    "invites 表不在库里 —— migration 20260902000000_invites_and_org_type 还没套", ""],
   ["⑥ ai_usage 分到人", (await dbHas("ai_usage", "user_id")) === true,
-    "还没开始 · 一小时 · 一支小 migration"],
+    "ai_usage.user_id 栏位不在库里 —— 要一支小 migration", ""],
 ];
-for (const [label, done, note] of six) {
-  console.log(mark(done, label + (done ? "" : "   ← " + note)));
-  if (done && note) console.log("         ⚠ " + note);
+for (const [label, done, undoneNote, doneCaveat] of six) {
+  console.log(mark(done, label + (done || !undoneNote ? "" : "   ← " + undoneNote)));
+  if (done && doneCaveat) console.log("         ⚠ " + doneCaveat);
 }
 
 // --- E. competition ---------------------------------------------------------
@@ -215,7 +223,10 @@ try {
   /* folder missing */
 }
 console.log(mark(shots.length > 0, `competition/screenshots/ —— ${shots.length} 张（README 不算）`));
-console.log(eye("Live URL（Vercel）—— 还没有。证据 6 ＋ public artifact 的 NO-GO 都卡在这一件"));
+console.log(eye("Live URL（Vercel）—— https://minit-project.vercel.app 已上线（2026-08-27 验证过）。\n" +
+  "             push 后线上像旧版？两个坑都记在 STATE 第 6 节 8-27 段：\n" +
+  "             ① Deployment Blocked（非 ifelse3d 署名/推送）② build cache 端出旧 CSS。\n" +
+  "             剩下的人工活：把这个 URL 写进竞赛材料"));
 console.log(eye("利害关系人访谈 —— 补 Commercial 那 25 分（现在 5/25，五项最低），不用写程式"));
 console.log(eye("真实手写 eval —— 现在是必跑的：填了词库的 org 走的不是量到 95.2% 的那支 prompt"));
 
