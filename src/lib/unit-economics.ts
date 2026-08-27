@@ -30,6 +30,11 @@ export type ModelPrice = {
  * Official list prices, checked 2026-08-03 (`docs/AI-API-选型与成本.md` §1).
  * Verify before quoting: vendors retire models and promotions end.
  */
+/** The day someone last verified MODEL_PRICES against the vendors' price
+ *  pages. Price tables rot (STATE trap) — every consumer that prints a price
+ *  must print this date next to it. Update BOTH when re-verifying. */
+export const PRICES_CHECKED_ON = "2026-08-03";
+
 export const MODEL_PRICES = {
   /** Cheapest usable vision model; recommended for classify + chat only. */
   gpt5Nano: { name: "gpt-5-nano", inputPerMTok: 0.05, outputPerMTok: 0.4 },

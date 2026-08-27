@@ -49,7 +49,10 @@ import {
 const ROOT = path.resolve(__dirname, "..");
 const CASES_DIR = path.join(ROOT, "eval", "cases");
 const REPORTS_DIR = path.join(ROOT, "eval", "reports");
-const PAUSE_MS = 8000; // be gentle to free-tier rate limits
+// Be gentle to free-tier rate limits. Overridable so the bench's MOCK
+// validation (scripts/bench-models.ts --mock, no vendor involved) does not
+// spend minutes sleeping between calls that cost nothing.
+const PAUSE_MS = Number(process.env.EVAL_PAUSE_MS ?? 8000);
 
 // --- minimal .env.local loader (no extra dependency; values never printed) --
 function loadEnvLocal() {
@@ -183,6 +186,17 @@ function parseAndScore(meta: CaseMeta, raw: unknown):
   }
 }
 
+// G-1 (work order 31): the bench's MOCK mode validates the whole toolchain
+// (suite → scoring → cost columns → ranking → report) without one vendor call.
+// This is the ONLY seam for that: a fake provider injected by
+// scripts/bench-models.ts --mock. Production code paths never set it.
+let providerOverride: ReturnType<typeof getVisionProvider> | null = null;
+export function setEvalProviderOverride(
+  p: ReturnType<typeof getVisionProvider> | null,
+): void {
+  providerOverride = p;
+}
+
 async function runCase(name: string): Promise<CaseOutcome> {
   const startedMs = Date.now();
   // What this case cost, from the vendor's own numbers. `unpriced` is tracked
@@ -216,7 +230,7 @@ async function runCase(name: string): Promise<CaseOutcome> {
   const imageBase64 = isText ? undefined : readFileSync(input.file).toString("base64");
 
   const prompt = buildPrompt(meta, textInput);
-  const provider = getVisionProvider();
+  const provider = providerOverride ?? getVisionProvider();
   const req = { prompt, imageBase64, mimeType: input.mime ?? undefined, onUsage };
 
   // One attempt = model call + JSON.parse + zod. A JSON SyntaxError (model wrote
