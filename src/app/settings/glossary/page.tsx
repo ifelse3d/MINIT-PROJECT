@@ -26,20 +26,70 @@ type Row = {
   action: "keep" | "translate";
   translation: string | null;
   note: string | null;
+  /** #10 (migration 28): which language the ORIGINAL is, and the other
+   *  languages' renderings. Absent on a pre-28 database / legacy rows. */
+  lang?: "bm" | "zh" | "en" | null;
+  render_bm?: string | null;
+  render_zh?: string | null;
+  render_en?: string | null;
 };
+
+/** One language's cell: the original slot says so; a render shows itself;
+ *  an empty render means "written exactly as the original". */
+function LangCell({ row, lang }: { row: Row; lang: "bm" | "zh" | "en" }) {
+  if (row.lang === lang) {
+    return (
+      <td className="px-2 py-3 align-top">
+        <span className="font-medium">{row.term}</span>{" "}
+        <span className="text-xs text-muted-foreground">
+          <Tri bm="(asal)" zh="（原文）" en="(original)" />
+        </span>
+      </td>
+    );
+  }
+  const render =
+    lang === "bm"
+      ? (row.render_bm ?? (row.action === "translate" ? row.translation : null))
+      : lang === "zh"
+        ? row.render_zh
+        : row.render_en;
+  return (
+    <td className="px-2 py-3 align-top">
+      {render ? (
+        render
+      ) : (
+        <span className="text-sm text-muted-foreground">
+          <Tri bm="ikut asal" zh="照原字" en="as original" />
+        </span>
+      )}
+    </td>
+  );
+}
 
 export default async function GlossaryPage() {
   const [user, active] = await Promise.all([getSessionUser(), getActiveOrg()]);
 
   let rows: Row[] = [];
+  let dbBehind = false;
   if (user && active) {
     const supabase = await getSupabaseServer();
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("org_glossary")
-      .select("id, term, action, translation, note")
+      .select("id, term, action, translation, note, lang, render_bm, render_zh, render_en")
       .eq("org_id", active.id)
       .order("id", { ascending: true });
-    rows = (data ?? []) as Row[];
+    if (!error && data) {
+      rows = data as Row[];
+    } else {
+      // Pre-28 database: the trilingual columns are not there yet.
+      dbBehind = true;
+      const legacy = await supabase
+        .from("org_glossary")
+        .select("id, term, action, translation, note")
+        .eq("org_id", active.id)
+        .order("id", { ascending: true });
+      rows = (legacy.data ?? []) as Row[];
+    }
   }
 
   // B-4: matches the server action's own check (minutes_write) — the UI is
@@ -104,15 +154,20 @@ export default async function GlossaryPage() {
               </p>
             ) : (
               <div className="-mx-2 overflow-x-auto">
-                <table className="w-full min-w-[34rem] border-collapse text-base">
+                {/* #10: one row = the original word (in ITS language) and how
+                    the other two languages say it. An empty pair of renders
+                    = the word is kept exactly, never translated. */}
+                <table className="w-full min-w-[44rem] border-collapse text-base">
                   <thead>
                     <tr className="border-b border-border text-left text-sm text-muted-foreground">
                       <th className="px-2 py-2 font-medium">
-                        <Tri bm="Perkataan" zh="那个词" en="The word" />
+                        <Tri bm="Perkataan asal" zh="原本的词" en="Original word" />
                       </th>
+                      <th className="px-2 py-2 font-medium">Bahasa Malaysia</th>
                       <th className="px-2 py-2 font-medium">
-                        <Tri bm="Ditulis sebagai" zh="怎么处理" en="Written as" />
+                        <Tri bm="Cina" zh="中文" en="Chinese" />
                       </th>
+                      <th className="px-2 py-2 font-medium">English</th>
                       <th className="px-2 py-2 font-medium">
                         <Tri bm="Ia apa" zh="这是什么" en="What it is" />
                       </th>
@@ -122,20 +177,17 @@ export default async function GlossaryPage() {
                   <tbody>
                     {rows.map((r) => (
                       <tr key={r.id} className="border-b border-border/60 last:border-0">
-                        <td className="px-2 py-3 align-top font-semibold">{r.term}</td>
                         <td className="px-2 py-3 align-top">
-                          {r.action === "keep" ? (
-                            <span className="text-muted-foreground">
-                              <Tri
-                                bm="kekal seperti asal"
-                                zh="保持原字"
-                                en="kept as written"
-                              />
+                          <span className="font-semibold">{r.term}</span>
+                          {r.lang && (
+                            <span className="ml-1.5 rounded-xs bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                              {r.lang === "bm" ? "BM" : r.lang === "zh" ? "中文" : "EN"}
                             </span>
-                          ) : (
-                            r.translation
                           )}
                         </td>
+                        <LangCell row={r} lang="bm" />
+                        <LangCell row={r} lang="zh" />
+                        <LangCell row={r} lang="en" />
                         <td className="px-2 py-3 align-top text-sm text-muted-foreground">
                           {r.note ?? "—"}
                         </td>
@@ -147,6 +199,16 @@ export default async function GlossaryPage() {
                   </tbody>
                 </table>
               </div>
+            )}
+
+            {dbBehind && (
+              <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
+                <Tri
+                  bm="Lajur tiga bahasa menunggu kemas kini pangkalan data 28. Entri baharu masih disimpan (bentuk lama) — tiada apa-apa hilang."
+                  zh="三语栏位在等数据库更新 28。新加的词还是会存起来（旧格式）—— 不会丢东西。"
+                  en="The trilingual columns are waiting for database update 28. New entries still save (legacy shape) — nothing is lost."
+                />
+              </p>
             )}
 
             {canEdit && (

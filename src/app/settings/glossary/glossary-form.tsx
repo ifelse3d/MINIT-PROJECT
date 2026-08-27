@@ -18,99 +18,105 @@ const inputCls =
 const errorCls =
   "rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium whitespace-pre-line text-red-900 dark:bg-red-400/10 dark:text-red-100";
 
-/** One row inside the card it feeds, not a second card below it. */
+const LANGS = [
+  { value: "zh", bm: "Cina", zh: "中文", en: "Chinese" },
+  { value: "bm", bm: "Bahasa Malaysia", zh: "马来文", en: "Malay" },
+  { value: "en", bm: "Inggeris", zh: "英文", en: "English" },
+] as const;
+
+const LANG_WORD: Record<"bm" | "zh" | "en", { bm: string; zh: string; en: string }> = {
+  bm: { bm: "Bahasa Malaysia", zh: "马来文", en: "Malay" },
+  zh: { bm: "Cina", zh: "中文", en: "Chinese" },
+  en: { bm: "Inggeris", zh: "英文", en: "English" },
+};
+
+/** #10 (launch feedback): the entry is the ORIGINAL word + which language it
+ *  is, and how the other two languages say it — any language can be the
+ *  original. Leave both empty = keep the word exactly, never translated. */
 export function AddTermForm() {
   const [state, formAction, pending] = useActionState(addGlossaryTerm, INITIAL);
-  // The second box only means anything for "translate", so it appears when it
-  // is needed instead of sitting there greyed out asking to be understood.
-  const [mode, setMode] = useState<"keep" | "translate">("keep");
+  const [lang, setLang] = useState<"bm" | "zh" | "en">("zh");
+  const others = (["bm", "zh", "en"] as const).filter((l) => l !== lang);
+  const renderField: Record<"bm" | "zh" | "en", string> = {
+    bm: "renderBm",
+    zh: "renderZh",
+    en: "renderEn",
+  };
 
   return (
     <form action={formAction} className="flex flex-col gap-3">
-      <div className="grid gap-3 md:grid-cols-[1.2fr_1.4fr_auto] md:items-end">
+      <div className="grid gap-3 md:grid-cols-[1.4fr_1fr] md:items-end">
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium text-muted-foreground">
             <Tri
-              bm="Perkataan (seperti dalam nota)"
-              zh="那个词（照笔记上的样子）"
-              en="The word (as in the notes)"
+              bm="Perkataan asal (seperti anda menulisnya)"
+              zh="原本的词（照你们写的样子）"
+              en="The original word (as you write it)"
             />
           </span>
           <input name="term" className={inputCls} required maxLength={80} />
         </label>
-
-        <div className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-muted-foreground">
-            <Tri bm="Bagaimana ditulis?" zh="要怎么处理？" en="How is it written?" />
-          </span>
-          <div className="flex flex-wrap items-center gap-4 py-2">
-            <label className="flex items-center gap-2 text-base">
-              <input
-                type="radio"
-                name="action"
-                value="keep"
-                className="h-5 w-5"
-                checked={mode === "keep"}
-                onChange={() => setMode("keep")}
-              />
-              <Tri bm="Kekalkan asal" zh="保持原字" en="Keep as written" />
-            </label>
-            <label className="flex items-center gap-2 text-base">
-              <input
-                type="radio"
-                name="action"
-                value="translate"
-                className="h-5 w-5"
-                checked={mode === "translate"}
-                onChange={() => setMode("translate")}
-              />
-              <Tri bm="Tulis sebagai…" zh="翻译成…" en="Write it as…" />
-            </label>
-          </div>
-        </div>
-
-        <Button type="submit" disabled={pending} className="md:mb-[9px]">
-          {pending ? (
-            <Tri bm="…" zh="…" en="…" />
-          ) : (
-            <Tri bm="Tambah" zh="加进词库" en="Add" />
-          )}
-        </Button>
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-2">
-        {mode === "translate" && (
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-muted-foreground">
-              <Tri bm="Ditulis sebagai" zh="翻译成" en="Written as" />
-            </span>
-            <input name="translation" className={inputCls} maxLength={160} />
-          </label>
-        )}
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium text-muted-foreground">
-            <Tri
-              bm="Ia apa?"
-              zh="这是什么？"
-              en="What is it?"
-            />
+            <Tri bm="Ia bahasa apa?" zh="这是什么语言？" en="Which language is it?" />
           </span>
-          <input
-            name="note"
+          <select
+            name="lang"
+            value={lang}
+            onChange={(e) => setLang(e.target.value as "bm" | "zh" | "en")}
             className={inputCls}
-            maxLength={200}
-            placeholder="ahli / kelas / ajaran"
-          />
+          >
+            {LANGS.map((l) => (
+              <option key={l.value} value={l.value}>
+                {l.zh} · {l.bm} · {l.en}
+              </option>
+            ))}
+          </select>
         </label>
       </div>
 
+      <div className="grid gap-3 md:grid-cols-2">
+        {others.map((l) => (
+          <label key={l} className="flex flex-col gap-1">
+            <span className="text-sm font-medium text-muted-foreground">
+              <Tri
+                bm={`Dalam ${LANG_WORD[l].bm} dipanggil…`}
+                zh={`${LANG_WORD[l].zh}的叫法…`}
+                en={`In ${LANG_WORD[l].en} it is called…`}
+              />
+            </span>
+            <input name={renderField[l]} className={inputCls} maxLength={160} />
+          </label>
+        ))}
+      </div>
+
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-muted-foreground">
+          <Tri bm="Ia apa?" zh="这是什么？" en="What is it?" />
+        </span>
+        <input
+          name="note"
+          className={inputCls}
+          maxLength={200}
+          placeholder="ahli / kelas / ajaran"
+        />
+      </label>
+
       <p className="text-sm text-muted-foreground">
         <Tri
-          bm="“Kekalkan asal” untuk nama orang, ajaran dan gelaran jawatan."
-          zh="人名、法号、称谓这类，选「保持原字」。"
-          en="Choose “keep as written” for people's names, teachings and titles of office."
+          bm="Biarkan kedua-dua kotak kosong untuk nama orang, ajaran dan gelaran — perkataan itu DIKEKALKAN, tidak diterjemah."
+          zh="人名、法号、称谓这类，两个叫法都留空 —— 那个词会保持原字，永远不被翻译。"
+          en="Leave both boxes empty for people's names, teachings and titles — the word is then KEPT exactly, never translated."
         />
       </p>
+
+      <Button type="submit" disabled={pending} className="self-start">
+        {pending ? (
+          <Tri bm="…" zh="…" en="…" />
+        ) : (
+          <Tri bm="Tambah" zh="加进词库" en="Add" />
+        )}
+      </Button>
 
       {state.ok && (
         <p className="text-base font-medium text-green-700 dark:text-green-300">

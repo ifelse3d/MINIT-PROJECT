@@ -48,36 +48,66 @@ export async function addGlossaryTerm(
     return { error: permissionError("minutes_write"), ok: false };
   }
 
+  // #10 (launch feedback, 2026-08-27 evening): an entry is the ORIGINAL word,
+  // WHICH language it is, and how the other two languages write it — any
+  // language can be the original. All renders empty = keep the word exactly.
   const term = String(formData.get("term") ?? "").trim();
-  const action = String(formData.get("action") ?? "keep");
-  const translation = String(formData.get("translation") ?? "").trim();
+  const langRaw = String(formData.get("lang") ?? "zh");
+  const lang = langRaw === "bm" || langRaw === "en" ? langRaw : "zh";
+  const renders: Record<"bm" | "zh" | "en", string | null> = {
+    bm: cleanRender(formData.get("renderBm")),
+    zh: cleanRender(formData.get("renderZh")),
+    en: cleanRender(formData.get("renderEn")),
+  };
+  // The original slot renders as itself — never stored twice.
+  renders[lang] = null;
   const note = String(formData.get("note") ?? "").trim();
 
   if (term === "") return { error: ERR.emptyTerm, ok: false };
-  if (action !== "keep" && action !== "translate") {
-    return { error: ERR.failed, ok: false };
-  }
-  if (action === "translate" && translation === "") {
-    return { error: ERR.needTranslation, ok: false };
-  }
+
+  // Legacy columns still drive the MODEL (the writing prompt renders BM
+  // documents): a BM render means "always write it as this" — exactly the
+  // old 'translate'; no BM render means the word is copied exactly ('keep').
+  // Prompts and their measurements stay untouched.
+  const bmRender = lang === "bm" ? null : renders.bm;
+  const action = bmRender ? "translate" : "keep";
 
   const supabase = await getSupabaseServer();
-  const { error } = await supabase.from("org_glossary").insert({
+  const base = {
     org_id: active.id,
     term: term.slice(0, 80),
     action,
-    translation: action === "translate" ? translation.slice(0, 160) : null,
+    translation: bmRender,
     note: note === "" ? null : note.slice(0, 200),
+  };
+  const { error } = await supabase.from("org_glossary").insert({
+    ...base,
+    lang,
+    render_bm: renders.bm,
+    render_zh: renders.zh,
+    render_en: renders.en,
   });
 
   if (error) {
     // 23505 = unique_violation (org_glossary_unique_term).
     if (error.code === "23505") return { error: ERR.duplicate, ok: false };
-    return { error: ERR.failed, ok: false };
+    // Pre-28 database: the trilingual columns do not exist yet — save the
+    // legacy shape so nothing typed is lost, and the page says what is
+    // missing until migration 28 lands.
+    const retry = await supabase.from("org_glossary").insert(base);
+    if (retry.error) {
+      if (retry.error.code === "23505") return { error: ERR.duplicate, ok: false };
+      return { error: ERR.failed, ok: false };
+    }
   }
 
   revalidatePath("/settings/glossary");
   return { error: null, ok: true };
+}
+
+function cleanRender(v: FormDataEntryValue | null): string | null {
+  const s = String(v ?? "").trim();
+  return s === "" ? null : s.slice(0, 160);
 }
 
 export async function deleteGlossaryTerm(

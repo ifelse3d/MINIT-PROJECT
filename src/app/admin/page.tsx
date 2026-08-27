@@ -6,6 +6,7 @@ import { planById } from "@/lib/plans";
 import { formatMytDateTime } from "@/lib/history";
 import { isOperatorEmail } from "@/lib/admin-gate";
 import { Tri } from "@/components/language-provider";
+import { FleetCharts } from "./fleet-charts";
 import { GrantCreditsCard } from "./grant-credits-card";
 
 // ---------------------------------------------------------------------------
@@ -44,6 +45,10 @@ type OrgRow = {
   usedThisMonth: number;
   usedPct: number;
   costMicrosTotal: number;
+  /** #20: this month's vendor cost for THIS org — who is burning what. */
+  costMicrosThisMonth: number;
+  /** #20: the plan's monthly price (null while pricing is undecided). */
+  priceRm: number | null;
   lastActivity: string | null;
   errors30d: number;
   /** K-2: this month's usage split by member ("?" = pre-migration rows). */
@@ -54,7 +59,10 @@ type OrgRow = {
   byAction: Subtotal[];
 };
 
-async function loadRows(): Promise<OrgRow[]> {
+/** #20: one calendar month of the fleet, for the charts. */
+type MonthPoint = { ym: string; actions: number; costMicros: number };
+
+async function loadRows(): Promise<{ rows: OrgRow[]; monthly: MonthPoint[] }> {
   const admin = getSupabase();
 
   // orgs — plan column may predate migration 20260830000000; retry without.
@@ -138,7 +146,28 @@ async function loadRows(): Promise<OrgRow[]> {
     .limit(20000);
   const errRows = (errs.data ?? []) as { org_id: number | null }[];
 
-  return orgs.map((o) => {
+  // #20: the last six calendar months of the whole fleet — actions (charged)
+  // and vendor cost, grouped by created_at month. TypeScript sums (Hard
+  // Rule 2 applies to our own books too).
+  const monthlyMap = new Map<string, { actions: number; costMicros: number }>();
+  const now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+    monthlyMap.set(d.toISOString().slice(0, 7), { actions: 0, costMicros: 0 });
+  }
+  for (const u of usageRows) {
+    const ym = u.created_at.slice(0, 7);
+    const bucket = monthlyMap.get(ym);
+    if (!bucket) continue;
+    if (u.refunded_at === null) bucket.actions += 1;
+    bucket.costMicros += u.cost_micros ?? 0;
+  }
+  const monthly: MonthPoint[] = [...monthlyMap.entries()].map(([ym, v]) => ({
+    ym,
+    ...v,
+  }));
+
+  const rows = orgs.map((o) => {
     const mine = usageRows.filter((u) => u.org_id === o.id);
     const thisMonth = mine.filter(
       (u) => u.created_at >= monthStart.toISOString() && u.refunded_at === null,
@@ -146,6 +175,9 @@ async function loadRows(): Promise<OrgRow[]> {
     const usedThisMonth = thisMonth.length;
     const quota = o.monthly_free_quota ?? 0;
     const costMicrosTotal = mine.reduce((s, u) => s + (u.cost_micros ?? 0), 0);
+    const costMicrosThisMonth = mine
+      .filter((u) => u.created_at >= monthStart.toISOString())
+      .reduce((s, u) => s + (u.cost_micros ?? 0), 0);
     const lastActivity = mine[0]?.created_at ?? null;
     // K-2: split this month's actions by member. Rows without a user_id
     // (pre-migration, or server-initiated) group under "?".
@@ -176,10 +208,12 @@ async function loadRows(): Promise<OrgRow[]> {
       name: o.name,
       // §1-1: the display NAME, not the internal id token.
       plan: planById(o.plan).name,
+      priceRm: planById(o.plan).priceRm,
       monthlyQuota: quota,
       usedThisMonth,
       usedPct: quota > 0 ? Math.round((usedThisMonth / quota) * 100) : 0,
       costMicrosTotal,
+      costMicrosThisMonth,
       lastActivity,
       errors30d: errRows.filter((e) => e.org_id === o.id).length,
       byPerson: [...perPerson.entries()]
@@ -190,6 +224,7 @@ async function loadRows(): Promise<OrgRow[]> {
       byAction: subtotal((u) => u.action),
     };
   });
+  return { rows, monthly };
 }
 
 // P-4: six decimals, because a single cheap call is ~$0.00004 and the old
@@ -260,7 +295,7 @@ export default async function AdminPage() {
   const user = await getSessionUser();
   if (!isAdmin(user?.email)) notFound();
 
-  const rows = await loadRows();
+  const { rows, monthly } = await loadRows();
   const [platformAdmin, feedback] = await Promise.all([
     isPlatformAdmin(user?.email ?? ""),
     loadFeedback(),
@@ -290,6 +325,19 @@ export default async function AdminPage() {
           />
         </p>
       </div>
+
+      {/* #20 (launch feedback): the numbers as CHARTS — months of cost,
+          this month's usage by org, the totals lined up. */}
+      <FleetCharts
+        monthly={monthly}
+        orgs={rows.map((r) => ({
+          id: r.id,
+          name: r.name,
+          usedThisMonth: r.usedThisMonth,
+          costMicrosThisMonth: r.costMicrosThisMonth,
+          priceRm: r.priceRm,
+        }))}
+      />
 
       <div className="v2-glass overflow-x-auto p-0">
         <table className="w-full text-base">
