@@ -225,7 +225,7 @@ export function AIPanel({
           explanation as small print. Nothing competes with the title for
           width any more. */}
       <div className="flex items-center gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#5b4bd6] via-[#6f5ef2] to-[#67cea4] text-white shadow-[0_12px_30px_-8px_rgba(124,108,245,0.7)]">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[color:var(--v2-primary-fill)] text-white shadow-[0_12px_30px_-8px_rgba(21,128,61,0.5)]">
           <Sparkles className="h-5 w-5" strokeWidth={1.9} />
         </span>
         <p className="min-w-0 flex-1 truncate text-lg font-semibold text-[color:var(--v2-text)]">
@@ -298,7 +298,7 @@ export function AIPanel({
           turn.role === "user" ? (
             <p
               key={i}
-              className="max-w-[88%] self-end rounded-3xl rounded-br-md bg-gradient-to-r from-[#5b4bd6] to-[#6f5ef2] px-4 py-3 text-base text-white"
+              className="max-w-[88%] self-end rounded-3xl rounded-br-md bg-[color:var(--v2-primary-fill)] px-4 py-3 text-base text-white"
             >
               {turn.text}
             </p>
@@ -314,7 +314,7 @@ export function AIPanel({
                 <Link
                   href={turn.button.href}
                   onClick={onNavigate}
-                  className="v2-pill mt-3 inline-flex min-h-11 items-center gap-2 rounded-full bg-gradient-to-r from-[#5b4bd6] to-[#6f5ef2] px-5 text-base font-semibold text-white"
+                  className="v2-pill mt-3 inline-flex min-h-11 items-center gap-2 rounded-full bg-[color:var(--v2-primary-fill)] px-5 text-base font-semibold text-white"
                 >
                   <Tri
                     bm={turn.button.bm}
@@ -439,7 +439,7 @@ export function AIPanel({
           aria-label={t("Hantar soalan", "发送问题", "Send question")}
           onClick={() => ask()}
           disabled={busy || isBlocked || !question.trim()}
-          className="v2-pill flex size-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#5b4bd6] to-[#6f5ef2] text-white shadow-[0_8px_20px_-6px_rgba(124,108,245,0.8)] disabled:opacity-50"
+          className="v2-pill flex size-11 shrink-0 items-center justify-center rounded-full bg-[color:var(--v2-primary-fill)] text-white shadow-[0_8px_20px_-6px_rgba(21,128,61,0.5)] disabled:opacity-50"
         >
           <ArrowUp className="h-5 w-5" strokeWidth={2.4} />
         </button>

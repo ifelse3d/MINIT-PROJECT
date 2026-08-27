@@ -241,7 +241,7 @@ export function StepCard({
             className={`flex shrink-0 items-center justify-center rounded-full font-bold text-white ${
               compact
                 ? "size-9 bg-green-600 text-base"
-                : "size-11 bg-gradient-to-br from-[#5b4bd6] to-[#6f5ef2] text-lg"
+                : "size-11 bg-[color:var(--v2-primary-fill)] text-lg"
             }`}
           >
             {compact ? <Check className="size-5" strokeWidth={3} /> : step}
@@ -509,7 +509,7 @@ export function StepNextButton({
         onClick?.();
         goToStep(targetId);
       }}
-      className="v2-pill inline-flex min-h-12 items-center gap-2 self-start rounded-full bg-gradient-to-r from-[#5b4bd6] to-[#6f5ef2] px-5 py-3 text-base font-semibold text-white shadow-[0_10px_26px_-10px_rgba(124,108,245,0.8)]"
+      className="v2-pill inline-flex min-h-12 items-center gap-2 self-start rounded-full bg-[color:var(--v2-primary-fill)] px-5 py-3 text-base font-semibold text-white shadow-[0_10px_26px_-10px_rgba(21,128,61,0.5)]"
     >
       <Tri bm={labelBm} zh={labelZh} en={labelEn} />
       <ArrowRight aria-hidden className="size-5" strokeWidth={2.4} />

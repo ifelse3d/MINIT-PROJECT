@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { Loader2 } from "lucide-react";
 import { Tri, useTriText } from "@/components/language-provider";
+import { BRAND_NAME } from "@/lib/brand";
 import { PasswordInput } from "@/components/password-input";
 import { getSupabaseBrowser } from "@/db/supabase-browser";
 import { stashInviteCode } from "@/lib/invite-stash";
@@ -249,10 +251,9 @@ export default function LoginPage() {
       {/* Brand block */}
       <div className="flex flex-col items-center gap-3">
         <div className="flex items-center gap-3">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[color:var(--v2-primary-fill)] text-2xl font-bold text-white">
-            M
-          </span>
-          <span className="text-4xl font-bold leading-none tracking-tight">Minit</span>
+          {/* P1 (拍板 0-8): the green logo; the name follows BRAND_NAME. */}
+          <Image src="/brand-logo-96.png" alt="" width={48} height={48} className="h-12 w-12" />
+          <span className="text-4xl font-bold leading-none tracking-tight">{BRAND_NAME}</span>
         </div>
         <p className="text-pretty text-center text-base text-[color:var(--v2-text-soft)]">
           <Tri

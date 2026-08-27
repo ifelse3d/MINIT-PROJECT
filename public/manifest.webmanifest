@@ -1,6 +1,6 @@
 {
-  "name": "Minit — Pembantu Persatuan",
-  "short_name": "Minit",
+  "name": "MinitAI — Pembantu Persatuan",
+  "short_name": "MinitAI",
   "description": "Urus dokumen persatuan anda — tanpa mengisi borang. 帮您的社团处理文件。",
   "start_url": "/",
   "display": "standalone",

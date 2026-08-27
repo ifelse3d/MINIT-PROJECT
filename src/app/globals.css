@@ -167,9 +167,9 @@
    here and nowhere else. J's brief (2026-08-24): kill the glassmorphism — it
    caused the mobile login ghosting, the contrast failures and the "template"
    look. Replaced with: near-white page (deep slate in dark mode), SOLID cards,
-   thin borders, light shadows, ONE brand colour (the existing deep purple,
-   kept only as an accent), and the green/amber/red semantic colours untouched
-   (Hard Rule 9).
+   thin borders, light shadows, ONE brand colour (brand GREEN since 2026-08-27,
+   拍板 0-8 — was deep purple), and the green/amber/red semantic colours
+   untouched (Hard Rule 9).
 
    The class/variable NAMES from the old system are kept (.v2-glass, --v2-*):
    forty files reference them, and a name is plumbing, not design. Their
@@ -179,13 +179,18 @@
 
 .v2-root {
   /* --- the one brand accent ------------------------------------------- */
-  /* White text on this measures 6.14:1 (kept from the audit). The "gradient"
-     pair now holds ONE colour twice: primary buttons are flat. */
-  --v2-primary: #5b4bd6;        /* accent for TEXT and icons */
-  --v2-primary-fill: #5b4bd6;   /* filled controls carrying WHITE text (6.14:1) */
-  --v2-primary-soft: #eceafc;
-  --v2-grad-from: #5b4bd6;
-  --v2-grad-to: #5b4bd6;
+  /* GREEN since 2026-08-27 (拍板 0-8, work order 32 P1; values from the
+     avocado spec §2.2 — computed, not estimated). ⚠ THE CONTRAST IRON RULE:
+     the brand's Fresh Green #22C55E measures only 2.28:1 under white text —
+     it is DECORATION (--v2-accent), never a fill under white. Interaction
+     green is #15803D: white on it = 5.02:1 (AA). The "gradient" pair still
+     holds ONE colour twice: primary buttons are flat. */
+  --v2-primary: #15803d;        /* accent for TEXT and icons — 5.0:1 on white */
+  --v2-primary-fill: #15803d;   /* filled controls carrying WHITE text (5.02:1) */
+  --v2-primary-soft: #ecfdf5;
+  --v2-accent: #22c55e;         /* decorative only: indicator bars, glyphs */
+  --v2-grad-from: #15803d;
+  --v2-grad-to: #15803d;
 
   /* --- surfaces --------------------------------------------------------- */
   --v2-page: #f6f7f9;
@@ -203,7 +208,7 @@
                                          affordance (was 0.65 ⇒ 3.4:1) */
   --v2-shadow: 0 0.0625rem 0.1875rem rgba(16, 24, 40, 0.07),
     0 0.0625rem 0.125rem rgba(16, 24, 40, 0.04);
-  --v2-shadow-soft: 0 0.25rem 0.75rem -0.25rem rgba(91, 75, 214, 0.35);
+  --v2-shadow-soft: 0 0.25rem 0.75rem -0.25rem rgba(21, 128, 61, 0.35);
 
   /* --- text ------------------------------------------------------------- */
   --v2-text: #1b1e27;                 /* 15.9:1 on white */
@@ -220,13 +225,14 @@
 }
 
 .dark .v2-root {
-  /* TWO tokens on purpose (found in the dark-mode screenshot pass):
-     the light lavender that reads well as TEXT on the dark page (#8d80f0,
-     ~7:1) fails as a FILL under white text (~2.5:1). Fills keep the deep
-     audited purple; text accents keep the light one. */
-  --v2-primary: #8d80f0;
-  --v2-primary-fill: #6f5ef2;   /* white text on this: 4.61:1 (audited) */
-  --v2-primary-soft: rgba(141, 128, 240, 0.16);
+  /* TWO tokens on purpose (same shape as the purple era): the bright green
+     that reads well as TEXT on the dark page (#22c55e, ~8:1) fails as a FILL
+     under white text (2.28:1 — the iron rule again). Fills keep the deep
+     interaction green in BOTH modes, so every white label stays ≥5:1. */
+  --v2-primary: #22c55e;
+  --v2-primary-fill: #15803d;   /* white text on this: 5.02:1 */
+  --v2-primary-soft: rgba(34, 197, 94, 0.16);
+  --v2-accent: #22c55e;
   --v2-page: #12151c;
   --v2-card: #1a1e28;
   --v2-glass: var(--v2-card);

@@ -340,7 +340,7 @@ export function AccountControls({ className }: { className?: string }) {
                 className={cn(
                   "flex min-h-12 items-center gap-3 rounded-xl px-3 py-2.5 text-base font-medium transition-colors",
                   active
-                    ? "bg-gradient-to-r from-[#5b4bd6]/90 to-[#6f5ef2]/90 text-white"
+                    ? "bg-[color:var(--v2-primary-fill)] text-white"
                     : "text-[color:var(--v2-text)] hover:bg-white/60 dark:hover:bg-white/10",
                 )}
               >

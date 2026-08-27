@@ -476,7 +476,7 @@ export function ConstitutionReview({
               className={`inline-flex cursor-pointer items-center gap-2 rounded-full px-5 py-3 text-base font-semibold text-white ${
                 aiBusy
                   ? "cursor-wait bg-muted-foreground"
-                  : "v2-pill bg-gradient-to-r from-[#5b4bd6] to-[#6f5ef2] shadow-[0_10px_26px_-10px_rgba(124,108,245,0.8)]"
+                  : "v2-pill bg-[color:var(--v2-primary-fill)] shadow-[0_10px_26px_-10px_rgba(21,128,61,0.5)]"
               }`}
             >
               {aiBusy ? (

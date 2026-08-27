@@ -23,7 +23,8 @@ import { usePathname } from "next/navigation";
 import { LanguageSwitcher, Tri } from "@/components/language-provider";
 import { FirstRunFlow } from "@/components/first-run-flow";
 import { usePersistentState } from "@/lib/use-persistent-state";
-import { BRAND_INITIAL, BRAND_NAME } from "@/lib/brand";
+import Image from "next/image";
+import { BRAND_NAME } from "@/lib/brand";
 import {
   PRIMARY_NAV,
   SIDEBAR_NAV,
@@ -174,9 +175,9 @@ function Rail({ pathname, showAdmin }: { pathname: string; showAdmin: boolean })
       aria-label="Navigation"
     >
       <div className="flex items-center gap-2 px-5 pb-4 pt-5">
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[color:var(--v2-primary-fill)] text-lg font-bold text-white">
-          {BRAND_INITIAL}
-        </span>
+        {/* P1 (拍板 0-8): the green "two people = M" logo replaces the
+            letter tile. The PNG carries its own rounded corners. */}
+        <Image src="/brand-logo-96.png" alt="" width={36} height={36} className="h-9 w-9" />
         <span className="text-xl font-semibold tracking-tight">{BRAND_NAME}</span>
       </div>
 
@@ -307,9 +308,7 @@ function MobileTopBar() {
   return (
     <header className="flex items-center justify-between gap-3 md:hidden">
       <div className="flex items-center gap-2">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[color:var(--v2-primary-fill)] text-base font-bold text-white">
-          {BRAND_INITIAL}
-        </span>
+        <Image src="/brand-logo-96.png" alt="" width={32} height={32} className="h-8 w-8" />
         <span className="text-lg font-semibold tracking-tight">{BRAND_NAME}</span>
       </div>
       {org && (

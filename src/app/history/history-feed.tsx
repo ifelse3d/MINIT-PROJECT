@@ -219,9 +219,9 @@ export function HistoryFeed({
                 </span>
                 {day.dayIso === todayIso && (
                   <Badge
-                    // #7c6cf5 gave white text 3.95:1 — fails AA at this size.
-                    // #5b4bd6 is the same hue at 6.14:1 (= --v2-grad-from).
-                    className="bg-[#5b4bd6] text-white hover:bg-[#5b4bd6]"
+                    // White text needs the interaction green (#15803D, 5.02:1)
+                    // — never the bright #22C55E (2.28:1, P1 iron rule).
+                    className="bg-[color:var(--v2-primary-fill)] text-white hover:bg-[color:var(--v2-primary-fill)]"
                   >
                     <Tri bm="Hari ini" zh="今天" en="Today" />
                   </Badge>

@@ -9,8 +9,11 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        // P1 (拍板 0-8): brand green. Flat fill, not a gradient — white text
+        // on the interaction green #15803D is 5.02:1; the bright #22C55E may
+        // NEVER carry white text (2.28:1, spec §2.2 iron rule).
         default:
-          "rounded-full bg-gradient-to-r from-[#5b4bd6] to-[#6f5ef2] text-white shadow-[0_10px_26px_-10px_rgba(124,108,245,0.8)] hover:opacity-90",
+          "rounded-full bg-[color:var(--v2-primary-fill)] text-white shadow-[0_10px_26px_-10px_rgba(21,128,61,0.5)] hover:opacity-90",
         // A white border on a near-white glass surface gave outline buttons no
         // perceivable edge (audit: "visually a floating label"). Every Confirm /
         // Edit / Copy / Download control in the app uses this variant, so it now

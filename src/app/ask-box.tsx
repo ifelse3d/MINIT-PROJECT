@@ -590,7 +590,7 @@ export function AskBox({
             turn.role === "user" ? (
               <p
                 key={i}
-                className="self-end rounded-2xl rounded-br-md bg-gradient-to-r from-[#5b4bd6] to-[#6f5ef2] px-4 py-3 text-lg text-white sm:max-w-[80%]"
+                className="self-end rounded-2xl rounded-br-md bg-[color:var(--v2-primary-fill)] px-4 py-3 text-lg text-white sm:max-w-[80%]"
               >
                 {turn.text}
               </p>
