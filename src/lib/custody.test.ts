@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   canTransition,
+  cancelRemittanceBatch,
   collectorBalances,
   confirmRemittanceBatch,
   createRemittanceBatch,
+  createRemittanceBatchFromIds,
   CustodyError,
   totalUnremittedCents,
+  updatePendingBatch,
 } from "@/lib/custody";
 import type { RegisterDonation } from "@/lib/receipts";
 
@@ -211,6 +214,112 @@ describe("HQ dashboard sums (deterministic)", () => {
         collector: "Siti",
         handedOverAtIso: "2026-08-28",
       }),
+    ).toThrow(CustodyError);
+  });
+});
+
+// 拍板 0-6 (work order 32 §1-6): per-item hand-over, editable while pending,
+// cancellable before HQ confirms, locked after.
+describe("per-item remittance batches (拍板 0-6)", () => {
+  const rows: RegisterDonation[] = [
+    donation({ id: "d1", receiptNo: "MIN-2026-0001", amountCents: 5000 }),
+    donation({ id: "d2", receiptNo: "MIN-2026-0002", amountCents: 10000 }),
+    donation({ id: "d3", receiptNo: "MIN-2026-0003", amountCents: 2000 }),
+    donation({ id: "u1", receiptNo: null, amountCents: 7000 }),
+  ];
+  const params = {
+    id: "b1",
+    collector: "Lim",
+    handedOverAtIso: "2026-08-26",
+    recordedAtIso: "2026-08-27T03:00:00Z",
+  };
+
+  it("batches exactly the selected rows and sums them in code", () => {
+    const { batch, donations: after } = createRemittanceBatchFromIds(rows, {
+      ...params,
+      donationIds: ["d1", "d3"],
+    });
+    expect(batch.receiptNos).toEqual(["MIN-2026-0001", "MIN-2026-0003"]);
+    expect(batch.totalCents).toBe(7000);
+    expect(batch.status).toBe("pending");
+    expect(batch.recordedAtIso).toBe("2026-08-27T03:00:00Z");
+    // The hand-over DATE is the one the person chose, not today.
+    expect(batch.handedOverAtIso).toBe("2026-08-26");
+    expect(after.find((d) => d.id === "d1")?.custodyStatus).toBe("pending_remittance");
+    expect(after.find((d) => d.id === "d2")?.custodyStatus).toBe("collected");
+  });
+
+  it("refuses an unreceipted row — nothing to tie the hand-over to", () => {
+    expect(() =>
+      createRemittanceBatchFromIds(rows, { ...params, donationIds: ["d1", "u1"] }),
+    ).toThrow(CustodyError);
+  });
+
+  it("refuses goods and transfers — they are not cash in a hand", () => {
+    const withGoods = [
+      ...rows,
+      donation({ id: "g1", receiptNo: "MIN-2026-0009", amountCents: 0, kind: "in_kind" }),
+      donation({ id: "t1", receiptNo: "MIN-2026-0010", amountCents: 100, paymentMethod: "transfer" }),
+    ];
+    expect(() =>
+      createRemittanceBatchFromIds(withGoods, { ...params, donationIds: ["g1"] }),
+    ).toThrow(CustodyError);
+    expect(() =>
+      createRemittanceBatchFromIds(withGoods, { ...params, donationIds: ["t1"] }),
+    ).toThrow(CustodyError);
+  });
+
+  it("refuses an empty selection and an unknown id", () => {
+    expect(() =>
+      createRemittanceBatchFromIds(rows, { ...params, donationIds: [] }),
+    ).toThrow(CustodyError);
+    expect(() =>
+      createRemittanceBatchFromIds(rows, { ...params, donationIds: ["nope"] }),
+    ).toThrow(CustodyError);
+  });
+
+  it("lets a PENDING batch's date and note be edited, and only pending", () => {
+    const { batch } = createRemittanceBatchFromIds(rows, {
+      ...params,
+      donationIds: ["d1"],
+    });
+    const edited = updatePendingBatch(batch, {
+      handedOverAtIso: "2026-08-25",
+      note: "kiraan malam",
+    });
+    expect(edited.handedOverAtIso).toBe("2026-08-25");
+    expect(edited.note).toBe("kiraan malam");
+    const settled = { ...batch, status: "settled" as const };
+    expect(() => updatePendingBatch(settled, { note: "x" })).toThrow(CustodyError);
+  });
+
+  it("cancel voids the record and returns the rows to collected", () => {
+    const made = createRemittanceBatchFromIds(rows, {
+      ...params,
+      donationIds: ["d1", "d2"],
+    });
+    const { batch, donations: after } = cancelRemittanceBatch(made.batch, made.donations);
+    expect(batch.status).toBe("cancelled");
+    expect(after.find((d) => d.id === "d1")?.custodyStatus).toBe("collected");
+    expect(after.find((d) => d.id === "d2")?.custodyStatus).toBe("collected");
+  });
+
+  it("a settled batch can never be cancelled, a cancelled one never confirmed", () => {
+    const made = createRemittanceBatchFromIds(rows, {
+      ...params,
+      donationIds: ["d1"],
+    });
+    const confirmed = confirmRemittanceBatch(made.batch, made.donations, {
+      confirmedBy: "HQ Mei",
+      confirmedAtIso: "2026-08-27T05:00:00Z",
+    });
+    expect(confirmed.batch.confirmedAtIso).toBe("2026-08-27T05:00:00Z");
+    expect(() => cancelRemittanceBatch(confirmed.batch, confirmed.donations)).toThrow(
+      CustodyError,
+    );
+    const cancelled = cancelRemittanceBatch(made.batch, made.donations);
+    expect(() =>
+      confirmRemittanceBatch(cancelled.batch, cancelled.donations, { confirmedBy: "HQ" }),
     ).toThrow(CustodyError);
   });
 });

@@ -60,23 +60,39 @@ export async function saveRemittanceBatch(
   if (!can(active.role, "money_collect")) return { ok: false, reason: "db" };
 
   const supabase = await getSupabaseServer();
+  const base = {
+    org_id: active.id,
+    client_id: batch.id,
+    collector_name: batch.collector,
+    receipt_nos: batch.receiptNos,
+    total_cents: batch.totalCents,
+    // handed_over_at is a timestamptz and the batch carries a Malaysian
+    // calendar day. Anchoring it to the start of that day in UTC+8 keeps the
+    // date it reads back as the date the treasurer chose, in every timezone.
+    handed_over_at: `${batch.handedOverAtIso}T00:00:00+08:00`,
+    confirmed_by_hq: batch.confirmedByHq,
+    status: batch.status,
+  };
+  // Migration 27 columns first; retry without them on a pre-27 database.
   const { error } = await supabase.from("remittance_batches").upsert(
     {
-      org_id: active.id,
-      client_id: batch.id,
-      collector_name: batch.collector,
-      receipt_nos: batch.receiptNos,
-      total_cents: batch.totalCents,
-      // handed_over_at is a timestamptz and the batch carries a Malaysian
-      // calendar day. Anchoring it to the start of that day in UTC+8 keeps the
-      // date it reads back as the date the treasurer chose, in every timezone.
-      handed_over_at: `${batch.handedOverAtIso}T00:00:00+08:00`,
-      confirmed_by_hq: batch.confirmedByHq,
-      status: batch.status,
+      ...base,
+      recorded_at: batch.recordedAtIso ?? null,
+      confirmed_at: batch.confirmedAtIso ?? null,
+      note: batch.note ?? null,
     },
     { onConflict: "org_id,client_id" },
   );
-  return error ? { ok: false, reason: "db" } : { ok: true };
+  if (!error) return { ok: true };
+  // 🔴 A CANCELLED batch cannot be written to a pre-27 database at all (its
+  // status check only knows pending/settled). Refusing is correct: writing it
+  // as anything else would un-cancel it on every other device. The UI then
+  // says "on this device only", which is the truth until J applies 27.
+  if (batch.status === "cancelled") return { ok: false, reason: "db" };
+  const retry = await supabase
+    .from("remittance_batches")
+    .upsert(base, { onConflict: "org_id,client_id" });
+  return retry.error ? { ok: false, reason: "db" } : { ok: true };
 }
 
 /**
@@ -96,32 +112,63 @@ export async function loadRemittanceBatches(): Promise<RemittanceBatch[]> {
   if (!active) return [];
 
   const supabase = await getSupabaseServer();
-  const { data, error } = await supabase
-    .from("remittance_batches")
-    .select(
-      "id, client_id, collector_name, receipt_nos, total_cents, handed_over_at, confirmed_by_hq, status",
-    )
-    .eq("org_id", active.id)
-    .order("id", { ascending: false })
-    .limit(200);
+  const SELECT =
+    "id, client_id, collector_name, receipt_nos, total_cents, handed_over_at, confirmed_by_hq, status, recorded_at, confirmed_at, note";
+  /** While migration 27 (recorded_at/confirmed_at/note) is not applied. */
+  const SELECT_LEGACY =
+    "id, client_id, collector_name, receipt_nos, total_cents, handed_over_at, confirmed_by_hq, status";
+  const query = (select: string) =>
+    supabase
+      .from("remittance_batches")
+      .select(select)
+      .eq("org_id", active.id)
+      .order("id", { ascending: false })
+      .limit(200);
 
+  type BatchRow = {
+    id: number;
+    client_id: string | null;
+    collector_name: string | null;
+    receipt_nos: string[] | null;
+    total_cents: number | null;
+    handed_over_at: string | null;
+    confirmed_by_hq: string | null;
+    status: string | null;
+    recorded_at?: string | null;
+    confirmed_at?: string | null;
+    note?: string | null;
+  };
+  let { data, error } = await query(SELECT).returns<BatchRow[]>();
+  if (error) {
+    const retry = await query(SELECT_LEGACY).returns<BatchRow[]>();
+    data = retry.data;
+    error = retry.error;
+  }
   if (error || !data) return [];
 
   return data.map((row) => ({
-    id: (row.client_id as string | null) ?? `db-${row.id}`,
-    collector: (row.collector_name as string | null) ?? "",
-    receiptNos: (row.receipt_nos as string[] | null) ?? [],
+    id: row.client_id ?? `db-${row.id}`,
+    collector: row.collector_name ?? "",
+    receiptNos: row.receipt_nos ?? [],
     totalCents: Number(row.total_cents ?? 0),
     handedOverAtIso: row.handed_over_at
-      ? new Date(row.handed_over_at as string).toLocaleDateString("en-CA", {
+      ? new Date(row.handed_over_at).toLocaleDateString("en-CA", {
           timeZone: "Asia/Kuala_Lumpur",
         })
       : "",
-    // The DB check allows 'pending' and 'settled' (fixed in migration
-    // 20260726000000, which also migrated the legacy 'confirmed' rows). Anything
-    // else is treated as still outstanding: claiming money has arrived when we
-    // cannot read the status is the wrong way round to be wrong.
-    status: row.status === "settled" ? "settled" : "pending",
-    confirmedByHq: (row.confirmed_by_hq as string | null) ?? null,
+    // The DB check allows 'pending', 'settled' and (since migration 27)
+    // 'cancelled'. Anything unknown is treated as still outstanding: claiming
+    // money has arrived when we cannot read the status is the wrong way
+    // round to be wrong.
+    status:
+      row.status === "settled"
+        ? ("settled" as const)
+        : row.status === "cancelled"
+          ? ("cancelled" as const)
+          : ("pending" as const),
+    confirmedByHq: row.confirmed_by_hq ?? null,
+    recordedAtIso: row.recorded_at ?? undefined,
+    confirmedAtIso: row.confirmed_at ?? null,
+    note: row.note ?? null,
   }));
 }

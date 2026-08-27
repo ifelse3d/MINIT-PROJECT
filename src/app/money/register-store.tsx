@@ -23,10 +23,12 @@ import {
   type RegisterDonation,
 } from "@/lib/receipts";
 import {
+  cancelRemittanceBatch,
   collectorBalances,
   confirmRemittanceBatch,
-  createRemittanceBatch,
+  createRemittanceBatchFromIds,
   totalUnremittedCents,
+  updatePendingBatch,
   type RemittanceBatch,
 } from "@/lib/custody";
 import { usePersistentState, type PersistMeta } from "@/lib/use-persistent-state";
@@ -158,7 +160,20 @@ export type RegisterStore = {
   issueBusy: boolean;
   issueNotice: IssueNotice | null;
   setIssueNotice: Dispatch<SetStateAction<IssueNotice | null>>;
-  handOver: () => void;
+  /**
+   * 拍板 0-6 (work order 32): record a hand-over of HAND-PICKED rows. The
+   * dialog supplies the date (default today, editable — people record later
+   * than they hand over), who carried the cash, and an optional note.
+   */
+  handOverSelected: (
+    donationIds: string[],
+    opts: { dateIso: string; collector: string; note?: string },
+  ) => void;
+  /** 拍板 0-6: edit a PENDING batch's hand-over date / note. */
+  updateBatch: (batchId: string, patch: { handedOverAtIso?: string; note?: string | null }) => void;
+  /** 拍板 0-6: void a mis-recorded PENDING batch — rows return to collected,
+   *  the batch stays on file as 'cancelled'. Settled = locked forever. */
+  cancelBatch: (batchId: string) => void;
   /** B-3: HQ ticks off ONE hand-over ("he brought it → confirm"). No id =
    *  confirm every pending batch (the old bulk behaviour). */
   hqConfirm: (batchId?: string) => void;
@@ -690,47 +705,73 @@ export function RegisterProvider({
     [setDonations, setBatches],
   );
 
-  const handOver = useCallback(() => {
-    setError(null);
-    try {
-      let current = donationsRef.current;
-      // Recomputed from the ref, not from the memo, for the reason above.
-      const collectors = Array.from(
-        new Set(
-          current
-            // holdsCash: goods (D-1) and bank transfers (D19) are never in
-            // anyone's hands, so they never make a collector "hold cash".
-            .filter(
-              (d) =>
-                d.custodyStatus === "collected" &&
-                d.receiptNo !== null &&
-                holdsCash(d),
-            )
-            .map((d) => d.collector),
-        ),
-      );
-      const created: RemittanceBatch[] = [];
-      for (const collector of collectors) {
-        const result = createRemittanceBatch(current, {
-          id: `batch-${Date.now()}-${created.length}`,
-          collector,
-          handedOverAtIso: todayIsoMalaysia(),
+  // 拍板 0-6: the hand-over is a HAND-PICKED batch from the dialog — the old
+  // one-tap "batch everything every collector holds" is gone (it was the
+  // "一鍵全交" J rejected). Same refs discipline as before.
+  const handOverSelected = useCallback(
+    (donationIds: string[], opts: { dateIso: string; collector: string; note?: string }) => {
+      setError(null);
+      try {
+        const result = createRemittanceBatchFromIds(donationsRef.current, {
+          id: `batch-${Date.now()}`,
+          collector: opts.collector,
+          donationIds,
+          handedOverAtIso: opts.dateIso,
+          recordedAtIso: new Date().toISOString(),
+          note: opts.note?.trim() ? opts.note.trim() : null,
         });
-        current = result.donations;
-        created.push(result.batch);
+        commitCustody(result.donations, [...batchesRef.current, result.batch]);
+        // Fire-and-forget: the hand-over has already happened in the room, and
+        // refusing to record it locally because the network is down would be
+        // recording it nowhere.
+        void saveRemittanceBatch(result.batch).then((r) =>
+          setCustodyLocalOnly(!r.ok),
+        );
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
       }
-      if (created.length === 0) return;
-      commitCustody(current, [...batchesRef.current, ...created]);
-      // Fire-and-forget, one call per batch: the hand-over has already happened
-      // in the room, and refusing to record it locally because the network is
-      // down would be recording it nowhere.
-      void Promise.all(created.map((b) => saveRemittanceBatch(b))).then((results) =>
-        setCustodyLocalOnly(results.some((r) => !r.ok)),
-      );
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    }
-  }, [commitCustody]);
+    },
+    [commitCustody],
+  );
+
+  const updateBatch = useCallback(
+    (batchId: string, patch: { handedOverAtIso?: string; note?: string | null }) => {
+      setError(null);
+      try {
+        let edited: RemittanceBatch | null = null;
+        const updated = batchesRef.current.map((b) => {
+          if (b.id !== batchId) return b;
+          edited = updatePendingBatch(b, patch);
+          return edited;
+        });
+        if (!edited) return;
+        commitCustody(donationsRef.current, updated);
+        void saveRemittanceBatch(edited).then((r) => setCustodyLocalOnly(!r.ok));
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      }
+    },
+    [commitCustody],
+  );
+
+  const cancelBatch = useCallback(
+    (batchId: string) => {
+      setError(null);
+      try {
+        const target = batchesRef.current.find((b) => b.id === batchId);
+        if (!target) return;
+        const result = cancelRemittanceBatch(target, donationsRef.current);
+        commitCustody(
+          result.donations,
+          batchesRef.current.map((b) => (b.id === batchId ? result.batch : b)),
+        );
+        void saveRemittanceBatch(result.batch).then((r) => setCustodyLocalOnly(!r.ok));
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      }
+    },
+    [commitCustody],
+  );
 
   const hqConfirm = useCallback((batchId?: string) => {
     setError(null);
@@ -743,10 +784,15 @@ export function RegisterProvider({
       const confirmedBy =
         signerName ?? t("(tidak dinyatakan)", "（未记录）", "(not recorded)");
       const updated = batchesRef.current.map((b) => {
-        if (b.status === "settled") return b;
+        // 拍板 0-6: a cancelled batch is a voided record — nothing to confirm.
+        if (b.status !== "pending") return b;
         // B-3: ticking ONE hand-over off confirms only that hand-over.
         if (batchId !== undefined && b.id !== batchId) return b;
-        const result = confirmRemittanceBatch(b, current, { confirmedBy });
+        const result = confirmRemittanceBatch(b, current, {
+          confirmedBy,
+          // §1-11: the confirm moment is its own timestamp.
+          confirmedAtIso: new Date().toISOString(),
+        });
         current = result.donations;
         changed = true;
         return result.batch;
@@ -867,7 +913,9 @@ export function RegisterProvider({
         issueBusy,
         issueNotice,
         setIssueNotice,
-        handOver,
+        handOverSelected,
+        updateBatch,
+        cancelBatch,
         hqConfirm,
         deleteEverything,
         custodyLocalOnly,

@@ -43,9 +43,23 @@ export type RemittanceBatch = {
   receiptNos: string[];
   /** Summed by this code from the donation rows, never keyed in. */
   totalCents: number;
+  /** The DATE the cash changed hands (拍板 0-6: editable while pending —
+   *  people record a hand-over later than it happened). */
   handedOverAtIso: string;
-  status: "pending" | "settled";
+  /** 'cancelled' (拍板 0-6): a mis-recorded hand-over voided BEFORE HQ
+   *  confirmed. The batch stays on file for audit; its donations return to
+   *  `collected` (they never actually left). This voids a RECORD — the
+   *  custody state machine on donations stays forward-only for money. */
+  status: "pending" | "settled" | "cancelled";
   confirmedByHq: string | null;
+  /** §1-11: WHEN the record was made — the timestamp that cannot lie,
+   *  even when handedOverAtIso is edited to yesterday. Absent on batches
+   *  recorded before migration 27. */
+  recordedAtIso?: string;
+  /** §1-11: when HQ confirmed. Absent/null while pending. */
+  confirmedAtIso?: string | null;
+  /** Free note, editable while pending, frozen at confirm (拍板 0-6). */
+  note?: string | null;
 };
 
 /**
@@ -91,14 +105,129 @@ export function createRemittanceBatch(
   };
 }
 
+/**
+ * 拍板 0-6 (work order 32): hand over a HAND-PICKED set of register rows —
+ * the per-item successor to createRemittanceBatch's "everything the collector
+ * holds". Every selected row must be receipted, still `collected`, and
+ * actually cash (holdsCash) — anything else is a CustodyError, because a
+ * batch containing it would be a paper trail claiming cash that was not
+ * there to hand over. Pure function — no mutation.
+ */
+export function createRemittanceBatchFromIds(
+  donations: RegisterDonation[],
+  params: {
+    id: string;
+    /** Who physically brings the cash (拍板 0-6: asked in the dialog). */
+    collector: string;
+    donationIds: string[];
+    handedOverAtIso: string;
+    recordedAtIso: string;
+    note?: string | null;
+  }
+): { batch: RemittanceBatch; donations: RegisterDonation[] } {
+  if (params.donationIds.length === 0) {
+    throw new CustodyError("A hand-over needs at least one selected donation.");
+  }
+  const wanted = new Set(params.donationIds);
+  const inBatch = donations.filter((d) => wanted.has(d.id));
+  if (inBatch.length !== wanted.size) {
+    throw new CustodyError("A selected donation is not in the register.");
+  }
+  for (const d of inBatch) {
+    if (d.receiptNo === null) {
+      throw new CustodyError(`Donation ${d.id} has no receipt yet — issue it first.`);
+    }
+    if (!holdsCash(d)) {
+      throw new CustodyError(`Donation ${d.id} is not cash in a hand (goods or transfer).`);
+    }
+    assertTransition(d.custodyStatus, "pending_remittance");
+  }
+
+  const ids = new Set(inBatch.map((d) => d.id));
+  return {
+    batch: {
+      id: params.id,
+      collector: params.collector,
+      receiptNos: inBatch.map((d) => d.receiptNo as string),
+      totalCents: inBatch.reduce((sum, d) => sum + d.amountCents, 0),
+      handedOverAtIso: params.handedOverAtIso,
+      status: "pending",
+      confirmedByHq: null,
+      recordedAtIso: params.recordedAtIso,
+      confirmedAtIso: null,
+      note: params.note ?? null,
+    },
+    donations: donations.map((d) =>
+      ids.has(d.id) ? { ...d, custodyStatus: "pending_remittance" as const } : d
+    ),
+  };
+}
+
+/**
+ * 拍板 0-6: edit a PENDING batch's hand-over date / note. A settled batch is
+ * locked forever; a cancelled one is history. Pure function.
+ */
+export function updatePendingBatch(
+  batch: RemittanceBatch,
+  patch: { handedOverAtIso?: string; note?: string | null }
+): RemittanceBatch {
+  if (batch.status !== "pending") {
+    throw new CustodyError(`Batch ${batch.id} is ${batch.status} — it can no longer be edited.`);
+  }
+  return {
+    ...batch,
+    handedOverAtIso: patch.handedOverAtIso ?? batch.handedOverAtIso,
+    note: patch.note === undefined ? (batch.note ?? null) : patch.note,
+  };
+}
+
+/**
+ * 拍板 0-6: void a mis-recorded hand-over BEFORE HQ confirms it.
+ *
+ * This is deliberately NOT a custody transition. The forward-only machine
+ * (collected → pending_remittance → settled) describes MONEY moving; a
+ * cancelled batch is a RECORD that was wrong — the cash never actually left
+ * the collector's hands, so the rows go back to `collected` and the batch
+ * stays on file as `cancelled` for the audit trail. A settled batch can
+ * never be cancelled: HQ counted real money.
+ */
+export function cancelRemittanceBatch(
+  batch: RemittanceBatch,
+  donations: RegisterDonation[]
+): { batch: RemittanceBatch; donations: RegisterDonation[] } {
+  if (batch.status !== "pending") {
+    throw new CustodyError(`Batch ${batch.id} is ${batch.status} — only a pending batch can be cancelled.`);
+  }
+  const receiptNos = new Set(batch.receiptNos);
+  const ids = new Set(
+    donations
+      .filter(
+        (d) =>
+          d.receiptNo !== null &&
+          receiptNos.has(d.receiptNo) &&
+          d.custodyStatus === "pending_remittance",
+      )
+      .map((d) => d.id),
+  );
+  return {
+    batch: { ...batch, status: "cancelled" },
+    donations: donations.map((d) =>
+      ids.has(d.id) ? { ...d, custodyStatus: "collected" as const } : d
+    ),
+  };
+}
+
 /** HQ counts the cash and confirms: batch settles, donations settle. Pure function. */
 export function confirmRemittanceBatch(
   batch: RemittanceBatch,
   donations: RegisterDonation[],
-  params: { confirmedBy: string }
+  params: { confirmedBy: string; confirmedAtIso?: string }
 ): { batch: RemittanceBatch; donations: RegisterDonation[] } {
   if (batch.status === "settled") {
     throw new CustodyError(`Batch ${batch.id} is already settled.`);
+  }
+  if (batch.status === "cancelled") {
+    throw new CustodyError(`Batch ${batch.id} was cancelled — there is nothing to confirm.`);
   }
   const receiptNos = new Set(batch.receiptNos);
   const inBatch = donations.filter((d) => d.receiptNo !== null && receiptNos.has(d.receiptNo));
@@ -106,7 +235,12 @@ export function confirmRemittanceBatch(
 
   const ids = new Set(inBatch.map((d) => d.id));
   return {
-    batch: { ...batch, status: "settled", confirmedByHq: params.confirmedBy },
+    batch: {
+      ...batch,
+      status: "settled",
+      confirmedByHq: params.confirmedBy,
+      confirmedAtIso: params.confirmedAtIso ?? null,
+    },
     donations: donations.map((d) =>
       ids.has(d.id) ? { ...d, custodyStatus: "settled" as const } : d
     ),
