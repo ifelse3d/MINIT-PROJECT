@@ -176,22 +176,35 @@ export type LunarOfferingEvent = {
   derived: true;
 };
 
+/** Which lunar days a recurring rule covers (launch feedback #13). */
+export type LunarRepeatDays = "both" | "1" | "15";
+
 /**
- * Every lunar 1st and 15th in [fromIso, toIso] (inclusive), as pseudo-events.
- * Range is walked day by day — callers pass windows of weeks, not years.
+ * Every lunar 1st and/or 15th in [fromIso, toIso] (inclusive), as
+ * pseudo-events. Range is walked day by day — callers pass windows of weeks,
+ * not years. The TITLE is the society's own word (#13: J wanted every 初一
+ * and 十五 to say 拜拜 — the wording is theirs, never ours).
  */
-export function lunarOfferingEvents(fromIso: string, toIso: string): LunarOfferingEvent[] {
+export function lunarOfferingEvents(
+  fromIso: string,
+  toIso: string,
+  opts?: { title?: string; days?: LunarRepeatDays },
+): LunarOfferingEvent[] {
   const start = Date.parse(`${fromIso}T00:00:00Z`);
   const end = Date.parse(`${toIso}T00:00:00Z`);
   if (Number.isNaN(start) || Number.isNaN(end)) return [];
+  const days = opts?.days ?? "both";
+  const title = opts?.title?.trim() || "献供 / persembahan";
   const out: LunarOfferingEvent[] = [];
   for (let ms = start; ms <= end; ms += 86_400_000) {
     const iso = new Date(ms).toISOString().slice(0, 10);
     const l = gregorianToLunar(iso);
     if (!l || (l.lunarDay !== 1 && l.lunarDay !== 15)) continue;
+    if (days === "1" && l.lunarDay !== 1) continue;
+    if (days === "15" && l.lunarDay !== 15) continue;
     out.push({
       id: `lunar-${iso}`,
-      title: `${l.lunarDay === 1 ? "初一" : "十五"} · 献供 / persembahan`,
+      title: `${l.lunarDay === 1 ? "初一" : "十五"} · ${title}`,
       dateIso: iso,
       timeText: "",
       derived: true,

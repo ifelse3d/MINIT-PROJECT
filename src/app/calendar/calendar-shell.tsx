@@ -17,9 +17,10 @@ import {
 } from "@/lib/local-events";
 import { deleteEvent, loadOrgEvents, saveEvent } from "./actions";
 import { ActivityCalendar } from "./activity-calendar";
+import { CalendarControls } from "./calendar-controls";
+import { useCalendarOverlays, useLunarRepeat } from "./calendar-prefs";
 import { UpcomingSidebar } from "./upcoming-sidebar";
 import { lunarOfferingEvents } from "@/lib/lunar";
-import { usePersistentState } from "@/lib/use-persistent-state";
 
 // ---------------------------------------------------------------------------
 // /calendar shell — ONE full-width page (no tabs). Month grid centre-left,
@@ -58,13 +59,11 @@ export function CalendarShell({
   agm: ConfirmedAgm | null;
 }) {
   const [events, setEvents] = useState<SimpleEvent[]>([]);
-  // F-9 (work order 31): the 初一/十五 offering-day switch. A DEVICE preference
-  // (dot-prefix key, like the sidebar groups): it carries no records, and a
-  // treasurer's phone remembering it is exactly the behaviour wanted.
-  const [lunarOffering, setLunarOffering] = usePersistentState<boolean>(
-    "minit.calendar.lunar-offering.v1",
-    false,
-  );
+  // #15: which secondary calendars this device shows (opt-in, default none).
+  const [overlays, setOverlays] = useCalendarOverlays();
+  // #13: the lunar-recurring rule — 每月初一/十五 with the society's OWN word
+  // (拜拜, 诵经…). A device preference; derived events, never stored.
+  const [lunarRepeat, setLunarRepeat] = useLunarRepeat();
   // Derived, never stored (see lunarOfferingEvents): cover the displayed month
   // plus the upcoming window from today, then merge for DISPLAY only — the
   // real `events` state is what gets persisted and synced.
@@ -75,12 +74,13 @@ export function CalendarShell({
   const upcomingEnd = new Date(Date.parse(`${todayIso}T00:00:00Z`) + 60 * 86_400_000)
     .toISOString()
     .slice(0, 10);
-  const shownEvents = lunarOffering
+  const shownEvents = lunarRepeat.on
     ? sortedByDate([
         ...events,
         ...lunarOfferingEvents(
           monthStart < todayIso ? monthStart : todayIso,
           monthEnd > upcomingEnd ? monthEnd : upcomingEnd,
+          { title: lunarRepeat.title, days: lunarRepeat.days },
         ),
       ])
     : events;
@@ -179,22 +179,14 @@ export function CalendarShell({
         </Button>
       </div>
 
-      {/* F-9: the offering-day switch. The lunar dates were already in the
-          grid; this puts 初一/十五 on the map as EVENTS — into the month cells
-          and the upcoming list — for the temple committees the pilot serves. */}
-      <label className="flex w-fit cursor-pointer items-center gap-2 text-base">
-        <input
-          type="checkbox"
-          checked={lunarOffering}
-          onChange={(e) => setLunarOffering(e.target.checked)}
-          className="size-5 accent-[color:var(--v2-primary)]"
-        />
-        <Tri
-          bm="Hari ke-1 & ke-15 bulan lunar setiap bulan · persembahan"
-          zh="每月农历初一/十五 · 献供"
-          en="Lunar 1st & 15th each month · offerings"
-        />
-      </label>
+      {/* #13/#15: secondary calendars (opt-in) + the lunar-recurring rule
+          with the society's own word — one controls row, calendar-controls. */}
+      <CalendarControls
+        overlays={overlays}
+        setOverlays={setOverlays}
+        lunarRepeat={lunarRepeat}
+        setLunarRepeat={setLunarRepeat}
+      />
 
       {/* Grid + sidebar fill the width; sidebar stacks below on mobile */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_380px]">
@@ -207,6 +199,8 @@ export function CalendarShell({
           localEvents={shownEvents}
           onAddEvent={addEvent}
           onRemoveEvent={removeEvent}
+          showLunar={overlays.lunar || lunarRepeat.on}
+          showHijri={overlays.hijri}
         />
         <UpcomingSidebar
           todayIso={todayIso}

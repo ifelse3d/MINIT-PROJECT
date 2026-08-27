@@ -39,7 +39,9 @@ import {
 } from "@/lib/history";
 import type { CalendarExportItem } from "@/lib/ics";
 import { isSpecialLunarDay, gregorianToLunar, lunarCellText } from "@/lib/lunar";
+import { hijriCellText } from "@/lib/hijri";
 import type { SimpleEvent } from "@/lib/local-events";
+import { EventMessageButton } from "./event-message";
 import { formatRm } from "@/lib/minutes-draft";
 import {
   computeStandardDeadlines,
@@ -92,6 +94,8 @@ export function ActivityCalendar({
   localEvents,
   onAddEvent,
   onRemoveEvent,
+  showLunar,
+  showHijri,
 }: {
   serverRecords: ActivityRecord[];
   month: string;
@@ -108,9 +112,14 @@ export function ActivityCalendar({
   onAddEvent: (event: SimpleEvent) => void;
   /** Remove one event (the day panel lists them with a delete). */
   onRemoveEvent: (id: string) => void;
+  /** #15: secondary calendars are OPT-IN — the grid starts plain Gregorian. */
+  showLunar?: boolean;
+  showHijri?: boolean;
 }) {
   const t = useTriText();
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const lunarOn = showLunar ?? false;
+  const hijriOn = showHijri ?? false;
 
   // Future items from the SAME sources the Upcoming sidebar shows, so the two
   // never disagree. DB-stored deadlines/events already arrive inside
@@ -133,7 +142,7 @@ export function ActivityCalendar({
   const selectedRecords = selectedDay ? (buckets.get(selectedDay) ?? []) : [];
   const historyLines = daySummary(selectedRecords.filter((r) => !CATEGORY_STYLE[r.category].future));
   const futureItems = selectedRecords.filter((r) => CATEGORY_STYLE[r.category].future);
-  const selectedLunar = selectedDay ? gregorianToLunar(selectedDay) : null;
+  const selectedLunar = lunarOn && selectedDay ? gregorianToLunar(selectedDay) : null;
   const dayEvents = selectedDay
     ? localEvents.filter((e) => e.dateIso === selectedDay)
     : [];
@@ -204,8 +213,10 @@ export function ActivityCalendar({
               // through are dimmed, so the eye lands on today and what is
               // still to come. Today itself is never dimmed.
               const isPast = cell.dayIso < todayIso;
-              const lunar = lunarCellText(cell.dayIso);
-              const lunarSpecial = isSpecialLunarDay(cell.dayIso);
+              // #15: secondary calendars only when the person added them.
+              const lunar = lunarOn ? lunarCellText(cell.dayIso) : null;
+              const lunarSpecial = lunarOn && isSpecialLunarDay(cell.dayIso);
+              const hijri = hijriOn ? hijriCellText(cell.dayIso) : null;
               const dayButton = (
                 <button
                   type="button"
@@ -239,6 +250,11 @@ export function ActivityCalendar({
                         }`}
                       >
                         {lunar}
+                      </span>
+                    )}
+                    {hijri && (
+                      <span className="text-[0.7rem] leading-tight text-muted-foreground sm:text-sm">
+                        {hijri}
                       </span>
                     )}
                   </span>
@@ -277,7 +293,12 @@ export function ActivityCalendar({
                 <HoverCard key={cell.dayIso} openDelay={100} closeDelay={60}>
                   <HoverCardTrigger asChild>{dayButton}</HoverCardTrigger>
                   <HoverCardContent side="top" className="w-80 p-3">
-                    <DayPreview dayIso={cell.dayIso} records={records} todayIso={todayIso} />
+                    <DayPreview
+                      dayIso={cell.dayIso}
+                      records={records}
+                      todayIso={todayIso}
+                      showLunar={lunarOn}
+                    />
                   </HoverCardContent>
                 </HoverCard>
               ) : (
@@ -305,10 +326,12 @@ export function ActivityCalendar({
             </span>
           );
         })}
-        <span className="flex items-center gap-1.5">
-          <span className="font-semibold text-amber-600">初一/十五</span>
-          <Tri bm="hari istimewa lunar" zh="农历初一十五" en="lunar special days" />
-        </span>
+        {lunarOn && (
+          <span className="flex items-center gap-1.5">
+            <span className="font-semibold text-amber-600">初一/十五</span>
+            <Tri bm="hari istimewa lunar" zh="农历初一十五" en="lunar special days" />
+          </span>
+        )}
       </div>
 
       {/* Day detail panel */}
@@ -390,6 +413,11 @@ export function ActivityCalendar({
                         📝 {ev.note}
                       </p>
                     )}
+                    {/* #7: invitation/reminder wording straight from the day
+                        panel — copy it or open WhatsApp. */}
+                    <div className="mt-2">
+                      <EventMessageButton ev={ev} orgName={orgName} />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -494,14 +522,16 @@ function DayPreview({
   dayIso,
   records,
   todayIso,
+  showLunar,
 }: {
   dayIso: string;
   records: ActivityRecord[];
   todayIso: string;
+  showLunar: boolean;
 }) {
   const lines = daySummary(records.filter((r) => !CATEGORY_STYLE[r.category].future));
   const future = records.filter((r) => CATEGORY_STYLE[r.category].future);
-  const lunar = gregorianToLunar(dayIso);
+  const lunar = showLunar ? gregorianToLunar(dayIso) : null;
   return (
     <div className="flex flex-col gap-2 text-sm">
       <div className="font-semibold tabular-nums">

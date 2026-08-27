@@ -14,13 +14,14 @@ import {
   reminderWhatsappText,
   type Deadline,
 } from "@/lib/deadlines";
-import { eventWhatsappText, type SimpleEvent } from "@/lib/local-events";
+import type { SimpleEvent } from "@/lib/local-events";
 import {
   computeStandardDeadlines,
   type ConfirmedAgm,
 } from "@/lib/standard-deadlines";
 import { loadDoneDeadlines, setDeadlineDone } from "./deadline-actions";
 import { AddToCalendar } from "./add-to-calendar";
+import { EventMessageButton } from "./event-message";
 
 // ---------------------------------------------------------------------------
 // "Akan datang / Upcoming" sidebar — the condensed version of the old
@@ -285,17 +286,9 @@ export function UpcomingSidebar({
               </div>
               {!past && (
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => void copyText(ev.id, eventWhatsappText(ev))}
-                  >
-                    {copied === ev.id ? (
-                      <Tri bm="✓ Disalin!" zh="✓ 已复制" en="✓ Copied!" />
-                    ) : (
-                      <Tri bm="Salin hebahan" zh="复制通知" en="Copy announcement" />
-                    )}
-                  </Button>
+                  {/* #7: invitation + reminder wording, editable, one tap to
+                      copy or open WhatsApp (event-message.tsx). */}
+                  <EventMessageButton ev={ev} orgName={orgName} />
                   {/* PDPA: only the user's own event title goes into the export */}
                   <AddToCalendar
                     item={{

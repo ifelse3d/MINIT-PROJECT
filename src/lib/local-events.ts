@@ -101,6 +101,49 @@ export function eventWhatsappText(ev: SimpleEvent): string {
   ].join("\n");
 }
 
+// ---------------------------------------------------------------------------
+// #7 (launch feedback, 2026-08-27 evening): ready-to-send WhatsApp wording
+// per event — an INVITATION (before people have said yes) and a REMINDER
+// (closer to the day). Deterministic templates, zero AI quota; the person
+// edits the text in the dialog before copying, so the words stay theirs.
+// Dates are written out (formatDateLong) so 03-04 can never be read two ways.
+// ---------------------------------------------------------------------------
+
+import { formatDateLong } from "@/lib/date-input";
+
+export function eventInviteText(ev: SimpleEvent, orgName: string | null): string {
+  const org = orgName?.trim() || "";
+  const when = `${formatDateLong(ev.dateIso, "bm")} / ${formatDateLong(ev.dateIso, "zh")}${
+    ev.timeText ? ` · ${ev.timeText}` : ""
+  }`;
+  return [
+    `📣 Jemputan / 邀请${org ? ` — ${org}` : ""}`,
+    "",
+    `${ev.title}`,
+    `🗓 ${when}`,
+    ...(ev.note ? [`📝 ${ev.note}`] : []),
+    "",
+    "Semua dijemput hadir! / 诚邀出席，欢迎大家！",
+    "Sila balas untuk sahkan kehadiran / 请回复确认出席 🙏",
+  ].join("\n");
+}
+
+export function eventReminderText(ev: SimpleEvent, orgName: string | null): string {
+  const org = orgName?.trim() || "";
+  const when = `${formatDateLong(ev.dateIso, "bm")} / ${formatDateLong(ev.dateIso, "zh")}${
+    ev.timeText ? ` · ${ev.timeText}` : ""
+  }`;
+  return [
+    `⏰ Peringatan / 提醒${org ? ` — ${org}` : ""}`,
+    "",
+    `${ev.title}`,
+    `🗓 ${when}`,
+    ...(ev.note ? [`📝 ${ev.note}`] : []),
+    "",
+    "Jangan lupa — jumpa anda di sana! / 别忘了，到时见！",
+  ].join("\n");
+}
+
 /**
  * The device's events and the organisation's events, as one list.
  *
