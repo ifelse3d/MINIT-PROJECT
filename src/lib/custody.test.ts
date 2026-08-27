@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  batchAlreadySettledElsewhere,
   canTransition,
   cancelRemittanceBatch,
   collectorBalances,
@@ -7,6 +8,10 @@ import {
   createRemittanceBatch,
   createRemittanceBatchFromIds,
   CustodyError,
+  furthestCustody,
+  mergeBatches,
+  mergeDonations,
+  reconcileCustodyWithBatches,
   totalUnremittedCents,
   updatePendingBatch,
 } from "@/lib/custody";
@@ -355,5 +360,150 @@ describe("per-item remittance batches (拍板 0-6)", () => {
     expect(() =>
       confirmRemittanceBatch(cancelled.batch, cancelled.donations, { confirmedBy: "HQ" }),
     ).toThrow(CustodyError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// D32 (2026-08-28) — the #17 double-hand-over bug. The database never heard
+// about custody transitions, and the hydration merge let its stale `collected`
+// copy overwrite the device's `settled` one — so every load resurrected
+// settled money as handable. These tests pin the three repairs: forward-only
+// merge, batch-driven reconcile, and the duplicate-pending detector.
+// ---------------------------------------------------------------------------
+
+describe("D32: forward-only merge of two copies of the truth", () => {
+  it("furthestCustody picks the state further along the machine", () => {
+    expect(furthestCustody("collected", "settled")).toBe("settled");
+    expect(furthestCustody("settled", "collected")).toBe("settled");
+    expect(furthestCustody("pending_remittance", "collected")).toBe("pending_remittance");
+    expect(furthestCustody("collected", "collected")).toBe("collected");
+  });
+
+  it("mergeDonations: remote fields win, but custody status never moves backwards", () => {
+    const local = [
+      donation({ id: "d1", custodyStatus: "settled", donorName: "Old Name" }),
+      donation({ id: "only-local", receiptNo: null }),
+    ];
+    const remote = [
+      donation({ id: "d1", custodyStatus: "collected", donorName: "DB Name" }),
+      donation({ id: "only-remote" }),
+    ];
+    const merged = mergeDonations(local, remote);
+    const d1 = merged.find((d) => d.id === "d1");
+    expect(d1?.donorName).toBe("DB Name"); // remote fields win
+    expect(d1?.custodyStatus).toBe("settled"); // …but money never un-settles
+    expect(merged.map((d) => d.id).sort()).toEqual(["d1", "only-local", "only-remote"]);
+  });
+
+  it("mergeBatches: a non-pending copy beats a pending one, whichever side holds it", () => {
+    const pending = {
+      id: "b1",
+      collector: "Lim",
+      receiptNos: ["MIN-2026-0001"],
+      totalCents: 5000,
+      handedOverAtIso: "2026-08-27",
+      status: "pending" as const,
+      confirmedByHq: null,
+    };
+    const settled = { ...pending, status: "settled" as const, confirmedByHq: "HQ Mei" };
+    // Local device confirmed; the DB write failed and it still says pending.
+    expect(mergeBatches([settled], [pending])[0].status).toBe("settled");
+    // The DB knows it settled; this device is stale.
+    expect(mergeBatches([pending], [settled])[0].status).toBe("settled");
+  });
+
+  it("reconcile: rows a settled batch claims are forced to settled on load", () => {
+    // The #17 leftovers: DB rows still `collected`, batch already settled.
+    const rows = [
+      donation({ id: "d1", receiptNo: "MIN-2026-0001", custodyStatus: "collected" }),
+      donation({ id: "d2", receiptNo: "MIN-2026-0002", custodyStatus: "collected" }),
+      donation({ id: "d3", receiptNo: null, custodyStatus: "collected" }),
+    ];
+    const batches = [
+      {
+        id: "b1",
+        collector: "J",
+        receiptNos: ["MIN-2026-0001", "MIN-2026-0002"],
+        donationIds: ["d1", "d2"],
+        totalCents: 27010,
+        handedOverAtIso: "2026-08-27",
+        status: "settled" as const,
+        confirmedByHq: "HQ",
+      },
+      {
+        id: "b2",
+        collector: "J",
+        receiptNos: [],
+        donationIds: ["d3"],
+        totalCents: 2000,
+        handedOverAtIso: "2026-08-27",
+        status: "pending" as const,
+        confirmedByHq: null,
+      },
+    ];
+    const healed = reconcileCustodyWithBatches(rows, batches);
+    expect(healed.find((d) => d.id === "d1")?.custodyStatus).toBe("settled");
+    expect(healed.find((d) => d.id === "d2")?.custodyStatus).toBe("settled");
+    // A pending batch pins its member at pending_remittance — not handable.
+    expect(healed.find((d) => d.id === "d3")?.custodyStatus).toBe("pending_remittance");
+  });
+
+  it("reconcile: a cancelled batch forces nothing, and a settled row never regresses", () => {
+    const rows = [
+      donation({ id: "d1", custodyStatus: "settled" }),
+      donation({ id: "d2", custodyStatus: "collected" }),
+    ];
+    const batches = [
+      {
+        id: "b-cancelled",
+        collector: "J",
+        receiptNos: [],
+        donationIds: ["d2"],
+        totalCents: 5000,
+        handedOverAtIso: "2026-08-27",
+        status: "cancelled" as const,
+        confirmedByHq: null,
+      },
+      {
+        id: "b-pending",
+        collector: "J",
+        receiptNos: [],
+        donationIds: ["d1"],
+        totalCents: 5000,
+        handedOverAtIso: "2026-08-27",
+        status: "pending" as const,
+        confirmedByHq: null,
+      },
+    ];
+    const healed = reconcileCustodyWithBatches(rows, batches);
+    expect(healed.find((d) => d.id === "d2")?.custodyStatus).toBe("collected");
+    // The stale duplicate pending batch cannot drag a settled row backwards.
+    expect(healed.find((d) => d.id === "d1")?.custodyStatus).toBe("settled");
+  });
+
+  it("batchAlreadySettledElsewhere flags the stale duplicate pending batch", () => {
+    const rows = [
+      donation({ id: "d1", custodyStatus: "settled" }),
+      donation({ id: "d2", custodyStatus: "pending_remittance" }),
+    ];
+    const dup = {
+      id: "b-dup",
+      collector: "J",
+      receiptNos: [],
+      donationIds: ["d1"],
+      totalCents: 3800,
+      handedOverAtIso: "2026-08-27",
+      status: "pending" as const,
+      confirmedByHq: null,
+    };
+    expect(batchAlreadySettledElsewhere(dup, rows)).toBe(true);
+    // A batch with a genuinely outstanding row is NOT a duplicate.
+    expect(
+      batchAlreadySettledElsewhere({ ...dup, donationIds: ["d1", "d2"] }, rows),
+    ).toBe(false);
+    // Settled/cancelled batches are never flagged.
+    expect(
+      batchAlreadySettledElsewhere({ ...dup, status: "settled", confirmedByHq: "HQ" }, rows),
+    ).toBe(false);
   });
 });

@@ -84,7 +84,10 @@ export async function saveRemittanceBatch(
     { ...base, ...m27, client_donation_ids: batch.donationIds ?? null },
     { onConflict: "org_id,client_id" },
   );
-  if (!error) return { ok: true };
+  if (!error) {
+    await syncBatchDonationStatuses(supabase, active.id, batch);
+    return { ok: true };
+  }
   // 🔴 A batch containing UNRECEIPTED rows cannot be written to a pre-28
   // database: without client_donation_ids, every other device would resolve
   // it by receipt numbers and silently lose those rows. Refusing keeps the
@@ -95,7 +98,10 @@ export async function saveRemittanceBatch(
   const retry27 = await supabase
     .from("remittance_batches")
     .upsert({ ...base, ...m27 }, { onConflict: "org_id,client_id" });
-  if (!retry27.error) return { ok: true };
+  if (!retry27.error) {
+    await syncBatchDonationStatuses(supabase, active.id, batch);
+    return { ok: true };
+  }
   // 🔴 A CANCELLED batch cannot be written to a pre-27 database at all (its
   // status check only knows pending/settled). Refusing is correct: writing it
   // as anything else would un-cancel it on every other device. The UI then
@@ -104,7 +110,82 @@ export async function saveRemittanceBatch(
   const retry = await supabase
     .from("remittance_batches")
     .upsert(base, { onConflict: "org_id,client_id" });
-  return retry.error ? { ok: false, reason: "db" } : { ok: true };
+  if (retry.error) return { ok: false, reason: "db" };
+  await syncBatchDonationStatuses(supabase, active.id, batch);
+  return { ok: true };
+}
+
+/**
+ * D32 (2026-08-28), the #17 double-hand-over bug: the batch is only half the
+ * record — the donation rows' `custody_status` in the DATABASE must move with
+ * it, or every other device (and every reload of this one) keeps seeing the
+ * money as "in hand, can be handed over" and lets it be handed over again.
+ *
+ * Forward-only, same as the client state machine: a pending batch lifts its
+ * members from `collected`; a settled batch lifts anything to `settled`; a
+ * cancelled batch returns ONLY `pending_remittance` rows to `collected`
+ * (a row another batch already settled is real money that arrived — the
+ * cancelled record cannot pull it back).
+ *
+ * Best-effort by design: the batch upsert already succeeded, and the load
+ * path's reconcile (lib/custody.ts) heals any row this update misses. Works
+ * on a database of any age — plain updates, no new columns.
+ */
+async function syncBatchDonationStatuses(
+  supabase: Awaited<ReturnType<typeof getSupabaseServer>>,
+  orgId: number,
+  batch: RemittanceBatch,
+): Promise<void> {
+  const status =
+    batch.status === "settled"
+      ? "settled"
+      : batch.status === "cancelled"
+        ? "collected"
+        : "pending_remittance";
+
+  // Which DB rows are members: client ids first (the authoritative link,
+  // D26), receipt numbers for batches recorded before migration 28.
+  const clientIds = batch.donationIds ?? [];
+  const receiptNos = batch.receiptNos;
+
+  const donationDbIds = new Set<number>();
+  if (receiptNos.length > 0) {
+    const { data } = await supabase
+      .from("receipts")
+      .select("donation_id")
+      .eq("org_id", orgId)
+      .in("receipt_no", receiptNos)
+      .returns<{ donation_id: number }[]>();
+    for (const r of data ?? []) donationDbIds.add(r.donation_id);
+  }
+
+  // Forward-only guards, expressed as status filters:
+  //   → pending_remittance: only lift rows still `collected`
+  //   → settled:            lift anything not already settled
+  //   → collected (cancel): only return rows sitting at `pending_remittance`
+  const guard =
+    status === "pending_remittance"
+      ? ["collected"]
+      : status === "settled"
+        ? ["collected", "pending_remittance"]
+        : ["pending_remittance"];
+
+  if (clientIds.length > 0) {
+    await supabase
+      .from("donations")
+      .update({ custody_status: status })
+      .eq("org_id", orgId)
+      .in("client_id", clientIds)
+      .in("custody_status", guard);
+  }
+  if (donationDbIds.size > 0) {
+    await supabase
+      .from("donations")
+      .update({ custody_status: status })
+      .eq("org_id", orgId)
+      .in("id", [...donationDbIds])
+      .in("custody_status", guard);
+  }
 }
 
 /**

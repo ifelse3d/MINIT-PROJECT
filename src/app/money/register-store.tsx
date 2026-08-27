@@ -23,10 +23,14 @@ import {
   type RegisterDonation,
 } from "@/lib/receipts";
 import {
+  batchAlreadySettledElsewhere,
   cancelRemittanceBatch,
   collectorBalances,
   confirmRemittanceBatch,
   createRemittanceBatchFromIds,
+  mergeBatches,
+  mergeDonations,
+  reconcileCustodyWithBatches,
   totalUnremittedCents,
   updatePendingBatch,
   type RemittanceBatch,
@@ -37,7 +41,11 @@ import { todayIsoMalaysia } from "@/lib/history";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
 import { consumeIntake } from "@/lib/intake-handoff";
 import { issueAndSaveReceipts } from "./actions";
-import { loadRegisterDonations } from "./register-actions";
+import {
+  deleteRegisterRows,
+  loadRegisterDonations,
+  saveRegisterRows,
+} from "./register-actions";
 import { loadRemittanceBatches, saveRemittanceBatch } from "./custody-actions";
 
 // ---------------------------------------------------------------------------
@@ -91,10 +99,18 @@ export type RegisterStore = {
   registerCollector: string;
 
   // --- the register itself (persisted) -------------------------------------
+  /** The RECONCILED view (D32): raw rows with custody status lifted to agree
+   *  with the hand-over batches. Writes go through setDonations (raw). */
   donations: RegisterDonation[];
   setDonations: Dispatch<SetStateAction<RegisterDonation[]>>;
   donationStore: PersistMeta;
   batches: RemittanceBatch[];
+  /**
+   * D32: true when a recorded row could not reach the organisation's records
+   * (no org chosen, migration 29 not applied, offline) — it exists on this
+   * device only, and the money pages say so instead of swallowing it.
+   */
+  registerLocalOnly: boolean;
 
   // --- the ledger photo under review (a draft, so not persisted) -----------
   ledger: LedgerExtraction;
@@ -478,18 +494,14 @@ export function RegisterProvider({
 
   // The organisation's hand-over history, merged in once on mount so a SECOND
   // device (HQ's computer, the branch's shared laptop) sees what the first one
-  // recorded. Same union rule as the calendar: a batch the remote has and this
-  // device does not is added; a batch only this device has is kept, because it
-  // may simply not have synced yet.
+  // recorded. Union by id; on a collision the non-pending copy wins (D32) —
+  // a batch is forward-only, and "the DB still says pending" must not undo a
+  // confirm this device already recorded (or vice versa).
   useEffect(() => {
     let cancelled = false;
     void loadRemittanceBatches().then((remote) => {
       if (cancelled || remote.length === 0) return;
-      setBatches((local) => {
-        const byId = new Map(local.map((b) => [b.id, b]));
-        for (const b of remote) byId.set(b.id, b);
-        return [...byId.values()];
-      });
+      setBatches((local) => mergeBatches(local, remote));
     });
     return () => {
       cancelled = true;
@@ -500,25 +512,45 @@ export function RegisterProvider({
 
   // F-4 (2026-08-25): the REGISTER hydrates from the database too, so signing
   // in on another computer shows the organisation's money instead of an empty
-  // page ("换装置钱不见了" — on the UX list since 8/20). Same union rule as the
-  // batches above: DB rows win on a collision (they are what every other
-  // device sees); rows only this device has — unreceipted drafts, offline
-  // work — are kept. localStorage is now the offline draft, not the record.
+  // page ("换装置钱不见了" — on the UX list since 8/20). Union by id; remote
+  // fields win on a collision, but custody status only moves FORWARD (D32) —
+  // the old "DB wins outright" rule is what resurrected settled money as
+  // handable every load (#17, the double-hand-over bug). localStorage is the
+  // offline draft, not the record.
   useEffect(() => {
     let cancelled = false;
     void loadRegisterDonations().then((remote) => {
       if (cancelled || remote.length === 0) return;
-      setDonations((local) => {
-        const byId = new Map(local.map((d) => [d.id, d]));
-        for (const d of remote) byId.set(d.id, d);
-        return [...byId.values()];
-      });
+      setDonations((local) => mergeDonations(local, remote));
     });
     return () => {
       cancelled = true;
     };
     // setDonations is stable (usePersistentState); run exactly once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // --- D32: the register the pages SEE is reconciled against the batches ----
+  // The batches are the hand-over record, so any row a pending/settled batch
+  // claims is shown at least that far along — even when the database row
+  // still says `collected` (the #17 leftovers). Derived, never set in an
+  // effect; writes keep going to the raw persisted state.
+  const donationsView = useMemo(
+    () => reconcileCustodyWithBatches(donations, batches),
+    [donations, batches],
+  );
+
+  // D32: every recorded row is pushed to the organisation's records the
+  // moment it is recorded. Fire-and-forget like the batches — the row is
+  // recorded on this device either way, and the flag puts "this has not
+  // reached the organisation's records" on screen instead of swallowing it.
+  // Rows that already carry a receipt number are in the database by
+  // definition (the issue path wrote them) — only unreceipted rows sync here.
+  const [registerLocalOnly, setRegisterLocalOnly] = useState(false);
+  const syncRowsToDb = useCallback((rows: RegisterDonation[]) => {
+    const unreceipted = rows.filter((r) => r.receiptNo === null);
+    if (unreceipted.length === 0) return;
+    void saveRegisterRows(unreceipted).then((r) => setRegisterLocalOnly(!r.ok));
   }, []);
 
   // Did the home page's "one door" just read a ledger page for us? Consume it
@@ -546,72 +578,91 @@ export function RegisterProvider({
       .filter(({ r, i }) => eligibleForReceipt(r) && !addedRows.has(i));
     if (eligible.length === 0) return;
     const stamp = Date.now();
+    const newRows: RegisterDonation[] = eligible.map(({ r, i }) => ({
+      id: `ledger-${stamp}-${i}`,
+      donorName: r.donor_name.value,
+      donorPhone: r.donor_phone.value === "" ? null : r.donor_phone.value,
+      amountCents: r.amount_cents.value ?? 0,
+      purpose: r.purpose.value,
+      donatedAtIso: r.donated_at.value,
+      // A ledger page does not record WHO collected the cash, so the honest
+      // answer is the person operating Minit right now — never the fictional
+      // sample collector this used to stamp on every real row.
+      collector: registerCollector,
+      receiptNo: null,
+      custodyStatus: "collected" as const,
+      // D19: the reviewer's answer, default cash. The AI never decides how
+      // the money arrived.
+      paymentMethod: ledgerPayments[i] ?? ("cash" as const),
+      // §1-11: when the row was recorded (the moment the human confirmed
+      // it into the register, not when the AI read it).
+      createdAtIso: new Date(stamp).toISOString(),
+    }));
     // #3: everything added this tap joins the current round.
-    setRoundIds((prev) => [
-      ...prev,
-      ...eligible.map(({ i }) => `ledger-${stamp}-${i}`),
-    ]);
-    setDonations((prev) => [
-      ...prev,
-      ...eligible.map(({ r, i }) => ({
-        id: `ledger-${stamp}-${i}`,
-        donorName: r.donor_name.value,
-        donorPhone: r.donor_phone.value === "" ? null : r.donor_phone.value,
-        amountCents: r.amount_cents.value ?? 0,
-        purpose: r.purpose.value,
-        donatedAtIso: r.donated_at.value,
-        // A ledger page does not record WHO collected the cash, so the honest
-        // answer is the person operating Minit right now — never the fictional
-        // sample collector this used to stamp on every real row.
-        collector: registerCollector,
-        receiptNo: null,
-        custodyStatus: "collected" as const,
-        // D19: the reviewer's answer, default cash. The AI never decides how
-        // the money arrived.
-        paymentMethod: ledgerPayments[i] ?? ("cash" as const),
-        // §1-11: when the row was recorded (the moment the human confirmed
-        // it into the register, not when the AI read it).
-        createdAtIso: new Date(stamp).toISOString(),
-      })),
-    ]);
+    setRoundIds((prev) => [...prev, ...newRows.map((d) => d.id)]);
+    setDonations((prev) => [...prev, ...newRows]);
+    // D32: recorded = in the organisation's records, not one browser.
+    syncRowsToDb(newRows);
     setAddedRows((prev) => {
       const next = new Set(prev);
       eligible.forEach(({ i }) => next.add(i));
       return next;
     });
-  }, [isSampleLedger, ledger, addedRows, registerCollector, ledgerPayments, setDonations, setRoundIds]);
+  }, [isSampleLedger, ledger, addedRows, registerCollector, ledgerPayments, setDonations, setRoundIds, syncRowsToDb]);
 
   // --- Editing a register row BEFORE its receipt is issued ------------------
   const saveDonation = useCallback(
     (updated: RegisterDonation) => {
       setDonations((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
+      // D32: the edit reaches the organisation's records too (unreceipted
+      // rows only — a receipted row's identity is locked everywhere).
+      if (updated.receiptNo === null) syncRowsToDb([updated]);
     },
-    [setDonations],
+    [setDonations, syncRowsToDb],
   );
 
   const deleteDonation = useCallback(
     (id: string) => {
+      // A row inside a hand-over batch is part of a money record — only a
+      // still-`collected`, unreceipted row can be taken back out. (The same
+      // guard the receipt series has always had, extended to custody. D32.)
       setDonations((prev) =>
-        prev.filter((d) => !(d.id === id && d.receiptNo === null)),
+        prev.filter(
+          (d) =>
+            !(
+              d.id === id &&
+              d.receiptNo === null &&
+              d.custodyStatus === "collected"
+            ),
+        ),
       );
+      void deleteRegisterRows([id]);
     },
     [setDonations],
   );
 
-  // §1-4: drafts are unreceipted and local-only (rows reach the database at
-  // receipt time), so clearing them clears them for good — the button that
-  // calls this confirms first.
+  // §1-4: clear every unreceipted draft row in one tap — the button that
+  // calls this confirms first. D32: rows now reach the database at record
+  // time, so the clear reaches it too; rows already in a hand-over batch
+  // (pending/settled) are money records and stay.
   const clearUnreceiptedDrafts = useCallback(() => {
-    setDonations((prev) => prev.filter((d) => d.receiptNo !== null));
-  }, [setDonations]);
+    const cleared = donations.filter(
+      (d) => d.receiptNo === null && d.custodyStatus === "collected",
+    );
+    if (cleared.length > 0) void deleteRegisterRows(cleared.map((d) => d.id));
+    setDonations((prev) =>
+      prev.filter((d) => !(d.receiptNo === null && d.custodyStatus === "collected")),
+    );
+  }, [donations, setDonations]);
 
   // Manual income entry (the eROSES-test exception) appends a confirmed row.
   const addManualDonation = useCallback(
     (d: RegisterDonation) => {
       setRoundIds((prev) => [...prev, d.id]);
       setDonations((prev) => [...prev, d]);
+      syncRowsToDb([d]);
     },
-    [setDonations, setRoundIds],
+    [setDonations, setRoundIds, syncRowsToDb],
   );
 
   /** A whole typed collection at once (see ./type-donations.tsx). One state
@@ -621,8 +672,9 @@ export function RegisterProvider({
     (rows: RegisterDonation[]) => {
       setRoundIds((prev) => [...prev, ...rows.map((r) => r.id)]);
       setDonations((prev) => [...prev, ...rows]);
+      syncRowsToDb(rows);
     },
-    [setDonations, setRoundIds],
+    [setDonations, setRoundIds, syncRowsToDb],
   );
 
   /** #3: close the round. The register keeps every row — only the "this
@@ -641,7 +693,9 @@ export function RegisterProvider({
     ids?: string[];
   }) => {
     const wanted = opts?.ids ? new Set(opts.ids) : null;
-    const need = donations.filter(
+    // Off the reconciled view (D32): the custody status that rides along to
+    // the database is the one the batches agree with.
+    const need = donationsView.filter(
       (d) => d.receiptNo === null && (wanted === null || wanted.has(d.id)),
     );
     if (need.length === 0) return;
@@ -734,7 +788,7 @@ export function RegisterProvider({
     } finally {
       setIssueBusy(false);
     }
-  }, [donations, setDonations]);
+  }, [donationsView, setDonations]);
 
   // --- Custody: collector → HQ --------------------------------------------
   // Driven by the live donation counts (not a single stuck batch ref), so the
@@ -754,10 +808,13 @@ export function RegisterProvider({
   // in this store (editing a row, adding manual income, issuing receipts) — and
   // now also when it is changed from a DIFFERENT PAGE, which is the whole point
   // of the register living up here rather than in each screen.
-  const donationsRef = useRef(donations);
+  // The refs mirror the RECONCILED view (D32): custody actions must assert
+  // against the truth the person is looking at, not the raw device copy a
+  // stale database row may sit inside.
+  const donationsRef = useRef(donationsView);
   const batchesRef = useRef(batches);
   useEffect(() => {
-    donationsRef.current = donations;
+    donationsRef.current = donationsView;
   });
   useEffect(() => {
     batchesRef.current = batches;
@@ -852,11 +909,31 @@ export function RegisterProvider({
       // appear in a real organisation's records again.
       const confirmedBy =
         signerName ?? t("(tidak dinyatakan)", "（未记录）", "(not recorded)");
+      // D32: a pending batch whose money is ALREADY settled under another
+      // batch is a duplicate record (the #17 leftovers). Confirming it would
+      // claim the money arrived twice — tell the person to cancel it instead.
+      const isDuplicate = (b: RemittanceBatch) =>
+        batchAlreadySettledElsewhere(b, current);
+      if (batchId !== undefined) {
+        const target = batchesRef.current.find((b) => b.id === batchId);
+        if (target && isDuplicate(target)) {
+          setError(
+            t(
+              "Wang ini sudah disahkan di bawah serahan lain. Rekod ini berulang — tekan 'Ubah' kemudian 'Batalkan serahan ini'.",
+              "这笔钱已经在另一笔交接下确认过了。这一笔是重复记录 —— 请按「修改」再「取消这条交接」。",
+              "This money was already confirmed under another hand-over. This record is a duplicate — tap 'Edit' and then 'Cancel this hand-over'.",
+            ),
+          );
+          return;
+        }
+      }
       const updated = batchesRef.current.map((b) => {
         // 拍板 0-6: a cancelled batch is a voided record — nothing to confirm.
         if (b.status !== "pending") return b;
         // B-3: ticking ONE hand-over off confirms only that hand-over.
         if (batchId !== undefined && b.id !== batchId) return b;
+        // Bulk confirm: leave duplicates pending rather than crash the rest.
+        if (isDuplicate(b)) return b;
         const result = confirmRemittanceBatch(b, current, {
           confirmedBy,
           // §1-11: the confirm moment is its own timestamp.
@@ -901,15 +978,15 @@ export function RegisterProvider({
     ledgerBackToEmpty();
   }, [donationStore, setBatches, setRoundIds, ledgerBackToEmpty]);
 
-  // --- derived -------------------------------------------------------------
+  // --- derived (all off the RECONCILED view, D32) ---------------------------
   // #3: the round, resolved against the live register — a deleted row simply
   // stops appearing, and order follows the order of recording.
   const roundDonations = useMemo(() => {
-    const byId = new Map(donations.map((d) => [d.id, d]));
+    const byId = new Map(donationsView.map((d) => [d.id, d]));
     return roundIdsRaw
       .map((id) => byId.get(id))
       .filter((d): d is RegisterDonation => d !== undefined);
-  }, [donations, roundIdsRaw]);
+  }, [donationsView, roundIdsRaw]);
   const roundIds = useMemo(
     () => roundDonations.map((d) => d.id),
     [roundDonations],
@@ -918,16 +995,17 @@ export function RegisterProvider({
   const rowsReadyToAdd = ledger.rows.filter(
     (r, i) => eligibleForReceipt(r) && !addedRows.has(i),
   ).length;
-  const unreceipted = donations.filter((d) => d.receiptNo === null).length;
+  const unreceipted = donationsView.filter((d) => d.receiptNo === null).length;
   // An EMPTY register has no receipts, so `every` returning true on [] would
   // claim "all receipts issued" and unlock the e-Invois section on nothing.
-  const receiptsIssued = donations.length > 0 && donations.every((d) => d.receiptNo !== null);
-  const cashInHandCents = totalUnremittedCents(donations);
+  const receiptsIssued =
+    donationsView.length > 0 && donationsView.every((d) => d.receiptNo !== null);
+  const cashInHandCents = totalUnremittedCents(donationsView);
   const collectorsWithCashInHand = useMemo(
     () =>
       Array.from(
         new Set(
-          donations
+          donationsView
             // Same holdsCash rule as handOver: goods and transfers are not
             // cash in a hand.
             .filter(
@@ -939,16 +1017,16 @@ export function RegisterProvider({
             .map((d) => d.collector),
         ),
       ),
-    [donations],
+    [donationsView],
   );
   const hasPendingBatch = batches.some((b) => b.status === "pending");
-  const balances = useMemo(() => collectorBalances(donations), [donations]);
+  const balances = useMemo(() => collectorBalances(donationsView), [donationsView]);
   // Months are derived from the donation dates, so the e-Invois picker only
   // ever offers months that actually have records.
   const availableMonths = useMemo(() => {
-    const set = new Set(donations.map((d) => d.donatedAtIso.slice(0, 7)));
+    const set = new Set(donationsView.map((d) => d.donatedAtIso.slice(0, 7)));
     return Array.from(set).sort().reverse();
-  }, [donations]);
+  }, [donationsView]);
 
   return (
     <RegisterContext.Provider
@@ -958,10 +1036,11 @@ export function RegisterProvider({
         signerName,
         documentOrgName,
         registerCollector,
-        donations,
+        donations: donationsView,
         setDonations,
         donationStore,
         batches,
+        registerLocalOnly,
         ledger,
         ledgerSourceLabel,
         isRealLedger,

@@ -108,6 +108,22 @@ for (const [label, table, column] of probes) {
   );
 }
 
+// 2026-08-28 (migration 29, D32): same trick — the RPC IS the probe. An empty
+// p_rows array loops zero times and writes nothing; 200 means the function
+// exists, 404 (PGRST202) means migration 29 has not run.
+{
+  const r = await fetch(`${url}/rest/v1/rpc/save_register_rows`, {
+    method: "POST",
+    headers: { ...headers, "Content-Type": "application/json" },
+    body: JSON.stringify({ p_org_id: 0, p_rows: [] }),
+  });
+  const ok = r.status === 200;
+  const body = ok ? "" : (await r.text()).slice(0, 120).replace(/\s+/g, " ");
+  console.log(
+    `${ok ? "[ APPLIED  ]" : "[ NOT YET  ]"} ${"20260907000000 save_register_rows() RPC".padEnd(46)} rpc/save_register_rows${ok ? "" : "   " + body}`,
+  );
+}
+
 // 2026-08-20: two of the migrations add NO column that PostgREST can see, so
 // "everything above says APPLIED" does NOT mean every file ran. Saying so out
 // loud, in the same idiom as npm run status, is cheaper than someone

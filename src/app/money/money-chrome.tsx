@@ -84,6 +84,7 @@ export function MoneyChrome({ children }: { children: ReactNode }) {
     ledgerRowsToCheck,
     rowsReadyToAdd,
     roundDonations,
+    registerLocalOnly,
     error,
     setError,
   } = useRegister();
@@ -175,6 +176,17 @@ export function MoneyChrome({ children }: { children: ReactNode }) {
             bm="Peranti ini penuh, jadi daftar ini TIDAK dapat disimpan. Jangan tutup halaman: jana resit sekarang supaya rekod masuk ke pangkalan data."
             zh="这台设备的储存空间满了，登记簿没能存下来。请先不要关掉页面：现在就开收据，记录才会进到资料库。"
             en="This device is full, so the register could NOT be saved. Do not close the page: issue the receipts now so the records reach the database."
+          />
+        </div>
+      )}
+      {/* D32: a recorded row that never reached the organisation's records is
+          one browser's private money — said out loud, same as custody. */}
+      {registerLocalOnly && (
+        <div className="rounded-md border-2 border-amber-300 bg-amber-50 p-4 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+          <Tri
+            bm="Rekod wang yang baru ditambah tercatat pada peranti ini sahaja — ia belum sampai ke rekod pertubuhan. Pilih pertubuhan anda, atau buka halaman ini semula apabila ada talian."
+            zh="刚记的钱只存在这台设备上 —— 还没有进到机构的记录里。请选好您的机构，或者等有网络时再打开这一页一次。"
+            en="The money just recorded is saved on this device only — it has not reached the organisation's records. Choose your organisation, or open this page again when you have a signal."
           />
         </div>
       )}

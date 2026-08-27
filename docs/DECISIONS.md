@@ -588,4 +588,46 @@ translate），prompt 路一字不動；⑤ 副歷（農曆／伊斯蘭曆）**o
 
 ---
 
-*Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C) · D16 appended 2026-08-25 (Stage D) · D17 appended 2026-08-27 (work order 27, the overnight sprint) · D18–D21 appended 2026-08-27 (work order 31 §0, J's post-launch rulings) · D22–D23 appended 2026-08-27 (work order 32 §0, launch-day feedback rulings) · D24–D25 appended 2026-08-27 (the afternoon rulings: violet redesign + BM guard) · D26–D28 appended 2026-08-27 (the launch-evening 20-point list)*
+### D29 — Prompt 解凍：主功能優先於量測（2026-08-28，用戶＋J 雙拍板）
+
+**推翻「助手/提取 prompt 一字不動、動了量測作廢」的凍結。** J 27 晚 #30 原話：
+「不要管之前的測試，我會重新測試 API usage，主要功能先做好！之前説了好幾次了！」
+用戶 8/28 拍板：「解凍，我從之前就一直說了。有些規矩需要被推翻才能進步！」
+生效範圍：所有 prompt（會議記錄提取、決議結構化、職位偵測、問一問）都可以為了
+準確度改。代價明寫：既有 bench/eval 數字全部作廢，改完要重測（J 說了他來重測）。
+「動 prompt 之前先問這讓哪些量測作廢了」這條紀律**仍然有效**——答案要寫出來，
+不是不准動。
+
+### D30 — 出席人數不得為零就出報告（2026-08-28，J 27 晚 #33）
+
+「These notes do not record attendance」逃生口**拆除**。出席是 eROSES 年度呈報的
+法定欄位（Bilangan Ahli Hadir）：沒有出席記錄就不能進入成品頁，唯一的緩衝是
+「稍後補上（will insert later）」——選了它，文件一路標「出席待補」水印，
+補齊之前不算「已確認」。反轉 32 號單時代做的逃生口設計。
+
+### D31 — 現有資金頁（2026-08-28，J 27 晚 #24）
+
+新功能：一頁看「現在還有多少錢」（收入−支出的現金制餘額，程式加總，Hard Rule 2）。
+金額預設用眼睛圖標遮住、點了才顯示；只做在這一頁，不進財報、不進首頁卡。
+權限：treasurer / hq_admin（錢區既有 can() 口徑）。
+
+### D32 — 記錄即入庫：登記的每一筆錢當場進資料庫（2026-08-28，錢區 #17 重複交接 bug 的根治）
+
+J 27 晚 #17 的根因：交接/確認只改本機 localStorage，DB 的 `donations.custody_status`
+永遠停在開收據那一刻，而合併規則「同 id DB 覆蓋本機」每次載入把已交接的行復活成
+「可交」→ 同一張收據交兩次、確認記錄成雙。定案三件：
+① **記錄一筆收入＝當場寫 DB**（migration 29 的 `save_register_rows`，upsert on
+org_id+client_id；`issue_receipts` v8 同支 migration 學會「行已存在→補開收據」，
+兩件事同一支 migration 出貨，不留中間窗口）；localStorage 降級為離線草稿，寫不進
+DB 時照舊明說「只在這台設備」。
+② **交接/確認/取消批次時同步回寫成員行的 custody_status**（純 PostgREST update，
+不需 migration，任何庫齡可用）。
+③ **合併規則改為 forward-only 勝**：同 id 兩份資料，custody 狀態取走得最遠的
+（collected < pending_remittance < settled）；批次同理（pending < settled/cancelled）。
+另：settled/pending 批次的成員行在載入時由批次推導鎖狀態（self-heal，J 現有的
+壞資料下次載入自動歸正；殘留的重複 pending 批次由 J 手動取消，settled 批次照
+規矩永久鎖存不清理）。
+
+---
+
+*Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C) · D16 appended 2026-08-25 (Stage D) · D17 appended 2026-08-27 (work order 27, the overnight sprint) · D18–D21 appended 2026-08-27 (work order 31 §0, J's post-launch rulings) · D22–D23 appended 2026-08-27 (work order 32 §0, launch-day feedback rulings) · D24–D25 appended 2026-08-27 (the afternoon rulings: violet redesign + BM guard) · D26–D28 appended 2026-08-27 (the launch-evening 20-point list) · D29–D32 appended 2026-08-28 (the two-review session: prompt unfreeze, attendance gate, funds page, record-to-DB)*

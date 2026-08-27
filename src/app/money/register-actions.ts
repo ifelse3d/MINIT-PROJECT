@@ -14,8 +14,10 @@
 // never to a log.
 // ---------------------------------------------------------------------------
 
-import { getSupabaseServer } from "@/db/supabase-server";
+import { getSessionUser, getSupabaseServer } from "@/db/supabase-server";
 import { getActiveOrg } from "@/lib/active-org";
+import { can } from "@/lib/roles";
+import { maskName } from "@/lib/mask";
 import type { RegisterDonation } from "@/lib/receipts";
 
 const SELECT =
@@ -101,8 +103,9 @@ export async function loadRegisterDonations(): Promise<RegisterDonation[]> {
 
   return data.map((d) => ({
     // The client_id IS the register row id when it exists (rows issued through
-    // the RPC), so a row issued on THIS device merges onto itself instead of
-    // duplicating. Pre-client_id rows get a stable db- id.
+    // the RPC, or saved at record time by save_register_rows), so a row from
+    // THIS device merges onto itself instead of duplicating. Pre-client_id
+    // rows get a stable db- id.
     id: d.client_id ?? `db-${d.id}`,
     donorName: d.donor_name ?? "",
     donorPhone: d.donor_phone,
@@ -124,4 +127,100 @@ export async function loadRegisterDonations(): Promise<RegisterDonation[]> {
     // §1-11: pre-migration-27 rows have no stored record time — honest absence.
     createdAtIso: d.created_at ?? undefined,
   }));
+}
+
+// ---------------------------------------------------------------------------
+// D32 (2026-08-28): the register writes FORWARD to the database too — every
+// recorded row reaches `donations` the moment it is recorded, not only at
+// receipt time. localStorage demotes to the offline draft. Without this, a
+// row that was handed to HQ existed only in one browser, and the #17 bug
+// (the same receipt handed over twice) had half its fuel.
+// ---------------------------------------------------------------------------
+
+export type RegisterSaveOutcome =
+  | { ok: true }
+  /** `db_behind` = migration 29 not applied yet — the rows stay device-local
+   *  and the UI says so; every other reason reads the same to the caller. */
+  | { ok: false; reason: "no_org" | "no_session" | "role" | "db_behind" | "db" };
+
+/**
+ * Upsert recorded (possibly unreceipted) register rows into `donations`.
+ * Goes through the `save_register_rows` RPC (migration 29) so a database
+ * that predates it refuses cleanly — the RPC's absence IS the feature
+ * detection, and rows never half-arrive on an old schema where
+ * `issue_receipts` v7 would then crash on them.
+ */
+export async function saveRegisterRows(
+  rows: RegisterDonation[],
+): Promise<RegisterSaveOutcome> {
+  if (rows.length === 0) return { ok: true };
+  const user = await getSessionUser();
+  if (!user) return { ok: false, reason: "no_session" };
+  const active = await getActiveOrg();
+  if (!active) return { ok: false, reason: "no_org" };
+  // Recording income is money_collect — same door as the transfer proof and
+  // the hand-over record.
+  if (!can(active.role, "money_collect")) return { ok: false, reason: "role" };
+
+  const supabase = await getSupabaseServer();
+  const { error } = await supabase.rpc("save_register_rows", {
+    p_org_id: active.id,
+    p_rows: rows.map((r) => ({
+      clientId: r.id,
+      donorName: r.donorName,
+      donorPhone: r.donorPhone,
+      donorMasked: maskName(r.donorName),
+      amountCents: r.amountCents,
+      purpose: r.purpose,
+      donatedAt: r.donatedAtIso,
+      custodyStatus: r.custodyStatus,
+      source: r.source === "manual" ? "manual" : "photo",
+      collectorName: r.collector || null,
+      kind: r.kind === "in_kind" ? "in_kind" : "cash",
+      itemDesc: r.itemDesc ?? null,
+      estValueCents:
+        r.estValueCents === null || r.estValueCents === undefined
+          ? null
+          : String(r.estValueCents),
+      paymentMethod: r.paymentMethod === "transfer" ? "transfer" : "cash",
+      transferProofPath: r.transferProofPath ?? null,
+      createdAt: r.createdAtIso ?? null,
+    })),
+  });
+  if (!error) return { ok: true };
+  // PGRST202 = PostgREST cannot find the function — migration 29 not applied.
+  return {
+    ok: false,
+    reason:
+      error.code === "PGRST202" || /save_register_rows/.test(error.message ?? "")
+        ? "db_behind"
+        : "db",
+  };
+}
+
+/**
+ * Delete recorded rows from `donations` — ONLY rows that never got a receipt
+ * (gap-free series, Hard Rule 2) and are still `collected` (a row inside a
+ * hand-over batch is part of a money record). The same guards the client
+ * applies; repeated here because the UI having hidden a button is not a rule.
+ */
+export async function deleteRegisterRows(
+  clientIds: string[],
+): Promise<RegisterSaveOutcome> {
+  if (clientIds.length === 0) return { ok: true };
+  const user = await getSessionUser();
+  if (!user) return { ok: false, reason: "no_session" };
+  const active = await getActiveOrg();
+  if (!active) return { ok: false, reason: "no_org" };
+  if (!can(active.role, "money_collect")) return { ok: false, reason: "role" };
+
+  const supabase = await getSupabaseServer();
+  const { error } = await supabase
+    .from("donations")
+    .delete()
+    .eq("org_id", active.id)
+    .in("client_id", clientIds)
+    .is("receipt_id", null)
+    .eq("custody_status", "collected");
+  return error ? { ok: false, reason: "db" } : { ok: true };
 }

@@ -108,8 +108,14 @@ export function SearchResults({
     try {
       const raw = window.localStorage.getItem(scopedKey("money:donations:v1"));
       const donations = raw ? (JSON.parse(raw) as RegisterDonation[]) : [];
+      // D32 (J's review, 27 evening): a receipted row lives in the database
+      // AND in this browser's draft — showing both printed the same receipt
+      // twice, once bare and once tagged "this browser". The DB hit is the
+      // canonical one; the local copy only adds rows the DB cannot show yet.
+      const dbNos = new Set(dbReceipts.map((r) => r.receiptNo));
       setLocalDonations(
         donations
+          .filter((d) => d.receiptNo === null || !dbNos.has(d.receiptNo))
           .filter((d) =>
             [d.donorName, d.purpose, d.receiptNo ?? "", d.donatedAtIso]
               .join(" ")
@@ -137,7 +143,7 @@ export function SearchResults({
     // No constitution photographed yet = no clause hits, which is the truth.
     setClauses(filterClauses(query, loadOwnClauses()));
     setReady(true);
-  }, [query]);
+  }, [query, dbReceipts]);
 
   const totalHits =
     dbReceipts.length + dbMinutes.length + localDonations.length + clauses.length;
@@ -217,13 +223,8 @@ export function SearchResults({
               🧾 <Tri bm="Resit & daftar derma" zh="收据与捐款登记" en="Receipts & register" />{" "}
               <Badge variant="secondary">{dbReceipts.length + localDonations.length}</Badge>
             </CardTitle>
-            <CardDescription>
-              <Tri
-                bm="Nama penderma disorok untuk melindungi privasi mereka"
-                zh="为保护捐款人隐私，姓名已隐藏"
-                en="Donor names are hidden to protect their privacy"
-              />
-            </CardDescription>
+            {/* The "names are hidden" line was stale: since D18 list views show
+                the donor's full name — masking belongs to print/share/export. */}
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
             {dbReceipts.map((r) => (

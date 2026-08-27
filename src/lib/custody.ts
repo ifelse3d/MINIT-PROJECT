@@ -271,6 +271,111 @@ export function confirmRemittanceBatch(
   };
 }
 
+// ----- Merging two copies of the truth (D32, 2026-08-28) -----------------------
+//
+// J's review, 27 evening #17: the SAME receipt could be handed over twice.
+// Root cause: hand-overs/confirms only advanced the LOCAL copy's custody
+// status; the database row stayed `collected`, and the hydration merge let
+// the database copy win — so every page load resurrected settled money as
+// "in hand, can be handed over". The state machine is forward-only, so the
+// merge rule must be too: when two copies of one row disagree, the one
+// FURTHER along the machine is the truth.
+
+const CUSTODY_RANK: Record<CustodyStatus, number> = {
+  collected: 0,
+  pending_remittance: 1,
+  settled: 2,
+};
+
+/** The status further along the forward-only machine. */
+export function furthestCustody(a: CustodyStatus, b: CustodyStatus): CustodyStatus {
+  return CUSTODY_RANK[a] >= CUSTODY_RANK[b] ? a : b;
+}
+
+/**
+ * Merge the organisation's donation rows (remote) onto this device's (local).
+ * Remote wins on every field EXCEPT custody status, which only moves forward —
+ * a database that has not yet heard about a hand-over must not undo it.
+ * Rows only one side has are kept.
+ */
+export function mergeDonations(
+  local: RegisterDonation[],
+  remote: RegisterDonation[],
+): RegisterDonation[] {
+  const byId = new Map(local.map((d) => [d.id, d]));
+  for (const r of remote) {
+    const l = byId.get(r.id);
+    byId.set(
+      r.id,
+      l ? { ...r, custodyStatus: furthestCustody(l.custodyStatus, r.custodyStatus) } : r,
+    );
+  }
+  return [...byId.values()];
+}
+
+/**
+ * Merge the organisation's hand-over batches (remote) onto this device's.
+ * A batch is forward-only too (pending → settled | cancelled), so on a
+ * collision the non-pending copy wins; two non-pending copies prefer remote.
+ */
+export function mergeBatches(
+  local: RemittanceBatch[],
+  remote: RemittanceBatch[],
+): RemittanceBatch[] {
+  const byId = new Map(local.map((b) => [b.id, b]));
+  for (const r of remote) {
+    const l = byId.get(r.id);
+    byId.set(r.id, l && l.status !== "pending" && r.status === "pending" ? l : r);
+  }
+  return [...byId.values()];
+}
+
+/**
+ * Self-heal: the batches ARE the hand-over record, so any donation row a
+ * batch claims must be at least as far along as the batch says. Rows the
+ * database still holds at `collected` (written before hand-overs synced
+ * back — the #17 bug's leftovers) get pushed forward here on every load,
+ * so stale data heals instead of offering settled money for a second
+ * hand-over. Cancelled batches force nothing (their rows really did
+ * return to `collected`). Pure function.
+ */
+export function reconcileCustodyWithBatches(
+  donations: RegisterDonation[],
+  batches: RemittanceBatch[],
+): RegisterDonation[] {
+  const floor = new Map<string, CustodyStatus>();
+  for (const batch of batches) {
+    if (batch.status === "cancelled") continue;
+    const wants: CustodyStatus =
+      batch.status === "settled" ? "settled" : "pending_remittance";
+    for (const member of batchMembers(batch, donations)) {
+      const prev = floor.get(member.id) ?? "collected";
+      floor.set(member.id, furthestCustody(prev, wants));
+    }
+  }
+  if (floor.size === 0) return donations;
+  return donations.map((d) => {
+    const want = floor.get(d.id);
+    if (!want || CUSTODY_RANK[want] <= CUSTODY_RANK[d.custodyStatus]) return d;
+    return { ...d, custodyStatus: want };
+  });
+}
+
+/**
+ * True when a PENDING batch's money has already been confirmed under some
+ * OTHER batch (every member row is settled) — the #17 leftovers. Confirming
+ * it would claim the money arrived twice; the honest action is to cancel
+ * this record, and the UI uses this to say so in the user's language.
+ */
+export function batchAlreadySettledElsewhere(
+  batch: RemittanceBatch,
+  donations: RegisterDonation[],
+): boolean {
+  if (batch.status !== "pending") return false;
+  const members = batchMembers(batch, donations);
+  return members.length > 0 && members.every((d) => d.custodyStatus === "settled");
+}
+
 // ----- HQ dashboard sums (deterministic) ---------------------------------------
 
 export type CollectorBalance = {
