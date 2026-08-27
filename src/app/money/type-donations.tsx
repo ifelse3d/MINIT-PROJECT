@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Tri, useTriText } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import { VoiceButton } from "@/components/voice-input";
+import { Req } from "@/components/required-mark";
 import { parseRmToCents, type RegisterDonation } from "@/lib/receipts";
 import { dayIsoMalaysia } from "@/lib/history";
 import { usePersistentState } from "@/lib/use-persistent-state";
@@ -350,14 +351,17 @@ export function TypeDonations({
         <table className="w-full min-w-[40rem] border-collapse text-sm">
           <thead>
             <tr className="text-left">
+              {/* 拍板 0-3 (D22): required = red star, optional = unmarked. */}
               <th className="p-2 font-semibold">
                 <Tri bm="Nama penderma" zh="捐款人" en="Donor" />
+                <Req />
               </th>
               <th className="p-2 font-semibold">
-                <Tri bm="Telefon (pilihan)" zh="电话（可不填）" en="Phone (optional)" />
+                <Tri bm="Telefon" zh="电话" en="Phone" />
               </th>
               <th className="p-2 font-semibold">
                 <Tri bm="Jumlah (RM)" zh="金额 (RM)" en="Amount (RM)" />
+                <Req />
               </th>
               <th className="p-2 font-semibold">
                 <Tri bm="Tujuan" zh="用途" en="Purpose" />
@@ -438,7 +442,7 @@ export function TypeDonations({
                           }`}
                           inputMode="decimal"
                           value={row.estValue}
-                          placeholder={t("anggaran RM (pilihan)", "估值 RM（可不填）", "est. RM (optional)")}
+                          placeholder={t("anggaran RM", "估值 RM", "est. RM")}
                           onChange={(e) => update(row.key, { estValue: e.target.value })}
                           aria-label={t(
                             `Nilai anggaran RM, baris ${index + 1}`,

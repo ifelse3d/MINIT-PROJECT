@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
 import { PageSection } from "@/components/page-section";
 import { VoiceButton } from "@/components/voice-input";
+import { Req } from "@/components/required-mark";
 import { canDecideClaim, canSubmitClaim, type ExpenseStatus } from "@/lib/claims";
 import { formatRm } from "@/lib/minutes-draft";
 import { parseRmToCents } from "@/lib/receipts";
@@ -470,6 +471,7 @@ export function ExpensesView({ role }: { role: string }) {
               <label className="flex flex-col gap-1 sm:col-span-2">
                 <span className="text-base font-semibold">
                   <Tri bm="Perihal" zh="说明（买了什么/付了什么）" en="Description" />
+                  <Req />
                 </span>
                 <span className="flex items-center gap-1">
                   <input
@@ -488,6 +490,7 @@ export function ExpensesView({ role }: { role: string }) {
               <label className="flex flex-col gap-1">
                 <span className="text-base font-semibold">
                   <Tri bm="Jumlah (RM)" zh="金额 (RM)" en="Amount (RM)" />
+                  <Req />
                 </span>
                 <input
                   className={inputClass}
@@ -516,6 +519,7 @@ export function ExpensesView({ role }: { role: string }) {
               <label className="flex flex-col gap-1">
                 <span className="text-base font-semibold">
                   <Tri bm="Tarikh" zh="日期" en="Date" />
+                  <Req />
                 </span>
                 <input
                   type="date"

@@ -291,7 +291,7 @@ export function EventsSection({ onAdd }: { onAdd: (ev: SimpleEvent) => void }) {
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium">
-              <Tri bm="Masa (pilihan)" zh="时间（可选）" en="Time (optional)" />
+              <Tri bm="Masa" zh="时间" en="Time" />
             </label>
             <input
               value={timeText}

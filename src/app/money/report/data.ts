@@ -27,6 +27,38 @@ export type StatementRows = {
   expenses: StatementExpenseRow[];
 };
 
+/**
+ * §1-7 (work order 32): the month of the LATEST money record, or null when
+ * the organisation has none (or the database cannot be read). An empty
+ * period must offer a way out — "the latest record is in 2026-04 → jump
+ * there" — instead of a wall of RM0.00 that reads like the report is broken.
+ */
+export async function loadLatestRecordMonth(orgId: number): Promise<string | null> {
+  const supabase = await getSupabaseServer();
+  const latest = async (
+    table: "donations" | "expenses",
+    column: "donated_at" | "spent_at",
+  ): Promise<string | null> => {
+    const { data, error } = await supabase
+      .from(table)
+      .select(column)
+      .eq("org_id", orgId)
+      .not(column, "is", null)
+      .order(column, { ascending: false })
+      .limit(1);
+    if (error || !data || data.length === 0) return null;
+    const value = (data[0] as Record<string, unknown>)[column];
+    return typeof value === "string" ? value.slice(0, 7) : null;
+  };
+  const [donationMonth, expenseMonth] = await Promise.all([
+    latest("donations", "donated_at"),
+    latest("expenses", "spent_at"),
+  ]);
+  if (donationMonth === null) return expenseMonth;
+  if (expenseMonth === null) return donationMonth;
+  return donationMonth > expenseMonth ? donationMonth : expenseMonth;
+}
+
 export async function loadStatementRows(
   orgId: number,
   period: { fromIso: string; toIso: string },

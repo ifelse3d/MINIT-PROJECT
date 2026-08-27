@@ -289,9 +289,9 @@ export function CreateOrgForm({
         <label className="flex flex-col gap-1">
           <span className="text-base font-semibold">
             <Tri
-              bm="No. pendaftaran PPM/ROS (pilihan)"
-              zh="PPM/ROS 注册号（可不填）"
-              en="PPM/ROS registration no. (optional)"
+              bm="No. pendaftaran PPM/ROS"
+              zh="PPM/ROS 注册号"
+              en="PPM/ROS registration no."
             />
           </span>
           <input name="ppmNo" className={inputCls} maxLength={64} placeholder="PPM-000-00-00000000" />

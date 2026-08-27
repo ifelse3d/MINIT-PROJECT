@@ -24,6 +24,7 @@ import { PAGE_SIZE, pageRange, pageSummary, parsePage } from "@/lib/list-page";
 import { Pager } from "@/components/pager";
 import { ReceiptFilters } from "./filters";
 import { DownloadReceiptButton } from "./row-actions";
+import { UnreceiptedNote } from "./unreceipted-note";
 
 // /money/history — every receipt saved for the active org (Phase 7).
 // D18 (拍板 35, 2026-08-27): donor names show IN FULL here — the treasurer
@@ -189,6 +190,10 @@ export default async function MoneyHistoryPage({
           </Link>
         </p>
       </div>
+
+      {/* §1-8: rows registered but not yet receipted are not in this list —
+          say so, with the way there, instead of looking stale. */}
+      <UnreceiptedNote />
 
       <ReceiptFilters q={q} from={from} to={to} active={anyFilter} />
 

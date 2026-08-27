@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { VoiceButton } from "@/components/voice-input";
+import { Req } from "@/components/required-mark";
 import { parseRmToCents, type RegisterDonation } from "@/lib/receipts";
 import { dayIsoMalaysia } from "@/lib/history";
 import { PaymentMethodToggle, type PaymentMethod } from "./payment-method-toggle";
@@ -110,6 +111,12 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
       setError(t("Isi tarikh.", "请填写日期。", "Enter a date."));
       return;
     }
+    // 拍板 0-3: the label carries a red star, so a blank must be said out
+    // loud — not silently patched with the default name.
+    if (!collector.trim()) {
+      setError(t("Isi nama pemungut.", "请填写收款人。", "Enter the collector's name."));
+      return;
+    }
     // F-7 (work order 31, J's old #10): "Other" with no note is a register row
     // that says nothing — the auditor (and the treasurer in December) cannot
     // tell what the money was. One sentence is required.
@@ -158,7 +165,7 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
       amountCents: cents,
       purpose,
       donatedAtIso: date,
-      collector: collector.trim() || defaultCollector,
+      collector: collector.trim(),
       receiptNo: null,
       custodyStatus: "collected",
       source: "manual",
@@ -279,6 +286,7 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
               <label className="flex flex-col gap-1">
                 <span className="text-base font-semibold">
                   <Tri bm="Jumlah (RM)" zh="金额 (RM)" en="Amount (RM)" />
+                  <Req />
                 </span>
                 <input
                   className={inputClass}
@@ -324,9 +332,9 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
                           <Tri bm="Tukar gambar bukti" zh="换一张截图" en="Change the screenshot" />
                         ) : (
                           <Tri
-                            bm="Lampirkan gambar bukti pindahan (pilihan)"
-                            zh="附上转账截图（可不附）"
-                            en="Attach the transfer screenshot (optional)"
+                            bm="Lampirkan gambar bukti pindahan"
+                            zh="附上转账截图"
+                            en="Attach the transfer screenshot"
                           />
                         )}
                         <input
@@ -365,6 +373,7 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
               <label className="flex flex-col gap-1">
                 <span className="text-base font-semibold">
                   <Tri bm="Penderma / Pembayar" zh="捐款人 / 付款人" en="Donor / Payer" />
+                  <Req />
                 </span>
                 <span className="flex items-center gap-1">
                   <input
@@ -383,7 +392,7 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
               </label>
               <label className="flex flex-col gap-1">
                 <span className="text-base font-semibold">
-                  <Tri bm="Telefon (pilihan)" zh="电话（可选）" en="Phone (optional)" />
+                  <Tri bm="Telefon" zh="电话" en="Phone" />
                 </span>
                 <input
                   className={inputClass}
@@ -395,6 +404,7 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
               <label className="flex flex-col gap-1">
                 <span className="text-base font-semibold">
                   <Tri bm="Tarikh" zh="日期" en="Date" />
+                  <Req />
                 </span>
                 <input
                   type="date"
@@ -406,6 +416,7 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
               <label className="flex flex-col gap-1">
                 <span className="text-base font-semibold">
                   <Tri bm="Pemungut" zh="收款人" en="Collector" />
+                  <Req />
                 </span>
                 <input
                   className={inputClass}
@@ -415,13 +426,11 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
               </label>
               <label className="flex flex-col gap-1 sm:col-span-2">
                 <span className="text-base font-semibold">
-                  {/* F-7: for "Other" the note is REQUIRED — the label says so
-                      the moment the category is picked, not only on submit. */}
-                  {category === "Lain-lain" ? (
-                    <Tri bm="Catatan (wajib untuk Lain-lain)" zh="备注（选「其他」时必填）" en="Note (required for Other)" />
-                  ) : (
-                    <Tri bm="Catatan (pilihan)" zh="备注（可选）" en="Note (optional)" />
-                  )}
+                  {/* F-7 + 拍板 0-3: for "Other" the note is REQUIRED — the
+                      red star appears the moment the category is picked, and
+                      the sentence below says why. */}
+                  <Tri bm="Catatan" zh="备注" en="Note" />
+                  {category === "Lain-lain" && <Req />}
                 </span>
                 {category === "Lain-lain" && (
                   <span className="text-sm text-muted-foreground">

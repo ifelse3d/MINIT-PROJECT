@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { BRAND_NAME } from "@/lib/brand";
 import {
   checkCoverage,
   checkNames,
@@ -141,8 +142,11 @@ describe("composeMinutesMd", () => {
   });
 
   it("ends with the Hard Rule 8 audit line naming the real signer", () => {
+    // The brand half of the line follows BRAND_NAME (D23: "MinitAI").
     expect(built().trimEnd()).toMatch(
-      /Disediakan oleh Minit, disahkan oleh shi hui pada 2026-08-19 \/ Drafted by Minit, confirmed by shi hui on 2026-08-19$/,
+      new RegExp(
+        `Disediakan oleh ${BRAND_NAME}, disahkan oleh shi hui pada 2026-08-19 / Drafted by ${BRAND_NAME}, confirmed by shi hui on 2026-08-19$`,
+      ),
     );
   });
 
@@ -296,10 +300,10 @@ describe("composeMinutesMd in other languages", () => {
   it("keeps Bahasa Malaysia in the audit line whatever the document language", () => {
     for (const lang of ["bm", "zh", "en"] as const) {
       expect(build(lang)).toContain(
-        "Disediakan oleh Minit, disahkan oleh shi hui pada 2026-08-19",
+        `Disediakan oleh ${BRAND_NAME}, disahkan oleh shi hui pada 2026-08-19`,
       );
     }
-    expect(build("zh")).toContain("由 Minit 起草，shi hui 于 2026-08-19 确认");
+    expect(build("zh")).toContain(`由 ${BRAND_NAME} 起草，shi hui 于 2026-08-19 确认`);
   });
 
   it("defaults to Bahasa Malaysia — what eROSES needs", () => {
@@ -401,7 +405,9 @@ describe("composeMinutesMd — the formal template (Stage D)", () => {
     // chairperson is and must not guess.
     expect(md).toContain("( Pengerusi )");
     expect(md).not.toContain("( Pengerusi ) shi hui");
-    expect(md.trimEnd()).toMatch(/Drafted by Minit, confirmed by shi hui on 2026-08-19$/);
+    expect(md.trimEnd()).toMatch(
+      new RegExp(`Drafted by ${BRAND_NAME}, confirmed by shi hui on 2026-08-19$`),
+    );
   });
 
   it("annotates an attendee with their position only on an exact confirmed name match", () => {

@@ -8,7 +8,7 @@ import {
 } from "@/lib/financial-statement";
 import { formatRm } from "@/lib/minutes-draft";
 import { dayIsoMalaysia } from "@/lib/history";
-import { loadStatementRows } from "./data";
+import { loadLatestRecordMonth, loadStatementRows } from "./data";
 import { DownloadStatementButton } from "./download-button";
 
 // ---------------------------------------------------------------------------
@@ -67,12 +67,16 @@ export default async function MoneyReportPage({
     );
   }
 
-  // The period: ?dari & ?hingga when valid, else this month.
+  // The period: ?dari & ?hingga when valid, else THIS YEAR SO FAR.
+  // §1-7 (work order 32): the default used to be this month — J's two receipts
+  // were dated 2026-04 and 2025-12, so first load showed RM0.00 everywhere and
+  // read as broken. A year-to-date default shows the numbers that exist.
   const thisMonth = monthBounds(todayIso);
+  const thisYear = { fromIso: `${todayIso.slice(0, 4)}-01-01`, toIso: todayIso };
   const dari = ISO_DAY.test(sp.dari ?? "") ? (sp.dari as string) : "";
   const hingga = ISO_DAY.test(sp.hingga ?? "") ? (sp.hingga as string) : "";
   const period =
-    dari && hingga && dari <= hingga ? { fromIso: dari, toIso: hingga } : thisMonth;
+    dari && hingga && dari <= hingga ? { fromIso: dari, toIso: hingga } : thisYear;
 
   const rows = await loadStatementRows(active.id, period);
   let statement: FinancialStatement | null = null;
@@ -80,12 +84,24 @@ export default async function MoneyReportPage({
     statement = buildFinancialStatement(rows, period);
   }
 
+  // §1-7: an empty period needs a way out, not a wall of zeros. Only looked
+  // up when the period actually came back empty.
+  const periodIsEmpty =
+    statement !== null &&
+    statement.income.length === 0 &&
+    statement.payments.length === 0 &&
+    statement.inKind.length === 0;
+  const latestMonth = periodIsEmpty ? await loadLatestRecordMonth(active.id) : null;
+  // The latest record's month as a period, for the one-tap jump link.
+  const latestMonthPeriod =
+    latestMonth !== null ? monthBounds(`${latestMonth}-01`) : null;
+
   const lastMonth = lastMonthBounds(todayIso);
-  const thisYear = { fromIso: `${todayIso.slice(0, 4)}-01-01`, toIso: todayIso };
+  // Year-to-date first: it is the default period since §1-7.
   const quick = [
+    { ...thisYear, bm: "Tahun ini", zh: "今年到今天", en: "This year so far" },
     { ...thisMonth, bm: "Bulan ini", zh: "本月", en: "This month" },
     { ...lastMonth, bm: "Bulan lepas", zh: "上个月", en: "Last month" },
-    { ...thisYear, bm: "Tahun ini", zh: "今年到今天", en: "This year so far" },
   ];
 
   return (
@@ -155,6 +171,38 @@ export default async function MoneyReportPage({
           </p>
         ) : (
           <>
+            {/* §1-7: an empty period is not a dead wall — say where the money
+                actually is, with a one-tap jump. */}
+            {periodIsEmpty && (
+              <p className="rounded-xl border-2 border-[color:var(--v2-outline-border)] bg-muted/30 p-4 text-base">
+                {latestMonthPeriod ? (
+                  <>
+                    <Tri
+                      bm={`Tiada rekod dalam tempoh ini. Rekod terkini pada ${latestMonth}.`}
+                      zh={`这段期间没有记录 —— 最近一笔在 ${latestMonth}。`}
+                      en={`No records in this period. The latest record is in ${latestMonth}.`}
+                    />{" "}
+                    <Link
+                      href={`/money/report?dari=${latestMonthPeriod.fromIso}&hingga=${latestMonthPeriod.toIso}`}
+                      className="font-medium underline underline-offset-4"
+                    >
+                      <Tri
+                        bm="Lompat ke bulan itu"
+                        zh="一键跳到那个月"
+                        en="Jump to that month"
+                      />{" "}
+                      →
+                    </Link>
+                  </>
+                ) : (
+                  <Tri
+                    bm="Tiada rekod wang lagi. Rekodkan pendapatan atau perbelanjaan dahulu."
+                    zh="还没有任何钱的记录。请先去记一笔收入或开支。"
+                    en="No money records yet. Record an income or an expense first."
+                  />
+                )}
+              </p>
+            )}
             {/* The statement table. */}
             <div className="overflow-x-auto rounded-xl border-2 border-[color:var(--v2-border)]">
               <table className="w-full text-base">

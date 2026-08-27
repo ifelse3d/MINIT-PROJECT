@@ -142,9 +142,9 @@ export function BeforeReading({
       <label className="flex flex-col gap-1">
         <span className="text-sm font-medium text-muted-foreground">
           <Tri
-            bm="Ada singkatan, nama atau tarikh yang Minit patut tahu? (pilihan)"
-            zh="有缩写、人名、日期要补充给 Minit 吗？（可以不填）"
-            en="Any abbreviations, names or dates Minit should know? (optional)"
+            bm="Ada singkatan, nama atau tarikh yang Minit patut tahu?"
+            zh="有缩写、人名、日期要补充给 Minit 吗？"
+            en="Any abbreviations, names or dates Minit should know?"
           />
         </span>
         <span className="flex items-start gap-2">

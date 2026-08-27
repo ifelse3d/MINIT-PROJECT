@@ -528,6 +528,20 @@ MyInvois Batch Upload 的 .xlsx 只放資料表（Dokumen 表第一且唯一，�
 獨立 README 下載。等 J 提供官方模板原檔後逐欄對齊；對齊前檔上保留
 「verify against LHDN template」警語。（Stage B-7 執行。）
 
+### D22 — 表單規範：必填＝紅色星號；選填＝什麼都不標（2026-08-27，32 號單 §0 拍板 0-3）
+
+必填欄位在標籤後加紅色 `*`（共用組件 `src/components/required-mark.tsx` 的
+`<Req />`）；選填欄位**不加任何尾巴**——「（可不附）」「（可選）」「(pilihan)」
+「(optional)」全部刪除。理由（J 原話的意思）：「可不附」這種尾巴讀起來像在
+引導（「你最好還是附」），而且三語各寫一次、寫法不一。漏填必填欄時，就地紅字
+說明哪一格、為什麼。標了紅星的欄位不得再有靜默 fallback（例：收款人空白時
+不再默默用預設名頂上，改為就地報錯）。
+
+### D23 — 名字定案：MinitAI（2026-08-27，32 號單 §0 拍板 0-1）
+
+`BRAND_NAME = "MinitAI"`（brand.ts 一行）。D13「賽後才定名」被此條覆蓋；
+D20 的其餘部分不變：已開收據字首 MIN- 鎖死、prompts 一字不動。
+
 ---
 
-*Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C) · D16 appended 2026-08-25 (Stage D) · D17 appended 2026-08-27 (work order 27, the overnight sprint) · D18–D21 appended 2026-08-27 (work order 31 §0, J's post-launch rulings)*
+*Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C) · D16 appended 2026-08-25 (Stage D) · D17 appended 2026-08-27 (work order 27, the overnight sprint) · D18–D21 appended 2026-08-27 (work order 31 §0, J's post-launch rulings) · D22–D23 appended 2026-08-27 (work order 32 §0, launch-day feedback rulings)*

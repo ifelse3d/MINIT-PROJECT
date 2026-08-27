@@ -1,11 +1,11 @@
 // ---------------------------------------------------------------------------
 // THE BRAND LEVER (work order 31 Stage E, 拍板 38 / D20)
 //
-// The product's display name is decided AFTER the competition (MinitAI?
-// Minity? — D13). Until then the name a user sees must be changeable by
-// editing ONE line: this one. Everything user-visible that says "Minit"
-// imports from here — layout metadata, the sidebar logo, the home page,
-// the ask-panel title, PDF footers ("Drafted by …"), how-it-works copy.
+// The name is DECIDED: "MinitAI" (J, 2026-08-27, work order 32 拍板 0-1 —
+// this supersedes D13's "decide after the competition"). The lever stays:
+// everything user-visible that says the brand name imports from here —
+// layout metadata, the sidebar logo, the home page, the ask-panel title,
+// PDF footers ("Drafted by …"), how-it-works copy.
 //
 // What deliberately does NOT go through this constant:
 //   · prompts (src/prompts/*) — changing a prompt invalidates measurements
@@ -19,8 +19,8 @@
 // footer follows. (Verified 2026-08-28 with a throwaway name, then reverted.)
 // ---------------------------------------------------------------------------
 
-/** The one line to edit when the rename lands. */
-export const BRAND_NAME = "Minit";
+/** The one line to edit when the rename lands. (Landed: 拍板 0-1.) */
+export const BRAND_NAME = "MinitAI";
 
 /** The single letter on the square logo tile (sidebar + phone top bar). */
 export const BRAND_INITIAL = BRAND_NAME.slice(0, 1).toUpperCase();

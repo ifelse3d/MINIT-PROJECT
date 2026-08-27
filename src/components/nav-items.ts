@@ -254,9 +254,9 @@ export const SIDEBAR_NAV: NavEntry[] = [
       byHref("/money/history"),
     ],
   },
-  // C-1 (拍板 30): the calendar is a DAILY page, not a filing chore — it moved
-  // out of the 申报 group onto its own top-level row.
-  { kind: "item", item: byHref("/calendar") },
+  // §1-9 (work order 32, 2026-08-27 — J overturned his own 拍板 30): the
+  // lone top-level calendar row sat oddly against a column of groups, and a
+  // deadline IS a filing date. Back into the 申报 group, first row.
   {
     kind: "group",
     id: "filings",
@@ -264,7 +264,7 @@ export const SIDEBAR_NAV: NavEntry[] = [
     bm: "Pemfailan",
     zh: "申报",
     en: "Filings",
-    children: [byHref("/filings"), byHref("/agm-pack")],
+    children: [byHref("/calendar"), byHref("/filings"), byHref("/agm-pack")],
   },
   {
     kind: "group",

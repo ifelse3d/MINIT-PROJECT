@@ -90,9 +90,9 @@ export function AddTermForm() {
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium text-muted-foreground">
             <Tri
-              bm="Ia apa? (pilihan)"
-              zh="这是什么？（可以不填）"
-              en="What is it? (optional)"
+              bm="Ia apa?"
+              zh="这是什么？"
+              en="What is it?"
             />
           </span>
           <input

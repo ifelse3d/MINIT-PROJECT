@@ -30,14 +30,15 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
     expect(PRIMARY_NAV.filter((e) => e.kind === "group")).toHaveLength(3);
   });
 
-  // EIGHT desktop entries (B-1, J 8/26 #3; amended by 拍板 30 on 8/27): Home,
-  // six collapsible groups, and the calendar as its own row — moved OUT of the
-  // 申报 group because deadlines are a daily page, not a filing chore.
-  it("keeps the desktop sidebar to Home + calendar + six groups, as J listed them", () => {
-    expect(SIDEBAR_NAV).toHaveLength(8);
+  // SEVEN desktop entries (B-1, J 8/26 #3; §1-9 of work order 32 on 8/27
+  // overturned 拍板 30's lone calendar row): Home + six collapsible groups,
+  // the calendar back inside 申报 — a deadline is a filing date, and a lone
+  // top-level row sat oddly against a column of groups.
+  it("keeps the desktop sidebar to Home + six groups, as J listed them", () => {
+    expect(SIDEBAR_NAV).toHaveLength(7);
     expect(SIDEBAR_NAV[0].kind).toBe("item");
     const items = SIDEBAR_NAV.flatMap((e) => (e.kind === "item" ? [e.item.href] : []));
-    expect(items).toEqual(["/", "/calendar"]);
+    expect(items).toEqual(["/"]);
     const ids = SIDEBAR_NAV.flatMap((e) => (e.kind === "group" ? [e.id] : []));
     expect(ids).toEqual([
       "minutes",
@@ -66,9 +67,10 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
       "/money/einvois",
       "/money/history",
     ]);
-    // 申报: eROSES · 常年大会文件包 (G-4 撿回; 拍板 30 moved the calendar out
-    // to its own top-level row — asserted above).
+    // 申报: 日历与死线 · eROSES · 常年大会文件包 (§1-9: the calendar came
+    // back into this group, first row — deadlines ARE filing dates).
     expect(byId("filings").children.map((c) => c.href)).toEqual([
+      "/calendar",
       "/filings",
       "/agm-pack",
     ]);
