@@ -8,6 +8,7 @@ import { askIntentPrompt } from "@/prompts/ask-intent";
 import { askSummarisePrompt } from "@/prompts/ask-summarise";
 import { chatPrompt } from "@/prompts/chat";
 import { classifyPrompt } from "@/prompts/classify";
+import { discussMinutesPrompt } from "@/prompts/discuss-minutes";
 import { extractEventsPrompt } from "@/prompts/extract-events";
 import { readRosterPrompt } from "@/prompts/read-roster";
 
@@ -74,6 +75,16 @@ const PROMPTS: Array<{ name: string; prompt: string; untrusted: string[] }> = [
   {
     name: "read-roster",
     prompt: readRosterPrompt("Persatuan Contoh", ATTACK),
+    untrusted: [ATTACK],
+  },
+  {
+    name: "discuss-minutes",
+    prompt: discussMinutesPrompt({
+      section: "resolutions",
+      rows: [{ index: 0, label: "Keputusan", text: ATTACK }],
+      instruction: ATTACK,
+      lang: "zh",
+    }),
     untrusted: [ATTACK],
   },
 ];

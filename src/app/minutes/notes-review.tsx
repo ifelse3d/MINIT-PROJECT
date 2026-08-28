@@ -14,6 +14,7 @@ import { MEETING_TYPES, meetingTypeUiLabelTri } from "@/lib/meeting-types";
 import { formatRm } from "@/lib/minutes-draft";
 import { parseRmToCents } from "@/lib/receipts";
 import { BeforeReading } from "./before-reading";
+import { DiscussSection } from "./discuss-section";
 import { FieldRow } from "./field-row";
 import { AddRowButton, DeletableRow } from "./row-controls";
 import { useMinutes, type TextLikeField } from "./minutes-store";
@@ -719,6 +720,9 @@ export function NotesReview() {
             }
           />
 
+          {/* #31 (approved 28/8): discuss THIS part with the AI — 1 action
+              per message, said on the button; proposals applied by hand. */}
+          <DiscussSection section="meeting" />
         </StepGroup>
         <StepGroup
           titleBm="Apa yang diputuskan"
@@ -835,6 +839,7 @@ export function NotesReview() {
             labelZh="自己加一条决议"
             labelEn="Add a resolution"
           />
+          <DiscussSection section="resolutions" />
         </StepGroup>
 
         <StepGroup
@@ -948,6 +953,7 @@ export function NotesReview() {
             labelZh="自己加一笔金额"
             labelEn="Add an amount"
           />
+          <DiscussSection section="figures" />
         </StepGroup>
 
         <StepGroup
@@ -1044,6 +1050,7 @@ export function NotesReview() {
             labelZh="自己加一个职位"
             labelEn="Add a position"
           />
+          <DiscussSection section="bearers" />
         </StepGroup>
 
           </div>

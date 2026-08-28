@@ -42,6 +42,10 @@ export const AI_ACTIONS = [
   // Stage E (work order 27): reading a photographed shop receipt / invoice
   // for the expense book or a member's claim. One receipt, one action.
   "extract_expense",
+  // 2026-08-28 (J review 27-evening #31, approved with billing 改一次算一次):
+  // one exchange of "discuss this section with the AI" on the minutes review.
+  // The model proposes wording; the person applies each proposal by hand.
+  "discuss_minutes",
 ] as const;
 
 export type AiAction = (typeof AI_ACTIONS)[number];
