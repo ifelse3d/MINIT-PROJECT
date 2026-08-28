@@ -29,7 +29,6 @@ import { useRouter } from "next/navigation";
 import { ArrowUp, Camera, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
-import { PdpaNote } from "@/components/pdpa-note";
 import { VoiceButton } from "@/components/voice-input";
 import { writeIntake, type IntakeKind } from "@/lib/intake-handoff";
 import { tidyReply } from "@/lib/tidy-reply";
@@ -697,11 +696,6 @@ export function AskBox({
           />
         )}
       </p>
-      {/* 0-5 (2026-08-25): the paid-tier privacy notice sits beside the door
-          that sends things to the AI — not on some other page. */}
-      <div className="mt-2">
-        <PdpaNote />
-      </div>
     </section>
   );
 }

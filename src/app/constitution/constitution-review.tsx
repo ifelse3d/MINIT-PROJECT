@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
-import { PdpaNote } from "@/components/pdpa-note";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -534,8 +533,6 @@ export function ConstitutionReview({
               </Button>
             )}
           </div>
-          {/* 0-5: the paid-tier privacy notice beside the upload door. */}
-          <PdpaNote />
           {aiError && (
             <div className="rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium whitespace-pre-line text-red-900">
               {localizeError(aiError)}

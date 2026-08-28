@@ -7,7 +7,6 @@ import { Tri, useLocalizedError, useTriText } from "@/components/language-provid
 import { StepGroup } from "@/components/step-card";
 import { NextStepLink, PageSection } from "@/components/page-section";
 import { PageThumbs } from "@/components/page-thumbs";
-import { PdpaNote } from "@/components/pdpa-note";
 import { HowItWorksButton } from "@/app/how-it-works";
 import { formatDateLong, isIsoDate } from "@/lib/date-input";
 import type { KnownMeetingFacts } from "@/lib/meeting-facts";
@@ -479,11 +478,6 @@ export function NotesReview() {
             every uploaded page as a tappable thumbnail (shared page-thumbs.tsx),
             instead of a fold-out stack of full-size images. */}
         <PageThumbs pages={photoPages} />
-        {/* 0-5 (2026-08-25): the old "use sample data until we go paid"
-            warning dated from the free-tier days and had gone wrong — the API
-            is on the PAID tier (J confirmed 8/25). Real data is allowed; what
-            people deserve to know is in the shared PdpaNote. */}
-        <PdpaNote />
         {/* Opt-in example. Deliberately quiet and LAST: someone holding their
             own notes should reach for the camera, not this. It exists so a
             first-timer (or a demo) can see what a finished page looks like. */}

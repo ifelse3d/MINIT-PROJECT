@@ -7,7 +7,6 @@ import { Tri, useLocalizedError, useTriText } from "@/components/language-provid
 import { ExtractionTable } from "@/components/extraction-table";
 import { NextStepLink, PageSection } from "@/components/page-section";
 import { PageThumbs } from "@/components/page-thumbs";
-import { PdpaNote } from "@/components/pdpa-note";
 import { HowItWorksButton } from "@/app/how-it-works";
 import {
   eligibleForReceipt,
@@ -406,9 +405,6 @@ export function LedgerReview() {
             of trusting memory about what page 2 was. Shared with the minutes
             flow since D-3 (page-thumbs.tsx). */}
         {!isSampleLedger && <PageThumbs pages={ledgerPages} />}
-
-        {/* 0-5: the paid-tier privacy notice beside the upload door. */}
-        <PdpaNote />
 
         {/* §1-4 (work order 32, J's #4): the DEMO is the picture walkthrough
             now — the sample data rows are gone from the real page. Fake rows

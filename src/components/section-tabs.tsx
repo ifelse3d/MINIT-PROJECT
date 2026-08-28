@@ -60,7 +60,10 @@ export function SectionTabs({
       aria-label={t(ariaLabelBm, ariaLabelZh, ariaLabelEn)}
       className="sticky top-14 z-20 py-2"
     >
-      <ol className="v2-glass flex flex-wrap items-center gap-1 rounded-md px-2 py-1.5">
+      {/* #27 (J, 2026-08-28 screenshot): w-fit — the glass backing hugs the
+          pills instead of running a full-width white strip behind two of them.
+          max-w-full keeps the wrap behaviour when there are many. */}
+      <ol className="v2-glass flex w-fit max-w-full flex-wrap items-center gap-1 rounded-md px-2 py-1.5">
         {tabs.map((tab, i) => {
           const here = pathname === tab.href;
           const tone =
