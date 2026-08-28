@@ -142,7 +142,11 @@ async function run() {
     await sleep(6000);
     check("admin created the org", a.url().includes("welcome=1"));
 
-    await a.goto(`${BASE}/settings`, { waitUntil: "networkidle2" });
+    // /settings/members, not /settings: the settings section was split into
+    // sub-routes (CLAUDE.md rule 13, "one step, one page") and the invite form
+    // moved with it. This script kept visiting the old address and had been
+    // failing these two checks ever since — found 2026-08-28.
+    await a.goto(`${BASE}/settings/members`, { waitUntil: "networkidle2" });
     const roleSel = await a.$('select[name="role"]');
     check("invite form present in Settings", Boolean(roleSel));
     if (roleSel) await roleSel.select("collector");
