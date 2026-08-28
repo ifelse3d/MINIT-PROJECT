@@ -14,7 +14,7 @@
 ⑤ J 看过后的第二轮：豬撲滿圖示刪除（族群 sensitive，D41）、四張卡改成
 四階「不同的紫」、TAB 圖示與 App 內 logo 統一成同一份向量（D42）、
 重設密碼頁 logo 統一、how-it-works 四張示範圖重拍。
-J 照 41/42 号报告：push（**9 支**，40 号那 4 支 J 已 push）→ Ctrl+Shift+R。本轮无新 migration。
+J 照 43 号报告：push（**11 支**，40 号那 4 支 J 已 push）→ Ctrl+Shift+R。本轮无新 migration。
 ⑥ J 报「线上没改动 + LOADING 超慢 + 直接 load 不出」→ 量了线上：**新版确实已上线**
 （登入页实测是新的），**慢是真的且与本轮改动无关**——公开页 0.4s，但登入后的
 首页 HTML 要 4.4–5.9s 才串流完（TTFB 只有 23ms，串流把伺服器耗时藏起来了）。
@@ -90,10 +90,18 @@ J 照 41/42 号报告：push（**9 支**，40 号那 4 支 J 已 push）→ Ctrl
   - 登入后：首页 HTML **4.4–5.9s** 才串流完、/orgs/new **12.5s**、sign-in **15.6s**。
     ⚠️ **TTFB 只有 23ms** —— Next 的串流让「伺服器很慢」在 TTFB 上完全看不出来，
     要看 `responseEnd − requestStart`。以后量这个页别再看 TTFB。
-  - 本机 dev 量「改动前 vs 改动后」中位数 637ms vs 596ms（n=7）——**本轮新增的
-    查询不是元凶**；元凶是登入后那棵树的串行往返次数。
-  - Supabase 从 J 的机器 ~100ms。🔴 **未决 #1（Vercel/Supabase 是否同区）到现在
-    还是没答案，而它正是最可能的放大器。**
+  - 本机 dev 三个版本各跑 7 次（中位数）：**本轮改动之前 630ms · 现在线上那版
+    637ms · 加了并行与 cache 之后 596ms**。⚠️ 第一次只比了后两个（都含本轮改动），
+    是 J 追问「为什么改完就坏」才补测第一个——**本轮 UI 改动 +7ms，不是元凶**。
+    以后回答「是不是我弄的」，基准要取「改动之前」，不是「我修之前」。
+  - 🔴🔴 **根因查到了，是确定的事实不是猜**：Vercel 函数跑在 **iad1（华盛顿）**
+    （响应头 `X-Vercel-Id: sin1::iad1::…`），Supabase 在 **ap-southeast-1（新加坡）**
+    （`db.<ref>.supabase.co` → `2406:da18:…`，对照 AWS 官方 ip-ranges.json）。
+    数据库自己只花 **14ms**（`x-envoy-upstream-service-time`）——4.5 秒全是
+    **新加坡↔华盛顿来回**，一页排队十几趟。公开页不问数据库，所以 0.4s，
+    这就是为什么它看起来不像主机问题。已加 `vercel.json` → `regions: ["sin1"]`。
+    ⚠️ Hobby 只允许一个 region，数组多写一个会让 build 失败。数据库若搬家，
+    这个必须跟着搬。
   - 已修：① 首页 agm/flags/usage/figures 四段串行 → 一个 Promise.all（figures
     另带 2.5s deadline，读不到就不画那行）；② `getSessionUser`/`getMemberships`/
     `getActiveOrg` 用 React `cache()` 每请求只算一次——原本画一页要向 auth 服务器
@@ -121,7 +129,7 @@ J 照 41/42 号报告：push（**9 支**，40 号那 4 支 J 已 push）→ Ctrl
 
 ### 🔴 J 的事（写在 40 号报告 §4）
 
-1. **push-cabang.bat**（本机领先 **9 支**；40 号那 4 支 J 已 push，origin/main 已到 769099c）→ 线上 Ctrl+Shift+R。**本轮无新 migration。**
+1. **push-cabang.bat**（本机领先 **11 支**；40 号那 4 支 J 已 push，origin/main 已到 769099c）→ 线上 Ctrl+Shift+R。**本轮无新 migration。**
    🔴 TAB 圖示要 **Ctrl+Shift+R 兩次**或關掉分頁再開——瀏覽器對 favicon 的快取特別頑固。
 2. 看三个地方：登入页、首页（背景＋四张卡＋底下那行字）、随便一页的卡片圆角。
 3. 40 号 §3 有三个等你一句话的小事：重设密码页的小 logo 要不要一起换成砖块版；
@@ -131,8 +139,11 @@ J 照 41/42 号报告：push（**9 支**，40 号那 4 支 J 已 push）→ Ctrl
 
 ### ❓ 未决问题
 
-1. 🔴🔴 Vercel/Supabase region 是否同区 —— 等 J 抄来两个值。**升级为最高优先：
-   线上登入后每页 4–6s，这是最可能的放大器（见上面的量测）。**
+1. ✅ **已答（2026-08-28，自己查到的，不用 J 抄）：两边本来就不同区。**
+   Vercel 函数在 **iad1（华盛顿）**（`X-Vercel-Id: sin1::iad1::…`），
+   Supabase 在 **ap-southeast-1（新加坡）**（`db.<ref>.supabase.co` 解析到
+   `2406:da18:…`，对照 AWS 官方 ip-ranges.json）。已加 `vercel.json`
+   把函数钉到 `sin1`。**效果要 push 后才知道**——J push 完请回报首页还慢不慢。
 2. 助手用哪个模型 —— prompt 已解冻（D29），等 J 重跑 bench 后定（J：系统先稳）
 3. 法律实体（金流前置，D12），试点前要答
 4. 真实手写 eval：92.9% 量的仍是印刷体，且 prompt 已动、数字作废——等 J 重测
