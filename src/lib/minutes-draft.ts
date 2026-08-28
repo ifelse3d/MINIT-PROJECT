@@ -58,7 +58,9 @@ export function renderMinutesDraftBm(
   if (attendees.length > 0) {
     lines.push("## KEHADIRAN", "");
     attendees.forEach((a, i) => lines.push(`${i + 1}. ${a.name.value}`));
-    lines.push("");
+    // 28/8 formality pass — the same count line composeMinutesMd prints, so
+    // the free preview matches the formal document. Counted by code.
+    lines.push("", `Jumlah hadir: ${attendees.length} orang`, "");
   }
 
   const resolutions = e.resolutions.filter(

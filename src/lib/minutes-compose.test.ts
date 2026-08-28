@@ -425,6 +425,9 @@ describe("composeMinutesMd — the formal template (Stage D)", () => {
     expect(md).toContain("1. 嘉益 — Setiausaha");
     expect(md).toContain("2. 雯倩");
     expect(md).not.toContain("雯倩 — ");
+    // 28/8 formality pass: the sheet closes with the count, counted by code —
+    // the same number the eROSES form's "Bilangan Ahli Hadir" asks for.
+    expect(md).toContain("Jumlah hadir: 2 orang");
   });
 
   it("D-2: a reading copy names itself a translation; the BM filing copy does not", () => {

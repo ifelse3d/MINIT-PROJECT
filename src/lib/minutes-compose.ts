@@ -305,7 +305,9 @@ export function composeMinutesMd(
         `${i + 1}. ${a.name.value}${position ? ` — ${position}` : ""}`,
       );
     });
-    out.push("");
+    // 28/8 formality pass: a formal minit closes the sheet with the count —
+    // the same number the eROSES form asks for, COUNTED by code (Hard Rule 2).
+    out.push("", L.attendanceCount(attendees.length), "");
   }
 
   // Sections that came back empty are dropped rather than printed as a bare

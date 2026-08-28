@@ -46,6 +46,9 @@ type Labels = {
   venue: string;
   purpose: string;
   attendance: string;
+  /** "Jumlah hadir: N orang" — the formal count line under the attendance
+   *  sheet (28/8 formality pass; also the number eROSES asks for). */
+  attendanceCount: (n: number) => string;
   money: string;
   officeBearers: string;
   unresolved: string;
@@ -86,6 +89,7 @@ export const LABELS: Record<MinutesLang, Labels> = {
     venue: "Tempat",
     purpose: "TUJUAN MESYUARAT",
     attendance: "KEHADIRAN",
+    attendanceCount: (n) => `Jumlah hadir: ${n} orang`,
     money: "KEWANGAN",
     officeBearers: "PEMEGANG JAWATAN",
     unresolved: "PERKARA BELUM MUKTAMAD",
@@ -111,6 +115,7 @@ export const LABELS: Record<MinutesLang, Labels> = {
     venue: "地点",
     purpose: "这次会议要谈什么",
     attendance: "出席",
+    attendanceCount: (n) => `出席人数：${n} 人`,
     money: "款项",
     officeBearers: "职位与人名",
     unresolved: "还没定下来的事",
@@ -137,6 +142,7 @@ export const LABELS: Record<MinutesLang, Labels> = {
     venue: "Venue",
     purpose: "WHAT THIS MEETING WAS ABOUT",
     attendance: "ATTENDANCE",
+    attendanceCount: (n) => `Total present: ${n}`,
     money: "AMOUNTS",
     officeBearers: "OFFICE BEARERS",
     unresolved: "STILL TO BE DECIDED",
