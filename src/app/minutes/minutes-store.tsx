@@ -15,6 +15,12 @@ import {
 import { useTriText } from "@/components/language-provider";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
 import {
+  isTooLargeToUpload,
+  shrinkPhotoForUpload,
+  tooLargeToUploadMessage,
+  uploadErrorMessage,
+} from "@/lib/shrink-photo";
+import {
   emptyMeetingNotesExtraction,
   type EventExtraction,
   type MeetingNotesExtraction,
@@ -533,15 +539,19 @@ export function MinutesProvider({
     setAiError(null);
     setAiBusy(true);
     try {
+      // 48: shrink in the browser first — a phone photo (3–8MB) dies on
+      // Vercel's ~4.5MB body cap with a text/plain 413 our code never sees.
+      const photo = await shrinkPhotoForUpload(file);
+      if (isTooLargeToUpload(photo.size)) throw new Error(tooLargeToUploadMessage());
       const form = new FormData();
-      form.append("photo", file);
+      form.append("photo", photo);
       // F-2: the supplement box travels WITH the photo, so the model reads
       // with the person's own knowledge (abbreviations, names, which date is
       // which). Sent only when something was typed.
       if (facts.notes.trim() !== "") form.append("context", facts.notes.trim());
       const res = await fetch("/api/extract-minutes", { method: "POST", body: form });
       const body = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(body?.error ?? joinUserError(USER_ERRORS.aiUnavailable));
+      if (!res.ok) throw new Error(uploadErrorMessage(res.status, body?.error));
       // AFTER the reading, not before: the response replaces the whole object,
       // so anything seeded beforehand would be silently thrown away. Doing it
       // here also makes the precedence explicit — on these three facts the

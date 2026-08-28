@@ -20,6 +20,12 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
+import {
+  isTooLargeToUpload,
+  shrinkPhotoForUpload,
+  tooLargeToUploadMessage,
+  uploadErrorMessage,
+} from "@/lib/shrink-photo";
 import { PageSection } from "@/components/page-section";
 import { VoiceButton } from "@/components/voice-input";
 import { Req } from "@/components/required-mark";
@@ -173,12 +179,19 @@ export function ExpensesView({ role }: { role: string }) {
     setFormError(null);
     setReading(true);
     try {
+      // 48: shrink in the browser first — a phone photo (3–8MB) dies on
+      // Vercel's ~4.5MB body cap with a text/plain 413 our code never sees.
+      const photo = await shrinkPhotoForUpload(file);
+      if (isTooLargeToUpload(photo.size)) {
+        setFormError(tooLargeToUploadMessage());
+        return;
+      }
       const form = new FormData();
-      form.append("photo", file);
+      form.append("photo", photo);
       const res = await fetch("/api/extract-expense", { method: "POST", body: form });
       const body = await res.json().catch(() => null);
       if (!res.ok) {
-        setFormError(body?.error ?? t("Tidak berjaya dibaca.", "读取失败。", "Could not read it."));
+        setFormError(uploadErrorMessage(res.status, body?.error));
         return;
       }
       const ex = body.extraction as ExpenseExtraction;

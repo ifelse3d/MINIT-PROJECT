@@ -11,6 +11,13 @@ import {
   type MemberActionState,
 } from "./actions";
 import { AttachIcon, ChooseFileLabel } from "@/components/attach-icon";
+import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
+import {
+  isTooLargeToUpload,
+  shrinkPhotoForUpload,
+  tooLargeToUploadMessage,
+  uploadErrorMessage,
+} from "@/lib/shrink-photo";
 
 /** #8 (launch feedback): a term-date box that formats ITSELF — type 20260101
  *  or 1/1/2026 and it becomes 2026-01-01 on blur. The dashes are our job. */
@@ -171,22 +178,43 @@ export function ImportCommittee() {
   const [text, setText] = useState("");
   const [aiBusy, setAiBusy] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  // 工作单 48 第二案: which road started the last AI read — the escape-hatch
+  // block under the paste form must stay on screen while ITS read runs, but
+  // must not pop up because the FILE road failed.
+  const [aiRoad, setAiRoad] = useState<"file" | "paste" | null>(null);
+  // ONE error line at a time. useActionState owns `state`, so a stale form
+  // refusal cannot be cleared imperatively — instead the state OBJECT that was
+  // on screen when an AI read started is remembered, and its error is no
+  // longer shown (the next form submit makes a new object, which shows again).
+  // The tester's screen had TWO stacked red boxes: an old "paste your list
+  // first" refusal plus the AI road's "…" — this is what prevents the repeat.
+  const [errorHiddenFor, setErrorHiddenFor] =
+    useState<MemberActionState | null>(null);
 
-  async function askMinitToRead(body: FormData) {
+  const formError = state === errorHiddenFor ? null : state.error;
+  // The AI error is always the newer of the two — it wins the single slot.
+  const shownError = aiError ?? formError;
+
+  async function askMinitToRead(body: FormData, road: "file" | "paste") {
+    setAiRoad(road);
     setAiBusy(true);
     setAiError(null);
+    setErrorHiddenFor(state);
     try {
       const res = await fetch("/api/import-roster", { method: "POST", body });
       const data = (await res.json().catch(() => null)) as
         | { text?: string; error?: string }
         | null;
       if (!res.ok || !data?.text) {
-        setAiError(data?.error ?? "…");
+        // Was `data?.error ?? "…"` — three literal dots was the whole message
+        // a tester got when the platform 413'd a big scan (工作单 48 第二案).
+        setAiError(uploadErrorMessage(res.status, data?.error));
         return;
       }
       setText(data.text);
     } catch {
-      setAiError("…");
+      // The fetch itself threw: nothing reached the server, nothing charged.
+      setAiError(joinUserError(USER_ERRORS.networkNoCharge));
     } finally {
       setAiBusy(false);
     }
@@ -194,9 +222,22 @@ export function ImportCommittee() {
 
   function readWithAi(file: File | undefined) {
     if (!file) return;
-    const body = new FormData();
-    body.append("file", file);
-    void askMinitToRead(body);
+    void (async () => {
+      // 48: shrink photos in the browser first — a phone photo (3–8MB) dies
+      // on Vercel's ~4.5MB body cap. A PDF cannot be shrunk: over the limit
+      // it gets the honest "too large, split it" sentence instead of a fetch
+      // that was doomed before it left.
+      const sent = await shrinkPhotoForUpload(file);
+      if (isTooLargeToUpload(sent.size)) {
+        setAiRoad("file");
+        setAiError(tooLargeToUploadMessage());
+        setErrorHiddenFor(state);
+        return;
+      }
+      const body = new FormData();
+      body.append("file", sent);
+      await askMinitToRead(body, "file");
+    })();
   }
 
   /**
@@ -213,7 +254,7 @@ export function ImportCommittee() {
   function readPastedWithAi() {
     const body = new FormData();
     body.append("text", text);
-    void askMinitToRead(body);
+    void askMinitToRead(body, "paste");
   }
 
   const choiceCls = (active: boolean) =>
@@ -348,9 +389,50 @@ Setiausaha, 林小美
                   en="MinitAI types what it sees into the box below. It saves nothing by itself — read it, fix it, then press Import."
                 />
               </p>
-              {aiError && <p className={errorCls}>{localizeError(aiError)}</p>}
             </div>
           )}
+
+          {/* THE error line — one slot, whichever road failed last. Two
+              independent red boxes stacking on one screen (the tester's
+              screenshot, 工作单 48 第二案) is the layout this replaces. */}
+          {shownError && <p className={errorCls}>{localizeError(shownError)}</p>}
+
+          {/* The way out of a refused paste, kept next to the refusal it
+              answers. Also shown while its own read runs, so the button's
+              busy label is the progress indicator. */}
+          {text.trim() !== "" &&
+            (formError !== null || (aiRoad === "paste" && (aiBusy || aiError !== null))) && (
+              <div className="flex flex-col gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={aiBusy}
+                  onClick={readPastedWithAi}
+                  className="self-start"
+                >
+                  {aiBusy ? (
+                    <Tri
+                      bm="MinitAI sedang membacanya…"
+                      zh="MinitAI 正在读…"
+                      en="MinitAI is reading it…"
+                    />
+                  ) : (
+                    <Tri
+                      bm="Tak difahami? Biar MinitAI yang baca · guna kuota AI"
+                      zh="看不懂？让 MinitAI 帮你读 · 会用 AI 用量"
+                      en="Not understood? Let MinitAI read it · uses the AI allowance"
+                    />
+                  )}
+                </Button>
+                <p className="text-sm text-muted-foreground">
+                  <Tri
+                    bm="MinitAI akan menaip semula apa yang difahaminya ke dalam kotak yang sama. Ia tidak menyimpan apa-apa — baca dahulu, betulkan, kemudian tekan “Import senarai”."
+                    zh="MinitAI 会把它读懂的内容重新打进下面同一个框。它不会自己保存 —— 您先看一遍、改好，再按「加进名单」。"
+                    en="MinitAI retypes what it makes out into the same box below. It saves nothing by itself — read it, fix it, then press “Import the list”."
+                  />
+                </p>
+              </div>
+            )}
 
           <form action={formAction} className="flex flex-col gap-3">
             <textarea
@@ -362,7 +444,10 @@ Setiausaha, 林小美
               className={inputCls}
             />
             <div className="flex flex-wrap items-center gap-3">
-              <Button type="submit" disabled={pending}>
+              {/* Clearing the AI error on submit keeps the one-error rule the
+                  other way round too: a new form refusal must not stack under
+                  an old AI failure. */}
+              <Button type="submit" disabled={pending} onClick={() => setAiError(null)}>
                 {pending ? (
                   <Tri bm="Mengimport…" zh="加入中…" en="Importing…" />
                 ) : (
@@ -398,47 +483,6 @@ Setiausaha, 林小美
               <p className="text-base font-medium text-green-700 dark:text-green-300">
                 ✓ <Tri bm="Senarai diimport" zh="名单加好了" en="The list was imported" />
               </p>
-            )}
-            {state.error && (
-              <div className="flex flex-col gap-2">
-                <p className={errorCls}>{localizeError(state.error)}</p>
-                {/* The escape hatch, at the only place it is any use. The price
-                    is on the button, not in a footnote: nobody should spend a
-                    credit without having read the word "credit" first. */}
-                {text.trim() !== "" && (
-                  <>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={aiBusy}
-                      onClick={readPastedWithAi}
-                      className="self-start"
-                    >
-                      {aiBusy ? (
-                        <Tri
-                          bm="MinitAI sedang membacanya…"
-                          zh="MinitAI 正在读…"
-                          en="MinitAI is reading it…"
-                        />
-                      ) : (
-                        <Tri
-                          bm="Tak difahami? Biar MinitAI yang baca · guna kuota AI"
-                          zh="看不懂？让 MinitAI 帮你读 · 会用 AI 用量"
-                          en="Not understood? Let MinitAI read it · uses the AI allowance"
-                        />
-                      )}
-                    </Button>
-                    <p className="text-sm text-muted-foreground">
-                      <Tri
-                        bm="MinitAI akan menaip semula apa yang difahaminya ke dalam kotak yang sama. Ia tidak menyimpan apa-apa — baca dahulu, betulkan, kemudian tekan “Import senarai”."
-                        zh="MinitAI 会把它读懂的内容重新打进上面同一个框。它不会自己保存 —— 您先看一遍、改好，再按「加进名单」。"
-                        en="MinitAI retypes what it makes out into the same box above. It saves nothing by itself — read it, fix it, then press “Import the list”."
-                      />
-                    </p>
-                  </>
-                )}
-                {aiError && <p className={errorCls}>{localizeError(aiError)}</p>}
-              </div>
             )}
           </form>
         </div>

@@ -38,7 +38,12 @@ import {
 import { usePersistentState, type PersistMeta } from "@/lib/use-persistent-state";
 import { useScopedKey } from "@/lib/storage-scope";
 import { todayIsoMalaysia } from "@/lib/history";
-import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
+import {
+  isTooLargeToUpload,
+  shrinkPhotoForUpload,
+  tooLargeToUploadMessage,
+  uploadErrorMessage,
+} from "@/lib/shrink-photo";
 import { consumeIntake } from "@/lib/intake-handoff";
 import { issueAndSaveReceipts } from "./actions";
 import {
@@ -429,11 +434,15 @@ export function RegisterProvider({
     setAiError(null);
     setAiBusy(true);
     try {
+      // 48: shrink in the browser first — a phone photo (3–8MB) dies on
+      // Vercel's ~4.5MB body cap with a text/plain 413 our code never sees.
+      const photo = await shrinkPhotoForUpload(file);
+      if (isTooLargeToUpload(photo.size)) throw new Error(tooLargeToUploadMessage());
       const form = new FormData();
-      form.append("photo", file);
+      form.append("photo", photo);
       const res = await fetch("/api/extract-ledger", { method: "POST", body: form });
       const body = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(body?.error ?? joinUserError(USER_ERRORS.aiUnavailable));
+      if (!res.ok) throw new Error(uploadErrorMessage(res.status, body?.error));
       const readRaw = body.extraction as LedgerExtraction;
       const fill = opts?.fillPurpose?.trim();
       const read = fill

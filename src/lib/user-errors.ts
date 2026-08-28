@@ -68,6 +68,31 @@ export const USER_ERRORS = {
     en: "This file is too large (over 8MB). Open the photo in your phone's album, crop it to just the part with writing, then choose it again. If your notes are long, take two separate photos.",
   },
 
+  /**
+   * 工作单 48 (2026-08-28): the TRANSPORT refuses the file — Vercel's platform
+   * caps request bodies at ~4.5MB, below our own 8MB promise, and answers with
+   * a text/plain 413 our code never sees. Shown by the client either BEFORE
+   * the fetch (pre-checked against 4MB in src/lib/shrink-photo.ts) or when a
+   * 413 came back without our JSON. Photos are auto-shrunk first, so a photo
+   * only reaches this message when even shrinking could not save it.
+   */
+  fileTooLargeForUpload: {
+    bm: "Fail ini terlalu besar untuk dihantar (lebih 4MB). Untuk gambar: ambil semula lebih dekat, tangkap bahagian yang ada tulisan sahaja. Untuk PDF: pecahkan kepada beberapa fail kecil dan hantar satu demi satu.",
+    zh: "这个文件太大，传不出去（超过 4MB）。照片：请靠近一点重拍，只拍有字的部分。PDF：请分成几份小的，一份一份地传。",
+    en: "This file is too big to send (over 4MB). For a photo: retake it closer, capturing only the part with writing. For a PDF: split it into smaller files and send them one at a time.",
+  },
+
+  /**
+   * The fetch itself threw — the request never left, or the line dropped
+   * before any answer. Nothing was charged, and saying so out loud matters:
+   * "did that cost me an action?" is the first question a treasurer asks.
+   */
+  networkNoCharge: {
+    bm: "Permintaan itu tidak sampai ke MinitAI — mungkin talian internet terputus seketika. Tiada apa-apa ditolak daripada kuota anda. Semak talian dan cuba sekali lagi.",
+    zh: "这次没有连上 MinitAI —— 可能是网络断了一下。您的用量一分都没有扣。请检查网络，再试一次。",
+    en: "The request never reached MinitAI — the internet connection may have dropped for a moment. Nothing was taken from your quota. Check the connection and try again.",
+  },
+
   nothingToRead: {
     bm: "Tiada apa-apa untuk dibaca. Taip atau tampal senarai acara ke dalam kotak, atau pilih satu fail.",
     zh: "没有内容可以读。请把活动清单打字或贴进框里，或者选一个文件。",

@@ -17,6 +17,11 @@ import { dayIsoMalaysia } from "@/lib/history";
 import { PaymentMethodToggle, type PaymentMethod } from "./payment-method-toggle";
 import { TemplateChips } from "./templates";
 import { uploadTransferProof } from "./transfer-proof-actions";
+import {
+  isTooLargeToUpload,
+  shrinkPhotoForUpload,
+  tooLargeToUploadMessage,
+} from "@/lib/shrink-photo";
 import { AttachIcon, ChooseFileLabel, UsesOneAiAction } from "@/components/attach-icon";
 
 // ---------------------------------------------------------------------------
@@ -142,9 +147,22 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
     if (method === "transfer" && proofFile) {
       setSaving(true);
       try {
+        // 48: shrink in the browser first. Server actions also ride the
+        // request body (bodySizeLimit in next.config.ts, under Vercel's
+        // ~4.5MB platform cap) — a full-size phone photo would die in
+        // transport before uploadTransferProof ever ran.
+        const proof = await shrinkPhotoForUpload(proofFile);
+        if (isTooLargeToUpload(proof.size)) {
+          setError(tooLargeToUploadMessage());
+          return;
+        }
         const form = new FormData();
-        form.append("proof", proofFile);
-        const result = await uploadTransferProof(form);
+        form.append("proof", proof);
+        // The action throws (rather than returning an outcome) when the
+        // transport refuses the body — same honest sentence, not a crash.
+        const result = await uploadTransferProof(form).catch(
+          () => ({ ok: false }) as const,
+        );
         if (!result.ok) {
           setError(
             t(

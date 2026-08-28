@@ -1,6 +1,11 @@
 "use client";
 
-import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
+import {
+  isTooLargeToUpload,
+  shrinkPhotoForUpload,
+  tooLargeToUploadMessage,
+  uploadErrorMessage,
+} from "@/lib/shrink-photo";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -97,10 +102,17 @@ export function EventsSection({ onAdd }: { onAdd: (ev: SimpleEvent) => void }) {
     try {
       const form = new FormData();
       if (pasteText.trim()) form.append("text", pasteText);
-      if (file) form.append("file", file);
+      if (file) {
+        // 48: shrink photos in the browser first — a phone photo (3–8MB) dies
+        // on Vercel's ~4.5MB body cap with a text/plain 413 our code never
+        // sees. Non-images (xlsx/csv/txt) pass through untouched.
+        const sent = await shrinkPhotoForUpload(file);
+        if (isTooLargeToUpload(sent.size)) throw new Error(tooLargeToUploadMessage());
+        form.append("file", sent);
+      }
       const res = await fetch("/api/extract-events", { method: "POST", body: form });
       const body = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(body?.error ?? joinUserError(USER_ERRORS.aiUnavailable));
+      if (!res.ok) throw new Error(uploadErrorMessage(res.status, body?.error));
       setProposed((body.events as EventExtraction[]).map(toRow));
     } catch (e) {
       setAiError(e instanceof Error ? e.message : String(e));

@@ -5,6 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
+import {
+  isTooLargeToUpload,
+  shrinkPhotoForUpload,
+  tooLargeToUploadMessage,
+  uploadErrorMessage,
+} from "@/lib/shrink-photo";
 import { writeIntake } from "@/lib/intake-handoff";
 import { createOrg, type OrgActionState } from "./actions";
 
@@ -116,17 +122,31 @@ export function CreateOrgForm({
     void (async () => {
       setReading(true);
       try {
+        // 48: shrink photos in the browser first — a phone photo (3–8MB) dies
+        // on Vercel's ~4.5MB body cap with a text/plain 413 our code never
+        // sees. PDFs pass through and hit the same honest pre-check instead.
+        const sent = await shrinkPhotoForUpload(file);
+        if (isTooLargeToUpload(sent.size)) {
+          setReadFailed(tooLargeToUploadMessage());
+          return;
+        }
         const body = new FormData();
-        body.append("photo", file);
+        body.append("photo", sent);
         const res = await fetch("/api/extract-constitution", {
           method: "POST",
           body,
         });
-        const json = (await res.json()) as {
+        // .json() without a catch used to send a platform 413 (text/plain)
+        // into the "internet dropped" branch below — a wrong diagnosis.
+        const json = (await res.json().catch(() => null)) as {
           extraction?: unknown;
           error?: string;
-        };
-        if (!res.ok || !json.extraction) {
+        } | null;
+        if (!res.ok || !json?.extraction) {
+          if (json === null) {
+            setReadFailed(uploadErrorMessage(res.status, null));
+            return;
+          }
           // The organisation IS created — only the reading failed. Say so and
           // let the person decide, instead of navigating away from the reason.
           // The quota is refunded by the route when the vendor never answered.

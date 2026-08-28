@@ -30,6 +30,11 @@ import { ArrowUp, RotateCcw, X } from "lucide-react";
 import { AttachIcon, ChooseFileLabel } from "@/components/attach-icon";
 import { Button } from "@/components/ui/button";
 import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
+import {
+  isTooLargeToUpload,
+  shrinkPhotoForUpload,
+  tooLargeToUploadMessage,
+} from "@/lib/shrink-photo";
 import { VoiceButton } from "@/components/voice-input";
 import { writeIntake, type IntakeKind } from "@/lib/intake-handoff";
 import { compressPhoto } from "@/app/minutes/minutes-storage";
@@ -243,19 +248,33 @@ export function AskBox({
     setBusy("file");
     setReading(file.name);
     try {
+      // 48: shrink photos in the browser first — a phone photo (3–8MB) dies
+      // on Vercel's ~4.5MB body cap with a text/plain 413 our code never
+      // sees. Non-images (PDF/docx/xlsx) pass through and hit the same
+      // honest pre-check instead.
+      const sent = await shrinkPhotoForUpload(file);
+      if (isTooLargeToUpload(sent.size)) {
+        setError(tooLargeToUploadMessage());
+        return;
+      }
       const form = new FormData();
-      form.append("file", file);
+      form.append("file", sent);
       if (context.trim() !== "") form.append("context", context.trim());
       if (forcedKind) form.append("kind", forcedKind);
       const res = await fetch("/api/intake", { method: "POST", body: form });
       // P-1 (the "connection dropped" incident): the old code read ANY failure
       // here as a dropped connection — including the server being killed
       // mid-read, which is precisely when the quota may have been eaten with
-      // nothing to show. If a response arrived but is unreadable, say THAT.
+      // nothing to show. If a response arrived but is unreadable, say THAT —
+      // except a 413, which is the transport refusing the file (工作单 48).
       let body: IntakeOk;
       try {
         body = (await res.json()) as IntakeOk;
       } catch {
+        if (res.status === 413) {
+          setError(tooLargeToUploadMessage());
+          return;
+        }
         setError(
           t(
             "Pelayan tidak membalas semasa membaca fail itu. Ini bukan salah anda. Tunggu seminit, lihat baki kuota AI anda, kemudian cuba sekali lagi.",

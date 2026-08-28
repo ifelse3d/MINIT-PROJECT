@@ -33,6 +33,12 @@ import { NewOrgBanner } from "./new-org-banner";
 import { OrgIdentityPanel } from "./org-identity-panel";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
 import {
+  isTooLargeToUpload,
+  shrinkPhotoForUpload,
+  tooLargeToUploadMessage,
+  uploadErrorMessage,
+} from "@/lib/shrink-photo";
+import {
   sampleClauses,
   sampleConstitutionTitle,
   sampleQuestions,
@@ -313,15 +319,19 @@ export function ConstitutionReview({
     setAiError(null);
     setAiBusy(true);
     try {
+      // 48: shrink in the browser first — a phone photo (3–8MB) dies on
+      // Vercel's ~4.5MB body cap with a text/plain 413 our code never sees.
+      const photo = await shrinkPhotoForUpload(file);
+      if (isTooLargeToUpload(photo.size)) throw new Error(tooLargeToUploadMessage());
       const form = new FormData();
-      form.append("photo", file);
+      form.append("photo", photo);
       const res = await fetch("/api/extract-constitution", {
         method: "POST",
         body: form,
       });
       const body = await res.json().catch(() => null);
       if (!res.ok) {
-        throw new Error(body?.error ?? joinUserError(USER_ERRORS.aiUnavailable));
+        throw new Error(uploadErrorMessage(res.status, body?.error));
       }
       const extraction = body.extraction as ConstitutionExtraction;
       const read = clausesFromExtraction(extraction);
