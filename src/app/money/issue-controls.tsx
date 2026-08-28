@@ -73,7 +73,7 @@ export function IssueControls({
           role="dialog"
           aria-modal="true"
         >
-          <div className="flex w-full max-w-md flex-col gap-3 rounded-md border bg-background p-5 shadow-xl">
+          <div className="flex max-h-full w-full max-w-md flex-col gap-3 overflow-y-auto rounded-md border bg-background p-5 shadow-xl">
             <p className="text-lg font-semibold">
               <Tri
                 bm={`Jana resit untuk ${count} derma?`}
@@ -160,7 +160,7 @@ export function IssueControls({
           role="dialog"
           aria-modal="true"
         >
-          <div className="flex w-full max-w-lg flex-col gap-3 rounded-md border bg-background p-5 shadow-xl">
+          <div className="flex max-h-full w-full max-w-lg flex-col gap-3 overflow-y-auto rounded-md border bg-background p-5 shadow-xl">
             <p className="text-lg font-semibold">
               <Tri
                 bm="Sebelum resit pertama: pilih huruf resit anda"

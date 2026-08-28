@@ -133,19 +133,13 @@ export function AppShell({
           />
         )}
 
-        {/* One animated offset: the wrapper follows --rail-w (§3.1). The
-            docked assistant takes real width off the right; hand it over so
-            no card hides behind it. */}
-        <div
-          className={cn(
-            "rail-anim",
-            !inSettings && "lg:ml-[var(--rail-w)]",
-            dock.dragging ? "" : "transition-[padding] duration-300 ease-out",
-          )}
-          style={{ paddingRight: dock.push || undefined }}
-        >
+        {/* One animated offset: the wrapper follows --rail-w (§3.1). */}
+        <div className={cn("rail-anim", !inSettings && "lg:ml-[var(--rail-w)]")}>
           {/* §5.2: the bar is the first child of the offset wrapper — sticky,
-              full width of the content column. */}
+              full width of the content column. The docked assistant pushes
+              only the CONTENT below (the inner div): the bar keeps the whole
+              column and the dock opens under its bottom edge (46 §0-2, J's
+              red pen — the panel must never cover Home/search/EN/moon/avatar). */}
           <TopBar pathname={pathname ?? "/"} onOpenDrawer={() => setDrawerOpen(true)} />
           {/* F-1 (2026-08-25): the shell is the widest bound (7xl); each
               page's own container decides its real width.
@@ -155,9 +149,14 @@ export function AppShell({
               a 14" laptop with the assistant open showed FOUR card columns
               in phone-width space. Width-sensitive grids below use
               container variants (@md:/@3xl:/…), which measure THIS column. */}
-          <main className="@container mx-auto w-full max-w-7xl px-4 pb-24 pt-4 sm:px-6 md:pb-10 md:pt-6">
-            {children}
-          </main>
+          <div
+            className={cn(dock.dragging ? "" : "transition-[padding] duration-300 ease-out")}
+            style={{ paddingRight: dock.push || undefined }}
+          >
+            <main className="@container mx-auto w-full max-w-7xl px-4 pb-24 pt-4 sm:px-6 md:pb-10 md:pt-6">
+              {children}
+            </main>
+          </div>
         </div>
 
         {/* Phone tab bar — the same four entries as ever (拍板④). */}

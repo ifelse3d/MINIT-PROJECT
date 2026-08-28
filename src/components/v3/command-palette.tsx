@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { Tri, useTriText } from "@/components/language-provider";
@@ -75,7 +76,11 @@ export function CommandPalette({
     onClose();
   };
 
-  return (
+  // Portalled to <body>: this palette lives inside the glass top bar, whose
+  // backdrop-filter makes it the containing block for fixed descendants —
+  // without the portal, `inset-0` measures the 56px bar, not the window
+  // (same trap as modal.tsx; J's screenshot, work order 46 §0-1).
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-start justify-center bg-[rgba(21,18,31,0.45)] p-4 pt-[12vh]"
       onClick={onClose}
@@ -170,6 +175,7 @@ export function CommandPalette({
           )}
         </ul>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

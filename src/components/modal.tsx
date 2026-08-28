@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Tri } from "@/components/language-provider";
 
@@ -46,7 +47,13 @@ export function Modal({
   }, [open, onClose]);
 
   if (!open) return null;
-  return (
+  // Portalled to <body>: a dialog opened from inside the glass top bar used
+  // to inherit the bar's backdrop-filter as its containing block (the CSS
+  // filter/backdrop-filter rule), so `fixed inset-0` meant "the 56px bar",
+  // and the card rendered at the window top with its head cut off (J's
+  // screenshot, work order 46 §0-1). From <body> the viewport is the
+  // viewport again, whatever ancestor the caller sits in.
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(21,18,31,0.45)] p-4 backdrop-blur-[2px] sm:items-center"
       onClick={onClose}
@@ -57,14 +64,15 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={labelledBy}
         tabIndex={-1}
-        className={`max-h-[90vh] w-full overflow-y-auto rounded-lg border border-[color:var(--v2-border)] bg-[color:var(--v2-card-raised)] p-6 shadow-[var(--v2-shadow-lg)] outline-none ${
+        className={`max-h-full w-full overflow-y-auto rounded-lg border border-[color:var(--v2-border)] bg-[color:var(--v2-card-raised)] p-6 shadow-[var(--v2-shadow-lg)] outline-none ${
           wide ? "max-w-2xl" : "max-w-[420px]"
         }`}
         onClick={(e) => e.stopPropagation()}
       >
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

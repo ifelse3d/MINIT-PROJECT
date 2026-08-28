@@ -219,9 +219,12 @@ export function AIDock({
               exit={{ x: 32, opacity: 0 }}
               transition={{ type: "spring", stiffness: 320, damping: 34 }}
               // NO backdrop element at all: the page behind stays clickable,
-              // scrollable and un-dimmed. Below the sidebar's z-index would be
-              // wrong (the rail must sit above page cards), so z-40 it is.
-              className="fixed inset-y-0 right-0 z-40 py-4 pl-3 pr-4"
+              // scrollable and un-dimmed. z-30 keeps it above page cards but
+              // UNDER the sticky top bar (z-40); top-14 = the bar's h-14, so
+              // the rail opens from the bar's bottom edge and never covers
+              // Home/search/EN/moon/avatar (46 §0-2, J's red pen). Both are
+              // rem so the user's text-size setting scales them together.
+              className="fixed bottom-0 right-0 top-14 z-30 pb-4 pl-3 pr-4 pt-3"
               style={{ width }}
             >
               {/* Drag the left gutter to resize; arrow keys work too. */}
@@ -244,7 +247,7 @@ export function AIDock({
                     nudgeWidth(-24);
                   }
                 }}
-                className="group absolute inset-y-4 left-0 z-10 flex w-3 cursor-col-resize items-center justify-center focus:outline-none"
+                className="group absolute bottom-4 left-0 top-3 z-10 flex w-3 cursor-col-resize items-center justify-center focus:outline-none"
               >
                 <span
                   className={
@@ -281,7 +284,10 @@ export function AIDock({
                 transition={{ type: "spring", stiffness: 320, damping: 32 }}
                 className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-md p-3"
               >
-                <div className="h-[80vh]">
+                {/* 80vh, but never up into the top bar: on a short phone
+                    viewport the sheet stops 3.5rem (the bar) + a breath
+                    below the top (46 §0-2 — same rule on mobile). */}
+                <div className="h-[80vh] max-h-[calc(100dvh-4.5rem)]">
                   <AIPanel
                     initialRemaining={initialRemaining}
                     initialUsedPct={initialUsedPct}
