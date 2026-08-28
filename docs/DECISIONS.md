@@ -676,6 +676,65 @@ draft-minutes 的 plan schema：`source` 可為索引**陣列**——十三行�
 ⚠ 真實 vendor 行為未驗證——規則在 prompt＋schema＋三道檢查裡，J 下次用真額度
 按「讓 MinitAI 寫成正式記錄」即是首次實測。
 
+### D38 — 圓角只剩五個值，而且整條尺度往上挪一階（2026-08-28，美術三包 01）
+
+`--v2-r-xs/sm/md/lg/pill = 6/8/12/16/999`，寫在 `:root`，`@theme` 的
+`--radius-*` 全部改成 `var()` 查表——**全 app 沒有一個元件自己寫圓角數字**。
+
+🔴 **Tailwind 的階名意義整體上移一階**（`rounded-md` 從 8px 變 12px）。
+理由是這個 repo 本來就是這樣用的：按鈕掛 `rounded-sm`、卡片和面板掛
+`rounded-md`、彈窗和登入卡掛 `rounded-lg`。挪尺度＝每一族剛好落在該落的值，
+**不必動 340 個呼叫點**。卡片 12px 是錨，其他都對著它判斷。
+
+輸入框例外，用一條不分層的元素選擇器釘在 8px：這個 repo 的輸入框和卡片共用
+`rounded-md`，要分開就得逐一分類 340 處，而且下一個新輸入框還是會寫錯。
+巢狀規則 `inner = outer − padding`（12px 卡片配 1rem padding → 8px 輸入框）。
+另外兩個宣告過的例外：checkbox 4px、3px 導覽指示條。
+⚠️ radio **不**在 4px 那條裡——圓形是普世慣例，方掉會看成 checkbox。
+
+順手修掉的既有錯：`.v2-pill` 是不分層 CSS，它的 border-radius 一直壓過
+`rounded-full`，所以 J 8/27 指定「圓形」的浮動 AI 按鈕其實一直是圓角方塊；
+tab 的圓角比裝著它的 tab list 還大（12 vs 8）。
+
+### D39 — 畫布漸層一直有畫，只是被蓋住：透明的是 body 和 .v2-root，底色在 html（2026-08-28，美術三包 02）
+
+`--v2-page-grad` 早就定義好、`.v2-root::before` 也早就在畫，但它是
+`z-index:-1`。CSS 2.1 附錄 E 的繪製順序：**負 z-index 子層（第 2 步）比
+in-flow 區塊背景（第 3 步）先畫**。所以 `body { bg-background }` 和
+`.v2-root { background: var(--v2-page) }` 兩層都蓋在漸層上面。
+
+定案：`--v2-page` / `--v2-page-grad` 搬到 `:root`／`.dark`（`<html>` 讀得到），
+`html` 拿平色當底、`body` 與 `.v2-root` 都 `transparent`。
+🔴 **不要把任何一個改回不透明**，改一個漸層就再消失一次。
+平色留著是真的後路：`prefers-reduced-transparency`、強制色彩、殼外的路由。
+
+### D40 — 首頁四張卡：四個顏色只准碰三樣東西；狀態行分「讀不到／是零／有數字」三種（2026-08-28，美術三包 02+03）
+
+卡片從 2px 近黑外框改成 1px `--v2-border` ＋ 陰影 ＋ 12px 圓角 ＋ 頂上 4px 色帶
+＋ 圖示磚 ＋ hover 抬 3px 滑出箭頭。Emoji 全刪——📝📋📊✨ 由作業系統畫，
+產品的第一個畫面在 Windows／Android／iOS 看起來像三個不同產品；改用專案本來
+就有的 lucide 線條圖示。
+
+**`--c` 只准出現在三個地方**：4px 色帶、圖示磚（底色＋字符）、7px 圓點。
+邊框、卡底、標題、說明、狀態文字一律 `--v2-border` / `--v2-card` / `--v2-text`
+/ `--v2-text-soft`，否則四個色就變成四套主題。圓點是裝飾，語意由旁邊的字扛，
+色盲讀者不會少任何資訊。淺色四個色都是深色，深色模式另給四個亮版（不是
+color-mix 推導，舊 Android WebView 也要一樣）。
+
+🔴 **狀態行的三態規則**（`src/lib/home-card-lines.ts`，13 支測試釘住）：
+`null` 讀不到 → **整行不畫**（不是 0、不是橫槓、不是轉圈）；
+`0` 讀得到而且真的沒有 → 寫成邀請（「還沒有會議記錄 —— 拍一張筆記就開始」）；
+`n` → 數字。剛成立的社團和壞掉的查詢，只看 falsy 是一模一樣的；把「你沒有記錄」
+講給查詢失敗的人聽，是合規工具最不該犯的錯。同理 `moneyRecords` 是
+`{ latestMonth } | null` 的雙層 null——外層 null＝讀不到，內層 null＝真的沒有。
+
+登入頁同場：白色線稿 M 換成真正的 app icon（`BrandLogo` 的磚塊版，本來就有向量），
+直接放在漸層上、不加白底不加外框。分離靠 `filter: drop-shadow()`
+**不是 box-shadow**——PNG／SVG 磚塊外面是透明的，box-shadow 會畫出一個方形陰影，
+圓角就爛了。陰影是深紫 `rgba(35,12,74,.16)` 不是黑（黑色會把下面的紫去飽和，
+看起來像髒污），單層 16%：要更分離就加模糊半徑，永遠不要加黑。
+品牌字級大於「歡迎回來」——登入頁的人已經知道自己被歡迎，要確認的是站對了產品。
+
 ---
 
-*Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C) · D16 appended 2026-08-25 (Stage D) · D17 appended 2026-08-27 (work order 27, the overnight sprint) · D18–D21 appended 2026-08-27 (work order 31 §0, J's post-launch rulings) · D22–D23 appended 2026-08-27 (work order 32 §0, launch-day feedback rulings) · D24–D25 appended 2026-08-27 (the afternoon rulings: violet redesign + BM guard) · D26–D28 appended 2026-08-27 (the launch-evening 20-point list) · D29–D32 appended 2026-08-28 (the two-review session: prompt unfreeze, attendance gate, funds page, record-to-DB) · D33–D35 appended 2026-08-28 (J's §6 answers + the new seven: PdpaNote deleted, per-part AI discussion, minutes named/printable/editable/photo-linked) · D36–D37 appended 2026-08-28 evening (the eight-item round: save lands on the finished document, saved workspaces clear themselves, AI may merge like items under checkMergedFacts)*
+*Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C) · D16 appended 2026-08-25 (Stage D) · D17 appended 2026-08-27 (work order 27, the overnight sprint) · D18–D21 appended 2026-08-27 (work order 31 §0, J's post-launch rulings) · D22–D23 appended 2026-08-27 (work order 32 §0, launch-day feedback rulings) · D24–D25 appended 2026-08-27 (the afternoon rulings: violet redesign + BM guard) · D26–D28 appended 2026-08-27 (the launch-evening 20-point list) · D29–D32 appended 2026-08-28 (the two-review session: prompt unfreeze, attendance gate, funds page, record-to-DB) · D33–D35 appended 2026-08-28 (J's §6 answers + the new seven: PdpaNote deleted, per-part AI discussion, minutes named/printable/editable/photo-linked) · D36–D37 appended 2026-08-28 evening (the eight-item round: save lands on the finished document, saved workspaces clear themselves, AI may merge like items under checkMergedFacts) · D38–D40 appended 2026-08-28 (the design pass: one five-step radius scale shifted a notch, the canvas gradient that was being painted and covered, the four rebuilt home cards and the sign-in brand panel)*

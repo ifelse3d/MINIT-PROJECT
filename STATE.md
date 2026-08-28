@@ -5,70 +5,77 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-28 晚（MYT）· Fable 5（J 晚间八条全做＋一道门照片连结）**
-**🔴 本场：J 的八条——①存好的工作区自清（BUG 连根拔）②历史每份可点开
-③签名线加宽（PDF 画实线，旧文件也修）④AI 撰写学会「合并同类项」（三道算术
-守门）＋预览双编号修掉 ⑤编辑框旁「看原稿照片」缩放弹窗 ⑥⑦保存直接落在
-成品页 /minutes/history/<id>（打印/修改/照片全在）⑧/filings 对不可登记
-类型先讲结论。另补：一道门照片连进保存记录。
-J 照 39 号报告 §5：push（5 支）→ Ctrl+Shift+R。本轮无新 migration。**
+**最后更新：2026-08-28（MYT）· Opus 5（J 给的美术三包：圆角尺度 / 首页背景＋四张卡 / 登入页）**
+**🔴 本场只动外观，没动功能、路由或文案。① 圆角收成五个具名 token（6/8/12/16/999）
+且整条尺度上移一阶——顺手修好「一直是圆角方块」的浮动 AI 按钮；② 画布渐层其实
+一直有画、被两层不透明底色盖住——底色移到 <html>，body 与 .v2-root 全透明；
+③ 首页四张卡重做（色带／图示砖／hover 抬起／一行真数据），emoji 全删；
+④ 登入页换真 app icon（drop-shadow 不是 box-shadow）、品牌字大于「欢迎回来」。
+J 照 40 号报告：push（4 支）→ Ctrl+Shift+R。本轮无新 migration。**
 
 ---
 
-## 🌙 现在在哪里（2026-08-28 晚，八条场收工）
+## 🌙 现在在哪里（2026-08-28，美术三包收工）
 
-> **已上线**：https://minit-project.vercel.app —— 38 号那 10 支 J 已 push（线上
-> 已见命名/修改留痕 → migration 30 已套用）；本机再领先 **5 支未 push**。
+> **已上线**：https://minit-project.vercel.app —— 39 号那 5 支 **J 已 push**
+> （origin/main 已同步）。本机现在领先 **4 支未 push**（本场的美术改动）。
 > push 是 J 的事（push-cabang.bat）。线上 org：15「J」、58「avocado」、91「TESTING1」。
 
-### 这一场做了什么（39 号报告逐条对照）
+### 这一场做了什么（J 给的三个 zip；40 号报告逐条对照）
 
-- **D36 保存即成品页；已存档工作区即弃**（J 八条 #1/#2/#6/#7）：
-  ① 保存成功 → router.push 到新页 `/minutes/history/<id>`（成品预览＋🖨打印/PDF
-  ＋照片＋✏️修改＋两条出路）；saveConfirmedMinutes 回传 row id（幂等路也回）。
-  ② 历史列表：名字＝链接（点开成品页），「打开 →」并排。
-  ③ minutes-store 还原逻辑：blob 带 savedToHistory → 清 localStorage、不还原；
-  notes-review 挂载时 alreadySaved → backToEmpty()。「上一场已存好」卡删除。
-  未保存的工作区照旧保留。
-- **D37 AI 撰写合并同类项**（J 八条 #4）：plan 的 `source` 可为数组；
-  checkCoverage 展开计数；checkNames 合并行对「任一来源」；新 **checkMergedFacts**
-  （所有语言）：合并行须含每个来源的 ≥2 字中文词＋所有数字（行首序号与单字
-  量词可去），违者进 repair.dropped 重写一次。prompt 加 MERGING LIKE ITEMS
-  节（含十大观音 worked example）。快速预览：自带编号的行照印（双编号修掉）。
-  ⚠ 真 vendor 行为未验证——等 J 按一次「让 MinitAI 写成正式记录」。
-- **签名块**（J 八条 #3）：compose 的签名线 SIGNATURE_LINE=40 底线；
-  minutes-pdf 把「纯底线行」画成 ~280pt 实线＋上方留 22pt 签名空间——
-  旧文件打印同样受益（打印时画，不改存文）。
-- **照片弹窗**（J 八条 #5）：page-thumbs.tsx 抽出 PhotoLightbox（＋/− 至 4×、
-  上一张/下一张、滚动平移）；/minutes/document 编辑框右上「📷 看原稿照片」
-  按钮（不离开编辑）；历史页/成品页缩图走 HistoryPhotoStrip（同一弹窗）。
-  钱区共用的 PageThumbs 自动升级（e2e:money 全过）。
-- **/filings**（J 八条 #8，猜的具体怪点）：选中 eROSES 下拉没有的类型时，
-  第 2 步开头即「✅ 这场不用登记」，逐栏值收进 details 折叠；第 1 步给
-  agm/egm/committee 挂「可登记进 eROSES」badge。若 J 还觉得怪，请他圈。
-- **一道门照片连结**（38 号未完项）：/api/intake 回传 recordUpload 的
-  storagePath；ask-box 写进 intake parcel（外加 compressPhoto 预览图）；
-  minutes-store 还原时 seed photoPages → 保存时进 photo_paths。
-  ⚠ 全链路要真上传（2 action）才能验，未烧。
+- **D38 圆角只剩五个值，整条尺度上移一阶**：`--v2-r-xs/sm/md/lg/pill = 6/8/12/16/999`
+  写在 `:root`，`@theme` 的 `--radius-*` 全改成 `var()` 查表——**全 app 没有一个
+  元件自己写圆角数字**。Tailwind 阶名意义整体上移（`rounded-md` 8→12），因为这个
+  repo 本来就是「按钮 sm / 卡片 md / 弹窗 lg」在用，挪尺度＝每族刚好落位，
+  **不必动 340 个呼叫点**。输入框用一条不分层元素选择器钉在 8px（巢状规则
+  inner = outer − padding）。checkbox 4px 例外；radio 故意不在里面（圆形是惯例）。
+  顺手修掉两个既有错：`.v2-pill` 的 border-radius 一直压过 `rounded-full`，所以
+  J 8/27 指定「圆形」的浮动 AI 按钮其实一直是圆角方块；tab 的圆角比装它的
+  tab list 还大（12 vs 8）。badge→xs、ai-panel 的 `rounded-[28px]`→md、
+  password-input 的 `rounded-r-[14px]`→sm，src 里已无任何 off-scale 圆角。
+- **D39 画布渐层一直有画，只是被盖住**：`.v2-root::before` 是 `z-index:-1`，
+  而负 z-index 子层（附录 E 第 2 步）比 in-flow 区块背景（第 3 步）**先**画，
+  所以 `body{bg-background}` 和 `.v2-root{background:--v2-page}` **两层**都盖在
+  上面（包里只猜到一层）。定案：`--v2-page`/`--v2-page-grad` 搬到 `:root`/`.dark`，
+  `html` 拿平色当底，`body` 与 `.v2-root` 都 transparent。实测 body/root 皆
+  `rgba(0,0,0,0)`、渐层层在画。
+- **D40 首页四张卡重做**：2px 近黑框 → 1px 淡框＋阴影＋12px 圆角＋顶上 4px 色带
+  ＋图示砖＋hover 抬 3px 滑出箭头。**📝📋📊✨ 四个 emoji 全删**（OS 画的，同一个
+  首页在三个平台像三个产品），改用专案本来就有的 lucide 线条图示。`--c` 只准碰
+  色带／图示砖／圆点三处，边框卡底文字一律照旧 token。深色另给四个亮版（不是
+  color-mix 推导，旧 Android WebView 也要一样）。
+  新增 `src/lib/home-stats.ts`（server：草稿数／本月进账／最新记录月／AI 余额，
+  每支各自 catch，读不到＝null）＋ `src/lib/home-card-lines.ts`（纯函式，13 支测试）。
+  🔴 **三态规则**：null 读不到→整行不画；0 读得到且真没有→写成邀请；n→数字。
+  `moneyRecords` 是双层 null（外层＝读不到，内层＝真的没有），因为「你没有记录」
+  是一句断言，不能靠一次失败的查询讲出口。
+- **登入页**（同 D40 尾段）：白色线稿 M → 真正的 app icon（`BrandLogo` 砖块版，
+  本来就有向量），直接放渐层上、无白底无外框；分离靠 `filter: drop-shadow()`
+  **不是 box-shadow**（砖块外面透明，box-shadow 会画出方形阴影）；阴影是深紫
+  `rgba(35,12,74,.16)` 单层，要更分离就加模糊不加黑。品牌字级 > 「欢迎回来」；
+  加装饰环；左下那条「指着空气」的线下面补上小 wordmark；电邮／密码栏加前置
+  图示；「忘记密码？」黑底线 → 紫色。<md 收成顶部横幅（环与多余文字自动收起）。
 
 ### 现场量到的（不是听说的）
 
-- 四道关：`tsc` 0 · `eslint` 基准逐字同（仅行号位移，git stash 对照过）·
-  `vitest` **863 全过（+8：merged coverage/names/mergedFacts 6、签名 1、
-  预览编号 1）** · `build` ✓（新路由 /minutes/history/[id] 在案）。
-- **e2e:minutes 全过、page errors 0**（真 DB）：「save lands on the finished
-  document's page with Print/PDF」「workspace is clean after a save」都是新增
-  断言实测；S0-3 单行存储照旧。**e2e:money 19/19、page errors 0**。
-- 截图人眼看过 → `eval/reports/shots-20260828e/`（成品页、清空工作区、
-  历史列表、filings 活动会议、7-signature-eyeball.pdf 签名实线）。
-- ⚠ 没能验证的：真 vendor 的合并写作；intake 照片真上传链路；线上部署。
+- 四道关：`tsc` 0 · `eslint` **跟基准逐字相同**（把改动 git stash 起来跑基准对照，
+  diff 空）· `vitest` **876 全过（+13：home-card-lines 三态／复数／三语）** · `build` ✓
+- **e2e:minutes 全过、e2e:money 全过，page errors 0**（真 DB）。
+- 截图脚本 `scripts/shots-design-20260828.mjs`（建测试帐号→塞 3 份草稿＋2 笔捐款
+  →各页截图→全删）；图在 `eval/reports/shots-design-20260828/`，人眼看过：
+  桌机／手机／深色／全新社团空状态／hover 都对。
+- 浏览器实测数值（非目测）：token = 6/8/12/16/999；`.home-card` 圆角 `12px`、
+  边框 `1px solid rgb(226,222,236)`；`body`/`.v2-root` 背景皆透明；
+  四行状态字真有数据（3 份草稿／RM8,450.00／2026-08／15 of 15）。
+- ⚠ 没能验证的：线上部署后的实机观感（等 J push）；真 vendor 的合并写作（D37 旧项）。
 
-### 🔴 J 的事（写在 39 号报告 §5/§6）
+### 🔴 J 的事（写在 40 号报告 §4）
 
-1. **push-cabang.bat**（本机领先 **5 支**）→ 线上 Ctrl+Shift+R。本轮无新 migration
-   （migration 29 若还没贴，钱区那条照 38 号报告；30 线上已见生效）。
-2. 回答 39 号 §6：①用真额度试一次 AI 撰写（看合并效果）；②申报页再看，还怪就圈；
-   ③老欠的「不专业」实例。
+1. **push-cabang.bat**（本机领先 **4 支**）→ 线上 Ctrl+Shift+R。**本轮无新 migration。**
+2. 看三个地方：登入页、首页（背景＋四张卡＋底下那行字）、随便一页的卡片圆角。
+3. 40 号 §3 有三个等你一句话的小事：重设密码页的小 logo 要不要一起换成砖块版；
+   四张卡的颜色会不会太花（要改回全紫是一分钟）；旧的 39 号 §6 三问仍未答
+   （真额度试 AI 撰写／申报页再看／「不专业」实例）。
    ⚠ **8/31 23:59 竞赛截止（内部 cutoff 18:00）**；one-pager 的 [YOU] 两处还空着。
 
 ### ❓ 未决问题
@@ -81,20 +88,42 @@ J 照 39 号报告 §5：push（5 支）→ Ctrl+Shift+R。本轮无新 migratio
 6. /privacy 法律文的「不用於訓練」句去不去 —— 法律文要人审，J 一句话
 7. 竞赛首页主图重拍（拍板 0-9）—— 等 push 完用真机构画面拍
 8. 配套定价（管理台毛利卡等它）—— 先量成本；bench/真用量之后
-9. #10 全站按钮统一的长尾扫尾（大头已消；本场八条优先，仍排队）
+9. #10 全站按钮统一的长尾扫尾（大头已消；仍排队）
 10. 真 vendor 的合并写作效果（D37）—— 等 J 一次真额度实测
-11. （旧，小）MyInvois 官方模板逐栏对齐（B-7 后半）等 J 给原档
-12. （旧，小）check-ai.bat 还 cd 到旧资料夹 C:\dev\minit——改天一行修
+11. 重设密码页的 32px logo 还是白色线稿版（40 号 §3.1，等 J 一句话）
+12. （旧，小）MyInvois 官方模板逐栏对齐（B-7 后半）等 J 给原档
+13. （旧，小）check-ai.bat 还 cd 到旧资料夹 C:\dev\minit——改天一行修
 
 ### ⏭ 下一个 session 从哪开始
 
-**J 验收 39 号报告（push、试 AI 撰写、申报页再看）→ 翻案开小场修；否则：
-①#10 按钮长尾、②8/31 前的竞赛素材（首页主图、one-pager [YOU]）、
-③31 号单场次 5（J 在场：D-8 正式版式、B-7 MyInvois、G-3 bench、真手写照片）。**
+**J 说的「大的等下才一起讨论」——等他开口。在那之前：
+①J 验收本场美术（push、三个地方看一遍）→ 翻案开小场修；
+②#10 按钮长尾、③8/31 前的竞赛素材（首页主图、one-pager [YOU]）、
+④31 号单场次 5（J 在场：D-8 正式版式、B-7 MyInvois、G-3 bench、真手写照片）。**
 
 ---
 
 ## 6. 已知陷阱（踩过的，别再踩）
+
+### 2026-08-28 新增（美术三包那一场）
+
+- 🔴 **`body` 和 `.v2-root` 的背景不要改回不透明**：画布渐层是
+  `.v2-root::before` 的 `z-index:-1` 层，而负 z-index 子层比 in-flow 区块背景
+  **先**画（CSS 2.1 附录 E：第 2 步 vs 第 3 步）。任何一层加回不透明底色，
+  渐层就再消失一次——而且它会「看起来像没写」，因为 CSS 全都在、只是被盖住。
+  平色底在 `<html>`，那是给 reduced-transparency／强制色彩／壳外路由的后路。
+- 🔴 **globals.css 里那些不分层的 class（.v2-pill / .v2-glass）会压过 Tailwind
+  utility**：Tailwind v4 的 utility 在 `@layer utilities`，而没写在任何 layer 里的
+  规则一律赢过有 layer 的——不看 specificity。所以 `className="v2-pill rounded-full"`
+  的圆形按钮一直是圆角方块（J 8/27 指定圆形，做了但没生效，没人发现）。
+  以后遇到「明明写了 utility 却没作用」，先看是不是撞到这几个 class。
+- **圆角阶名的意义在 2026-08-28 整体上移了一阶**（`rounded-md` 8→12、
+  `rounded-sm` 6→8、`rounded-lg` 12→16）。看到旧 commit 或旧文件写「卡片 8px」
+  不要照着改回去——现在卡片是 12px，而且五个数字只在 `:root` 的 `--v2-r-*` 写一次。
+- **首页状态行的 null 和 0 是两回事，不要合并成 falsy 检查**：null＝读不到→
+  整行不画；0＝读得到而且真的没有→写成邀请句。刚成立的社团和坏掉的查询，
+  只看 falsy 长得一模一样，而把「你没有记录」讲给查询失败的人听是最不该犯的错。
+  `src/lib/home-card-lines.test.ts` 用 13 支测试钉住这条。
 
 ### 2026-08-28 晚新增（八条那一场）
 
