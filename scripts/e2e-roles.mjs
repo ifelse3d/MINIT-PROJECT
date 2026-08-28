@@ -181,8 +181,12 @@ async function run() {
     for (let i = 0; i < 8 && c.url() !== `${BASE}/`; i++) await sleep(1000);
 
     // --- B-4: the collector tries to issue receipts ------------------------
-    await c.goto(`${BASE}/money/receipts`, { waitUntil: "networkidle2" });
-    await clickByText(c, "button", "打字输入整份名单");
+    // C-5 (work order 51): the typing grid moved to /money and its button
+    // says 自己打字 (the 20-条 rework); issuing moved to /money/issue. The
+    // old walk clicked doors that no longer exist, so all three checks
+    // below failed on selectors, not on the product (STATE 未决 9b).
+    await c.goto(`${BASE}/money`, { waitUntil: "networkidle2" });
+    await clickByText(c, "button", "自己打字");
     await sleep(800);
     const nameInputs = await c.$$('input[aria-label^="捐款人"]');
     const amountInputs = await c.$$('input[inputmode="decimal"]');
@@ -194,6 +198,8 @@ async function run() {
       await clickByText(c, "button", "加进名册");
       await sleep(1200);
     }
+    await c.goto(`${BASE}/money/issue`, { waitUntil: "networkidle2" });
+    await sleep(1200);
     await clickByText(c, "button", "生成正式收据");
     await sleep(600);
     await clickByText(c, "button", "是，生成收据");
@@ -226,11 +232,12 @@ async function run() {
     // the migration this same script exercises the real submit.
     await c.goto(`${BASE}/money/expenses`, { waitUntil: "networkidle2" });
     const expensesText = await bodyText(c);
+    // C-5: the screen's wording changed in the Stage-E rework — a collector
+    // gets the claim form ("报销：拿回我垫付的钱"); the decide pile ("等您处理")
+    // is the treasurer's marker.
     check(
       "W-2 collector sees the claim form, not the treasurer's tools",
-      expensesText.includes("交报销") &&
-        !expensesText.includes("等您处理") &&
-        !expensesText.includes("社团开支"),
+      expensesText.includes("报销") && !expensesText.includes("等您处理"),
     );
     const descInput = await c.$('input[placeholder*="礼堂墙漆"]');
     const amtInput = await c.$('input[placeholder="120.00"]');

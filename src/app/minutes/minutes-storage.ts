@@ -80,6 +80,12 @@ export type SavedMinutes = {
    * asked — the safe direction.
    */
   savedToHistory?: boolean;
+  /**
+   * C-13 (work order 51): which CLOUD draft this workspace is — the upsert
+   * key into minutes_drafts, minted on this device when content first
+   * appeared. Optional: older blobs get a fresh key on first autosave.
+   */
+  draftKey?: string;
 };
 
 export function loadSavedMinutes(): SavedMinutes | null {

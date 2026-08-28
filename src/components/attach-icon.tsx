@@ -32,9 +32,11 @@ export function AttachIcon({ className = "h-5 w-5" }: { className?: string }) {
 }
 
 /**
- * "Choose a file (PDF or photo)", in the three languages. Pass the three
+ * "Choose file (PDF or photo)", in the three languages. Pass the three
  * bracket strings only if this particular picker accepts something different —
  * they must match its `accept` attribute.
+ * C-3 (work order 51, tester C16): SHORT phrasing — the zh label used to be a
+ * sentence ("选一个档案（…）") and wrapped to two lines on phone buttons.
  */
 export function ChooseFileLabel({
   bm = "PDF atau gambar",
@@ -48,8 +50,8 @@ export function ChooseFileLabel({
   return (
     <Tri
       bm={`Pilih fail (${bm})`}
-      zh={`选一个档案（${zh}）`}
-      en={`Choose a file (${en})`}
+      zh={`选档案（${zh}）`}
+      en={`Choose file (${en})`}
     />
   );
 }

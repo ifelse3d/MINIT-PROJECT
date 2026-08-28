@@ -121,15 +121,14 @@ export default async function Home() {
 
       {/* 2 — THE box: photo / file / typing, mixed; type first, then
           confirm to send; MinitAI asks back when unsure. Card ④ focuses it. */}
+      {/* C-11 (work order 51): the walkthrough entry sits beside the box's
+          own heading — it explains exactly the flow the box starts. */}
       <AskBox
         hasOrg
         initialRemaining={usage?.totalRemaining ?? null}
         initialUsedPct={usage?.usedPct ?? null}
+        howItWorks={<HowItWorksButton variant="link" />}
       />
-
-      <div className="flex flex-wrap items-center gap-2">
-        <HowItWorksButton variant="link" />
-      </div>
 
       {/* 3 — what is due (this org's own deadlines, never invented ones) */}
       <HomeUpcoming deadlines={deadlines} todayIso={todayIso} />

@@ -5,11 +5,13 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-29 凌晨（MYT）· Fable 5（51 号过夜施工场，进行中：包 A ✅ 包 B ✅ → 小修包接着做）**
-**🔴 本场状态一句话：照 51 号总单开工。包 A（52 号报告）与包 B（Members/
-Glossary，53 号报告）都已完成＋checkpoint 收毕。包 B 写了 migration 32
-（roster note+honorific，B-6/B-7 地基）——只写档未套用，程序 fail-open 已实测。
-接下来 §4 小修包。J 早上：看 52/53 号报告 → 贴 migration 32 → push-cabang.bat。**
+**最后更新：2026-08-29 清晨（MYT）· Fable 5（51 号过夜施工场收工：包 A ✅ 包 B ✅ 小修包 ✅）**
+**🔴 本场状态一句话：51 号总单三包全部做完（52/53/55 号报告＋54 号 GUIDE）。
+两支新 migration 只写档等 J 贴：32（roster note/honorific）与 33（云端草稿），
+fail-open 都实测过。四道关全绿（eslint 还从 22 降到 21）、三条 e2e 全过
+（roles 修好后首次）、围栏三面墙实测全挡。J 早上：贴 32 → 贴 33 →
+push-cabang.bat → 叫 tester（清单在 55 号报告末尾）。C-14① 两表合并
+留给下一场（凌晨不动钱区最敏感的表，如实记）。**
 
 ---
 
@@ -101,6 +103,49 @@ Glossary，53 号报告）都已完成＋checkpoint 收毕。包 B 写了 migrat
 - 诚实记下：①「IC 尾号」实为 IC 姓名比对（系统从不收 IC 号码，PDPA）；
   ② note/honorific 真存档等 J 贴 32；③ 出席勾选显示备注但同名两人仍按
   名字一起勾（要分开得动出席底层，长尾）。
+
+### 这一场做了什么（51 号过夜场 · 小修包 ✅，55 号报告）
+
+- **C-1 弹窗裸样式**：🔴 根因＝RESPONSIVE 场把 Modal/CommandPalette portal 到
+  `<body>`，逃出了 `.v2-root`——全部 --v2-* token 落空＝透明裸框。修法：新
+  `src/lib/portal-target.ts`（portal 进 .v2-root：无 filter/transform，fixed 仍
+  量视窗；token 齐全），两处换上。截图证据 proof-51-c1-templates-modal.png。
+- **C-2 马来西亚公共假期**：新 `src/lib/malaysia-holidays.ts`（8 测试）——固定
+  日程式算＋CNY/卫塞用现有 lunar 表推＋回历节日用现有 Umm al-Qura 推（标
+  approx「以官方宣布为准」）＋屠妖节内建表 2026/27；hijri.ts 加数字月日 API。
+  overlays 加 holidays 开关（旧存值兼容）、格子红标＋日面板显示；只含全国、
+  州属不含（弹窗写明）。
+- **C-3** 选档案文案短句化（attach-icon＋首页括号「照片 / PDF / Office」）。
+- **C-4** privacy「不用于训练」段删（documents.ts＋legal/ 正本 md 同步——
+  legal 有 compiled-vs-md 的一致性测试，只改一边会红）。
+- **C-5 e2e:roles 修好**：三处全是脚本对旧 UI（打字格在 /money·「自己打字」、
+  开收据在 /money/issue、报销文案改版）。15/15 全过——**三条 e2e 全绿**。
+- **C-6** check-ai.bat cd `%~dp0`；最后一颗黑按钮（出席筛选 chip 选中态
+  slate-900）随 C-9 消灭——#10 长尾清零。
+- **C-7 围栏撞墙实测**（`scripts/probe-fence-51.mjs`，零 AI）：文件第 6 份挡 ✅
+  干净下载第 4 次 402 ✅ 收据第 21 张整批拒、零号码烧 ✅（未决 #1 大头结案；
+  第 21 页不测——要烧 20 页真额度）。
+- **C-8** 54 号 GUIDE（Supabase Site URL＋邮件模板，J 五分钟照做）。
+- **C-9** 出席：分组筛选改 dropdown、「全部勾起来」→「全选」、名单旁
+  「＋加名字」跳到输入格。
+- **C-10** Next 按钮只剩一个词（目的地句移出按钮变旁注）；「华语 / 中文」→「中文」。
+- **C-11** How it works 进 AskBox 标题旁（howItWorks prop）。
+- **C-12** PhotoLightbox 改真浮窗：无遮罩不挡操作、标题列可拖（pointer
+  capture）、右下角原生 resize、常驻自关。
+- **C-13 云端草稿**（拍板 8）：migration 33 `minutes_drafts`（org+client_key
+  upsert，RLS 四政策；salin 33 项＋探针）；`draft-actions.ts`（save/list/load/
+  drop，表缺席=db_behind fail-open）；minutes-store 自动存云（2.5s 节流、
+  photoPages 只存路径不存图）、「先存成草稿开新的一份」、草稿列表可续可删、
+  存历史即删草稿（D36 不变）；draftKey 进 localStorage blob。fail-open 实测：
+  未套用 33 时人话提示＋工作区一字不清。
+- **C-14 做一半（如实）**：② ✅ 每行 Purpose 变 select（模板喂选项＋
+  「✏️ 自己写…」自由打；PurposeCell）、模板 chip 只填空行＋提示写明、入口带
+  说明。① 两表合并（打字名单 vs 手动添加收入）**没做**——手动表带转账凭证/
+  收入类型等独有件，凌晨不动钱区最敏感的表；留给下一场专门做。
+- **测过**：tsc 0 · **eslint 21（比基准 22 少一条**——C-9 改版消掉一条旧错，
+  新基准 21=20 错+1 警告）· vitest **930 全过（+8 假期）** · build ✓ ·
+  **e2e:minutes ✓ money ✓ roles ✓（三条全绿，page errors 0）** ·
+  probe-fence-51 ✅ · probe-smallfix-51 ✅（含两张截图证据）。
 
 ### 上一场（48 号单＋追加第二案；49 号报告给 J 的版本在 _J-要做的事）
 
@@ -227,43 +272,54 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
 
 ### 🔴 J 的事
 
-1. 过夜跑完的早上：看最新一份报告（52/53/…）。
-2. **贴 migration 32**：salin-migration.bat 选 32 → Supabase SQL Editor 贴上
-   → Run（53 号报告有逐步教学；没贴之前系统照常，fail-open）。
+1. 看 52 / 53 / 55 号报告（各一分钟版在开头）。
+2. **贴两支 migration**：salin-migration.bat 选 **32** → Supabase SQL Editor
+   贴上 → Run；再选 **33** → 贴上 → Run（没贴之前系统照常，fail-open 已实测）。
 3. 双击 **push-cabang.bat**。
-4. **叫 tester 重试**：PPT/Word 直传、>4MB PDF、一次多张照片（包 A）；
-   加理事（试同名）、分组 chips、词库（包 B）。
-5. bench 那个视窗：你有空就跑（双击 bench-models.bat）。
+4. **叫 tester 重试**（总清单在 55 号报告末尾）：PPT/Word/大 PDF 直传、多张
+   照片；加理事试同名、分组、词库；模板弹窗、云端草稿、日历假期。
+5. 有空照 **54 号 GUIDE** 设 Supabase 邮件（五分钟）；用 iPhone 看副历的
+   伊斯兰历＋新假期栏。
+6. bench 那个视窗：你有空就跑（双击 bench-models.bat）。
 
 ### ❓ 未决问题
 
-1. **围栏真挡下未实测**（migration 31 已套用 ✅，通电了）：文件第 6 份、
-   收据第 21 张、第 21 页、第 4 次干净下载，各撞一次看被挡＋讯息对不对
-   ——要一个真 trial 帐号手工撞（脚本撞会烧 AI 额度）。
+1. ~~围栏真挡下未实测~~ **大头已结案**（8/29 probe-fence-51 实测：文件第 6 份、
+   收据第 21 张、干净下载第 4 次全被挡、讯息对版）。只剩**第 21 页**没撞
+   ——要烧 20 页真 AI 读取，不值得脚本烧；等真用户自然撞到或 J 授权。
 2. 助手用哪个模型 —— prompt 已解冻（D29），等 J 重跑 bench 后定（J：系统先稳）
 3. 法律实体（金流前置，D12），试点前要答
 4. 真实手写 eval：92.9% 量的仍是印刷体，且 prompt 已动、数字作废——等 J 重测
-5. Supabase 邮件模板＋Site URL 还停 localhost（J 一分钟改）
-6. /privacy 法律文的「不用於訓練」句去不去 —— 法律文要人审，J 一句话
+5. Supabase 邮件模板＋Site URL 还停 localhost —— **54 号 GUIDE 已写好**，
+   等 J 照做（五分钟）
+6. ~~/privacy「不用於訓練」句~~ 已删（8/29 小修包 C-4，J 在 51 号拍板）
 7. 竞赛首页主图重拍（拍板 0-9）—— push 已全上线，条件已齐，工程排队中
 8. 配套定价（管理台毛利卡等它）—— 先量成本；围栏已立，价格牌之后挂（D44/D12）
-9. #10 全站按钮统一的长尾扫尾（大头已消；仍排队）
-9b. `e2e:roles` collector 那 4 项要重新对着现在的钱区 UI 推一遍
+9. ~~#10 按钮长尾~~ 已清零（最后一颗黑 chip 随 C-9 消灭）
+9b. ~~e2e:roles collector~~ 已修（8/29 小修包 C-5：三处全是脚本选择器过期，
+    15/15 全过——三条 e2e 全绿）
 10. 真 vendor 的合并写作效果（D37）—— 等 J 一次真额度实测
 11. 免费版上传门旁没有「还剩几页」的常驻提示（只在 /settings/plan 和拒绝讯息
-    里）——要不要补，等围栏通电后看真用户反应
+    里）——要不要补，等真用户反应
 12. （旧，小）MyInvois 官方模板逐栏对齐（B-7 后半）等 J 给原档
-13. （旧，小）check-ai.bat 还 cd 到旧资料夹 C:\dev\minit——改天一行修
+13. ~~check-ai.bat cd 旧资料夹~~ 已修（8/29 小修包 C-6）
+14. **C-14① 两套钱录入合并**（打字名单 vs 手动添加收入）——小修包只做了 ②
+    （每行 Purpose 下拉）；合并要处理手动表独有的转账凭证/收入类型，
+    留给下一场专门做（51 号拍板 9① 还欠这半）
+15. 云端草稿的跨装置照片预览：draft 只存 storage 路径，换装置续写时缩图是
+    占位符（原图还在 uploads bucket，要看得走签名 URL——之后要不要补，
+    看真用户反应）
 
 ### ⏭ 下一个 session 从哪开始
 
-**照 51 号檔跑，别的不用想**：
-`C:\dev\_J-要做的事\51-過夜施工總單與開場PROMPT-20260829.md`
-——**包 A 已完（52 号报告）、包 B 已完（53 号报告）**；接下来 §4 小修包
-（C-1～C-14，C-13/C-14 偏大放最后做到哪算哪），
-每包收尾 checkpoint（四道关＋e2e＋覆写 STATE＋报告＋commit）才开下一包。
-之后的场（也都在 51 号 §5）：⑤ eROSES 大改版（17 张截图为教材）→
+**51 号过夜单已全部做完**（包 A=52 号、包 B=53 号、小修包=55 号报告）。
+接下来照 51 号 §5 的场次顺序（J 已点头）：
+**⑤ eROSES 大改版**（A2 整包＋「存好问要不要呈报→图文引导＋每值 COPY」；
+教材＝`C:\Users\User\Desktop\Penyata Kewangan screenshot` 那 17 张截图，
+九步清单抄在 51 号 §5；系统现缺四个洞：钱区科目↔1.1–2.4 对照、Juruaudit
+概念、银行户口＋会员数/投票权数栏、活动报告生成）→
 ⑥ AI 智能建议场 → ⑦ 品质场 → ⑧ 助手＋AI 代办 → ⑨ 上线后第一批。
+**顺路补**：C-14① 两表合并（未决 14）适合塞进 ⑤ 前后的钱区场。
 竞赛材料 J 自己定 30/31 交，**不催**。
 RESPONSIVE：J 若再圈破版，贴 46 号单同段 PROMPT 继续。
 
@@ -734,7 +790,7 @@ J 手贴 migration 的步骤：记事本开档 → `Ctrl+A` `Ctrl+C` → Supabas
 | 模型对比 | `npm run bench`（--dry-run / --mock）· `bench-models.bat` · 报告在 `eval/reports/model-bench-<日期>.md` |
 | 「到底做了没有」 | `npm run status` / `status.bat` |
 | 示范章程（CONTOH） | `public/contoh/undang-undang-tubuh-contoh.pdf`（8 页 BM 完整章程，虚构社团）· 文字版 `docs/contoh-undang-undang-tubuh.md` · 重生 `npm run contoh:constitution`。十条条文与 `src/lib/sample-constitution.ts` **逐字相同**、印出来的页码对得上 `page_ref`，所以拿它测 `/constitution` 上传时**答案是已知的** |
-| migration | `supabase/migrations/`（**31 支；1–31 全部已套用（2026-08-29 探针实测）**）· `salin-migration.bat`（31 项）· `npm run check:migrations`（含 save_register_rows／fence_charge RPC 探针） |
+| migration | `supabase/migrations/`（**33 支；1–31 已套用（2026-08-29 探针实测）；32（roster note/honorific）与 33（云端草稿）只写档，等 J 贴**）· `salin-migration.bat`（33 项）· `npm run check:migrations`（含 32/33 列探针） |
 | 给 J 双击的 `.bat` | `status.bat` · `salin-migration.bat` · `salin-env-vercel.bat` · `push-cabang.bat` · `bench-models.bat`。🔴 `push-to-github.bat` 不能用；⚠ `check-ai.bat` 还指旧资料夹 |
 | `competition/` | 顶层＝当前版（**[YOU] 两处还空着**）；`screenshots/` 60 张旧配色（拍板 0-9：只重拍首页主图，未拍——未决 7） |
 | `eval/reports/` | 整夹 gitignore；只有 `SUMMARY.md` 例外 |

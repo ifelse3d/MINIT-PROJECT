@@ -43,6 +43,13 @@ import {
 import { addRow, removeRow, rowHasContent, type RowList } from "@/lib/extraction-rows";
 import { saveConfirmedMinutes } from "./actions";
 import {
+  dropDraft,
+  listDrafts,
+  loadDraft,
+  saveDraft,
+  type DraftListItem,
+} from "./draft-actions";
+import {
   minutesStoreKey,
   compressPhoto,
   loadSavedMinutes,
@@ -276,9 +283,60 @@ export type MinutesStore = {
   evError: string | null;
   findEventsInMinutes: () => Promise<void>;
   confirmEvent: (idx: number) => void;
+
+  // --- C-13 (work order 51): cloud drafts ---------------------------------
+  /** This organisation's unfinished drafts in the cloud, newest first.
+   *  null = not loaded yet; [] = none (or the DB is behind — fail-open). */
+  cloudDrafts: DraftListItem[] | null;
+  /** Which cloud draft the CURRENT workspace is (null = none yet). */
+  currentDraftKey: string | null;
+  /** A sentence when a draft operation could not deliver; null otherwise. */
+  draftNote: string | null;
+  /** 拍板 8's scenario: keep THIS unfinished meeting in the cloud and open a
+   *  clean workspace for the one that is starting. false = could not stash
+   *  (nothing was cleared; draftNote says why). */
+  stashAndStartNew: () => Promise<boolean>;
+  /** Load a cloud draft into the workspace (stashing current work first). */
+  resumeDraft: (clientKey: string) => Promise<void>;
+  /** Remove a listed draft (never the one currently open). */
+  deleteCloudDraft: (clientKey: string) => void;
 };
 
 const MinutesContext = createContext<MinutesStore | null>(null);
+
+/** C-13: a fresh draft identity, minted where the draft is born. */
+function mintDraftKey(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `d-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+/** What a cloud draft's payload must look like before it may enter the
+ *  workspace — it crossed a boundary, so it is not trusted (the intake-parcel
+ *  rule). Loose on purpose: extra keys are ignored, absents default. */
+type DraftPayload = {
+  extraction: MeetingNotesExtraction;
+  sourceLabel?: string | null;
+  typed?: boolean;
+  noAttendees?: boolean;
+  title?: string;
+  photoPages?: { name: string; storagePath: string | null }[];
+};
+
+function isDraftPayload(v: unknown): v is DraftPayload {
+  if (typeof v !== "object" || v === null) return false;
+  const e = (v as { extraction?: unknown }).extraction;
+  if (typeof e !== "object" || e === null) return false;
+  const x = e as Record<string, unknown>;
+  return (
+    Array.isArray(x.attendees) &&
+    Array.isArray(x.resolutions) &&
+    typeof x.meeting_date === "object" &&
+    x.meeting_date !== null &&
+    typeof x.meeting_type === "object" &&
+    x.meeting_type !== null
+  );
+}
 
 export function useMinutes(): MinutesStore {
   const store = useContext(MinutesContext);
@@ -320,6 +378,18 @@ export function MinutesProvider({
   const [aiBusy, setAiBusy] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [storageNote, setStorageNote] = useState<SaveOutcome | null>(null);
+  // C-13: cloud drafts. The key identifies THIS workspace's row; the timer
+  // debounces autosaves; droppedFor stops the saved-to-History cleanup from
+  // firing once per render.
+  const [cloudDrafts, setCloudDrafts] = useState<DraftListItem[] | null>(null);
+  const [draftNote, setDraftNote] = useState<string | null>(null);
+  const draftKeyRef = useRef<string | null>(null);
+  // The ref is the SYNCHRONOUS truth (effects write blobs with it in the same
+  // pass); this state is its render-safe mirror for the UI. Effects update it
+  // through setTimeout(0) — the repo's sanctioned shape.
+  const [draftKeyForUi, setDraftKeyForUi] = useState<string | null>(null);
+  const cloudTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const droppedForRef = useRef<string | null>(null);
   const [typedByHand, setTypedByHand] = useState(false);
   const [noAttendeesRecorded, setNoAttendeesRecorded] = useState(false);
   // J 28/8 item 3: the person's own name for the document. Plain state (not
@@ -438,11 +508,31 @@ export function MinutesProvider({
       setTypedByHand(saved.typed === true);
       setNoAttendeesRecorded(saved.noAttendees === true);
       if (typeof saved.title === "string") setDocTitle(saved.title);
+      // C-13: keep writing into the same cloud draft this device was on.
+      if (typeof saved.draftKey === "string" && saved.draftKey !== "") {
+        draftKeyRef.current = saved.draftKey;
+        const k = saved.draftKey;
+        setTimeout(() => setDraftKeyForUi(k), 0);
+      }
       // (0-1's "restore the saved mark" branch is gone on purpose — a
       // saved-to-History blob is purged above and never restored at all.)
     }
     setRestored(true);
   }, []);
+
+  // C-13: what unfinished drafts does the CLOUD hold for this org? Loaded
+  // once per visit; [] covers "none" and "DB behind migration 33" alike
+  // (fail-open) — the picker then simply does not render.
+  useEffect(() => {
+    if (!restored) return;
+    let cancelled = false;
+    void listDrafts().then((rows) => {
+      if (!cancelled) setCloudDrafts(rows);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [restored]);
 
   useEffect(() => {
     if (!restored) return;
@@ -456,6 +546,13 @@ export function MinutesProvider({
     // "Nothing to save yet" is now two conditions, not one: no photo AND not
     // typed. Without the second, everything a person typed vanished on refresh.
     if (sourceLabel === null && !typedByHand) return;
+    // C-13: content exists, so this workspace IS a draft — give it its
+    // identity before anything is written under it.
+    if (!draftKeyRef.current) {
+      draftKeyRef.current = mintDraftKey();
+      const k = draftKeyRef.current;
+      setTimeout(() => setDraftKeyForUi(k), 0);
+    }
     const outcome = saveMinutes({
       extraction,
       sourceLabel,
@@ -466,13 +563,49 @@ export function MinutesProvider({
       noAttendees: noAttendeesRecorded,
       title: docTitle,
       savedToHistory: alreadySaved,
+      draftKey: draftKeyRef.current,
     });
     if (outcome === "photo-dropped" && photoPages.length > 0) {
       // Clear them from state too, otherwise the failing write repeats forever.
       setPhotoPages([]);
     }
     setStorageNote(outcome === "ok" ? null : outcome);
-  }, [extraction, sourceLabel, photoDataUrl, photoPages, typedByHand, noAttendeesRecorded, docTitle, restored, alreadySaved]);
+
+    // C-13: the CLOUD copy. Saved-to-History means the draft became a
+    // document — its row is deleted (D36), once. Unsaved content autosaves,
+    // debounced so typing never races the network; fire-and-forget, and a
+    // db-behind answer simply means "localStorage only, like before".
+    if (alreadySaved) {
+      const key = draftKeyRef.current;
+      if (key && droppedForRef.current !== key) {
+        droppedForRef.current = key;
+        void dropDraft(key);
+      }
+      return;
+    }
+    if (showSample) return;
+    const clientKey = draftKeyRef.current;
+    const payload = {
+      extraction,
+      sourceLabel,
+      typed: typedByHand,
+      noAttendees: noAttendeesRecorded,
+      title: docTitle,
+      // Paths only — previews stay on the device (and in the uploads bucket).
+      photoPages: photoPages.map((p) => ({
+        name: p.name,
+        storagePath: p.storagePath ?? null,
+      })),
+    };
+    // BM for the derived label (docLang is declared further down — and a
+    // draft's label must not change with the viewer's language anyway).
+    const title =
+      cleanMinutesTitle(docTitle) || suggestMinutesTitle(extraction, "bm") || sourceLabel;
+    if (cloudTimerRef.current) clearTimeout(cloudTimerRef.current);
+    cloudTimerRef.current = setTimeout(() => {
+      void saveDraft({ clientKey, title, payload });
+    }, 2500);
+  }, [extraction, sourceLabel, photoDataUrl, photoPages, typedByHand, noAttendeesRecorded, docTitle, restored, alreadySaved, showSample]);
 
   const findEventsInMinutes = useCallback(async () => {
     setEvError(null);
@@ -672,6 +805,15 @@ export function MinutesProvider({
 
   /** Clean, empty page: no example, no half-read photo, nothing saved. */
   const backToEmpty = useCallback(() => {
+    // C-13: discarding the workspace discards its cloud draft too (a draft
+    // already turned into a saved document was dropped by the autosave
+    // effect; dropping again is a no-op). The NEXT content mints a new key.
+    if (cloudTimerRef.current) clearTimeout(cloudTimerRef.current);
+    if (draftKeyRef.current) void dropDraft(draftKeyRef.current);
+    draftKeyRef.current = null;
+    setDraftKeyForUi(null);
+    void listDrafts().then(setCloudDrafts);
+    setDraftNote(null);
     setExtraction(emptyMeetingNotesExtraction);
     setSourceLabel(null);
     setTypedByHand(false);
@@ -693,6 +835,149 @@ export function MinutesProvider({
     } catch {
       // Storage unavailable: state is already reset, nothing more to do.
     }
+  }, []);
+
+  // --- C-13 (work order 51, 拍板 8): several drafts, in the cloud -----------
+
+  /** The current workspace, as a cloud payload (paths, no image data). */
+  const draftPayloadNow = useCallback(
+    () => ({
+      extraction,
+      sourceLabel,
+      typed: typedByHand,
+      noAttendees: noAttendeesRecorded,
+      title: docTitle,
+      photoPages: photoPages.map((p) => ({
+        name: p.name,
+        storagePath: p.storagePath ?? null,
+      })),
+    }),
+    [extraction, sourceLabel, typedByHand, noAttendeesRecorded, docTitle, photoPages],
+  );
+
+  const draftCannotReachCloud = t(
+    "Draf ini tidak dapat disimpan ke awan buat masa ini (kemas kini pangkalan data 33 belum dijalankan, atau talian terputus). Kerja anda masih selamat pada peranti ini — tiada apa-apa dibuang.",
+    "这份草稿暂时存不上云端（数据库更新 33 还没贴，或网络问题）。您的东西还安全地在这台设备上 —— 什么都没有丢。",
+    "This draft could not reach the cloud just now (database update 33 not applied yet, or the connection dropped). Your work is still safe on this device — nothing was thrown away.",
+    "\n",
+  );
+
+  /** Stash the unfinished meeting in the cloud NOW and open a clean page. */
+  const stashAndStartNew = useCallback(async (): Promise<boolean> => {
+    const key = draftKeyRef.current ?? mintDraftKey();
+    draftKeyRef.current = key;
+    if (cloudTimerRef.current) clearTimeout(cloudTimerRef.current);
+    const title =
+      cleanMinutesTitle(docTitle) || suggestMinutesTitle(extraction, "bm") || sourceLabel;
+    const res = await saveDraft({ clientKey: key, title, payload: draftPayloadNow() });
+    if (!res.ok) {
+      // NOTHING is cleared on failure — clearing would be exactly the loss
+      // this feature exists to prevent.
+      setDraftNote(draftCannotReachCloud);
+      return false;
+    }
+    setDraftNote(null);
+    // A clean page for the meeting that is starting; the stashed draft stays.
+    draftKeyRef.current = null;
+    setDraftKeyForUi(null);
+    setExtraction(emptyMeetingNotesExtraction);
+    setSourceLabel(null);
+    setTypedByHand(false);
+    setNoAttendeesRecorded(false);
+    setMixedInput(false);
+    setShowSample(false);
+    setPhotoPages([]);
+    setEvRows(null);
+    setAiError(null);
+    setStorageNote(null);
+    setDocTitle("");
+    setSaveResult(null);
+    setSavedFor(null);
+    setSavedDocId(null);
+    try {
+      localStorage.removeItem(minutesStoreKey());
+    } catch {
+      // Storage unavailable: state is already reset.
+    }
+    void listDrafts().then(setCloudDrafts);
+    return true;
+  }, [docTitle, extraction, sourceLabel, draftPayloadNow, draftCannotReachCloud]);
+
+  /** Open a cloud draft — stashing whatever unfinished work is on screen
+   *  first, so switching can never eat a meeting. */
+  const resumeDraft = useCallback(
+    async (clientKey: string) => {
+      const hasUnsaved =
+        (sourceLabel !== null || typedByHand) &&
+        !alreadySaved &&
+        hasMeetingContent(extraction);
+      if (hasUnsaved) {
+        const key = draftKeyRef.current ?? mintDraftKey();
+        draftKeyRef.current = key;
+        if (cloudTimerRef.current) clearTimeout(cloudTimerRef.current);
+        const title =
+          cleanMinutesTitle(docTitle) || suggestMinutesTitle(extraction, "bm") || sourceLabel;
+        const stashed = await saveDraft({ clientKey: key, title, payload: draftPayloadNow() });
+        if (!stashed.ok) {
+          setDraftNote(draftCannotReachCloud);
+          return;
+        }
+      }
+      const payload = await loadDraft(clientKey);
+      if (!isDraftPayload(payload)) {
+        setDraftNote(
+          t(
+            "Draf itu tidak dapat dibuka. Cuba sekali lagi.",
+            "那份草稿打不开。请再试一次。",
+            "That draft could not be opened. Please try again.",
+            "\n",
+          ),
+        );
+        return;
+      }
+      setDraftNote(null);
+      draftKeyRef.current = clientKey;
+      setDraftKeyForUi(clientKey);
+      droppedForRef.current = null;
+      setExtraction(payload.extraction);
+      setSourceLabel(payload.sourceLabel ?? null);
+      setTypedByHand(payload.typed === true);
+      setNoAttendeesRecorded(payload.noAttendees === true);
+      setDocTitle(typeof payload.title === "string" ? payload.title : "");
+      // Previews live on the device that took them; on another device the
+      // pages keep their names and storage paths, shown as file tiles.
+      setPhotoPages(
+        (payload.photoPages ?? []).flatMap((p) =>
+          typeof p?.name === "string"
+            ? [{ name: p.name, dataUrl: "", storagePath: p.storagePath ?? null }]
+            : [],
+        ),
+      );
+      setMixedInput(false);
+      setShowSample(false);
+      setEvRows(null);
+      setAiError(null);
+      setStorageNote(null);
+      setSaveResult(null);
+      setSavedFor(null);
+      setSavedDocId(null);
+      void listDrafts().then(setCloudDrafts);
+    },
+    [
+      sourceLabel,
+      typedByHand,
+      alreadySaved,
+      extraction,
+      docTitle,
+      draftPayloadNow,
+      draftCannotReachCloud,
+      t,
+    ],
+  );
+
+  /** Remove a listed draft. The picker never offers this for the open one. */
+  const deleteCloudDraft = useCallback((clientKey: string) => {
+    void dropDraft(clientKey).then(() => listDrafts().then(setCloudDrafts));
   }, []);
 
   /** The worked example, on request only — for a first look or a demo. */
@@ -1200,6 +1485,12 @@ export function MinutesProvider({
         evError,
         findEventsInMinutes,
         confirmEvent,
+        cloudDrafts,
+        currentDraftKey: draftKeyForUi,
+        draftNote,
+        stashAndStartNew,
+        resumeDraft,
+        deleteCloudDraft,
       }}
     >
       {children}

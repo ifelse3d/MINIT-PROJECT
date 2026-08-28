@@ -30,7 +30,8 @@ import { useMinutes } from "./minutes-store";
  *  中文 finds 中文, whatever language the interface happens to be in. */
 const LANGUAGE_CHOICE: Record<MinutesLang, string> = {
   bm: "Bahasa Malaysia (eROSES)",
-  zh: "华语 / 中文",
+  // C-10 (work order 51, J): ONE word — "华语 / 中文" read as two options.
+  zh: "中文",
   en: "English",
 };
 

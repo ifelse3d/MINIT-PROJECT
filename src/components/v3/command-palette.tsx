@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { portalTarget } from "@/lib/portal-target";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { Tri, useTriText } from "@/components/language-provider";
@@ -76,10 +77,10 @@ export function CommandPalette({
     onClose();
   };
 
-  // Portalled to <body>: this palette lives inside the glass top bar, whose
-  // backdrop-filter makes it the containing block for fixed descendants —
-  // without the portal, `inset-0` measures the 56px bar, not the window
-  // (same trap as modal.tsx; J's screenshot, work order 46 §0-1).
+  // Portalled OUT of the glass top bar (its backdrop-filter is the containing
+  // block for fixed descendants — work order 46 §0-1) but INTO .v2-root,
+  // never <body>: the --v2-* tokens live on .v2-root, and from <body> the
+  // card loses them all (work order 51 C-1). See src/lib/portal-target.ts.
   return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-start justify-center bg-[rgba(21,18,31,0.45)] p-4 pt-[12vh]"
@@ -176,6 +177,6 @@ export function CommandPalette({
         </ul>
       </div>
     </div>,
-    document.body,
+    portalTarget(),
   );
 }

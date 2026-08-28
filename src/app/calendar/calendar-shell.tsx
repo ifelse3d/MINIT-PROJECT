@@ -201,6 +201,7 @@ export function CalendarShell({
           onRemoveEvent={removeEvent}
           showLunar={overlays.lunar || lunarRepeat.on}
           showHijri={overlays.hijri}
+          showHolidays={overlays.holidays === true}
         />
         <UpcomingSidebar
           todayIso={todayIso}

@@ -115,6 +115,12 @@ export function NotesReview() {
     openSample,
     backToEmpty,
     alreadySaved,
+    cloudDrafts,
+    currentDraftKey,
+    draftNote,
+    stashAndStartNew,
+    resumeDraft,
+    deleteCloudDraft,
   } = useMinutes();
 
   // D-4: has the typist actually entered anything yet? Decides when the
@@ -330,29 +336,44 @@ export function NotesReview() {
             </Button>
           )}
           {(sourceLabel || typedByHand) && !aiBusy && (
-            <Button
-              variant="outline"
-              onClick={() => {
-                // This DISCARDS the user's uploaded extraction. It used to be
-                // a quiet ghost button with no confirmation, while the
-                // harmless actions did confirm. (2026-07-28 audit.)
-                const ok = window.confirm(
-                  t(
-                    "Buang kerja ini dan mula semula? Medan yang anda semak akan hilang dan tidak boleh dikembalikan.",
-                    "要丢掉这份记录、重新开始吗？您核对过的栏位会消失，无法复原。",
-                    "Discard this work and start again? The fields you reviewed will be lost and cannot be recovered.",
-                  ),
-                );
-                if (!ok) return;
-                backToEmpty();
-              }}
-            >
-              <Tri
-                bm="Buang & mula semula"
-                zh="丢掉，重新开始"
-                en="Discard & start again"
-              />
-            </Button>
+            <>
+              {/* C-13 (拍板 8): last week's record is unfinished and this
+                  week's meeting is starting — park THIS one in the cloud and
+                  open a clean page. Nothing is lost on failure. */}
+              {isReal && !alreadySaved && (
+                <Button variant="outline" onClick={() => void stashAndStartNew()}>
+                  ☁️{" "}
+                  <Tri
+                    bm="Simpan draf, mula yang baharu"
+                    zh="先存成草稿，开新的一份"
+                    en="Stash as a draft, start a new one"
+                  />
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                onClick={() => {
+                  // This DISCARDS the user's uploaded extraction. It used to be
+                  // a quiet ghost button with no confirmation, while the
+                  // harmless actions did confirm. (2026-07-28 audit.)
+                  const ok = window.confirm(
+                    t(
+                      "Buang kerja ini dan mula semula? Medan yang anda semak akan hilang dan tidak boleh dikembalikan.",
+                      "要丢掉这份记录、重新开始吗？您核对过的栏位会消失，无法复原。",
+                      "Discard this work and start again? The fields you reviewed will be lost and cannot be recovered.",
+                    ),
+                  );
+                  if (!ok) return;
+                  backToEmpty();
+                }}
+              >
+                <Tri
+                  bm="Buang & mula semula"
+                  zh="丢掉，重新开始"
+                  en="Discard & start again"
+                />
+              </Button>
+            </>
           )}
         </div>
         {/* #9 (J review 27-evening, 2026-08-28): the two-line Word/Excel
@@ -440,6 +461,81 @@ export function NotesReview() {
             {localizeError(aiError)}
           </div>
         )}
+        {/* C-13: a draft operation that could not deliver says so HERE, next
+            to the buttons that started it — and says nothing was lost. */}
+        {draftNote && (
+          <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-base font-medium whitespace-pre-line text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+            {localizeError(draftNote)}
+          </p>
+        )}
+
+        {/* C-13 (拍板 8): every unfinished draft this ORGANISATION holds in
+            the cloud — any device, several at once. The one currently open
+            is not offered (it is already on screen). Renders nothing before
+            migration 33 (fail-open: the list is simply empty). */}
+        {(cloudDrafts ?? []).filter((d) => d.clientKey !== currentDraftKey).length > 0 && (
+          <div className="flex flex-col gap-2 rounded-md border-2 border-[color:var(--v2-border)] bg-white/60 p-4 dark:bg-white/5">
+            <p className="text-base font-semibold">
+              ☁️{" "}
+              <Tri
+                bm="Draf belum siap (awan)"
+                zh="还没写完的草稿（云端）"
+                en="Unfinished drafts (cloud)"
+              />
+            </p>
+            <ul className="flex flex-col divide-y divide-border/60">
+              {(cloudDrafts ?? [])
+                .filter((d) => d.clientKey !== currentDraftKey)
+                .map((d) => (
+                  <li
+                    key={d.clientKey}
+                    className="flex flex-wrap items-center justify-between gap-2 py-2"
+                  >
+                    <span className="min-w-40 flex-1">
+                      <span className="font-medium">
+                        {d.title || t("(tiada nama)", "（未命名）", "(untitled)")}
+                      </span>
+                      {d.updatedAt && (
+                        <span className="ml-2 text-sm text-muted-foreground">
+                          {d.updatedAt.slice(0, 16).replace("T", " ")}
+                        </span>
+                      )}
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <Button size="sm" onClick={() => void resumeDraft(d.clientKey)}>
+                        <Tri bm="Sambung" zh="继续这一份" en="Resume" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-red-700 hover:bg-red-50 hover:text-red-800 dark:text-red-300 dark:hover:bg-red-400/10"
+                        onClick={() => {
+                          const ok = window.confirm(
+                            t(
+                              "Buang draf ini dari awan? Ia tidak boleh dikembalikan.",
+                              "要删掉这份云端草稿吗？删了就找不回来了。",
+                              "Delete this cloud draft? It cannot be recovered.",
+                            ),
+                          );
+                          if (ok) deleteCloudDraft(d.clientKey);
+                        }}
+                      >
+                        <Tri bm="Padam" zh="删除" en="Delete" />
+                      </Button>
+                    </span>
+                  </li>
+                ))}
+            </ul>
+            <p className="text-sm text-muted-foreground">
+              <Tri
+                bm="Draf disimpan sendiri semasa anda bekerja dan boleh dibuka di mana-mana peranti. Dokumen yang sudah DISIMPAN ada dalam Sejarah, bukan di sini."
+                zh="草稿会边写边自动存云端，换设备也能打开。已经「保存」的文件在「历史」里，不在这里。"
+                en="Drafts save themselves as you work and open on any device. Documents you already SAVED live in History, not here."
+              />
+            </p>
+          </div>
+        )}
+
         {/* D-3 (work order 31, J #8): the same look-back the money review has —
             every uploaded page as a tappable thumbnail (shared page-thumbs.tsx),
             instead of a fold-out stack of full-size images. */}

@@ -109,50 +109,32 @@ export function RosterPicker({
         />
       </p>
 
-      {/* Multi-select, because 「可单选可多选」 — a meeting is often the youth
-          wing AND the committee, and making that two passes is the friction
-          that stops people using it. Nothing selected means everybody, which is
-          the state somebody who has never made a group should see. */}
+      {/* C-9 (work order 51): a DROPDOWN, one group at a time. The chip row
+          was read as buttons that "did nothing" (and its selected state was
+          the last black button in the app, #10). "Everyone" is the first
+          option, which is also the state somebody with no groups sees. */}
       {groupNames.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2">
+        <label className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
             <Tri bm="Tapis mengikut kumpulan" zh="按分组筛选" en="Filter by group" />
           </span>
-          {groupNames.map((g) => {
-            const on = filter.has(g);
-            return (
-              <button
-                key={g}
-                type="button"
-                aria-pressed={on}
-                onClick={() =>
-                  setFilter((prev) => {
-                    const next = new Set(prev);
-                    if (next.has(g)) next.delete(g);
-                    else next.add(g);
-                    return next;
-                  })
-                }
-                className={`min-h-9 rounded-xs border-2 px-3 text-base font-medium ${
-                  on
-                    ? "border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900"
-                    : "border-[color:var(--v2-border)] hover:bg-accent"
-                }`}
-              >
+          <select
+            value={filter.size === 1 ? [...filter][0] : ""}
+            onChange={(e) =>
+              setFilter(e.target.value === "" ? new Set() : new Set([e.target.value]))
+            }
+            className="w-full min-w-0 rounded-sm border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-3 py-2 text-base sm:w-auto"
+          >
+            <option value="">
+              {t("Semua orang", "全部的人", "Everyone")}
+            </option>
+            {groupNames.map((g) => (
+              <option key={g} value={g}>
                 {g}
-              </button>
-            );
-          })}
-          {filter.size > 0 && (
-            <button
-              type="button"
-              onClick={() => setFilter(new Set())}
-              className="text-sm text-muted-foreground underline underline-offset-4"
-            >
-              <Tri bm="Tunjuk semua" zh="全部显示" en="Show everyone" />
-            </button>
-          )}
-        </div>
+              </option>
+            ))}
+          </select>
+        </label>
       )}
 
       {/* One tap for a whole group — the reason the filter exists at all. */}
@@ -171,11 +153,8 @@ export function RosterPicker({
             })
           }
         >
-          <Tri
-            bm="Tanda semua yang dipaparkan"
-            zh="下面这些全部勾起来"
-            en="Tick everyone shown"
-          />
+          {/* C-9: "Select all" — the old sentence read as an instruction. */}
+          <Tri bm="Pilih semua" zh="全选" en="Select all" />
         </Button>
       )}
 

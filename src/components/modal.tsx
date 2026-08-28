@@ -4,6 +4,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Tri } from "@/components/language-provider";
+import { portalTarget } from "@/lib/portal-target";
 
 // ---------------------------------------------------------------------------
 // The confirmation modal (violet redesign spec §8) — ONE reusable pattern:
@@ -47,12 +48,11 @@ export function Modal({
   }, [open, onClose]);
 
   if (!open) return null;
-  // Portalled to <body>: a dialog opened from inside the glass top bar used
-  // to inherit the bar's backdrop-filter as its containing block (the CSS
-  // filter/backdrop-filter rule), so `fixed inset-0` meant "the 56px bar",
-  // and the card rendered at the window top with its head cut off (J's
-  // screenshot, work order 46 §0-1). From <body> the viewport is the
-  // viewport again, whatever ancestor the caller sits in.
+  // Portalled OUT of the caller's ancestors (a glass top bar's
+  // backdrop-filter would become the containing block and cut the card off —
+  // work order 46 §0-1) but INTO .v2-root, never <body>: the --v2-* tokens
+  // live on .v2-root, and from <body> this card rendered as a bare
+  // transparent rectangle (work order 51 C-1). See src/lib/portal-target.ts.
   return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(21,18,31,0.45)] p-4 backdrop-blur-[2px] sm:items-center"
@@ -72,7 +72,7 @@ export function Modal({
         {children}
       </div>
     </div>,
-    document.body,
+    portalTarget(),
   );
 }
 

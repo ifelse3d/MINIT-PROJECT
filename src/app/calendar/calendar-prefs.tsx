@@ -19,7 +19,13 @@ import type { LunarRepeatDays } from "@/lib/lunar";
 // (STATE §6) does not bite here.
 // ---------------------------------------------------------------------------
 
-export type CalendarOverlays = { lunar: boolean; hijri: boolean };
+export type CalendarOverlays = {
+  lunar: boolean;
+  hijri: boolean;
+  /** C-2 (work order 51): national public holidays, derived by code.
+   *  Optional so a value stored before this existed still validates. */
+  holidays?: boolean;
+};
 
 function isOverlays(parsed: unknown): boolean {
   return (
@@ -33,7 +39,7 @@ function isOverlays(parsed: unknown): boolean {
 export function useCalendarOverlays() {
   return usePersistentState<CalendarOverlays>(
     "minit.calendar.overlays.v1",
-    { lunar: false, hijri: false },
+    { lunar: false, hijri: false, holidays: false },
     isOverlays,
   );
 }

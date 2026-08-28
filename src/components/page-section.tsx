@@ -96,22 +96,22 @@ export function NextStepLink({
       </Link>
     );
   }
-  // D-5 (work order 31, 客⑪): the button itself says "Next" — a sentence like
-  // "On to who attended" made every forward button a different shape to scan.
-  // The sentence survives as the small line underneath: it still says where
-  // the tap goes, it just stops being the label.
+  // D-5 (work order 31, 客⑪) tightened by C-10 (work order 51, J's live
+  // test): the button is ONE word. The destination sentence used to render
+  // as a second line inside the button, which still read as a two-line
+  // button — it now sits OUTSIDE, as quiet text beside the tap target.
   return (
-    <Link
-      href={href}
-      className="inline-flex min-h-12 flex-col items-start gap-0.5 self-start rounded-md bg-primary px-5 py-2.5 text-primary-foreground shadow hover:bg-primary/90 active:scale-95"
-    >
-      <span className="inline-flex items-center gap-2 text-base font-semibold">
+    <span className="inline-flex flex-wrap items-center gap-3 self-start">
+      <Link
+        href={href}
+        className="inline-flex min-h-12 items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-base font-semibold text-primary-foreground shadow hover:bg-primary/90 active:scale-95"
+      >
         <Tri bm="Seterusnya" zh="下一步" en="Next" />
         <ArrowRight aria-hidden className="size-5" strokeWidth={2.4} />
-      </span>
-      <span className="text-sm font-normal opacity-90">
+      </Link>
+      <span className="text-sm text-muted-foreground">
         <Tri bm={labelBm} zh={labelZh} en={labelEn} />
       </span>
-    </Link>
+    </span>
   );
 }

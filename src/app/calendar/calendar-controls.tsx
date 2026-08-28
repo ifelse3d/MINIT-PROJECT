@@ -122,6 +122,32 @@ export function SecondaryCalendarDialog({
           />
           <Tri bm="Kalendar Hijrah" zh="伊斯兰历（希吉来历）" en="Hijri calendar" />
         </label>
+        {/* C-2 (work order 51): national holidays, derived by code — free. */}
+        <div className="flex flex-col gap-1">
+          <label className="flex cursor-pointer items-center gap-2.5 text-base">
+            <input
+              type="checkbox"
+              checked={overlays.holidays === true}
+              onChange={(e) =>
+                setOverlays({ ...overlays, holidays: e.target.checked })
+              }
+              className="size-5 accent-[color:var(--v2-primary)]"
+            />
+            🇲🇾{" "}
+            <Tri
+              bm="Cuti umum Malaysia (kebangsaan)"
+              zh="马来西亚公共假期（全国）"
+              en="Malaysia public holidays (national)"
+            />
+          </label>
+          <p className="pl-7 text-sm text-muted-foreground">
+            <Tri
+              bm="Cuti kebangsaan sahaja — cuti negeri tidak termasuk. Tarikh Islam tertakluk kepada pengumuman rasmi."
+              zh="只含全国假期，州属假期不在内。伊斯兰历的日期以官方宣布为准（可能差一天）。"
+              en="National holidays only — state holidays are not included. Islamic dates follow the official announcement and can shift a day."
+            />
+          </p>
+        </div>
 
         <div className="flex flex-col gap-2 rounded-md border border-[color:var(--v2-border)] p-3">
           <label className="flex cursor-pointer items-center gap-2.5 text-base font-medium">

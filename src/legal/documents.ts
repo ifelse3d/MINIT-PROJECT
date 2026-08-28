@@ -331,14 +331,8 @@ Peribadi Rentas Sempadan (2025).
 
 **Kami tidak menjual data anda. Kami tidak berkongsi data anda untuk pengiklanan.**
 
-**Peringkat berbayar (sejak Ogos 2026):** akses AI Minit berjalan pada
-peringkat API **berbayar**, dan di bawah terma berbayar itu input anda
-**tidak digunakan untuk melatih** model pembekal. Walaupun begitu, amalan
-kami tetap: hantar seminimum mungkin data peribadi yang tidak perlu —
-nombor kad pengenalan hampir tidak pernah diperlukan. Jika pada bila-bila
-masa perkhidmatan AI kami kembali kepada peringkat percuma (yang mungkin
-menggunakan input untuk latihan), kami akan memaklumkan dan hanya menerima
-data contoh/rekaan sepanjang tempoh itu.
+Amalan kami: hantar seminimum mungkin data peribadi yang tidak perlu kepada
+pembekal AI — nombor kad pengenalan hampir tidak pernah diperlukan.
 
 ## 7. Keselamatan
 
@@ -464,13 +458,8 @@ Transfer Guidelines.
 
 **We do not sell your data. We do not share your data for advertising.**
 
-**Paid tier (since August 2026):** Minit's AI access runs on the **paid**
-API tier, and under those paid terms your inputs are **not used to train**
-the provider's models. Our practice stays the same regardless: send as
-little unnecessary personal data as possible — IC numbers are almost never
-needed. If our AI service ever returns to a free tier (which may use inputs
-for training), we will say so and accept sample/fictional data only for as
-long as that lasts.
+Our practice: send as little unnecessary personal data as possible to the
+AI provider — IC numbers are almost never needed.
 
 ## 7. Security
 

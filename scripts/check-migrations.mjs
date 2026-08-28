@@ -76,6 +76,7 @@ const probes = [
   ["20260909000000 free fence counters (D44)", "fence_usage", "docs_made"],
   ["20260910000000 roster note (51 B-6)", "committee_roster", "note"],
   ["20260910000000 roster honorific (51 B-7)", "committee_roster", "honorific"],
+  ["20260911000000 cloud minutes drafts (51 C-13)", "minutes_drafts", "client_key"],
 ];
 
 const headers = { apikey: key, Authorization: `Bearer ${key}` };

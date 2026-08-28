@@ -1,10 +1,10 @@
 @echo off
 setlocal
-cd /d "C:\dev\minit"
+cd /d "%~dp0"
 
 echo  ============================================
 echo   Menyemak laluan AI / Checking AI routing
-echo   Folder: C:\dev\minit
+echo   Folder: %~dp0
 echo  ============================================
 echo.
 

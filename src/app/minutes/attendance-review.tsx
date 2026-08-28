@@ -347,13 +347,32 @@ export function AttendanceReview() {
                   ),
                 )}
               </ul>
-              <p className="text-sm text-muted-foreground">
-                <Tri
-                  bm="Tekan satu nama untuk mengubah atau membuangnya."
-                  zh="点一个名字就可以修改或删掉它。"
-                  en="Tap a name to change or remove it."
-                />
-              </p>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm text-muted-foreground">
+                  <Tri
+                    bm="Tekan satu nama untuk mengubah atau membuangnya."
+                    zh="点一个名字就可以修改或删掉它。"
+                    en="Tap a name to change or remove it."
+                  />
+                </p>
+                {/* C-9 (work order 51): the way to ADD a name sits BESIDE the
+                    list it grows — the typing box lives further down, and
+                    nobody scrolled that far to find it. One tap lands there. */}
+                {!isSample && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const el = document.getElementById("add-attendee");
+                      el?.scrollIntoView({ block: "center", behavior: "smooth" });
+                      el?.focus({ preventScroll: true });
+                    }}
+                  >
+                    ＋ <Tri bm="Tambah nama" zh="加名字" en="Add a name" />
+                  </Button>
+                )}
+              </div>
             </div>
           )}
 

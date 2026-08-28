@@ -61,3 +61,50 @@ export function hijriCellText(iso: string): string | null {
   if (!h) return null;
   return h.day === 1 ? h.monthText : String(h.day);
 }
+
+// --- numeric variant (C-2, work order 51) ----------------------------------
+// malaysia-holidays.ts needs the MONTH NUMBER (1 Syawal, 10 Zulhijjah…), and
+// month names vary by locale/ICU build — numbers do not. Same guarded
+// formatter pattern, same known-date probe.
+
+let numericFormatter: Intl.DateTimeFormat | null | undefined;
+
+function getNumericFormatter(): Intl.DateTimeFormat | null {
+  if (numericFormatter !== undefined) return numericFormatter;
+  try {
+    numericFormatter = new Intl.DateTimeFormat("en-u-ca-islamic-umalqura", {
+      day: "numeric",
+      month: "numeric",
+      timeZone: "UTC",
+    });
+    // 2024-03-15 is 5 Ramadan (month 9) 1445 in Umm al-Qura.
+    const probe = numericFormatter.formatToParts(new Date(Date.UTC(2024, 2, 15)));
+    const m = Number(probe.find((p) => p.type === "month")?.value ?? "");
+    if (m !== 9) numericFormatter = null;
+  } catch {
+    numericFormatter = null;
+  }
+  return numericFormatter;
+}
+
+/** Hijri {month 1-12, day} for a Gregorian YYYY-MM-DD, or null when the
+ *  environment cannot compute it (the caller then shows nothing). */
+export function gregorianToHijriNumeric(
+  iso: string,
+): { month: number; day: number } | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
+  const f = getNumericFormatter();
+  if (!f) return null;
+  const ms = Date.parse(`${iso}T00:00:00Z`);
+  if (Number.isNaN(ms)) return null;
+  try {
+    const parts = f.formatToParts(new Date(ms));
+    const month = Number(parts.find((p) => p.type === "month")?.value ?? "");
+    const day = Number(parts.find((p) => p.type === "day")?.value ?? "");
+    if (!Number.isInteger(month) || !Number.isInteger(day)) return null;
+    if (month < 1 || month > 12 || day < 1 || day > 30) return null;
+    return { month, day };
+  } catch {
+    return null;
+  }
+}

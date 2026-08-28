@@ -110,12 +110,16 @@ export function AskBox({
   hasOrg,
   initialRemaining,
   initialUsedPct,
+  howItWorks,
 }: {
   hasOrg: boolean;
   /** AI actions left this month; null when there is no organisation yet. */
   initialRemaining: number | null;
   /** Share of the monthly free quota spent, 0–100; null when unknown. */
   initialUsedPct: number | null;
+  /** C-11 (work order 51): the "how it works" entry, rendered BESIDE the
+   *  heading — it explains exactly the flow this box starts. */
+  howItWorks?: React.ReactNode;
 }) {
   const t = useTriText();
   const localizeError = useLocalizedError();
@@ -429,13 +433,16 @@ export function AskBox({
 
   return (
     <section className="v2-glass-strong rounded-md border-2 border-[#a855f7]/40 p-4 sm:p-6">
-      <h2 className="font-heading text-2xl font-semibold leading-snug">
-        <Tri
-          bm="Ada kertas di tangan, atau ada soalan?"
-          zh="手上有文件，或者有问题？"
-          en="Got a piece of paper, or a question?"
-        />
-      </h2>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-heading text-2xl font-semibold leading-snug">
+          <Tri
+            bm="Ada kertas di tangan, atau ada soalan?"
+            zh="手上有文件，或者有问题？"
+            en="Got a piece of paper, or a question?"
+          />
+        </h2>
+        {howItWorks}
+      </div>
       {/* 2026-07-28 — the long paragraph that used to sit here ("send a photo of
           it here and MinitAI will work out what it is…") is gone. It explained in
           words what the two buttons and the question box below it already say,
@@ -466,10 +473,12 @@ export function AskBox({
             <AttachIcon className="h-5 w-5" />
             {/* Brackets differ from the standard label on purpose: this one
                 also takes Word, Excel and PowerPoint (拍板 3). */}
+            {/* C-3: the full list ("Word, Excel or PowerPoint…") made the
+                button two lines on a phone — "Office" covers all three. */}
             <ChooseFileLabel
-              bm="gambar, PDF, Word, Excel atau PowerPoint"
-              zh="照片、PDF、Word、Excel 或 PowerPoint"
-              en="photo, PDF, Word, Excel or PowerPoint"
+              bm="gambar, PDF atau fail Office"
+              zh="照片 / PDF / Office"
+              en="photo, PDF or Office file"
             />
           </Button>
         </div>

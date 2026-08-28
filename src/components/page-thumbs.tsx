@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
 
@@ -28,6 +28,14 @@ export type LightboxPage = { name: string; src: string | null };
 
 const ZOOM_STEPS = [1, 1.5, 2.2, 3, 4];
 
+/**
+ * C-12 (work order 51, J's live test): a FLOATING WINDOW, not a modal.
+ * The whole point of "see the original photo" is to read it WHILE typing
+ * corrections — so it must not black out the page, must stay open until the
+ * person closes it, and must move out of the way: drag it by its title bar,
+ * resize it by the bottom-right corner (native CSS resize). No backdrop, no
+ * click-outside-to-close.
+ */
 export function PhotoLightbox({
   pages,
   index,
@@ -44,6 +52,10 @@ export function PhotoLightbox({
   // Zoom is remembered WITH the page it applies to, so moving to another
   // page derives back to fit-to-screen — no effect, no extra render.
   const [zoomState, setZoomState] = useState({ forIndex: index, step: 0 });
+  // Where the window has been dragged to; null = the default CSS spot.
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const dragFrom = useRef<{ px: number; py: number; x: number; y: number } | null>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
   const step = zoomState.forIndex === index ? zoomState.step : 0;
   const setStep = (next: (s: number) => number) =>
     setZoomState({ forIndex: index, step: next(step) });
@@ -53,14 +65,50 @@ export function PhotoLightbox({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col bg-black/80 p-3 sm:p-4"
+      ref={boxRef}
       role="dialog"
-      aria-modal="true"
-      onClick={onClose}
+      aria-label={page.name}
+      className="fixed z-50 flex flex-col overflow-hidden rounded-md border-2 border-[color:var(--v2-border-strong)] bg-[#1c1926] p-2 shadow-[var(--v2-shadow-lg)] sm:p-3"
+      style={{
+        // Default: hug the right edge, clear of the top bar. Once dragged,
+        // the dragged spot wins. Resize is the browser's own corner handle.
+        left: pos ? pos.x : undefined,
+        top: pos ? pos.y : 72,
+        right: pos ? undefined : 12,
+        width: "min(92vw, 460px)",
+        height: "min(64vh, 560px)",
+        minWidth: 260,
+        minHeight: 220,
+        maxWidth: "96vw",
+        maxHeight: "88vh",
+        resize: "both",
+      }}
     >
       <div
-        className="flex flex-wrap items-center justify-between gap-2 pb-2"
-        onClick={(e) => e.stopPropagation()}
+        className="flex cursor-move touch-none flex-wrap items-center justify-between gap-2 pb-2 select-none"
+        onPointerDown={(e) => {
+          // Drag by the title bar (buttons opt out below). Pointer capture
+          // keeps the drag alive even when the cursor outruns the bar.
+          if ((e.target as HTMLElement).closest("button")) return;
+          const rect = boxRef.current?.getBoundingClientRect();
+          if (!rect) return;
+          dragFrom.current = { px: e.clientX, py: e.clientY, x: rect.left, y: rect.top };
+          (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        }}
+        onPointerMove={(e) => {
+          const d = dragFrom.current;
+          if (!d) return;
+          const nx = d.x + (e.clientX - d.px);
+          const ny = d.y + (e.clientY - d.py);
+          setPos({
+            x: Math.max(-40, Math.min(nx, window.innerWidth - 80)),
+            y: Math.max(0, Math.min(ny, window.innerHeight - 60)),
+          });
+        }}
+        onPointerUp={(e) => {
+          dragFrom.current = null;
+          (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+        }}
       >
         <p className="min-w-0 flex-1 truncate text-sm font-medium text-white">
           {page.name}
@@ -120,11 +168,9 @@ export function PhotoLightbox({
         </div>
       </div>
       {/* The picture scrolls inside this box when zoomed in — drag the
-          scrollbars (or swipe) to move around the page. */}
-      <div
-        className="v2-scroll flex-1 overflow-auto rounded-sm"
-        onClick={(e) => e.stopPropagation()}
-      >
+          scrollbars (or swipe) to move around the page. The window itself
+          resizes from its bottom-right corner (native CSS resize). */}
+      <div className="v2-scroll flex-1 overflow-auto rounded-sm">
         {page.src ? (
           // A data: URL from the user's own device or a short-lived signed
           // link — next/image cannot optimise either.

@@ -10,7 +10,7 @@ import { dayIsoMalaysia } from "@/lib/history";
 import { usePersistentState } from "@/lib/use-persistent-state";
 import { useScopedKey } from "@/lib/storage-scope";
 import { PaymentMethodToggle } from "./payment-method-toggle";
-import { TemplateChips } from "./templates";
+import { TemplateChips, useTemplates } from "./templates";
 
 // ---------------------------------------------------------------------------
 // TYPE A WHOLE COLLECTION IN ONE GO (2026-08-22)
@@ -135,6 +135,78 @@ const inputClass =
   "w-full rounded-md border border-input bg-background px-2 py-2 text-base shadow-sm " +
   "focus:outline-none focus:ring-2 focus:ring-ring";
 
+/**
+ * C-14 (work order 51, 拍板 9②): the PURPOSE box on every row is a dropdown
+ * fed by the society's own templates — one tap per row, each row its own
+ * purpose. Free typing stays one option away ("✏️ …"), because the templates
+ * are suggestions, never a closed list. With no templates yet the row is the
+ * plain input it always was.
+ */
+function PurposeCell({
+  value,
+  onChange,
+  templates,
+  ariaLabel,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  templates: string[];
+  ariaLabel: string;
+}) {
+  const t = useTriText();
+  const [custom, setCustom] = useState(false);
+  if (templates.length === 0 || custom) {
+    return (
+      <span className="flex items-center gap-1">
+        <input
+          className={inputClass}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          aria-label={ariaLabel}
+        />
+        {templates.length > 0 && (
+          <button
+            type="button"
+            className="rounded-md px-1.5 py-1 text-sm text-muted-foreground hover:text-foreground"
+            onClick={() => setCustom(false)}
+            title={t("Pilih daripada templat", "改成从模板选", "Pick from templates")}
+          >
+            ▾
+          </button>
+        )}
+      </span>
+    );
+  }
+  // The row's current wording is always a valid option, even when it is not
+  // (or no longer) a template — a select must never blank a value it holds.
+  const options = templates.includes(value.trim()) || value.trim() === ""
+    ? templates
+    : [value.trim(), ...templates];
+  return (
+    <select
+      className={inputClass}
+      value={value.trim() === "" ? templates[0] : value}
+      onChange={(e) => {
+        if (e.target.value === "__custom__") {
+          setCustom(true);
+          return;
+        }
+        onChange(e.target.value);
+      }}
+      aria-label={ariaLabel}
+    >
+      {options.map((label) => (
+        <option key={label} value={label}>
+          {label}
+        </option>
+      ))}
+      <option value="__custom__">
+        ✏️ {t("Taip sendiri…", "自己写…", "Type your own…")}
+      </option>
+    </select>
+  );
+}
+
 export function TypeDonations({
   onAddMany,
   defaultCollector,
@@ -153,6 +225,8 @@ export function TypeDonations({
   const t = useTriText();
   const localizeError = useLocalizedError();
   const today = dayIsoMalaysia(new Date().toISOString())!;
+  // C-14 (拍板 9②): the same template list feeds every row's purpose dropdown.
+  const { labels: purposeTemplates } = useTemplates("income_purpose");
   // null = the person has not chosen yet. The grid then opens BY ITSELF when
   // a saved draft with real content comes back (B-5②) — an invisible saved
   // draft is as good as a lost one. Derived, not set in an effect.
@@ -351,26 +425,37 @@ export function TypeDonations({
         />
       </label>
 
-      {/* #5: the organisation's own purpose wordings — one tap fills every
-          still-empty row, and rows typed after inherit it as usual. */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-semibold">
-          <Tri bm="Tujuan biasa" zh="常用用途" en="Usual purposes" />:
-        </span>
-        <TemplateChips
-          kind="income_purpose"
-          onPick={(label) =>
-            setRows((current) =>
-              current.map((r) =>
-                r.name.trim() === "" &&
-                r.amount.trim() === "" &&
-                r.phone.trim() === ""
-                  ? { ...r, purpose: label }
-                  : r,
-              ),
-            )
-          }
-        />
+      {/* #5 + C-14 (拍板 9②): the organisation's own purpose wordings. A chip
+          fills ONLY the still-empty rows (rows already filled in keep their
+          own purpose — a chip must never rewrite the whole table), and the
+          hint SAYS so; each row also has its own dropdown below. */}
+      <div className="flex flex-col gap-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-semibold">
+            <Tri bm="Tujuan biasa" zh="常用用途" en="Usual purposes" />:
+          </span>
+          <TemplateChips
+            kind="income_purpose"
+            onPick={(label) =>
+              setRows((current) =>
+                current.map((r) =>
+                  r.name.trim() === "" &&
+                  r.amount.trim() === "" &&
+                  r.phone.trim() === ""
+                    ? { ...r, purpose: label }
+                    : r,
+                ),
+              )
+            }
+          />
+        </div>
+        <p className="text-sm text-muted-foreground">
+          <Tri
+            bm="Tekan satu templat = baris KOSONG sahaja diisi; baris yang sudah ditaip tidak diubah. Setiap baris juga boleh pilih tujuannya sendiri dalam jadual."
+            zh="点一下模板 = 只填还空着的行；已经打好的行不会被改。每一行也可以在表格里自己选用途。"
+            en="Tap a template = only EMPTY rows are filled; rows already typed keep their own. Each row can also pick its purpose in the table."
+          />
+        </p>
       </div>
 
       <div className="overflow-x-auto">
@@ -526,11 +611,13 @@ export function TypeDonations({
                     </label>
                   </td>
                   <td className="p-1">
-                    <input
-                      className={inputClass}
+                    {/* C-14 (拍板 9②): a dropdown per ROW — rows can carry
+                        different purposes; typing your own is one option in. */}
+                    <PurposeCell
                       value={row.purpose}
-                      onChange={(e) => update(row.key, { purpose: e.target.value })}
-                      aria-label={t(
+                      onChange={(v) => update(row.key, { purpose: v })}
+                      templates={purposeTemplates}
+                      ariaLabel={t(
                         `Tujuan, baris ${index + 1}`,
                         `用途，第 ${index + 1} 行`,
                         `Purpose, row ${index + 1}`,

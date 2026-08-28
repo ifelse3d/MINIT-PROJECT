@@ -40,6 +40,7 @@ import {
 import type { CalendarExportItem } from "@/lib/ics";
 import { isSpecialLunarDay, gregorianToLunar, lunarCellText } from "@/lib/lunar";
 import { hijriCellText } from "@/lib/hijri";
+import { malaysiaHolidayFor } from "@/lib/malaysia-holidays";
 import type { SimpleEvent } from "@/lib/local-events";
 import { EventMessageButton } from "./event-message";
 import { formatRm } from "@/lib/minutes-draft";
@@ -96,6 +97,7 @@ export function ActivityCalendar({
   onRemoveEvent,
   showLunar,
   showHijri,
+  showHolidays,
 }: {
   serverRecords: ActivityRecord[];
   month: string;
@@ -115,11 +117,14 @@ export function ActivityCalendar({
   /** #15: secondary calendars are OPT-IN — the grid starts plain Gregorian. */
   showLunar?: boolean;
   showHijri?: boolean;
+  /** C-2 (work order 51): national public holidays, derived by code. */
+  showHolidays?: boolean;
 }) {
   const t = useTriText();
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const lunarOn = showLunar ?? false;
   const hijriOn = showHijri ?? false;
+  const holidaysOn = showHolidays ?? false;
 
   // Future items from the SAME sources the Upcoming sidebar shows, so the two
   // never disagree. DB-stored deadlines/events already arrive inside
@@ -143,6 +148,8 @@ export function ActivityCalendar({
   const historyLines = daySummary(selectedRecords.filter((r) => !CATEGORY_STYLE[r.category].future));
   const futureItems = selectedRecords.filter((r) => CATEGORY_STYLE[r.category].future);
   const selectedLunar = lunarOn && selectedDay ? gregorianToLunar(selectedDay) : null;
+  const selectedHoliday =
+    holidaysOn && selectedDay ? malaysiaHolidayFor(selectedDay) : null;
   const dayEvents = selectedDay
     ? localEvents.filter((e) => e.dateIso === selectedDay)
     : [];
@@ -217,6 +224,8 @@ export function ActivityCalendar({
               const lunar = lunarOn ? lunarCellText(cell.dayIso) : null;
               const lunarSpecial = lunarOn && isSpecialLunarDay(cell.dayIso);
               const hijri = hijriOn ? hijriCellText(cell.dayIso) : null;
+              // C-2: the national holiday, derived — free, never stored.
+              const holiday = holidaysOn ? malaysiaHolidayFor(cell.dayIso) : null;
               const dayButton = (
                 <button
                   type="button"
@@ -258,6 +267,14 @@ export function ActivityCalendar({
                       </span>
                     )}
                   </span>
+                  {holiday && (
+                    <span
+                      className="max-w-full truncate rounded-xs bg-red-100 px-1 text-[0.65rem] leading-snug font-medium text-red-800 sm:text-xs dark:bg-red-400/15 dark:text-red-200"
+                      title={`${holiday.bm} · ${holiday.zh} · ${holiday.en}`}
+                    >
+                      <Tri bm={holiday.bm} zh={holiday.zh} en={holiday.en} sep=" · " />
+                    </span>
+                  )}
                   {cats.length > 0 && (
                     <span
                       // Past days used opacity-60 on the whole cluster, which
@@ -344,6 +361,17 @@ export function ActivityCalendar({
                 <span className="ml-2 text-base font-normal text-muted-foreground">
                   {selectedLunar.monthText}
                   {selectedLunar.dayText}
+                </span>
+              )}
+              {selectedHoliday && (
+                <span className="mt-1 block text-base font-normal text-red-700 dark:text-red-300">
+                  🇲🇾{" "}
+                  <Tri
+                    bm={selectedHoliday.bm}
+                    zh={selectedHoliday.zh}
+                    en={selectedHoliday.en}
+                    sep=" · "
+                  />
                 </span>
               )}
             </SheetTitle>
