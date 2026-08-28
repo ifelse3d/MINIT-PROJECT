@@ -50,6 +50,7 @@ export function GroupsCard({
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [search, setSearch] = useState("");
   // #9 (launch feedback): pick MANY people from the roster in one popup.
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerGroup, setPickerGroup] = useState("");
@@ -82,6 +83,18 @@ export function GroupsCard({
   }
   const groupNames = [...byGroup.keys()];
 
+  // B-3: the search narrows to matching groups, or to matching PEOPLE within
+  // a group (the group row stays, showing only the people who match).
+  const needle = search.trim().toLowerCase();
+  const shownGroups: [string, string[]][] = [...byGroup.entries()].flatMap(
+    ([g, names]) => {
+      if (needle === "") return [[g, names] as [string, string[]]];
+      if (g.toLowerCase().includes(needle)) return [[g, names] as [string, string[]]];
+      const matching = names.filter((n) => n.toLowerCase().includes(needle));
+      return matching.length > 0 ? [[g, matching] as [string, string[]]] : [];
+    },
+  );
+
   async function add() {
     if (group.trim() === "" || name.trim() === "") return;
     setBusy(true);
@@ -107,59 +120,9 @@ export function GroupsCard({
         />
       </p>
 
-      {groupNames.length === 0 ? (
-        <p className="text-base text-muted-foreground">
-          <Tri
-            bm="Belum ada kumpulan. Namakan satu di bawah — kumpulan itu wujud sebaik sahaja ada orang pertama di dalamnya."
-            zh="还没有分组。在下面取一个名字 —— 加进第一个人，那个分组就存在了。"
-            en="No groups yet. Name one below — a group exists as soon as its first person is in it."
-          />
-        </p>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {groupNames.map((g) => (
-            <div key={g}>
-              <p className="text-base font-semibold">
-                {g}{" "}
-                <span className="text-sm font-normal text-muted-foreground">
-                  ({(byGroup.get(g) ?? []).length})
-                </span>
-              </p>
-              <ul className="mt-1 flex flex-wrap gap-2">
-                {(byGroup.get(g) ?? []).map((n) => (
-                  <li
-                    key={`${g}-${n}`}
-                    className="inline-flex items-center gap-1.5 rounded-xs border-2 border-[color:var(--v2-border)] px-3 py-1 text-base"
-                  >
-                    {n}
-                    {canEdit && (
-                      <button
-                        type="button"
-                        aria-label={t(
-                          `Keluarkan ${n} daripada ${g}`,
-                          `把 ${n} 从 ${g} 移除`,
-                          `Remove ${n} from ${g}`,
-                        )}
-                        className="text-muted-foreground hover:text-red-700"
-                        onClick={async () => {
-                          const res = await removeFromGroup({ group: g, name: n });
-                          setFailed(!res.ok);
-                          if (res.ok) await refresh();
-                        }}
-                      >
-                        <X aria-hidden className="size-4" strokeWidth={2.4} />
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      )}
-
+      {/* B-3 (work order 51): the FORM on top, the list below it. */}
       {canEdit && (
-        <div className="flex flex-col gap-3 border-t border-border pt-4">
+        <div className="flex flex-col gap-3 border-b border-border pb-4">
           {/* #9: the one-popup way — pick a group, tick many names, done. */}
           {candidates.length > 0 && (
             <Button
@@ -184,11 +147,7 @@ export function GroupsCard({
               <span className="text-sm font-medium text-muted-foreground">
                 <Tri bm="Nama kumpulan" zh="分组名字" en="Group name" />
               </span>
-              {/* A datalist, not a select: the existing groups are one keystroke
-                  away, and a brand-new group is still just typed. A select would
-                  make "we have started a new group" the hardest thing to do. */}
               <input
-                list="minit-group-names"
                 value={group}
                 onChange={(e) => setGroup(e.target.value)}
                 maxLength={60}
@@ -202,11 +161,6 @@ export function GroupsCard({
                 )}
                 className="min-h-11 rounded-md border border-input bg-background px-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
-              <datalist id="minit-group-names">
-                {groupNames.map((g) => (
-                  <option key={g} value={g} />
-                ))}
-              </datalist>
             </label>
 
             <label className="flex min-w-40 flex-1 flex-col gap-1">
@@ -240,12 +194,132 @@ export function GroupsCard({
             </Button>
           </div>
 
+          {/* B-5 (work order 51): the old datalist LOOKED like a dropdown and
+              showed nothing until you typed — the tester read it as broken.
+              The existing groups are now visible, tappable chips: tap one and
+              the box fills. A NEW group is still just typed. */}
+          {groupNames.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                <Tri bm="Kumpulan sedia ada:" zh="已有的分组：" en="Existing groups:" />
+              </span>
+              {groupNames.map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setGroup(g)}
+                  aria-pressed={group === g}
+                  className={
+                    "min-h-9 rounded-xs border-2 px-3 text-base transition " +
+                    (group === g
+                      ? "border-[#a855f7] bg-[#a855f7]/10 font-medium"
+                      : "border-[color:var(--v2-border)] hover:border-[#a855f7]/60")
+                  }
+                >
+                  {g}
+                </button>
+              ))}
+            </div>
+          )}
+
           {failed && (
             <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-base text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
               <Tri
                 bm="Tidak berjaya disimpan. Ciri kumpulan ini memerlukan satu kemas kini pangkalan data yang belum dijalankan — semua yang lain di halaman ini masih berfungsi seperti biasa."
                 zh="没有保存成功。分组这个功能需要一支还没有跑的资料库更新 —— 这一页其他东西都照常可以用。"
                 en="Could not save. Groups need a database update that has not been run yet — everything else on this page still works as normal."
+              />
+            </p>
+          )}
+        </div>
+      )}
+
+      {groupNames.length === 0 ? (
+        <p className="text-base text-muted-foreground">
+          <Tri
+            bm="Belum ada kumpulan. Namakan satu di atas — kumpulan itu wujud sebaik sahaja ada orang pertama di dalamnya."
+            zh="还没有分组。在上面取一个名字 —— 加进第一个人，那个分组就存在了。"
+            en="No groups yet. Name one above — a group exists as soon as its first person is in it."
+          />
+        </p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {/* B-3: search across groups and people once there is enough to
+              lose somebody in. */}
+          {(rows?.length ?? 0) > 8 && (
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t(
+                "Cari kumpulan atau nama…",
+                "搜分组或名字…",
+                "Search a group or a name…",
+              )}
+              className="w-full max-w-sm rounded-sm border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-3 py-2 text-base outline-none focus:border-[color:var(--v2-primary)]"
+            />
+          )}
+          <div className="-mx-2 overflow-x-auto">
+            <table className="w-full min-w-[28rem] border-collapse text-base">
+              <thead>
+                <tr className="border-b border-border text-left text-sm text-muted-foreground">
+                  <th className="px-2 py-2 font-medium">
+                    <Tri bm="Kumpulan" zh="分组" en="Group" />
+                  </th>
+                  <th className="px-2 py-2 font-medium">
+                    <Tri bm="Ahli" zh="成员" en="Members" />
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {shownGroups.map(([g, names]) => (
+                  <tr key={g} className="border-b border-border/60 align-top last:border-0">
+                    <td className="w-40 px-2 py-3 font-semibold">
+                      {g}{" "}
+                      <span className="text-sm font-normal text-muted-foreground">
+                        ({(byGroup.get(g) ?? []).length})
+                      </span>
+                    </td>
+                    <td className="px-2 py-2.5">
+                      <ul className="flex flex-wrap gap-2">
+                        {names.map((n) => (
+                          <li
+                            key={`${g}-${n}`}
+                            className="inline-flex items-center gap-1.5 rounded-xs border-2 border-[color:var(--v2-border)] px-3 py-1 text-base"
+                          >
+                            {n}
+                            {canEdit && (
+                              <button
+                                type="button"
+                                aria-label={t(
+                                  `Keluarkan ${n} daripada ${g}`,
+                                  `把 ${n} 从 ${g} 移除`,
+                                  `Remove ${n} from ${g}`,
+                                )}
+                                className="text-muted-foreground hover:text-red-700"
+                                onClick={async () => {
+                                  const res = await removeFromGroup({ group: g, name: n });
+                                  setFailed(!res.ok);
+                                  if (res.ok) await refresh();
+                                }}
+                              >
+                                <X aria-hidden className="size-4" strokeWidth={2.4} />
+                              </button>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {shownGroups.length === 0 && (
+            <p className="text-base text-muted-foreground">
+              <Tri
+                bm={`Tiada padanan untuk "${search}".`}
+                zh={`找不到「${search}」。`}
+                en={`No match for "${search}".`}
               />
             </p>
           )}
@@ -263,7 +337,6 @@ export function GroupsCard({
               <Tri bm="Nama kumpulan" zh="分组名字" en="Group name" />
             </span>
             <input
-              list="minit-group-names"
               value={pickerGroup}
               onChange={(e) => setPickerGroup(e.target.value)}
               maxLength={60}
@@ -275,6 +348,28 @@ export function GroupsCard({
               className="rounded-md border border-input bg-background px-3 py-2 text-base"
             />
           </label>
+          {/* B-5: the existing groups, visible and tappable — same fix as the
+              main form; the invisible datalist read as a broken dropdown. */}
+          {groupNames.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              {groupNames.map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setPickerGroup(g)}
+                  aria-pressed={pickerGroup === g}
+                  className={
+                    "min-h-9 rounded-xs border-2 px-3 text-base transition " +
+                    (pickerGroup === g
+                      ? "border-[#a855f7] bg-[#a855f7]/10 font-medium"
+                      : "border-[color:var(--v2-border)] hover:border-[#a855f7]/60")
+                  }
+                >
+                  {g}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="flex items-center justify-between gap-2">
             <span className="text-sm text-muted-foreground">
               <Tri

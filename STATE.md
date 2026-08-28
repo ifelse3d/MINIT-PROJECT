@@ -5,11 +5,11 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-29 凌晨（MYT）· Fable 5（51 号过夜施工场，进行中：包 A ✅ → 包 B 接着做）**
-**🔴 本场状态一句话：照 51 号总单开工。包 A（上传与 AI 读文件，A-1～A-6）
-全部做完＋checkpoint 收毕（四道关＋e2e＋探针实测＋52 号报告＋commit）；
-接下来照单做 §3 包 B（Members/Glossary）→ §4 小修包。无新 migration
-（今晚只有 C-13 那支会写档）。J 早上：看最新报告 → push-cabang.bat。**
+**最后更新：2026-08-29 凌晨（MYT）· Fable 5（51 号过夜施工场，进行中：包 A ✅ 包 B ✅ → 小修包接着做）**
+**🔴 本场状态一句话：照 51 号总单开工。包 A（52 号报告）与包 B（Members/
+Glossary，53 号报告）都已完成＋checkpoint 收毕。包 B 写了 migration 32
+（roster note+honorific，B-6/B-7 地基）——只写档未套用，程序 fail-open 已实测。
+接下来 §4 小修包。J 早上：看 52/53 号报告 → 贴 migration 32 → push-cabang.bat。**
 
 ---
 
@@ -55,6 +55,52 @@
   `scripts/probe-relay-51.mjs`：.pptx → 200＋extraction；**5.25MB 单页 PDF
   走真 UI → Storage 直传 → AI 读出进工作区**；relay 档读完即删、历史留档；
   实测花费 US$0.008（ai_usage 两行）；ZZZ org/user 全删。
+
+### 这一场做了什么（51 号过夜场 · 包 B ✅，53 号报告）
+
+- **B-1 删「任期结束」整套**（拍板 5）：表单栏位、Former 分区、Excel 模板
+  Tamat 栏、import-roster 输出栏全拆；term_end 数据库栏保留但无人读写
+  （org-tools 的 senarai_ajk 例外，栏还在无碍）。任命日期加 📅 小日历
+  （隐形 native date input 借 showPicker；打字多格式照旧）。
+- **B-2 错误本地化＋哪格错哪格红**：members/glossary 的 ERR 全改三行
+  joinUserError 格式；`permissionError()` 全局改三行（roles.test 跟着改）；
+  `useLocalizedError` 学会「三行＋空行＋细节」（bulk import 的坏行清单保留）；
+  MemberActionState 加 `field` 标记，对应输入框红框。
+- **B-3 三清单表格化＋表单在上**：members/page 重排（AddCommitteeRow +
+  ImportCommittee 在上，新 `committee-table.tsx` 客户端搜寻表在下）；
+  glossary 同款（新 `glossary-table.tsx`：搜寻＋每页 20 笔分页＋B-10 呈现）；
+  groups-card 表单上移＋搜寻＋表格化。删除钮全站红字＋Trash2。
+- **B-4 表单自动清空**：🔴 根因是 React 19 会在 server action 返回后自动
+  reset 非受控栏位（成功、失败、同名询问都会）——旧日期栏是受控的所以
+  「不清空」，其他栏位其实会被「错误时也清空」。改法：AddCommitteeRow 全部
+  改受控（值活过 auto-reset，错误/询问时输入不丢），成功后 setTimeout(0)
+  清空（eslint 基准的 sanctioned 写法）。glossary 表单靠 auto-reset 即可。
+- **B-5 分组下拉**：datalist（要打字才出现，tester 读成坏的）删掉，改成
+  「已有的分组」可点 chips（主表单＋弹窗同款，点了填入，新分组照样打字）。
+- **B-6 同名规则＋备注栏**（拍板 6）：同名＋同 IC 姓名＝挡；同名＋不同 IC
+  姓名＝amber 询问框「是另一位吗？」（确认钮手动组 FormData +
+  startTransition(formAction)——不赌 submitter name/value 是否进 FormData）。
+  备注栏进表单/表格/出席勾选（roster-actions loadRosterNames 带 note、
+  dedupe key 变 name+note；roster-picker 显示）。
+- **B-7 敬语/职衔地基**（拍板 7）：honorific 栏＋表单（多族群建议 datalist：
+  Dato'/Ustaz/讲师…）＋表格小标签。AI 对人是品质场的事。
+- **B-8**：/members 的「谁可以用 MinitAI」卡删除，留一行指去
+  /settings/members（本来就有完整管理）。
+- **B-9**：members 两处＋glossary 一处的档案选择器改真按钮（file: 伪类紫底白字）。
+- **B-10**：词库原文格直接显示词本身；全 keep 的词一句「三语都保持原字」
+  colSpan 横跨，不再三格灰字重复。
+- **B-11**：徽章改「现任 X 人」，数表格行数，对得上。
+- **Migration 32** `20260910000000_roster_note_honorific.sql`（只写档，J 早上贴）：
+  committee_roster + note(≤120) + honorific(≤60)；salin-migration.bat 加第 32 项；
+  check:migrations 加两条列探针。程序未套用时 fail-open：insert 走 minutes_docs
+  同款「点名剥离重试」梯度，select 走退阶。
+- **测过**：tsc 0 · eslint 22（同基准）· vitest 922 全过（roles.test 那条改成
+  验三行格式）· build ✓ · e2e:minutes ✓ e2e:money ✓（page errors 0）·
+  新探针 `scripts/probe-members-51.mjs` 17 项全 PASS（真 UI、零 AI 费、
+  ZZZ 全删）——含 migration 32 未套用的 fail-open 实测。
+- 诚实记下：①「IC 尾号」实为 IC 姓名比对（系统从不收 IC 号码，PDPA）；
+  ② note/honorific 真存档等 J 贴 32；③ 出席勾选显示备注但同名两人仍按
+  名字一起勾（要分开得动出席底层，长尾）。
 
 ### 上一场（48 号单＋追加第二案；49 号报告给 J 的版本在 _J-要做的事）
 
@@ -181,11 +227,13 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
 
 ### 🔴 J 的事
 
-1. 过夜跑完的早上：看最新一份报告 →（若有 migration 32）照报告指示贴 →
-   **push-cabang.bat**。
-2. push 完**叫 tester 重试**：PPT 直传（不用转 PDF）、Word 直传、>4MB 的
-   PDF 直传、一次传多张照片 —— 包 A 修的就是这四条。
-3. bench 那个视窗：你有空就跑（双击 bench-models.bat）。
+1. 过夜跑完的早上：看最新一份报告（52/53/…）。
+2. **贴 migration 32**：salin-migration.bat 选 32 → Supabase SQL Editor 贴上
+   → Run（53 号报告有逐步教学；没贴之前系统照常，fail-open）。
+3. 双击 **push-cabang.bat**。
+4. **叫 tester 重试**：PPT/Word 直传、>4MB PDF、一次多张照片（包 A）；
+   加理事（试同名）、分组 chips、词库（包 B）。
+5. bench 那个视窗：你有空就跑（双击 bench-models.bat）。
 
 ### ❓ 未决问题
 
@@ -211,7 +259,8 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
 
 **照 51 号檔跑，别的不用想**：
 `C:\dev\_J-要做的事\51-過夜施工總單與開場PROMPT-20260829.md`
-——**包 A 已完（52 号报告）**；接下来 §3 包B（Members/Glossary）→ §4 小修包，
+——**包 A 已完（52 号报告）、包 B 已完（53 号报告）**；接下来 §4 小修包
+（C-1～C-14，C-13/C-14 偏大放最后做到哪算哪），
 每包收尾 checkpoint（四道关＋e2e＋覆写 STATE＋报告＋commit）才开下一包。
 之后的场（也都在 51 号 §5）：⑤ eROSES 大改版（17 张截图为教材）→
 ⑥ AI 智能建议场 → ⑦ 品质场 → ⑧ 助手＋AI 代办 → ⑨ 上线后第一批。
@@ -221,6 +270,23 @@ RESPONSIVE：J 若再圈破版，贴 46 号单同段 PROMPT 继续。
 ---
 
 ## 6. 已知陷阱（踩过的，别再踩）
+
+### 2026-08-29 凌晨新增（51 号过夜场）
+
+- 🔴 **React 19 会在 form action 返回后自动 reset 非受控栏位——成功、报错、
+  「再问一句」全都会**。后果两种：①受控栏位不清（B-4 的「日期卡着上一笔」）；
+  ②报错时用户输入被清光、「确认后重送」送出的是空表单（同名确认第一版就是
+  这样死的，探针抓到）。**修法：要活过 action 的表单一律受控；成功后要清就
+  effect 里 setTimeout(0) 清（eslint 基准的 sanctioned 写法）；「确认重送」
+  不要靠 submit button 的 name/value（版本行为有差），手动组 FormData +
+  startTransition(formAction(fd))。**
+- ⚠ **探针/e2e 的 waitForFunction 等的字串，先 grep 它会不会出现在「上一步
+  的画面」里**——members 探针等「另一位同名」，而上一步的拒绝句里恰好也有
+  这四个字，wait 瞬间通过、按钮还没渲染就去点（点了个寂寞，还以为产品坏了）。
+  等「这一步独有」的字（按钮文案「照加」）。
+- ⚠ **Edit 工具写「哨兵字元」类不可见字符会写出 NUL 进源码**（office-text
+  的 pptx 第一版）——不可见字符的批量替换用 PowerShell/.NET 写行，不要在
+  Edit 的字符串参数里放特殊码位。
 
 ### 2026-08-29 晚新增（48 号救 AI 场）
 

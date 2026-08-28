@@ -3,11 +3,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GroupsCard } from "./groups-card";
 import { Tri } from "@/components/language-provider";
-import { ROLE_LABEL, labelFor } from "@/lib/status-labels";
 import { getSupabaseServer, getSessionUser } from "@/db/supabase-server";
 import { getActiveOrg } from "@/lib/active-org";
 import { can } from "@/lib/roles";
-import { AddCommitteeRow, ImportCommittee, RemoveCommitteeButton } from "./members-form";
+import { AddCommitteeRow, ImportCommittee } from "./members-form";
+import { CommitteeTable, type CommitteeRow } from "./committee-table";
 
 // /members — who is in this society, and in what capacity.
 //
@@ -16,71 +16,49 @@ import { AddCommitteeRow, ImportCommittee, RemoveCommitteeButton } from "./membe
 //
 //   committee_roster — the society's OWN roster. This is what becomes "Senarai
 //     Ahli Jawatankuasa" in the eROSES Annual Return, so the card says out loud
-//     that a one-off duty does not belong in it. One of the 11 tables no code
-//     had ever written to.
-//   members_roles — who can LOG IN and what they may do. A treasurer with no
-//     account is still on the committee; conflating the two is how a system
-//     ends up filing its user list to the Registrar.
+//     that a one-off duty does not belong in it.
+//   members_roles — who can LOG IN and what they may do. That list now lives
+//     where it is managed: Settings → Members & invites (B-8, work order 51 —
+//     the tester read the two lists on one page as one confusing list).
 //
-// Second pass the same afternoon, after the user saw it: "為什麼那麼窄，明明還有
-// 很多地方。然後看起來也很亂。" Both were fair. It was max-w-2xl on a page whose
-// content is tabular (every other working screen is max-w-5xl), and the add
-// form sat in its own card below the list, so a page with two lists read as a
-// page with four panels. Now: one card per list, the form is a row inside the
-// card it feeds, and the data is an actual table.
+// B-3 (work order 51): the FORM sits on top, the list below it, and the list
+// is a searchable table. B-1 (拍板 5): the "term ended / former" machinery is
+// gone — a committee change is a Mesyuarat Agung decision, and eROSES only
+// asks for the APPOINTMENT date.
 
 export const dynamic = "force-dynamic";
-
-type Committee = {
-  id: number;
-  position: string;
-  person_name: string;
-  name_official: string | null;
-  term_start: string | null;
-  term_end: string | null;
-};
-
-type AppUser = { id: number; name: string; role: string };
 
 export default async function MembersPage() {
   const [user, active] = await Promise.all([getSessionUser(), getActiveOrg()]);
 
-  let committee: Committee[] = [];
-  let users: AppUser[] = [];
+  let committee: CommitteeRow[] = [];
   if (user && active) {
     const supabase = await getSupabaseServer();
-    const [c, u] = await Promise.all([
-      supabase
+    // Migration 32 columns first; a database that is behind (D8) answers with
+    // an unknown-column error, and the select retries without them — the
+    // page never white-screens over a schema gap.
+    const withNew = await supabase
+      .from("committee_roster")
+      .select(
+        "id, position, person_name, name_official, term_start, note, honorific",
+      )
+      .eq("org_id", active.id)
+      .order("id", { ascending: true });
+    if (!withNew.error && withNew.data) {
+      committee = withNew.data as CommitteeRow[];
+    } else {
+      const legacy = await supabase
         .from("committee_roster")
-        .select("id, position, person_name, name_official, term_start, term_end")
+        .select("id, position, person_name, name_official, term_start")
         .eq("org_id", active.id)
-        .order("id", { ascending: true }),
-      supabase
-        .from("members_roles")
-        .select("id, name, role")
-        .eq("org_id", active.id)
-        .order("id", { ascending: true }),
-    ]);
-    committee = (c.data ?? []) as Committee[];
-    users = (u.data ?? []) as AppUser[];
+        .order("id", { ascending: true });
+      committee = (legacy.data ?? []) as CommitteeRow[];
+    }
   }
 
-  // B-4: matches the server action's own check (minutes_write) — the UI is
+  // Matches the server action's own check (minutes_write) — the UI is
   // never the authority, but it must not offer a form the server will refuse.
   const canEdit = active !== null && can(active.role, "minutes_write");
-
-  // #8 (launch feedback): 「任期結束也已經不在那個職位了」— a member whose
-  // term has ENDED is not on the current committee. They stay on file (the
-  // record is real) but move to their own "former" section below.
-  const todayIso = new Date().toLocaleDateString("en-CA", {
-    timeZone: "Asia/Kuala_Lumpur",
-  });
-  const current = committee.filter(
-    (m) => !(m.term_end && m.term_end.slice(0, 10) < todayIso),
-  );
-  const former = committee.filter(
-    (m) => m.term_end && m.term_end.slice(0, 10) < todayIso,
-  );
 
   // How many of the filed committee still have no name as printed on their IC.
   //
@@ -89,10 +67,9 @@ export default async function MembersPage() {
   // only the Chinese name to hand and has to ask the person for the IC — if
   // adding someone were blocked on it, they could not even write the name
   // down, so they would invent a romanisation, and an invented romanisation on
-  // a government form is a false filing. That is the exact thing being
-  // prevented. So: never in the way while the list is being built, and counted
-  // in plain sight because eROSES will ask.
-  const missingOfficial = current.filter(
+  // a government form is a false filing. So: never in the way while the list
+  // is being built, and counted in plain sight because eROSES will ask.
+  const missingOfficial = committee.filter(
     (m) => (m.name_official ?? "").trim() === "",
   ).length;
 
@@ -106,9 +83,9 @@ export default async function MembersPage() {
         </h1>
         <p className="text-base text-muted-foreground">
           <Tri
-            bm="Dua senarai berbeza: jawatankuasa yang difailkan, dan siapa yang boleh log masuk."
-            zh="两份不一样的名单：要申报的理事名单，还有谁可以登入。"
-            en="Two different lists: the committee you file, and who can log in."
+            bm="Senarai jawatankuasa yang difailkan, dan kumpulan pertubuhan anda sendiri."
+            zh="要申报的理事名单，还有你们自己的分组。"
+            en="The committee you file, and your society's own groups."
           />
         </p>
       </div>
@@ -142,7 +119,7 @@ export default async function MembersPage() {
             </p>
           )}
 
-          {/* 1 — the filed committee */}
+          {/* 1 — the filed committee. Form on top, table below (B-3). */}
           <Card>
             <CardHeader className="gap-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -153,9 +130,14 @@ export default async function MembersPage() {
                     en="Committee list"
                   />
                 </CardTitle>
+                {/* B-11: SAY what the number counts — "0 people" above a
+                    visible list read as a bug to the tester. */}
                 <Badge variant="secondary">
-                  {current.length}{" "}
-                  <Tri bm="orang" zh="人" en="people" />
+                  <Tri
+                    bm={`Semasa: ${committee.length} orang`}
+                    zh={`现任 ${committee.length} 人`}
+                    en={`Current: ${committee.length}`}
+                  />
                 </Badge>
               </div>
               <p className="rounded-sm border border-amber-300/70 bg-amber-50/70 px-3 py-2 text-sm text-amber-900 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
@@ -168,113 +150,15 @@ export default async function MembersPage() {
             </CardHeader>
 
             <CardContent className="flex flex-col gap-5">
-              {current.length === 0 ? (
-                <p className="text-base text-muted-foreground">
-                  <Tri
-                    bm="Masih kosong — tambah seorang di bawah, atau tampal senarai sedia ada."
-                    zh="还是空的 —— 在下面加一位，或者把已经有的名单贴进来。"
-                    en="Still empty — add someone below, or paste a list you already have."
-                  />
-                </p>
-              ) : (
-                <div className="-mx-2 overflow-x-auto">
-                  <table className="w-full min-w-[44rem] border-collapse text-base">
-                    <thead>
-                      <tr className="border-b border-border text-left text-sm text-muted-foreground">
-                        <th className="px-2 py-2 font-medium">
-                          <Tri bm="Jawatan" zh="职位" en="Position" />
-                        </th>
-                        <th className="px-2 py-2 font-medium">
-                          <Tri bm="Nama" zh="姓名" en="Name" />
-                        </th>
-                        <th className="px-2 py-2 font-medium">
-                          <Tri
-                            bm="Nama dalam IC (eROSES)"
-                            zh="身份证上的名字（eROSES）"
-                            en="Name on IC (eROSES)"
-                          />
-                        </th>
-                        <th className="px-2 py-2 font-medium">
-                          <Tri bm="Penggal" zh="任期" en="Term" />
-                        </th>
-                        <th className="px-2 py-2" />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {current.map((m) => (
-                        <tr key={m.id} className="border-b border-border/60 last:border-0">
-                          <td className="px-2 py-3 align-top">{m.position}</td>
-                          <td className="px-2 py-3 align-top font-semibold">
-                            {m.person_name}
-                          </td>
-                          <td className="px-2 py-3 align-top">
-                            {/* Amber, not grey: this is the same gap the
-                                banner above counts, so it has to be findable
-                                by eye once you have read the number. Empty
-                                string counts as missing too — the roster
-                                import writes "" where a photo showed no IC
-                                name, and a blank that reads as "filled in"
-                                is the whole problem. */}
-                            {(m.name_official ?? "").trim() !== "" ? (
-                              m.name_official
-                            ) : (
-                              <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
-                                <Tri bm="belum diisi" zh="还没填" en="not filled in" />
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-2 py-3 align-top text-sm text-muted-foreground">
-                            {m.term_start || m.term_end
-                              ? `${m.term_start ?? "—"} → ${m.term_end ?? "—"}`
-                              : "—"}
-                          </td>
-                          <td className="px-2 py-3 text-right align-top">
-                            {canEdit && <RemoveCommitteeButton id={m.id} />}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {/* #8: former bearers — term ended, off the current list, still
-                  on file. Grey, separate, and clearly labelled. */}
-              {former.length > 0 && (
-                <div className="rounded-md border border-dashed border-[color:var(--v2-border-strong)] p-3">
-                  <p className="text-sm font-semibold text-muted-foreground">
-                    <Tri
-                      bm={`Mantan (penggal tamat) — ${former.length}`}
-                      zh={`已卸任（任期已结束）— ${former.length} 人`}
-                      en={`Former (term ended) — ${former.length}`}
-                    />
-                  </p>
-                  <ul className="mt-2 flex flex-col gap-1 text-sm text-muted-foreground">
-                    {former.map((m) => (
-                      <li
-                        key={m.id}
-                        className="flex flex-wrap items-center justify-between gap-2"
-                      >
-                        <span>
-                          {m.position} · <span className="font-medium">{m.person_name}</span>
-                          {" · "}
-                          {m.term_start ?? "—"} → {m.term_end}
-                        </span>
-                        {canEdit && <RemoveCommitteeButton id={m.id} />}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
               {canEdit && (
                 <>
-                  <div className="border-t border-border pt-5">
-                    <AddCommitteeRow />
-                  </div>
+                  <AddCommitteeRow />
                   <ImportCommittee />
                 </>
               )}
+              <div className={canEdit ? "border-t border-border pt-5" : undefined}>
+                <CommitteeTable rows={committee} canEdit={canEdit} />
+              </div>
             </CardContent>
           </Card>
 
@@ -299,53 +183,25 @@ export default async function MembersPage() {
             </CardContent>
           </Card>
 
-          {/* 3 — who can log in. A different question entirely. */}
-          <Card>
-            <CardHeader className="gap-2">
-              <CardTitle>
-                <Tri bm="Siapa boleh guna MinitAI" zh="谁可以用 MinitAI" en="Who can use MinitAI" />
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                <Tri
-                  bm="Akaun dan kebenaran. Ini bukan senarai yang difailkan — seorang bendahari tanpa akaun masih ahli jawatankuasa."
-                  zh="这是登入帐号和权限，不是要申报的名单 —— 没有帐号的财政，还是理事。"
-                  en="Accounts and permissions. This is not the filed list — a treasurer without an account is still on the committee."
-                />
-              </p>
-            </CardHeader>
-            <CardContent>
-              {users.length === 0 ? (
-                <p className="text-base text-muted-foreground">
-                  <Tri
-                    bm="Tiada akaun lain buat masa ini."
-                    zh="目前只有您一个人。"
-                    en="No other accounts yet."
-                  />
-                </p>
-              ) : (
-                <ul className="flex flex-col divide-y divide-border/60">
-                  {users.map((m) => (
-                    <li
-                      key={m.id}
-                      className="flex flex-wrap items-center justify-between gap-3 py-3"
-                    >
-                      <span className="text-base font-semibold">{m.name}</span>
-                      <span className="text-sm text-muted-foreground">
-                        <Tri {...labelFor(ROLE_LABEL, m.role)} />
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <p className="mt-4 text-sm text-muted-foreground">
-                <Tri
-                  bm="Menjemput orang lain belum tersedia (P1-1)."
-                  zh="邀请其他人加入还没做（P1-1）。"
-                  en="Inviting other people is not built yet (P1-1)."
-                />
-              </p>
-            </CardContent>
-          </Card>
+          {/* B-8: accounts & permissions live where they are MANAGED. */}
+          <p className="text-base text-muted-foreground">
+            <Tri
+              bm="Siapa boleh log masuk dan guna MinitAI —"
+              zh="谁可以登入用 MinitAI ——"
+              en="Who can log in and use MinitAI —"
+            />{" "}
+            <Link
+              href="/settings/members"
+              className="underline underline-offset-4"
+            >
+              <Tri
+                bm="Tetapan → Ahli & jemputan"
+                zh="设置 → 成员与邀请"
+                en="Settings → Members & invites"
+              />{" "}
+              →
+            </Link>
+          </p>
         </div>
       )}
     </div>

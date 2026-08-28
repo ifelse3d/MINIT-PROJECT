@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tri } from "@/components/language-provider";
+import { Tri, useLocalizedError } from "@/components/language-provider";
 import { ChooseFileLabel } from "@/components/attach-icon";
 import {
   addGlossaryTerm,
@@ -18,6 +19,11 @@ const inputCls =
 
 const errorCls =
   "rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium whitespace-pre-line text-red-900 dark:bg-red-400/10 dark:text-red-100";
+
+/** B-9: the file input AS a real button — the browser's "Choose file" small
+ *  text was invisible to testers. */
+const fileBtnCls =
+  "text-base file:mr-3 file:cursor-pointer file:rounded-sm file:border-0 file:bg-[color:var(--v2-primary-fill)] file:px-4 file:py-2 file:text-base file:font-semibold file:text-white";
 
 const LANGS = [
   { value: "zh", bm: "Cina", zh: "中文", en: "Chinese" },
@@ -36,7 +42,9 @@ const LANG_WORD: Record<"bm" | "zh" | "en", { bm: string; zh: string; en: string
  *  original. Leave both empty = keep the word exactly, never translated. */
 export function AddTermForm() {
   const [state, formAction, pending] = useActionState(addGlossaryTerm, INITIAL);
+  const localizeError = useLocalizedError();
   const [lang, setLang] = useState<"bm" | "zh" | "en">("zh");
+  const formRef = useRef<HTMLFormElement>(null);
   const others = (["bm", "zh", "en"] as const).filter((l) => l !== lang);
   const renderField: Record<"bm" | "zh" | "en", string> = {
     bm: "renderBm",
@@ -44,8 +52,15 @@ export function AddTermForm() {
     en: "renderEn",
   };
 
+  // B-4 (work order 51): a successful add clears the text boxes for the next
+  // word. The language choice stays — a person adding ten names picks the
+  // language once. No setState here.
+  useEffect(() => {
+    if (state.ok) formRef.current?.reset();
+  }, [state]);
+
   return (
-    <form action={formAction} className="flex flex-col gap-3">
+    <form ref={formRef} action={formAction} className="flex flex-col gap-3">
       <div className="grid gap-3 @3xl:grid-cols-[1.4fr_1fr] @3xl:items-end">
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium text-muted-foreground">
@@ -124,7 +139,7 @@ export function AddTermForm() {
           ✓ <Tri bm="Ditambah" zh="加好了" en="Added" />
         </p>
       )}
-      {state.error && <p className={errorCls}>{state.error}</p>}
+      {state.error && <p className={errorCls}>{localizeError(state.error)}</p>}
     </form>
   );
 }
@@ -134,7 +149,15 @@ export function DeleteTermButton({ id }: { id: number }) {
   return (
     <form action={formAction} className="inline">
       <input type="hidden" name="id" value={id} />
-      <Button type="submit" variant="ghost" size="sm" disabled={pending}>
+      {/* B-3: removal reads as removal — red, with a bin icon. */}
+      <Button
+        type="submit"
+        variant="ghost"
+        size="sm"
+        disabled={pending}
+        className="text-red-700 hover:bg-red-50 hover:text-red-800 dark:text-red-300 dark:hover:bg-red-400/10"
+      >
+        <Trash2 aria-hidden className="size-4" strokeWidth={2.2} />
         <Tri bm="Padam" zh="删除" en="Remove" />
       </Button>
       {state.error && <span className="sr-only">{state.error}</span>}
@@ -152,6 +175,7 @@ export function DeleteTermButton({ id }: { id: number }) {
  */
 export function ImportGlossary() {
   const [state, formAction, pending] = useActionState(importGlossary, INITIAL);
+  const localizeError = useLocalizedError();
   const [open, setOpen] = useState(false);
 
   return (
@@ -227,7 +251,8 @@ export function ImportGlossary() {
                 type="file"
                 name="file"
                 accept=".xlsx,.csv,.txt,.tsv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                className="max-w-[16rem] text-sm"
+                // B-9: a real button, not the browser's tiny default text.
+                className={"max-w-[20rem] " + fileBtnCls}
               />
             </label>
           </div>
@@ -244,7 +269,7 @@ export function ImportGlossary() {
               ✓ <Tri bm="Diimport" zh="加好了" en="Imported" />
             </p>
           )}
-          {state.error && <p className={errorCls}>{state.error}</p>}
+          {state.error && <p className={errorCls}>{localizeError(state.error)}</p>}
         </form>
       )}
     </div>

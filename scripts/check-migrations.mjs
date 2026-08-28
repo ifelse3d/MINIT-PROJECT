@@ -74,6 +74,8 @@ const probes = [
   ["20260908000000 minutes edit log", "minutes_docs", "edited_at"],
   ["20260908000000 minutes photo links", "minutes_docs", "photo_paths"],
   ["20260909000000 free fence counters (D44)", "fence_usage", "docs_made"],
+  ["20260910000000 roster note (51 B-6)", "committee_roster", "note"],
+  ["20260910000000 roster honorific (51 B-7)", "committee_roster", "honorific"],
 ];
 
 const headers = { apikey: key, Authorization: `Bearer ${key}` };

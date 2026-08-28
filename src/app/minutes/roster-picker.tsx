@@ -184,7 +184,7 @@ export function RosterPicker({
           const here = alreadyThere.has(r.name.toLowerCase());
           const checked = here || picked.has(r.name);
           return (
-            <li key={`${r.name}-${r.position}`}>
+            <li key={`${r.name}-${r.position}-${r.note ?? ""}`}>
               <label
                 className={`flex min-h-11 items-center gap-3 py-2 text-base ${
                   here ? "text-muted-foreground" : "cursor-pointer"
@@ -204,7 +204,17 @@ export function RosterPicker({
                     })
                   }
                 />
-                <span className="flex-1">{r.name}</span>
+                <span className="flex-1">
+                  {r.name}
+                  {/* B-6 (work order 51): the tell-apart note rides with the
+                      name wherever the name is shown — two 陈小明 must be
+                      tickable apart. */}
+                  {(r.note ?? "") !== "" && (
+                    <span className="ml-1.5 text-sm text-muted-foreground">
+                      {r.note}
+                    </span>
+                  )}
+                </span>
                 {r.position && (
                   <span className="text-sm text-muted-foreground">{r.position}</span>
                 )}

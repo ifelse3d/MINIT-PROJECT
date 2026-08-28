@@ -34,18 +34,21 @@ const SPEC: Record<
 > = {
   committee: {
     sheet: "Jawatankuasa",
+    // B-1 (work order 51, 拍板 5): no "term end" column any more — eROSES asks
+    // for the APPOINTMENT date only, and an end date quietly expiring people
+    // was removed from the whole feature. Old files that still carry a fifth
+    // column are accepted (the parser reads it) and the end date is ignored.
     columns: [
       { header: "Jawatan / 职位 / Position", width: 34 },
       { header: "Nama / 姓名 / Name", width: 26 },
       { header: "Nama seperti dalam IC / 马来文姓名（如 IC）/ Name as on IC", width: 34 },
-      { header: "Mula / 任期开始 / From (YYYY-MM-DD)", width: 26 },
-      { header: "Tamat / 任期结束 / To (YYYY-MM-DD)", width: 26 },
+      { header: "Tarikh perlantikan / 任命日期 / Appointed (YYYY-MM-DD)", width: 30 },
     ],
     examples: [
-      ["Pengerusi / 主席", "陈大明", "TAN TAI BENG", "2026-01-01", "2027-12-31"],
-      ["Setiausaha / 秘书", "林小美", "LIM SIEW MEI", "", ""],
-      ["Bendahari / 财政", "王小强", "", "", ""],
-      ["Ahli Jawatankuasa (AJK) / 理事", "李美玲", "", "", ""],
+      ["Pengerusi / 主席", "陈大明", "TAN TAI BENG", "2026-01-01"],
+      ["Setiausaha / 秘书", "林小美", "LIM SIEW MEI", ""],
+      ["Bendahari / 财政", "王小强", "", ""],
+      ["Ahli Jawatankuasa (AJK) / 理事", "李美玲", "", ""],
     ],
     notes: [
       "Isi satu orang satu baris. Padamkan baris contoh sebelum muat naik.",

@@ -18,20 +18,22 @@ import { xlsxToPasteText } from "@/lib/roster-xlsx";
 
 export type GlossaryActionState = { error: string | null; ok: boolean };
 
+// B-2 (work order 51): three LINES (the joinUserError shape), so
+// useLocalizedError shows only the reader's language.
 const ERR = {
-  login: "Sila log masuk semula / 请重新登入 / Please log in again",
+  login: "Sila log masuk semula\n请重新登入\nPlease log in again",
   noOrg:
-    "Pilih pertubuhan dahulu / 请先选择一个机构 / Choose an organisation first",
+    "Pilih pertubuhan dahulu\n请先选择一个机构\nChoose an organisation first",
   readOnly:
-    "Akaun auditor hanya boleh membaca / 审计账号只能查看 / Auditor accounts are read-only",
+    "Akaun auditor hanya boleh membaca\n审计账号只能查看\nAuditor accounts are read-only",
   emptyTerm:
-    "Taip perkataan itu dahulu / 请先填上那个词 / Type the word first",
+    "Taip perkataan itu dahulu\n请先填上那个词\nType the word first",
   needTranslation:
-    "Anda memilih “terjemah” — jadi tulis juga cara ia patut ditulis / 您选了「翻译成」—— 请也写上要翻成什么 / You chose “translate” — so write what it should become",
+    "Anda memilih “terjemah” — jadi tulis juga cara ia patut ditulis\n您选了「翻译成」—— 请也写上要翻成什么\nYou chose “translate” — so write what it should become",
   duplicate:
-    "Perkataan ini sudah ada dalam senarai. Padam yang lama dahulu jika mahu menukarnya / 这个词已经在列表里了。要改的话，请先删掉旧的那一条 / This word is already in the list. Delete the old entry first if you want to change it",
+    "Perkataan ini sudah ada dalam senarai. Padam yang lama dahulu jika mahu menukarnya\n这个词已经在列表里了。要改的话，请先删掉旧的那一条\nThis word is already in the list. Delete the old entry first if you want to change it",
   failed:
-    "Tidak berjaya — cuba lagi / 没有成功 —— 请再试一次 / Something went wrong — please try again",
+    "Tidak berjaya — cuba lagi\n没有成功 —— 请再试一次\nSomething went wrong — please try again",
 };
 
 export async function addGlossaryTerm(
@@ -161,7 +163,7 @@ export async function importGlossary(
   const text = await readPastedOrFile(formData);
   if (text.trim() === "") {
     return {
-      error: "Tampal senarai anda dahulu / 请先贴上您的清单 / Paste your list first",
+      error: "Tampal senarai anda dahulu\n请先贴上您的清单\nPaste your list first",
       ok: false,
     };
   }
@@ -173,7 +175,7 @@ export async function importGlossary(
   if (rows.length === 0 || rows.length > 300) {
     return {
       error:
-        "Antara 1 dan 300 baris / 一次 1 到 300 行 / Between 1 and 300 lines",
+        "Antara 1 dan 300 baris\n一次 1 到 300 行\nBetween 1 and 300 lines",
       ok: false,
     };
   }

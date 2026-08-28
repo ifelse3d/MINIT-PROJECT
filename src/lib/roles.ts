@@ -115,5 +115,8 @@ export function permissionError(cap: Capability): string {
     },
   };
   const w = who[cap];
-  return `Peranan anda tidak boleh membuat tindakan ini — minta ${w.bm} / 您的角色不能做这个操作，请找${w.zh} / Your role cannot do this — ask ${w.en}`;
+  // B-2 (work order 51): the three-LINE joinUserError shape, so
+  // useLocalizedError shows only the reader's language. The old " / " single
+  // line showed all three to everybody.
+  return `Peranan anda tidak boleh membuat tindakan ini — minta ${w.bm}\n您的角色不能做这个操作，请找${w.zh}\nYour role cannot do this — ask ${w.en}`;
 }

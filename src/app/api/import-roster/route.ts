@@ -207,10 +207,13 @@ export async function POST(req: Request) {
 
     // Tab-separated, because that is what the one parser takes — and because
     // empty cells stay in position, which is how a missing IC name survives the
-    // trip instead of sliding into the term column.
+    // trip instead of sliding into the term column. B-1 (work order 51): the
+    // model may still read a term_end off an old paper list (the schema
+    // tolerates it), but it is dropped here — the feature keeps only the
+    // appointment date.
     const text = parsed.data.rows
       .map((r) =>
-        [r.position, r.name, r.name_official, r.term_start, r.term_end]
+        [r.position, r.name, r.name_official, r.term_start]
           .map((f) => f.trim())
           .join("\t")
           .replace(/\t+$/, ""),

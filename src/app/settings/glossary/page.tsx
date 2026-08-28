@@ -5,7 +5,8 @@ import { Tri } from "@/components/language-provider";
 import { getSupabaseServer, getSessionUser } from "@/db/supabase-server";
 import { getActiveOrg } from "@/lib/active-org";
 import { can } from "@/lib/roles";
-import { AddTermForm, DeleteTermButton, ImportGlossary } from "./glossary-form";
+import { AddTermForm, ImportGlossary } from "./glossary-form";
+import { GlossaryTable, type GlossaryRow } from "./glossary-table";
 
 // /glossary — the organisation teaches Minit its own words.
 //
@@ -20,51 +21,7 @@ import { AddTermForm, DeleteTermButton, ImportGlossary } from "./glossary-form";
 
 export const dynamic = "force-dynamic";
 
-type Row = {
-  id: number;
-  term: string;
-  action: "keep" | "translate";
-  translation: string | null;
-  note: string | null;
-  /** #10 (migration 28): which language the ORIGINAL is, and the other
-   *  languages' renderings. Absent on a pre-28 database / legacy rows. */
-  lang?: "bm" | "zh" | "en" | null;
-  render_bm?: string | null;
-  render_zh?: string | null;
-  render_en?: string | null;
-};
-
-/** One language's cell: the original slot says so; a render shows itself;
- *  an empty render means "written exactly as the original". */
-function LangCell({ row, lang }: { row: Row; lang: "bm" | "zh" | "en" }) {
-  if (row.lang === lang) {
-    return (
-      <td className="px-2 py-3 align-top">
-        <span className="font-medium">{row.term}</span>{" "}
-        <span className="text-xs text-muted-foreground">
-          <Tri bm="(asal)" zh="（原文）" en="(original)" />
-        </span>
-      </td>
-    );
-  }
-  const render =
-    lang === "bm"
-      ? (row.render_bm ?? (row.action === "translate" ? row.translation : null))
-      : lang === "zh"
-        ? row.render_zh
-        : row.render_en;
-  return (
-    <td className="px-2 py-3 align-top">
-      {render ? (
-        render
-      ) : (
-        <span className="text-sm text-muted-foreground">
-          <Tri bm="ikut asal" zh="照原字" en="as original" />
-        </span>
-      )}
-    </td>
-  );
-}
+type Row = GlossaryRow;
 
 export default async function GlossaryPage() {
   const [user, active] = await Promise.all([getSessionUser(), getActiveOrg()]);
@@ -144,62 +101,20 @@ export default async function GlossaryPage() {
           </CardHeader>
 
           <CardContent className="flex flex-col gap-5">
-            {rows.length === 0 ? (
-              <p className="text-base text-muted-foreground">
-                <Tri
-                  bm="Masih kosong. Mulakan dengan nama ahli yang sering disalah baca, dan nama kelas atau ajaran anda."
-                  zh="还是空的。可以先加最常被读错的人名，还有你们的班别、法号这类。"
-                  en="Still empty. Start with the members' names that get misread most, and your class or teaching names."
-                />
-              </p>
-            ) : (
-              <div className="-mx-2 overflow-x-auto">
-                {/* #10: one row = the original word (in ITS language) and how
-                    the other two languages say it. An empty pair of renders
-                    = the word is kept exactly, never translated. */}
-                <table className="w-full min-w-[44rem] border-collapse text-base">
-                  <thead>
-                    <tr className="border-b border-border text-left text-sm text-muted-foreground">
-                      <th className="px-2 py-2 font-medium">
-                        <Tri bm="Perkataan asal" zh="原本的词" en="Original word" />
-                      </th>
-                      <th className="px-2 py-2 font-medium">Bahasa Malaysia</th>
-                      <th className="px-2 py-2 font-medium">
-                        <Tri bm="Cina" zh="中文" en="Chinese" />
-                      </th>
-                      <th className="px-2 py-2 font-medium">English</th>
-                      <th className="px-2 py-2 font-medium">
-                        <Tri bm="Ia apa" zh="这是什么" en="What it is" />
-                      </th>
-                      <th className="px-2 py-2" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((r) => (
-                      <tr key={r.id} className="border-b border-border/60 last:border-0">
-                        <td className="px-2 py-3 align-top">
-                          <span className="font-semibold">{r.term}</span>
-                          {r.lang && (
-                            <span className="ml-1.5 rounded-xs bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-                              {r.lang === "bm" ? "BM" : r.lang === "zh" ? "中文" : "EN"}
-                            </span>
-                          )}
-                        </td>
-                        <LangCell row={r} lang="bm" />
-                        <LangCell row={r} lang="zh" />
-                        <LangCell row={r} lang="en" />
-                        <td className="px-2 py-3 align-top text-sm text-muted-foreground">
-                          {r.note ?? "—"}
-                        </td>
-                        <td className="px-2 py-3 text-right align-top">
-                          {canEdit && <DeleteTermButton id={r.id} />}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+            {/* B-3 (work order 51): the FORM on top, the list below it. */}
+            {canEdit && (
+              <>
+                <AddTermForm />
+                <ImportGlossary />
+              </>
             )}
+            <div className={canEdit ? "border-t border-border pt-5" : undefined}>
+              {/* #10: one row = the original word (in ITS language) and how
+                  the other two languages say it. No renderings anywhere =
+                  the word is kept exactly, never translated (B-10 wording).
+                  Search + pages live in the table component. */}
+              <GlossaryTable rows={rows} canEdit={canEdit} />
+            </div>
 
             {dbBehind && (
               <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
@@ -211,14 +126,6 @@ export default async function GlossaryPage() {
               </p>
             )}
 
-            {canEdit && (
-              <>
-                <div className="border-t border-border pt-5">
-                  <AddTermForm />
-                </div>
-                <ImportGlossary />
-              </>
-            )}
           </CardContent>
         </Card>
       )}

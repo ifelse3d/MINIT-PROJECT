@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Tri, useLocalizedError } from "@/components/language-provider";
+import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
 import { toIsoDate } from "@/lib/date-input";
 import {
   addCommitteeMember,
@@ -10,38 +10,96 @@ import {
   removeCommitteeMember,
   type MemberActionState,
 } from "./actions";
+import { Trash2 } from "lucide-react";
 import { AttachIcon, ChooseFileLabel } from "@/components/attach-icon";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
 import { uploadErrorMessage } from "@/lib/shrink-photo";
 import { prepareUploadForSend } from "@/lib/upload-relay-client";
-
-/** #8 (launch feedback): a term-date box that formats ITSELF — type 20260101
- *  or 1/1/2026 and it becomes 2026-01-01 on blur. The dashes are our job. */
-function TermDateInput({ name }: { name: string }) {
-  const [value, setValue] = useState("");
-  return (
-    <input
-      name={name}
-      className={inputCls}
-      value={value}
-      inputMode="numeric"
-      placeholder="2026-01-01"
-      onChange={(e) => setValue(e.target.value)}
-      onBlur={() => {
-        const iso = toIsoDate(value);
-        if (iso) setValue(iso);
-      }}
-    />
-  );
-}
 
 const INITIAL: MemberActionState = { error: null, ok: false };
 
 const inputCls =
   "w-full rounded-sm border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-3 py-2 text-base text-[color:var(--v2-text)] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[color:var(--v2-primary)] focus:shadow-[0_0_0_3px_rgba(91,75,214,0.18)]";
 
+/** B-2: the box the error is about turns red — appended to inputCls. */
+const invalidCls =
+  " border-red-400 focus:border-red-500 focus:shadow-[0_0_0_3px_rgba(239,68,68,0.18)]";
+
 const errorCls =
   "rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium whitespace-pre-line text-red-900 dark:bg-red-400/10 dark:text-red-100";
+
+/** B-9: the file input AS a real button — the browser's "Choose file" small
+ *  text was invisible to testers. Same file: classes create-org-form uses. */
+const fileBtnCls =
+  "text-base file:mr-3 file:cursor-pointer file:rounded-sm file:border-0 file:bg-[color:var(--v2-primary-fill)] file:px-4 file:py-2 file:text-base file:font-semibold file:text-white";
+
+/**
+ * #8 (launch feedback) + B-1 (work order 51): the appointment-date box.
+ * Typing still takes any shape (20260101, 1/1/2026 — the dashes are our job,
+ * normalised on blur), and the 📅 button opens the browser's own little
+ * calendar for people who would rather tap than type.
+ * CONTROLLED, like every box in this form: React 19 auto-resets a form after
+ * its action returns — including after a refusal or the same-name question —
+ * and a controlled value is the only kind that survives that reset.
+ */
+function TermDateInput({
+  name,
+  value,
+  onChange,
+  invalid,
+}: {
+  name: string;
+  value: string;
+  onChange: (v: string) => void;
+  invalid?: boolean;
+}) {
+  const t = useTriText();
+  const dateRef = useRef<HTMLInputElement>(null);
+  return (
+    <div className="relative">
+      <input
+        name={name}
+        value={value}
+        className={inputCls + (invalid ? invalidCls : "") + " pr-11"}
+        inputMode="numeric"
+        placeholder="2026-01-01"
+        onChange={(e) => onChange(e.currentTarget.value)}
+        onBlur={() => {
+          const iso = toIsoDate(value);
+          if (iso) onChange(iso);
+        }}
+      />
+      <button
+        type="button"
+        aria-label={t("Buka kalendar", "打开小日历", "Open the calendar")}
+        className="absolute top-1/2 right-1.5 -translate-y-1/2 rounded-xs px-1.5 py-0.5 text-lg hover:bg-black/5 dark:hover:bg-white/10"
+        onClick={() => {
+          const d = dateRef.current;
+          if (!d) return;
+          try {
+            d.showPicker();
+          } catch {
+            d.click();
+          }
+        }}
+      >
+        📅
+      </button>
+      {/* The native date input exists only to lend its picker; invisible,
+          anchored to the box so the calendar opens in the right place. */}
+      <input
+        ref={dateRef}
+        type="date"
+        tabIndex={-1}
+        aria-hidden
+        className="pointer-events-none absolute right-0 bottom-0 h-0 w-0 opacity-0"
+        onChange={(e) => {
+          if (e.currentTarget.value) onChange(e.currentTarget.value);
+        }}
+      />
+    </div>
+  );
+}
 
 /** The positions a Malaysian registered society actually files. Suggestions,
  *  not a fixed list — societies use their own wording, and being told "that is
@@ -58,23 +116,72 @@ const SUGGESTED = [
   "Ahli biasa / 普通会员",
 ];
 
+/** The society's own honorifics/titles — SUGGESTIONS only, from several
+ *  Malaysian communities; whatever this society writes is the right answer. */
+const HONORIFIC_SUGGESTED = [
+  "Dato'",
+  "Datin",
+  "Dr.",
+  "Haji",
+  "Hajah",
+  "Ustaz",
+  "Ustazah",
+  "讲师",
+  "师兄",
+  "师姐",
+];
+
 /** One row, not a second card. Adding a person is part of reading the list —
  *  the previous layout put it in a separate panel below, which is how a page
  *  with two lists ended up looking like a page with four. */
 export function AddCommitteeRow() {
   const [state, formAction, pending] = useActionState(addCommitteeMember, INITIAL);
   const localizeError = useLocalizedError();
+  // CONTROLLED fields, deliberately: React 19 auto-resets a form's
+  // uncontrolled inputs the moment its action returns — including on a
+  // refusal and on the same-name question — which would throw away what the
+  // person typed exactly when they still need it (to fix one box, or to
+  // answer "yes, another person" and re-submit the same values).
+  const [position, setPosition] = useState("");
+  const [personName, setPersonName] = useState("");
+  const [honorific, setHonorific] = useState("");
+  const [nameOfficial, setNameOfficial] = useState("");
+  const [note, setNote] = useState("");
+  const [termStart, setTermStart] = useState("");
+  // Cancelling the same-name question: useActionState's state cannot be
+  // cleared imperatively, so remember WHICH state object was dismissed (the
+  // errorHiddenFor pattern from ImportCommittee below).
+  const [askHiddenFor, setAskHiddenFor] = useState<MemberActionState | null>(null);
+  const askSameName = state === askHiddenFor ? null : state.askSameName;
+
+  // B-4 (work order 51): a successful add clears the WHOLE form (date
+  // included) so the next person starts on a clean row. setTimeout(0), not a
+  // bare setState-in-effect — the repo's eslint baseline forbids the latter.
+  useEffect(() => {
+    if (!state.ok) return;
+    const timer = setTimeout(() => {
+      setPosition("");
+      setPersonName("");
+      setHonorific("");
+      setNameOfficial("");
+      setNote("");
+      setTermStart("");
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [state]);
 
   return (
     <form action={formAction} className="flex flex-col gap-3">
-      <div className="grid gap-3 @3xl:grid-cols-[1.1fr_1fr_1.2fr_0.8fr_0.8fr_auto] @3xl:items-end">
+      <div className="grid gap-3 @3xl:grid-cols-3">
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium text-muted-foreground">
             <Tri bm="Jawatan" zh="职位" en="Position" />
           </span>
           <input
             name="position"
-            className={inputCls}
+            value={position}
+            onChange={(e) => setPosition(e.currentTarget.value)}
+            className={inputCls + (state.field === "position" ? invalidCls : "")}
             required
             maxLength={120}
             list="committee-positions"
@@ -90,7 +197,36 @@ export function AddCommitteeRow() {
           <span className="text-sm font-medium text-muted-foreground">
             <Tri bm="Nama" zh="姓名" en="Name" />
           </span>
-          <input name="personName" className={inputCls} required maxLength={120} />
+          <input
+            name="personName"
+            value={personName}
+            onChange={(e) => setPersonName(e.currentTarget.value)}
+            className={inputCls + (state.field === "personName" ? invalidCls : "")}
+            required
+            maxLength={120}
+          />
+        </label>
+
+        {/* B-7 (拍板 7): the title the society itself uses (讲师, Dato',
+            Ustaz…) — groundwork so a note that says 陈讲师 can later be
+            matched to the right 陈. Optional, free text. */}
+        <label className="flex flex-col gap-1">
+          <span className="text-sm font-medium text-muted-foreground">
+            <Tri bm="Gelaran (jika ada)" zh="称呼/职衔（可不填）" en="Title (if any)" />
+          </span>
+          <input
+            name="honorific"
+            value={honorific}
+            onChange={(e) => setHonorific(e.currentTarget.value)}
+            className={inputCls}
+            maxLength={60}
+            list="committee-honorifics"
+          />
+          <datalist id="committee-honorifics">
+            {HONORIFIC_SUGGESTED.map((h) => (
+              <option key={h} value={h} />
+            ))}
+          </datalist>
         </label>
 
         <label className="flex flex-col gap-1">
@@ -101,24 +237,124 @@ export function AddCommitteeRow() {
               en="Name on IC (eROSES)"
             />
           </span>
-          <input name="nameOfficial" className={inputCls} maxLength={160} />
+          <input
+            name="nameOfficial"
+            value={nameOfficial}
+            onChange={(e) => setNameOfficial(e.currentTarget.value)}
+            className={inputCls}
+            maxLength={160}
+          />
         </label>
 
+        {/* B-6 (拍板 6): the society's own way of telling two same-named
+            people apart —（大）（小）, a village, a class. Never filed. */}
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium text-muted-foreground">
-            <Tri bm="Mula" zh="任期开始" en="From" />
+            <Tri
+              bm="Nota (bezakan nama sama)"
+              zh="备注（同名时分辨用）"
+              en="Note (tell same names apart)"
+            />
           </span>
-          <TermDateInput name="termStart" />
+          <input
+            name="note"
+            value={note}
+            onChange={(e) => setNote(e.currentTarget.value)}
+            className={inputCls}
+            maxLength={120}
+            placeholder="（大）／（小）"
+          />
         </label>
 
+        {/* B-1 (拍板 5): appointment date only — eROSES asks for it. The old
+            "term end" field is gone; a committee change is a Mesyuarat Agung
+            decision, not a date quietly expiring people. */}
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium text-muted-foreground">
-            <Tri bm="Tamat" zh="任期结束" en="To" />
+            <Tri
+              bm="Tarikh perlantikan (eROSES)"
+              zh="任命日期（eROSES 要的）"
+              en="Appointment date (eROSES)"
+            />
           </span>
-          <TermDateInput name="termEnd" />
+          <TermDateInput
+            name="termStart"
+            value={termStart}
+            onChange={setTermStart}
+            invalid={state.field === "termStart"}
+          />
         </label>
+      </div>
 
-        <Button type="submit" disabled={pending} className="md:mb-[1px]">
+      <p className="text-sm text-muted-foreground">
+        <Tri
+          bm="Tarikh boleh dibiarkan kosong — taip apa sahaja bentuk (20260101, 1/1/2026) atau tekan 📅. “Nama dalam IC” ialah nama yang eROSES mahu — salin daripada kad pengenalan, jangan terjemah sendiri; biarkan kosong jika anda belum tahu."
+          zh="日期可以不填 —— 随便怎么打（20260101、1/1/2026）都行，或按 📅 选。「身份证上的名字」是 eROSES 要的那个 —— 请照身份证抄，不要自己音译；还不知道就留空。"
+          en="The date can be left blank — type it any way (20260101, 1/1/2026) or tap 📅. “Name on IC” is the one eROSES wants — copy it from the identity card rather than transliterating it yourself; leave it blank if you do not know it yet."
+        />
+      </p>
+
+      {/* B-6: same name, different IC name — ask, don't block and don't
+          silently duplicate. The Yes button re-submits the SAME filled form
+          with confirmSameName=1 (submitter name/value rides in FormData). */}
+      {askSameName && (
+        <div className="flex flex-col gap-2 rounded-md border-2 border-amber-300 bg-amber-50 p-3 dark:bg-amber-400/10">
+          <p className="text-base font-medium text-amber-900 dark:text-amber-100">
+            🤔{" "}
+            <Tri
+              bm={`Sudah ada "${askSameName.name}" dalam senarai${askSameName.official ? ` (nama IC: ${askSameName.official})` : " (nama IC belum diisi)"}. Orang LAIN yang sama nama?`}
+              zh={`名单里已经有「${askSameName.name}」${askSameName.official ? `（身份证名字：${askSameName.official}）` : "（身份证名字还没填）"}。这是另一位同名的人吗？`}
+              en={`"${askSameName.name}" is already on the list${askSameName.official ? ` (IC name: ${askSameName.official})` : " (no IC name yet)"}. Is this a DIFFERENT person with the same name?`}
+            />
+          </p>
+          <p className="text-sm text-amber-900/80 dark:text-amber-100/80">
+            <Tri
+              bm="Petua: isi kotak Nota (contohnya （大）／（小）) supaya semua orang tahu yang mana satu."
+              zh="建议：在「备注」写点分辨的字（例如（大）（小）），大家才认得出是哪一位。"
+              en="Tip: put something in the Note box (e.g. （大）／（小）) so everyone can tell which is which."
+            />
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              disabled={pending}
+              onClick={() => {
+                // The same values, re-submitted with the person's answer.
+                // Built by hand: whether a submit button's name/value rides
+                // in the action's FormData varies by React version, and this
+                // must not depend on it.
+                const fd = new FormData();
+                fd.set("position", position);
+                fd.set("personName", personName);
+                fd.set("honorific", honorific);
+                fd.set("nameOfficial", nameOfficial);
+                fd.set("note", note);
+                fd.set("termStart", termStart);
+                fd.set("confirmSameName", "1");
+                startTransition(() => formAction(fd));
+              }}
+            >
+              ✓{" "}
+              <Tri
+                bm="Ya, orang lain — tambah juga"
+                zh="是另一位 —— 照加"
+                en="Yes, another person — add them"
+              />
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pending}
+              onClick={() => setAskHiddenFor(state)}
+            >
+              <Tri bm="Batal" zh="取消" en="Cancel" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div>
+        <Button type="submit" disabled={pending}>
           {pending ? (
             <Tri bm="…" zh="…" en="…" />
           ) : (
@@ -126,14 +362,6 @@ export function AddCommitteeRow() {
           )}
         </Button>
       </div>
-
-      <p className="text-sm text-muted-foreground">
-        <Tri
-          bm="Tarikh penggal boleh dibiarkan kosong — taip apa sahaja bentuk (20260101, 1/1/2026), ia dikemas sendiri. “Nama dalam IC” ialah nama yang eROSES mahu — salin daripada kad pengenalan, jangan terjemah sendiri; biarkan kosong jika anda belum tahu."
-          zh="任期可以不填 —— 随便怎么打（20260101、1/1/2026）都行，会自动整理好。「身份证上的名字」是 eROSES 要的那个 —— 请照身份证抄，不要自己音译；还不知道就留空。"
-          en="The term dates can be left blank — type them any way (20260101, 1/1/2026), they tidy themselves. “Name on IC” is the one eROSES wants — copy it from the identity card rather than transliterating it yourself; leave it blank if you do not know it yet."
-        />
-      </p>
 
       {state.ok && (
         <p className="text-base font-medium text-green-700 dark:text-green-300">
@@ -364,7 +592,8 @@ Setiausaha, 林小美
                 <input
                   type="file"
                   accept="image/*,application/pdf"
-                  className="max-w-[18rem] text-sm"
+                  // B-9: a real button, not the browser's tiny default text.
+                  className={"max-w-[20rem] " + fileBtnCls}
                   disabled={aiBusy}
                   onChange={(e) => readWithAi(e.target.files?.[0])}
                 />
@@ -461,7 +690,8 @@ Setiausaha, 林小美
                     type="file"
                     name="file"
                     accept=".xlsx,.csv,.txt,.tsv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    className="max-w-[16rem] text-sm"
+                    // B-9: a real button, not the browser's tiny default text.
+                    className={"max-w-[20rem] " + fileBtnCls}
                   />
                 </label>
               )}
@@ -492,7 +722,15 @@ export function RemoveCommitteeButton({ id }: { id: number }) {
   return (
     <form action={formAction} className="inline">
       <input type="hidden" name="id" value={id} />
-      <Button type="submit" variant="ghost" size="sm" disabled={pending}>
+      {/* B-3: removal reads as removal — red, with a bin icon. */}
+      <Button
+        type="submit"
+        variant="ghost"
+        size="sm"
+        disabled={pending}
+        className="text-red-700 hover:bg-red-50 hover:text-red-800 dark:text-red-300 dark:hover:bg-red-400/10"
+      >
+        <Trash2 aria-hidden className="size-4" strokeWidth={2.2} />
         <Tri bm="Padam" zh="删除" en="Remove" />
       </Button>
       {state.error && <span className="sr-only">{state.error}</span>}

@@ -71,10 +71,11 @@ describe("roles table (建議①, v1)", () => {
   });
 
   it("every refusal names who CAN do it, in all three languages", () => {
+    // B-2 (work order 51): the three-LINE joinUserError shape, so
+    // useLocalizedError can show only the reader's language.
     for (const cap of ["manage_org", "minutes_write", "money_write", "money_collect", "upload"] as const) {
       const msg = permissionError(cap);
-      expect(msg).toContain(" / ");
-      expect(msg.split(" / ")).toHaveLength(3);
+      expect(msg.split("\n")).toHaveLength(3);
     }
   });
 });

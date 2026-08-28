@@ -177,10 +177,15 @@ export function useLocalizedError() {
   return (raw: string | null | undefined): string | null => {
     if (raw == null || raw === "") return null;
     if (mode === "all") return raw;
-    const lines = raw.split("\n");
+    // B-2 (work order 51): a message may be "three lines, blank line, detail"
+    // (the bulk-import refusal and its list of bad lines). The head localises;
+    // the detail — line numbers, verbatim input — is language-free and stays.
+    const [head, ...detail] = raw.split("\n\n");
+    const lines = head.split("\n");
     if (lines.length !== 3) return raw;
     const idx = mode === "bm" ? 0 : mode === "zh" ? 1 : 2;
-    return lines[idx] || raw;
+    const picked = lines[idx] || raw;
+    return detail.length > 0 ? `${picked}\n\n${detail.join("\n\n")}` : picked;
   };
 }
 

@@ -18,8 +18,11 @@ describe("buildTemplateXlsx", () => {
     const header = (ws.getRow(1).values as unknown[]).slice(1).map(String);
     expect(header[0]).toContain("职位");
     expect(header[1]).toContain("姓名");
-    expect(header).toHaveLength(5);
+    // B-1 (work order 51): four columns — the "term end" column is gone;
+    // the date column is the eROSES appointment date.
+    expect(header).toHaveLength(4);
     expect(header[2]).toContain("IC");
+    expect(header[3]).toContain("任命日期");
   });
 
   it("ships an instructions sheet, not just a grid", async () => {

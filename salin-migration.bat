@@ -91,6 +91,8 @@ echo         minutes title + edit log + source-photo links (28/8 review)
 echo    31.  20260909000000  pagar pelan percuma / the free fence (D44)
 echo         5 dokumen, 20 resit, 20 muka surat, 3 muat turun bersih
 echo         + org 15/58/91 jadi Standard (org anda sendiri / your own orgs)
+echo    32.  20260910000000  nota + gelaran AJK / roster note + honorific (51 B-6/B-7)
+echo         bezakan dua orang sama nama + rekod gelaran (讲师, Dato', Ustaz...)
 echo.
 echo     0.  Keluar / Quit
 echo.
@@ -128,6 +130,7 @@ if "%pick%"=="28" set f=20260906000000_custody_ids_glossary_langs_templates.sql&
 if "%pick%"=="29" set f=20260907000000_register_rows_and_receipts_v8.sql& goto copy
 if "%pick%"=="30" set f=20260908000000_minutes_title_edits_photos.sql& goto copy
 if "%pick%"=="31" set f=20260909000000_free_fence.sql& goto copy
+if "%pick%"=="32" set f=20260910000000_roster_note_honorific.sql& goto copy
 
 echo.
 echo    Nombor tak sah / not a valid number.
