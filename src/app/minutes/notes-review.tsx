@@ -256,9 +256,9 @@ export function NotesReview() {
             />
           ) : (
             <Tri
-              bm="Gambar atau PDF (paling banyak 5 muka surat). MinitAI membaca tulisan tangan Bahasa Malaysia, Cina dan Inggeris. Atau taip sendiri."
-              zh="照片或 PDF（最多 5 页）。MinitAI 能读马来文、中文和英文的手写字。也可以自己打字。"
-              en="A photo or a PDF (up to 5 pages). MinitAI reads handwriting in Malay, Chinese and English. Or type it in yourself."
+              bm="Gambar, PDF, Word atau PowerPoint (paling banyak 5 muka surat). MinitAI membaca tulisan tangan Bahasa Malaysia, Cina dan Inggeris. Atau taip sendiri."
+              zh="照片、PDF、Word 或 PowerPoint（最多 5 页）。MinitAI 能读马来文、中文和英文的手写字。也可以自己打字。"
+              en="A photo, PDF, Word or PowerPoint file (up to 5 pages). MinitAI reads handwriting in Malay, Chinese and English. Or type it in yourself."
             />
           )
         }
@@ -280,6 +280,18 @@ export function NotesReview() {
               <>
                 ⏳ <Tri bm="AI sedang membaca…" zh="AI 读取中…" en="AI is reading…" />
               </>
+            ) : sourceLabel ? (
+              // A-5 (work order 51): once a page is read, the SAME button says
+              // what it now does — add the next page of this meeting. Nobody
+              // should have to guess that the picker button also continues.
+              <>
+                <AttachIcon />{" "}
+                <Tri
+                  bm="＋ Tambah muka surat seterusnya"
+                  zh="＋ 加下一页"
+                  en="＋ Add the next page"
+                />
+              </>
             ) : (
               <>
                 <AttachIcon />{" "}
@@ -288,7 +300,9 @@ export function NotesReview() {
             )}
             <input
               type="file"
-              accept="image/*,application/pdf"
+              // A-3 (拍板 3): last year's minutes live in Word, the briefing
+              // deck in PowerPoint — /api/extract-minutes reads both now.
+              accept="image/*,application/pdf,.docx,.pptx"
               className="hidden"
               disabled={aiBusy}
               onChange={(e) => {

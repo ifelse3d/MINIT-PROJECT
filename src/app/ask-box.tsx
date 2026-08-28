@@ -30,11 +30,18 @@ import { ArrowUp, RotateCcw, X } from "lucide-react";
 import { AttachIcon, ChooseFileLabel } from "@/components/attach-icon";
 import { Button } from "@/components/ui/button";
 import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
+import { prepareUploadForSend } from "@/lib/upload-relay-client";
 import {
-  isTooLargeToUpload,
-  shrinkPhotoForUpload,
-  tooLargeToUploadMessage,
-} from "@/lib/shrink-photo";
+  mergeConstitutionExtractions,
+  mergeLedgerExtractions,
+  mergeMeetingExtractions,
+  mergedSourceLabel,
+} from "@/lib/extraction-merge";
+import type {
+  ConstitutionExtraction,
+  LedgerExtraction,
+  MeetingNotesExtraction,
+} from "@/lib/extraction";
 import { VoiceButton } from "@/components/voice-input";
 import { writeIntake, type IntakeKind } from "@/lib/intake-handoff";
 import { compressPhoto } from "@/app/minutes/minutes-storage";
@@ -134,7 +141,11 @@ export function AskBox({
   // a line of text first ("type first, then confirm to send"), sees exactly
   // what will go, and presses Send. Choosing a file used to fire the AI (and
   // the charge) on the spot, which is "choosing a file silently charged you".
-  const [staged, setStaged] = useState<File | null>(null);
+  // A-5 (work order 51): SEVERAL photos can be staged together — a two-page
+  // meeting record is two photos, and "one at a time" made people re-answer
+  // the same questions per page. Each entry keeps a small preview for the
+  // thumbnail strip (images only; PDFs/Office files show an icon).
+  const [staged, setStaged] = useState<{ file: File; preview: string | null }[]>([]);
   // Set when Minit could not place the page: it ASKS instead of giving up.
   // Holds the text that accompanied the failed attempt so the retry carries it.
   const [askKind, setAskKind] = useState<{ context: string } | null>(null);
@@ -228,96 +239,180 @@ export function AskBox({
     }
   }
 
-  /** A picked file only lands in the staging area; nothing is sent yet. */
-  function stageFile(file: File | null) {
-    if (!file || busy) return;
+  /** Picked files land in the staging area; nothing is sent yet. A-5: more
+   *  taps ADD to what is staged — that is how "add the next page" works. */
+  async function stageFiles(list: FileList | null) {
+    if (!list || list.length === 0 || busy) return;
     setError(null);
     setAskKind(null);
-    setStaged(file);
+    const picked = Array.from(list);
+    // Several files at once only makes sense for PHOTOS of pages. A PDF or
+    // Office file is already a whole document — one of those at a time.
+    const wouldBe = [...staged.map((s) => s.file), ...picked];
+    if (wouldBe.length > 1 && wouldBe.some((f) => !f.type.startsWith("image/"))) {
+      setError(
+        t(
+          "Hantar beberapa fail sekali gus hanya untuk GAMBAR. PDF / Word / Excel / PowerPoint: satu fail pada satu masa.",
+          "一次传多个，只限「照片」。PDF / Word / Excel / PowerPoint 请一次传一份。",
+          "Sending several at once is for PHOTOS only. PDF / Word / Excel / PowerPoint: one file at a time.",
+        ),
+      );
+      return;
+    }
+    const withPreviews = await Promise.all(
+      picked.map(async (file) => ({
+        file,
+        preview: file.type.startsWith("image/") ? await compressPhoto(file) : null,
+      })),
+    );
+    setStaged((prev) => [...prev, ...withPreviews]);
+  }
+
+  /** One reading through /api/intake. `forcedKind` skips the classifier. */
+  async function readOneFile(
+    file: File,
+    context: string,
+    forcedKind: IntakeKind | undefined,
+  ): Promise<
+    | { outcome: "ok"; body: IntakeOk }
+    | { outcome: "unknown" }
+    | { outcome: "error"; message: string }
+  > {
+    // 48 + A-4: shrink photos in the browser; relay a big PDF via Storage;
+    // refuse honestly what neither road can carry.
+    const prepared = await prepareUploadForSend(file);
+    if (prepared.send === "refuse") return { outcome: "error", message: prepared.error };
+    const form = new FormData();
+    if (prepared.send === "file") form.append("file", prepared.file);
+    else form.append("storagePath", prepared.storagePath);
+    if (context.trim() !== "") form.append("context", context.trim());
+    if (forcedKind) form.append("kind", forcedKind);
+    const res = await fetch("/api/intake", { method: "POST", body: form });
+    // P-1 (the "connection dropped" incident): the old code read ANY failure
+    // here as a dropped connection — including the server being killed
+    // mid-read, which is precisely when the quota may have been eaten with
+    // nothing to show. If a response arrived but is unreadable, say THAT.
+    let body: IntakeOk;
+    try {
+      body = (await res.json()) as IntakeOk;
+    } catch {
+      return {
+        outcome: "error",
+        message: t(
+          "Pelayan tidak membalas semasa membaca fail itu. Ini bukan salah anda. Tunggu seminit, lihat baki kuota AI anda, kemudian cuba sekali lagi.",
+          "读取文件的时候，伺服器没有回应。这不是您的问题。请等一分钟，看一下 AI 用量的余额，再试一次。",
+          "The server did not reply while reading that file. This is not your fault. Wait a minute, check your remaining AI quota, then try again.",
+        ),
+      };
+    }
+    if (body.kind === "unknown") return { outcome: "unknown" };
+    if (!res.ok || !body.page || !body.extraction) {
+      return {
+        outcome: "error",
+        message:
+          body.error ??
+          t(
+            "MinitAI tidak dapat membaca fail itu. Cuba sekali lagi.",
+            "MinitAI 读不了这个文件。请再试一次。",
+            "MinitAI could not read that file. Please try again.",
+          ),
+      };
+    }
+    return { outcome: "ok", body };
+  }
+
+  /** The kind-specific page merge — the same rules each review page uses. */
+  function mergeByKind(kind: IntakeKind, a: unknown, b: unknown): unknown {
+    if (kind === "meeting_notes")
+      return mergeMeetingExtractions(
+        a as MeetingNotesExtraction,
+        b as MeetingNotesExtraction,
+      );
+    if (kind === "ledger_page")
+      return mergeLedgerExtractions(a as LedgerExtraction, b as LedgerExtraction);
+    return mergeConstitutionExtractions(
+      a as ConstitutionExtraction,
+      b as ConstitutionExtraction,
+    );
   }
 
   /**
-   * Send the staged file (with whatever was typed as context for the reader).
-   * `forcedKind` is the person's own answer after Minit asked what the page
-   * is — it skips the classifier, so only the read itself is charged.
+   * Send everything staged (with whatever was typed as context). The first
+   * file answers "what IS this?" (unless `forcedKind` carries the person's own
+   * answer); every further photo is read as another page of the SAME document
+   * and merged, so a two-page meeting arrives as one meeting.
    */
-  async function sendFile(file: File, context: string, forcedKind?: IntakeKind) {
-    if (busy) return;
+  async function sendFiles(
+    files: File[],
+    context: string,
+    forcedKind?: IntakeKind,
+  ) {
+    if (busy || files.length === 0) return;
     setError(null);
     setAskKind(null);
     setBusy("file");
-    setReading(file.name);
     try {
-      // 48: shrink photos in the browser first — a phone photo (3–8MB) dies
-      // on Vercel's ~4.5MB body cap with a text/plain 413 our code never
-      // sees. Non-images (PDF/docx/xlsx) pass through and hit the same
-      // honest pre-check instead.
-      const sent = await shrinkPhotoForUpload(file);
-      if (isTooLargeToUpload(sent.size)) {
-        setError(tooLargeToUploadMessage());
-        return;
-      }
-      const form = new FormData();
-      form.append("file", sent);
-      if (context.trim() !== "") form.append("context", context.trim());
-      if (forcedKind) form.append("kind", forcedKind);
-      const res = await fetch("/api/intake", { method: "POST", body: form });
-      // P-1 (the "connection dropped" incident): the old code read ANY failure
-      // here as a dropped connection — including the server being killed
-      // mid-read, which is precisely when the quota may have been eaten with
-      // nothing to show. If a response arrived but is unreadable, say THAT —
-      // except a 413, which is the transport refusing the file (工作单 48).
-      let body: IntakeOk;
-      try {
-        body = (await res.json()) as IntakeOk;
-      } catch {
-        if (res.status === 413) {
-          setError(tooLargeToUploadMessage());
+      let kind: IntakeKind | null = forcedKind ?? null;
+      let merged: unknown = null;
+      let page: string | null = null;
+      let label: string | null = null;
+      const pages: {
+        fileName: string;
+        storagePath: string | null;
+        photoDataUrl: string | null;
+      }[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setReading(
+          files.length === 1 ? file.name : `${file.name} (${i + 1}/${files.length})`,
+        );
+        const r = await readOneFile(file, context, kind ?? undefined);
+        if (r.outcome === "unknown") {
+          // Minit could not place the page — ASK, don't give up (A-2). The
+          // files stay staged; the person answers with one tap and only the
+          // reads are charged on the retry. (Only the FIRST file classifies,
+          // so this can only happen before anything was merged.)
+          setAskKind({ context });
           return;
         }
-        setError(
-          t(
-            "Pelayan tidak membalas semasa membaca fail itu. Ini bukan salah anda. Tunggu seminit, lihat baki kuota AI anda, kemudian cuba sekali lagi.",
-            "读取文件的时候，伺服器没有回应。这不是您的问题。请等一分钟，看一下 AI 用量的余额，再试一次。",
-            "The server did not reply while reading that file. This is not your fault. Wait a minute, check your remaining AI quota, then try again.",
-          ),
-        );
-        return;
+        if (r.outcome === "error") {
+          // Stop at the first page that failed and say WHICH one — pages read
+          // before it are not handed over half-silent; everything stays
+          // staged for one more send once the person fixes or removes it.
+          setError(
+            files.length === 1 ? r.message : `📄 ${file.name}\n${r.message}`,
+          );
+          return;
+        }
+        const body = r.body;
+        kind = body.kind as IntakeKind;
+        page = body.page ?? page;
+        merged = merged === null ? body.extraction : mergeByKind(kind, merged, body.extraction);
+        label = label === null ? (body.fileName ?? file.name) : mergedSourceLabel(label, file.name);
+        pages.push({
+          fileName: body.fileName ?? file.name,
+          storagePath: body.storagePath ?? null,
+          photoDataUrl: file.type.startsWith("image/")
+            ? await compressPhoto(file)
+            : null,
+        });
       }
-      if (body.kind === "unknown") {
-        // Minit could not place the page — ASK, don't give up (A-2). The file
-        // stays staged; the person answers with one tap and only the read is
-        // charged on the retry.
-        setAskKind({ context });
-        return;
-      }
-      if (!res.ok || !body.page || !body.extraction) {
-        setError(
-          body.error ??
-            t(
-              "MinitAI tidak dapat membaca fail itu. Cuba sekali lagi.",
-              "MinitAI 读不了这个文件。请再试一次。",
-              "MinitAI could not read that file. Please try again.",
-            ),
-        );
-        return;
-      }
-      // Hand the finished extraction to the review page and go there. The
-      // storage path + a small preview travel along (28/8 evening) so the
-      // front-door photo reaches the saved document's photo_paths, same as a
-      // photo taken on /minutes itself.
+      if (!kind || !page || merged === null) return;
+      // Hand the finished (merged) extraction to the review page and go
+      // there. The storage paths + small previews travel along so every page
+      // reaches the saved document's photo_paths, same as photos taken on
+      // /minutes itself.
       writeIntake({
-        kind: body.kind,
-        fileName: body.fileName ?? file.name,
-        extraction: body.extraction,
-        storagePath: body.storagePath ?? null,
-        photoDataUrl: file.type.startsWith("image/")
-          ? await compressPhoto(file)
-          : null,
+        kind,
+        fileName: label ?? files[0].name,
+        extraction: merged,
+        storagePath: pages[0]?.storagePath ?? null,
+        photoDataUrl: pages[0]?.photoDataUrl ?? null,
+        pages,
       });
-      setStaged(null);
+      setStaged([]);
       setQuestion("");
-      router.push(body.page);
+      router.push(page);
     } catch {
       setError(
         t(
@@ -370,11 +465,11 @@ export function AskBox({
           >
             <AttachIcon className="h-5 w-5" />
             {/* Brackets differ from the standard label on purpose: this one
-                also takes Word and Excel. */}
+                also takes Word, Excel and PowerPoint (拍板 3). */}
             <ChooseFileLabel
-              bm="gambar, PDF, Word atau Excel"
-              zh="照片、PDF、Word 或 Excel"
-              en="photo, PDF, Word or Excel"
+              bm="gambar, PDF, Word, Excel atau PowerPoint"
+              zh="照片、PDF、Word、Excel 或 PowerPoint"
+              en="photo, PDF, Word, Excel or PowerPoint"
             />
           </Button>
         </div>
@@ -382,55 +477,104 @@ export function AskBox({
         <input
           ref={fileInput}
           type="file"
-          accept="image/*,application/pdf,.docx,.xlsx"
+          multiple
+          accept="image/*,application/pdf,.docx,.xlsx,.pptx"
           className="hidden"
           onChange={(e) => {
-            stageFile(e.target.files?.[0] ?? null);
+            void stageFiles(e.target.files);
             e.target.value = "";
           }}
         />
 
-        {/* A-2: the staged file, visible and removable BEFORE anything is
-            sent or charged. */}
-        {staged && (
-          <div className="flex flex-wrap items-center gap-3 rounded-md border-2 border-[#a855f7]/40 bg-white/70 p-3 dark:bg-white/10">
-            <span className="text-base font-medium">
-              📄 {staged.name}{" "}
-              <span className="text-muted-foreground">
-                ({Math.max(1, Math.round(staged.size / 1024))} KB)
-              </span>
-            </span>
+        {/* A-2: the staged files, visible and removable BEFORE anything is
+            sent or charged. A-5: several photos stage together, each with a
+            thumbnail, and "+ add another page" keeps the same picker open. */}
+        {staged.length > 0 && (
+          <div className="flex flex-col gap-3 rounded-md border-2 border-[#a855f7]/40 bg-white/70 p-3 dark:bg-white/10">
+            <div className="flex flex-wrap gap-3">
+              {staged.map((s, i) => (
+                <div
+                  key={`${s.file.name}-${i}`}
+                  className="relative flex w-28 flex-col items-center gap-1 rounded-sm border-2 border-[color:var(--v2-border)] bg-white/80 p-2 dark:bg-white/10"
+                >
+                  {s.preview ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={s.preview}
+                      alt={s.file.name}
+                      className="h-20 w-full rounded-xs object-cover"
+                    />
+                  ) : (
+                    <span className="flex h-20 w-full items-center justify-center text-4xl">
+                      📄
+                    </span>
+                  )}
+                  <span className="w-full truncate text-center text-xs" title={s.file.name}>
+                    {s.file.name}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={busy !== null}
+                    onClick={() => {
+                      setStaged((prev) => prev.filter((_, j) => j !== i));
+                      setAskKind(null);
+                    }}
+                    className="absolute -top-2 -right-2 inline-flex h-7 w-7 items-center justify-center rounded-full border-2 border-[color:var(--v2-border)] bg-white text-muted-foreground hover:bg-red-50 hover:text-red-700 dark:bg-neutral-800 dark:hover:bg-red-400/10"
+                    aria-label={t(
+                      `Buang ${s.file.name}`,
+                      `移除 ${s.file.name}`,
+                      `Remove ${s.file.name}`,
+                    )}
+                  >
+                    <X className="h-4 w-4" strokeWidth={2.2} />
+                  </button>
+                </div>
+              ))}
+              {/* Adding the next page must not mean hunting for the first
+                  button again — the strip itself offers it (photos only:
+                  a PDF/Office file is already a whole document). */}
+              {staged.every((s) => s.file.type.startsWith("image/")) && (
+                <button
+                  type="button"
+                  disabled={busy !== null}
+                  onClick={() => fileInput.current?.click()}
+                  className="flex w-28 flex-col items-center justify-center gap-1 rounded-sm border-2 border-dashed border-[color:var(--v2-border)] p-2 text-muted-foreground hover:border-[#a855f7]/60 hover:text-foreground"
+                >
+                  <span className="text-3xl leading-none">＋</span>
+                  <span className="text-center text-xs">
+                    <Tri bm="Tambah muka surat" zh="加下一页" en="Add next page" />
+                  </span>
+                </button>
+              )}
+            </div>
             <span className="text-sm text-muted-foreground">
-              <Tri
-                bm="Belum dihantar — boleh taip beberapa patah dahulu, kemudian tekan Hantar."
-                zh="还没送出 —— 可以先打几句说明，再按送出。"
-                en="Not sent yet — you can type a few words first, then press Send."
-              />
+              {staged.length > 1 ? (
+                <Tri
+                  bm={`${staged.length} gambar akan dibaca sebagai SATU dokumen (muka surat demi muka surat). Belum dihantar — tekan Hantar bila siap.`}
+                  zh={`这 ${staged.length} 张会当成同一份文件、一页一页读。还没送出 —— 准备好按送出。`}
+                  en={`These ${staged.length} photos will be read as ONE document, page by page. Not sent yet — press Send when ready.`}
+                />
+              ) : (
+                <Tri
+                  bm="Belum dihantar — boleh taip beberapa patah dahulu, kemudian tekan Hantar."
+                  zh="还没送出 —— 可以先打几句说明，再按送出。"
+                  en="Not sent yet — you can type a few words first, then press Send."
+                />
+              )}
             </span>
-            <button
-              type="button"
-              onClick={() => {
-                setStaged(null);
-                setAskKind(null);
-              }}
-              className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-sm text-muted-foreground hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-400/10"
-              aria-label={t("Buang fail", "移除档案", "Remove the file")}
-            >
-              <X className="h-5 w-5" strokeWidth={2.2} />
-            </button>
           </div>
         )}
 
         {/* MinitAI could not place the page → it asks, with one-tap answers.
             Only the read is charged after the person answers. */}
-        {askKind && staged && (
+        {askKind && staged.length > 0 && (
           <div className="flex flex-col gap-3 rounded-md border-2 border-[color:var(--v2-border)] bg-white/80 p-4 dark:bg-white/10">
             <p className="text-lg">
               🤔{" "}
               <Tri
-                bm={`MinitAI tidak pasti "${staged.name}" ini halaman jenis apa. Beritahu MinitAI — ia jenis yang mana?`}
-                zh={`MinitAI 看不出「${staged.name}」是哪一种文件。告诉 MinitAI —— 这是哪一种？`}
-                en={`MinitAI is not sure what kind of page "${staged.name}" is. Tell MinitAI — which is it?`}
+                bm={`MinitAI tidak pasti "${staged[0].file.name}" ini halaman jenis apa. Beritahu MinitAI — ia jenis yang mana?`}
+                zh={`MinitAI 看不出「${staged[0].file.name}」是哪一种文件。告诉 MinitAI —— 这是哪一种？`}
+                en={`MinitAI is not sure what kind of page "${staged[0].file.name}" is. Tell MinitAI — which is it?`}
               />
             </p>
             <div className="flex flex-wrap gap-2">
@@ -441,7 +585,11 @@ export function AskBox({
                 size="lg"
                 disabled={busy !== null}
                 onClick={() =>
-                  void sendFile(staged, question.trim() || askKind.context, "meeting_notes")
+                  void sendFiles(
+                    staged.map((s) => s.file),
+                    question.trim() || askKind.context,
+                    "meeting_notes",
+                  )
                 }
               >
                 📝 <Tri bm="Nota mesyuarat" zh="会议笔记" en="Meeting notes" />
@@ -450,7 +598,11 @@ export function AskBox({
                 size="lg"
                 disabled={busy !== null}
                 onClick={() =>
-                  void sendFile(staged, question.trim() || askKind.context, "ledger_page")
+                  void sendFiles(
+                    staged.map((s) => s.file),
+                    question.trim() || askKind.context,
+                    "ledger_page",
+                  )
                 }
               >
                 🧾 <Tri bm="Halaman lejar derma" zh="捐款账页" en="Donation ledger page" />
@@ -459,7 +611,11 @@ export function AskBox({
                 size="lg"
                 disabled={busy !== null}
                 onClick={() =>
-                  void sendFile(staged, question.trim() || askKind.context, "constitution")
+                  void sendFiles(
+                    staged.map((s) => s.file),
+                    question.trim() || askKind.context,
+                    "constitution",
+                  )
                 }
               >
                 📜 <Tri bm="Perlembagaan" zh="章程" en="Constitution" />
@@ -469,7 +625,7 @@ export function AskBox({
                 variant="outline"
                 disabled={busy !== null}
                 onClick={() => {
-                  setStaged(null);
+                  setStaged([]);
                   setAskKind(null);
                 }}
               >
@@ -498,7 +654,8 @@ export function AskBox({
           className="flex flex-col gap-3 sm:flex-row sm:items-end"
           onSubmit={(e) => {
             e.preventDefault();
-            if (staged) void sendFile(staged, question);
+            if (staged.length > 0)
+              void sendFiles(staged.map((s) => s.file), question);
             else void send(question);
           }}
         >
@@ -517,12 +674,13 @@ export function AskBox({
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
-                  if (staged) void sendFile(staged, question);
+                  if (staged.length > 0)
+                    void sendFiles(staged.map((s) => s.file), question);
                   else void send(question);
                 }
               }}
               placeholder={
-                staged
+                staged.length > 0
                   ? t(
                       "Apa-apa yang membantu bacaan — ejaan nama, singkatan, tarikh. Boleh kosong.",
                       "写点帮助读取的话 —— 名字的写法、缩写、日期。可以留空。",
@@ -553,12 +711,12 @@ export function AskBox({
               !hasOrg ||
               busy !== null ||
               outOfQuota ||
-              (staged === null && !question.trim())
+              (staged.length === 0 && !question.trim())
             }
           >
             {busy !== null ? (
               <Tri bm="Sebentar…" zh="请稍等…" en="One moment…" />
-            ) : staged ? (
+            ) : staged.length > 0 ? (
               <>
                 <ArrowUp className="h-5 w-5" strokeWidth={2.4} />
                 <Tri bm="Hantar" zh="送出" en="Send" />

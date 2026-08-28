@@ -285,7 +285,11 @@ export function MinutesDocument() {
                   />
                 </span>
               </div>
-              {draftError && (
+              {/* A-6 (work order 51): shown here only while the BM guard box
+                  is not on screen — when it is, the SAME error renders inside
+                  that box, next to the button that was actually pressed.
+                  Twice on one screen would be the two-red-boxes trap. */}
+              {draftError && bmOffenders.length === 0 && (
                 <p className="rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium whitespace-pre-line text-red-900 dark:bg-red-400/10 dark:text-red-100">
                   {draftError}
                   {"\n"}
@@ -485,6 +489,21 @@ export function MinutesDocument() {
                     ✏️ <Tri bm="Saya betulkan sendiri" zh="我自己改" en="I will fix it myself" />
                   </Button>
                 </div>
+                {/* A-6 (work order 51, tester: "按了没动静"): when the AI
+                    write fails, the error used to render only at the TOP of
+                    the page — far above this button, off screen. It shows
+                    HERE, beside the button that was pressed. */}
+                {draftError && (
+                  <p className="rounded-md border-2 border-red-400 bg-white/80 p-3 text-base font-medium whitespace-pre-line text-red-900 dark:bg-red-950/40 dark:text-red-100">
+                    {draftError}
+                    {"\n"}
+                    <Tri
+                      bm="Kuota anda tidak ditolak. Anda juga boleh betulkan baris di atas sendiri."
+                      zh="额度没有被扣。您也可以直接自己改上面那几行。"
+                      en="Your allowance was not charged. You can also fix the lines above by hand."
+                    />
+                  </p>
+                )}
                 <p className="text-sm text-red-900/80 dark:text-red-100/80">
                   <Tri
                     bm="Nama yang tiada dalam senarai ahli: tambah dia (dengan nama IC) di halaman Ahli — lain kali butang di atas menggantikannya sendiri."

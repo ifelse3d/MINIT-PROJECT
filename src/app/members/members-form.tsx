@@ -12,12 +12,8 @@ import {
 } from "./actions";
 import { AttachIcon, ChooseFileLabel } from "@/components/attach-icon";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
-import {
-  isTooLargeToUpload,
-  shrinkPhotoForUpload,
-  tooLargeToUploadMessage,
-  uploadErrorMessage,
-} from "@/lib/shrink-photo";
+import { uploadErrorMessage } from "@/lib/shrink-photo";
+import { prepareUploadForSend } from "@/lib/upload-relay-client";
 
 /** #8 (launch feedback): a term-date box that formats ITSELF — type 20260101
  *  or 1/1/2026 and it becomes 2026-01-01 on blur. The dashes are our job. */
@@ -223,19 +219,19 @@ export function ImportCommittee() {
   function readWithAi(file: File | undefined) {
     if (!file) return;
     void (async () => {
-      // 48: shrink photos in the browser first — a phone photo (3–8MB) dies
-      // on Vercel's ~4.5MB body cap. A PDF cannot be shrunk: over the limit
-      // it gets the honest "too large, split it" sentence instead of a fetch
-      // that was doomed before it left.
-      const sent = await shrinkPhotoForUpload(file);
-      if (isTooLargeToUpload(sent.size)) {
+      // 48 + A-4: shrink photos in the browser; relay a big PDF via Storage
+      // (the tester's 6MB roster scan now goes through instead of the "too
+      // large" refusal); refuse honestly what neither road can carry.
+      const prepared = await prepareUploadForSend(file);
+      if (prepared.send === "refuse") {
         setAiRoad("file");
-        setAiError(tooLargeToUploadMessage());
+        setAiError(prepared.error);
         setErrorHiddenFor(state);
         return;
       }
       const body = new FormData();
-      body.append("file", sent);
+      if (prepared.send === "file") body.append("file", prepared.file);
+      else body.append("storagePath", prepared.storagePath);
       await askMinitToRead(body, "file");
     })();
   }

@@ -44,6 +44,13 @@ export type IntakeParcel = {
   /** A small JPEG preview of the page, when the home page could make one —
    *  what the workspace thumbnails show. Optional (PDFs have none). */
   photoDataUrl?: string | null;
+  /**
+   * A-5 (work order 51): several photos sent from the home door in ONE go —
+   * the extraction above is already the MERGED reading, and this lists every
+   * page so the workspace shows all the thumbnails, not just the first.
+   * Absent on single-file parcels (storagePath/photoDataUrl cover those).
+   */
+  pages?: { fileName: string; storagePath: string | null; photoDataUrl: string | null }[];
   /** Date.now() when the home page wrote it. */
   at: number;
 };
@@ -104,12 +111,29 @@ function asParcel(v: unknown): IntakeParcel | null {
   if (typeof r.fileName !== "string") return null;
   if (typeof r.at !== "number" || !Number.isFinite(r.at)) return null;
   if (r.extraction === undefined || r.extraction === null) return null;
+  const pages = Array.isArray(r.pages)
+    ? r.pages.flatMap((p) => {
+        if (typeof p !== "object" || p === null) return [];
+        const page = p as Record<string, unknown>;
+        if (typeof page.fileName !== "string") return [];
+        return [
+          {
+            fileName: page.fileName,
+            storagePath:
+              typeof page.storagePath === "string" ? page.storagePath : null,
+            photoDataUrl:
+              typeof page.photoDataUrl === "string" ? page.photoDataUrl : null,
+          },
+        ];
+      })
+    : undefined;
   return {
     kind: r.kind,
     fileName: r.fileName,
     extraction: r.extraction,
     storagePath: typeof r.storagePath === "string" ? r.storagePath : null,
     photoDataUrl: typeof r.photoDataUrl === "string" ? r.photoDataUrl : null,
+    pages,
     at: r.at,
   };
 }

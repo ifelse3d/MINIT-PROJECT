@@ -52,6 +52,17 @@ export const USER_ERRORS = {
     en: "MinitAI can only read images (JPG, PNG) or PDF files here. If it is a photo from your phone, take a fresh one from inside MinitAI with the camera button.",
   },
 
+  /**
+   * The pre-2007 binary Office formats (.doc/.ppt/.xls). 拍板 3 (work order
+   * 51): the modern .docx/.pptx/.xlsx are read directly, and the fix for the
+   * old ones is a menu item the person can actually find — "save as".
+   */
+  legacyOfficeFile: {
+    bm: "Fail ini format Office lama (.doc / .ppt / .xls). Buka fail itu di komputer, tekan Save As, dan pilih format baharu (.docx / .pptx / .xlsx) — kemudian muat naik fail baharu itu.",
+    zh: "这个文件是旧版 Office 格式（.doc / .ppt / .xls）。请在电脑上打开它，按「另存为 / Save As」，选新格式（.docx / .pptx / .xlsx），再把新文件传上来。",
+    en: "This file is an old Office format (.doc / .ppt / .xls). Open it on a computer, use Save As, and pick the newer format (.docx / .pptx / .xlsx) — then upload that new file.",
+  },
+
   unsupportedEventFile: {
     bm: "MinitAI hanya boleh membaca gambar, fail Excel (.xlsx), .csv atau teks di sini. Anda juga boleh taip atau tampal senarai acara ke dalam kotak di atas.",
     zh: "这里只能读图片、Excel 文件（.xlsx）、.csv 或文字。您也可以直接把活动清单打字或贴进上面的框里。",
@@ -80,6 +91,18 @@ export const USER_ERRORS = {
     bm: "Fail ini terlalu besar untuk dihantar (lebih 4MB). Untuk gambar: ambil semula lebih dekat, tangkap bahagian yang ada tulisan sahaja. Untuk PDF: pecahkan kepada beberapa fail kecil dan hantar satu demi satu.",
     zh: "这个文件太大，传不出去（超过 4MB）。照片：请靠近一点重拍，只拍有字的部分。PDF：请分成几份小的，一份一份地传。",
     en: "This file is too big to send (over 4MB). For a photo: retake it closer, capturing only the part with writing. For a PDF: split it into smaller files and send them one at a time.",
+  },
+
+  /**
+   * A-4 (work order 51): PDFs above the 4MB transport limit now travel via
+   * Storage — but the AI vendor itself has a request ceiling, so a truly huge
+   * PDF still has an honest wall (RELAY_MAX_BYTES in upload-relay.ts). This
+   * message is that wall. Splitting is the real fix at this size.
+   */
+  pdfTooBigForAi: {
+    bm: "PDF ini terlalu besar untuk dibaca oleh AI (lebih 12MB). Pecahkannya kepada beberapa fail yang lebih kecil — contohnya ikut bahagian — dan hantar satu demi satu.",
+    zh: "这个 PDF 太大了，AI 读不了（超过 12MB）。请把它拆成几个小一点的文件 —— 比如按章节拆 —— 一份一份地传。",
+    en: "This PDF is too large for the AI to read (over 12MB). Split it into a few smaller files — by section, for example — and send them one at a time.",
   },
 
   /**
@@ -140,6 +163,25 @@ export const USER_ERRORS = {
     bm: "AI tidak dapat membaca tulisan dalam gambar ini. Cuba lagi dengan: cahaya lebih terang (dekat tingkap), kertas dibentang rata di atas meja, telefon tepat di atas kertas, dan satu halaman sahaja dalam satu gambar.",
     zh: "AI 读不出这张照片里的字。请这样再试一次：光线亮一点（靠窗最好）、纸摊平放在桌上、手机正对着纸的上方、一张照片只拍一页。",
     en: "The AI could not read the writing in this photo. Try again with: brighter light (near a window), the paper flat on a table, the phone directly above it, and only one page per photo.",
+  },
+
+  /**
+   * A-1 (work order 51): a PDF is not a photo — "more light, flat on the
+   * table" sends the person chasing a fix that does not exist for their input.
+   * The PDF advice is about what actually goes wrong with PDFs: scans with no
+   * text layer that are too blurry, decorative/locked pages, wrong file.
+   */
+  aiCouldNotReadPdf: {
+    bm: "AI tidak dapat membaca kandungan PDF ini. Kalau ia hasil imbasan (scan), pastikan imbasan itu jelas dan lurus. Kalau PDF itu panjang, cuba hantar beberapa muka surat yang perlu sahaja. Kalau masih gagal, buka PDF itu dan ambil gambar skrin muka surat yang ada tulisan.",
+    zh: "AI 读不出这个 PDF 的内容。如果它是扫描出来的，请确认扫描清晰、没有歪斜。如果 PDF 很长，可以只送需要的那几页。还是不行的话，把 PDF 打开，对着有字的那页截图再传。",
+    en: "The AI could not read this PDF. If it is a scan, make sure the scan is clear and straight. If the PDF is long, try sending only the pages you need. If it still fails, open the PDF and send a screenshot of the page with the writing.",
+  },
+
+  /** Same split for Word/Excel/PowerPoint text: no camera advice, ever. */
+  aiCouldNotReadOffice: {
+    bm: "Teks fail itu dapat dibuka, tetapi AI tidak dapat mengenal pasti maklumat yang diperlukan di dalamnya. Pastikan fail itu memang dokumen yang betul (nota mesyuarat / lejar / perlembagaan), atau tampal teks yang penting sahaja dan cuba lagi.",
+    zh: "文件的文字打得开，但 AI 认不出里面需要的内容。请确认传的是对的文件（会议笔记／账目／章程），或者只把重要的那段文字贴上来再试一次。",
+    en: "The file's text opened fine, but the AI could not find the needed information in it. Check that this is the right document (meeting notes / ledger / constitution), or paste just the important part as text and try again.",
   },
 
   // --- Bringing in a committee list (2026-08-19) ------------------------

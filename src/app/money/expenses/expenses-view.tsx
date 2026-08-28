@@ -20,12 +20,8 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
-import {
-  isTooLargeToUpload,
-  shrinkPhotoForUpload,
-  tooLargeToUploadMessage,
-  uploadErrorMessage,
-} from "@/lib/shrink-photo";
+import { uploadErrorMessage } from "@/lib/shrink-photo";
+import { prepareUploadForSend } from "@/lib/upload-relay-client";
 import { PageSection } from "@/components/page-section";
 import { VoiceButton } from "@/components/voice-input";
 import { Req } from "@/components/required-mark";
@@ -179,15 +175,16 @@ export function ExpensesView({ role }: { role: string }) {
     setFormError(null);
     setReading(true);
     try {
-      // 48: shrink in the browser first — a phone photo (3–8MB) dies on
-      // Vercel's ~4.5MB body cap with a text/plain 413 our code never sees.
-      const photo = await shrinkPhotoForUpload(file);
-      if (isTooLargeToUpload(photo.size)) {
-        setFormError(tooLargeToUploadMessage());
+      // 48 + A-4: shrink photos in the browser; relay a big PDF via Storage;
+      // refuse honestly what neither road can carry. One helper, every door.
+      const prepared = await prepareUploadForSend(file);
+      if (prepared.send === "refuse") {
+        setFormError(prepared.error);
         return;
       }
       const form = new FormData();
-      form.append("photo", photo);
+      if (prepared.send === "file") form.append("photo", prepared.file);
+      else form.append("storagePath", prepared.storagePath);
       const res = await fetch("/api/extract-expense", { method: "POST", body: form });
       const body = await res.json().catch(() => null);
       if (!res.ok) {

@@ -14,12 +14,8 @@ import {
 } from "react";
 import { useTriText } from "@/components/language-provider";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
-import {
-  isTooLargeToUpload,
-  shrinkPhotoForUpload,
-  tooLargeToUploadMessage,
-  uploadErrorMessage,
-} from "@/lib/shrink-photo";
+import { uploadErrorMessage } from "@/lib/shrink-photo";
+import { prepareUploadForSend } from "@/lib/upload-relay-client";
 import {
   emptyMeetingNotesExtraction,
   type EventExtraction,
@@ -392,16 +388,23 @@ export function MinutesProvider({
       // hands over WHERE the original landed (and a small preview when it
       // could make one), so a meeting that started at the front door links
       // its photos into History exactly like one photographed here.
+      // A-5: a multi-photo send lists every page in `pages` — show them all.
       setPhotoPages(
-        handed.storagePath || handed.photoDataUrl
-          ? [
-              {
-                name: handed.fileName,
-                dataUrl: handed.photoDataUrl ?? "",
-                storagePath: handed.storagePath ?? null,
-              },
-            ]
-          : [],
+        handed.pages && handed.pages.length > 0
+          ? handed.pages.map((p) => ({
+              name: p.fileName,
+              dataUrl: p.photoDataUrl ?? "",
+              storagePath: p.storagePath,
+            }))
+          : handed.storagePath || handed.photoDataUrl
+            ? [
+                {
+                  name: handed.fileName,
+                  dataUrl: handed.photoDataUrl ?? "",
+                  storagePath: handed.storagePath ?? null,
+                },
+              ]
+            : [],
       );
       setRestored(true);
       return;
@@ -539,12 +542,13 @@ export function MinutesProvider({
     setAiError(null);
     setAiBusy(true);
     try {
-      // 48: shrink in the browser first — a phone photo (3–8MB) dies on
-      // Vercel's ~4.5MB body cap with a text/plain 413 our code never sees.
-      const photo = await shrinkPhotoForUpload(file);
-      if (isTooLargeToUpload(photo.size)) throw new Error(tooLargeToUploadMessage());
+      // 48 + A-4: shrink photos in the browser; relay a big PDF via Storage;
+      // refuse honestly what neither road can carry. One helper, every door.
+      const prepared = await prepareUploadForSend(file);
+      if (prepared.send === "refuse") throw new Error(prepared.error);
       const form = new FormData();
-      form.append("photo", photo);
+      if (prepared.send === "file") form.append("photo", prepared.file);
+      else form.append("storagePath", prepared.storagePath);
       // F-2: the supplement box travels WITH the photo, so the model reads
       // with the person's own knowledge (abbreviations, names, which date is
       // which). Sent only when something was typed.

@@ -18,6 +18,7 @@ import { chargeFence, refundFence } from "@/lib/fence";
 import { checkPageLimit, countPdfPages } from "@/lib/pdf-pages";
 import { ROUTE_AI_DEADLINE_MS, VendorTimeoutError } from "@/lib/ai/http";
 import { vendorFailureResponse } from "@/lib/ai/vendor-failure";
+import { fileFromRelay } from "@/lib/upload-relay-server";
 
 // ---------------------------------------------------------------------------
 // PHOTO / SCAN OF THE SOCIETY CONSTITUTION → validated clause JSON.
@@ -65,12 +66,30 @@ export async function POST(req: Request) {
     // past Vercel's 60s kill, after which NO refund and NO app_errors row runs.
     const deadlineAt = Date.now() + ROUTE_AI_DEADLINE_MS;
     const form = await req.formData();
-    const file = form.get("photo");
-    if (!(file instanceof File)) {
-      return NextResponse.json(
-        { error: joinUserError(USER_ERRORS.noPhoto) },
-        { status: 400 },
-      );
+    const posted = form.get("photo");
+    let file: File;
+    let viaRelay = false;
+    if (posted instanceof File) {
+      file = posted;
+    } else {
+      // A-4 (work order 51): a PDF too big for Vercel's body cap arrives as a
+      // Storage path instead of a file — the constitution is the document
+      // this matters most for (a 20-40 page scan is routinely over 4MB).
+      const relayed = await fileFromRelay(form.get("storagePath"));
+      if (!relayed) {
+        return NextResponse.json(
+          { error: joinUserError(USER_ERRORS.noPhoto) },
+          { status: 400 },
+        );
+      }
+      if (!relayed.ok) {
+        return NextResponse.json(
+          { error: joinUserError(relayed.error) },
+          { status: relayed.status },
+        );
+      }
+      file = relayed.file;
+      viaRelay = true;
     }
     if (!ALLOWED_MIME.has(file.type)) {
       return NextResponse.json(
@@ -78,7 +97,8 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
-    if (file.size > MAX_BYTES) {
+    // Relay files were already size-checked against the vendor ceiling.
+    if (!viaRelay && file.size > MAX_BYTES) {
       return NextResponse.json(
         { error: joinUserError(USER_ERRORS.fileTooLarge) },
         { status: 400 },
@@ -193,8 +213,21 @@ ${issues}`;
       // Two attempts, nothing readable came back: the person keeps the credit.
       await refundUsage(gate.org.id, gate.charges[0]);
       await refundFence(fenceCharge);
+      // A-1: the REAL reason lands in app_errors (typed marker, no contents).
+      void captureAppError(
+        "/api/extract-constitution",
+        new Error("extraction failed validation twice"),
+        { orgId: gate.org.id, code: "unreadable_twice" },
+      );
       return NextResponse.json(
-        { error: joinUserError(USER_ERRORS.aiCouldNotRead) },
+        {
+          // A-1: advice split by INPUT — camera talk only for actual photos.
+          error: joinUserError(
+            file.type === "application/pdf"
+              ? USER_ERRORS.aiCouldNotReadPdf
+              : USER_ERRORS.aiCouldNotRead,
+          ),
+        },
         { status: 422 },
       );
     }

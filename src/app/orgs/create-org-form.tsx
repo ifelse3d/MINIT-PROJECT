@@ -5,12 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
-import {
-  isTooLargeToUpload,
-  shrinkPhotoForUpload,
-  tooLargeToUploadMessage,
-  uploadErrorMessage,
-} from "@/lib/shrink-photo";
+import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
+import { uploadErrorMessage } from "@/lib/shrink-photo";
+import { RELAY_MAX_BYTES } from "@/lib/upload-relay";
+import { prepareUploadForSend } from "@/lib/upload-relay-client";
 import { writeIntake } from "@/lib/intake-handoff";
 import { createOrg, type OrgActionState } from "./actions";
 
@@ -33,9 +31,11 @@ const AFTER_CREATE_WITH_FILE = "/constitution?setup=1";
  *  usually a photocopy, so a PDF is as likely as a photo. */
 const CONSTITUTION_ACCEPT = "image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf";
 
-/** Matches MAX_BYTES in the same route. Checked here too, so an 20MB scan is
- *  refused instantly instead of after a long upload on a phone connection. */
-const MAX_BYTES = 8 * 1024 * 1024;
+/** A-4: PDFs over the request-body cap now ride the Storage relay, whose own
+ *  ceiling is RELAY_MAX_BYTES (12MB, the AI vendor's wall) — so the instant
+ *  refusal here only fires above THAT. Photos are shrunk before sending, so
+ *  they get no pre-check at all. */
+const MAX_BYTES = RELAY_MAX_BYTES;
 
 export function CreateOrgForm({
   parentChoices,
@@ -90,14 +90,10 @@ export function CreateOrgForm({
 
   function chooseFile(picked: File | null) {
     setFileError(null);
-    if (picked && picked.size > MAX_BYTES) {
-      setFileError(
-        t(
-          "Fail itu terlalu besar (had 8MB). Ambil gambar muka surat, atau guna PDF yang lebih kecil.",
-          "这个档案太大了（上限 8MB）。可以一页一页拍照，或者用小一点的 PDF。",
-          "That file is too big (8MB limit). Photograph the pages, or use a smaller PDF.",
-        ),
-      );
+    // Photos are shrunk in the browser before sending (48), so only a PDF
+    // can be refused up front — and only above the relay's own ceiling.
+    if (picked && picked.type === "application/pdf" && picked.size > MAX_BYTES) {
+      setFileError(joinUserError(USER_ERRORS.pdfTooBigForAi));
       return;
     }
     setFile(picked);
@@ -122,16 +118,16 @@ export function CreateOrgForm({
     void (async () => {
       setReading(true);
       try {
-        // 48: shrink photos in the browser first — a phone photo (3–8MB) dies
-        // on Vercel's ~4.5MB body cap with a text/plain 413 our code never
-        // sees. PDFs pass through and hit the same honest pre-check instead.
-        const sent = await shrinkPhotoForUpload(file);
-        if (isTooLargeToUpload(sent.size)) {
-          setReadFailed(tooLargeToUploadMessage());
+        // 48 + A-4: shrink photos in the browser; relay a big PDF via
+        // Storage; refuse honestly what neither road can carry.
+        const prepared = await prepareUploadForSend(file);
+        if (prepared.send === "refuse") {
+          setReadFailed(prepared.error);
           return;
         }
         const body = new FormData();
-        body.append("photo", sent);
+        if (prepared.send === "file") body.append("photo", prepared.file);
+        else body.append("storagePath", prepared.storagePath);
         const res = await fetch("/api/extract-constitution", {
           method: "POST",
           body,

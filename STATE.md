@@ -5,34 +5,56 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-29 凌晨（MYT）· Fable 5（讨论场：50 号二十条＋tester 整批回馈＋J 亲测九条 → 51 号过夜总单拍板）**
-**🔴 本场结论一句话：J 已点头 51 号计划（包A 上传与AI读文件 → 包B Members/Glossary
-改造 → 小修包 → eROSES 大改版 → AI 智能建议场 → 品质场 → 助手 → 上线后第一批）。
-全部拍板与各包规格写在 `C:\dev\_J-要做的事\51-過夜施工總單與開場PROMPT-20260829.md`
-——下一个 session 照那份开工，不再问。48 号的修 J 已 push 上线（0ca62e7，
-git 查证 main == origin/main；「等 push」旧话作废）。**
+**最后更新：2026-08-29 凌晨（MYT）· Fable 5（51 号过夜施工场，进行中：包 A ✅ → 包 B 接着做）**
+**🔴 本场状态一句话：照 51 号总单开工。包 A（上传与 AI 读文件，A-1～A-6）
+全部做完＋checkpoint 收毕（四道关＋e2e＋探针实测＋52 号报告＋commit）；
+接下来照单做 §3 包 B（Members/Glossary）→ §4 小修包。无新 migration
+（今晚只有 C-13 那支会写档）。J 早上：看最新报告 → push-cabang.bat。**
 
 ---
 
-## 🌙 现在在哪里（2026-08-29 凌晨，讨论场收工）
+## 🌙 现在在哪里（2026-08-29 凌晨，过夜场进行中）
 
-> **已上线**：https://minit-project.vercel.app —— 截至 **0ca62e7 全部已 push**
-> （8/29 凌晨 git 查证 main == origin/main；48 号的修在线上生效）。
+> **已上线**：https://minit-project.vercel.app —— 截至 0ca62e7 已 push；
+> 过夜的 commit 等 J 早上 push-cabang.bat。
 > 线上 org：15「J」、58「avocado」、91「TESTING1」。
 
-### 这一场做了什么（讨论场，无代码改动）
+### 这一场做了什么（51 号过夜场 · 包 A ✅，52 号报告）
 
-- 收齐三批输入：J 对 50 号二十条的回覆、tester SH 的整批截图回馈
-  （members 日期/错误/表格化、glossary、attendance、choose file、AI 读 PDF、
-  BM 按钮没反应）、J 自己在线上 TESTING1 的九条实测。
-- 全部拍板（demo 对照帐号、收 .pptx/.docx、大 PDF 直传 Storage、理事表单
-  **删任期结束**、同名+备注栏、敬语 dropdown、云端多份草稿一次做完整、
-  money 录入两套合一＋Purpose 每行 dropdown、模板弹窗裸样式与 C17 同款）
-  ＋各包规格 ＋ eROSES Penyata Tahunan 九步完整清单（J 给的 17 张截图在
-  `C:\Users\User\Desktop\Penyata Kewangan screenshot`，B10 结案）——
-  **全部写进 51 号檔**，下一个 session 一贴就跑。
-- 教训（已犯已认）：① J 早 push 了还叫他 push——说「等 push」前必先
-  `git status -sb` 查证；② J 按顺序拍的截图要**全部按顺序看完**，不准抽样。
+- **A-4 大 PDF 直传 Storage**（拍板 4）：新 `src/lib/upload-relay.ts`（纯逻辑
+  ＋7 支测试）· `upload-relay-client.ts`（浏览器直传 uploads bucket 的
+  `{org}/relay/`，RLS 是边界；上传前顺手扫掉 >2h 的弃件）·
+  `upload-relay-server.ts`（fileFromRelay：验路径→下载→**读完即删**→
+  验 %PDF 魔术字→重建 File）。`prepareUploadForSend()` 一个 helper 统一
+  「缩图→太大→PDF 走直传→诚实拒绝」，六支收 PDF 的路由（extract-minutes/
+  intake/ledger/constitution/expense/import-roster）＋八个前端门全接上。
+  上限只剩页数围栏＋RELAY_MAX_BYTES 12MB（厂商 20MB 请求顶的余量，
+  USER_ERRORS.pdfTooBigForAi 教人拆档）。
+- **A-3 收 .pptx/.docx**（拍板 3，推翻拍板 41 的 no-PPT）：office-text.ts 加
+  `pptxToText`（slide XML 剥标签，同 docx 手法）＋ `isLegacyOfficeFile`
+  （.doc/.ppt/.xls 挡下＋legacyOfficeFile 三语句）；/api/extract-minutes 也收
+  office 档（文字走 untrustedBlock，同 intake 模式）；旧测试那条
+  `a.pptx → false` 按新拍板改。
+- **A-1/A-2 错误分流＋记真因**：aiCouldNotReadPdf（讲扫描/拆页，不讲相机）、
+  aiCouldNotReadOffice（完全不提相机）；五支 extract 路由「两次都读不出」时
+  `captureAppError(..., code:"unreadable_twice")`（只记代号，PDPA 照旧）。
+  PPT→PDF 与 Word→PDF 的根因＝48 号已证实的平台 413（大档），现在
+  .pptx 直收＋大 PDF 直传，两条死路都消了。
+- **A-5 首页多张照片**：ask-box 可一次选多张（multiple）＋缩图预览＋
+  「＋加下一页」；多张当同一份文件逐页读（第 1 张 classify，其余 forced
+  kind 各收一个 extract action），extraction 客户端按 kind 合并
+  （meeting/ledger 用既有 merge，constitution 新增 mergeConstitutionExtractions），
+  IntakeParcel 加 `pages[]` 带全部缩图/storagePath 到工作区。多张只限照片
+  （PDF/Office 一次一份，staging 时就有三语提示）。/minutes 的选档按钮在
+  已有内容时自动变「＋加下一页」。
+- **A-6「让 AI 写 BM 版」按了没动静**：根因＝draftError 只渲染在页面顶部、
+  离 BM 守门按钮很远（常在屏幕外）。改成就近显示（bmOffenders 在场时错误
+  出现在守门按钮旁，顶部那条同时隐藏，不会叠两条红框）。
+- **测过**：tsc 0 · eslint 22（同基准）· vitest **922 全过（+12）** · build ✓ ·
+  e2e:minutes ✓ e2e:money ✓（page errors 0）· 新探针
+  `scripts/probe-relay-51.mjs`：.pptx → 200＋extraction；**5.25MB 单页 PDF
+  走真 UI → Storage 直传 → AI 读出进工作区**；relay 档读完即删、历史留档；
+  实测花费 US$0.008（ai_usage 两行）；ZZZ org/user 全删。
 
 ### 上一场（48 号单＋追加第二案；49 号报告给 J 的版本在 _J-要做的事）
 
@@ -159,12 +181,11 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
 
 ### 🔴 J 的事
 
-1. **开新 session 贴 51 号檔灰框那段**（过夜跑；51 号檔开头有使用说明）。
-2. 过夜跑完的早上：看最新报告 →（若有 migration 32）照报告指示贴 →
+1. 过夜跑完的早上：看最新一份报告 →（若有 migration 32）照报告指示贴 →
    **push-cabang.bat**。
-3. **叫 tester 再试一次照片路**（48 号修已上线：自动缩图＋人话错误）；
-   PDF/PPT 的问题就是过夜包 A 在修的。
-4. bench 那个视窗：你有空就跑（双击 bench-models.bat）。
+2. push 完**叫 tester 重试**：PPT 直传（不用转 PDF）、Word 直传、>4MB 的
+   PDF 直传、一次传多张照片 —— 包 A 修的就是这四条。
+3. bench 那个视窗：你有空就跑（双击 bench-models.bat）。
 
 ### ❓ 未决问题
 
@@ -190,7 +211,7 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
 
 **照 51 号檔跑，别的不用想**：
 `C:\dev\_J-要做的事\51-過夜施工總單與開場PROMPT-20260829.md`
-——§2 包A（上传与AI读文件）→ §3 包B（Members/Glossary）→ §4 小修包，
+——**包 A 已完（52 号报告）**；接下来 §3 包B（Members/Glossary）→ §4 小修包，
 每包收尾 checkpoint（四道关＋e2e＋覆写 STATE＋报告＋commit）才开下一包。
 之后的场（也都在 51 号 §5）：⑤ eROSES 大改版（17 张截图为教材）→
 ⑥ AI 智能建议场 → ⑦ 品质场 → ⑧ 助手＋AI 代办 → ⑨ 上线后第一批。

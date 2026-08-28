@@ -38,7 +38,12 @@ import { chargeFence, refundFence } from "@/lib/fence";
 import { checkPageLimit, countPdfPages } from "@/lib/pdf-pages";
 import { ROUTE_AI_DEADLINE_MS, VendorTimeoutError } from "@/lib/ai/http";
 import { vendorFailureResponse } from "@/lib/ai/vendor-failure";
-import { isOfficeFile, officeFileToText } from "@/lib/office-text";
+import {
+  isLegacyOfficeFile,
+  isOfficeFile,
+  officeFileToText,
+} from "@/lib/office-text";
+import { fileFromRelay } from "@/lib/upload-relay-server";
 
 // ---------------------------------------------------------------------------
 // ONE DOOR: drop any page of society paperwork here and Minit works out what it
@@ -102,16 +107,42 @@ export async function POST(req: Request) {
     // unrefunded, unlogged — the signature of a function killed mid-flight.
     const deadlineAt = Date.now() + ROUTE_AI_DEADLINE_MS;
     const form = await req.formData();
-    const file = form.get("file");
-    if (!(file instanceof File)) {
+    const posted = form.get("file");
+    let file: File;
+    let viaRelay = false;
+    if (posted instanceof File) {
+      file = posted;
+    } else {
+      // A-4 (work order 51): a PDF too big for Vercel's body cap arrives as a
+      // Storage path instead of a file. fileFromRelay validates, downloads
+      // and deletes the relay object; from here on it IS a File.
+      const relayed = await fileFromRelay(form.get("storagePath"));
+      if (!relayed) {
+        return NextResponse.json(
+          { error: joinUserError(USER_ERRORS.noPhoto) },
+          { status: 400 },
+        );
+      }
+      if (!relayed.ok) {
+        return NextResponse.json(
+          { error: joinUserError(relayed.error) },
+          { status: relayed.status },
+        );
+      }
+      file = relayed.file;
+      viaRelay = true;
+    }
+    // F-10 (拍板 41) + 拍板 3 (work order 51): .docx / .xlsx / .pptx are
+    // welcome at this door — their text is pulled out DETERMINISTICALLY below
+    // (no AI, no quota) and then read by the same extract prompts as labelled
+    // text instead of an image. The pre-2007 binary formats get "save it as
+    // .docx/.pptx" instead of the generic unsupported-file sentence.
+    if (isLegacyOfficeFile(file.name, file.type)) {
       return NextResponse.json(
-        { error: joinUserError(USER_ERRORS.noPhoto) },
+        { error: joinUserError(USER_ERRORS.legacyOfficeFile) },
         { status: 400 },
       );
     }
-    // F-10 (拍板 41): .docx / .xlsx are welcome at this door — their text is
-    // pulled out DETERMINISTICALLY below (no AI, no quota) and then read by
-    // the same extract prompts as labelled text instead of an image.
     const officeFile = isOfficeFile(file.name, file.type);
     if (!officeFile && !ALLOWED_MIME.has(file.type)) {
       return NextResponse.json(
@@ -119,7 +150,8 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
-    if (file.size > MAX_BYTES) {
+    // Relay files were already size-checked against the vendor ceiling.
+    if (!viaRelay && file.size > MAX_BYTES) {
       return NextResponse.json(
         { error: joinUserError(USER_ERRORS.fileTooLarge) },
         { status: 400 },
@@ -140,14 +172,14 @@ export async function POST(req: Request) {
         const msg =
           converted.reason === "too_long"
             ? {
-                bm: "Fail Word/Excel ini terlalu panjang untuk dibaca sekali gus. Pecahkannya, atau simpan bahagian yang perlu sebagai PDF dan muat naik itu.",
-                zh: "这个 Word/Excel 文件太长，没办法一次读完。请拆小一点，或把需要的部分另存为 PDF 再上传。",
-                en: "This Word/Excel file is too long to read in one go. Split it up, or save the needed part as a PDF and upload that.",
+                bm: "Fail Office ini terlalu panjang untuk dibaca sekali gus. Pecahkannya, atau simpan bahagian yang perlu sebagai PDF dan muat naik itu.",
+                zh: "这个 Office 文件太长，没办法一次读完。请拆小一点，或把需要的部分另存为 PDF 再上传。",
+                en: "This Office file is too long to read in one go. Split it up, or save the needed part as a PDF and upload that.",
               }
             : {
-                bm: "Fail Word/Excel ini tidak dapat dibaca. Buka fail itu, simpan sebagai PDF, dan muat naik PDF itu.",
-                zh: "这个 Word/Excel 文件读不出来。请打开文件另存为 PDF，再上传那个 PDF。",
-                en: "This Word/Excel file could not be read. Open it, save it as a PDF, and upload that PDF.",
+                bm: "Fail Office ini tidak dapat dibaca. Buka fail itu, simpan sebagai PDF, dan muat naik PDF itu.",
+                zh: "这个 Office 文件读不出来。请打开文件另存为 PDF，再上传那个 PDF。",
+                en: "This Office file could not be read. Open it, save it as a PDF, and upload that PDF.",
               };
         return NextResponse.json({ error: joinUserError(msg) }, { status: 400 });
       }
@@ -228,7 +260,7 @@ export async function POST(req: Request) {
       officeText === null
         ? ""
         : `\n\n${untrustedBlock(
-            "THE DOCUMENT'S FULL TEXT (converted from a Word/Excel file on the server — there is no photo; read this text as the page itself)",
+            "THE DOCUMENT'S FULL TEXT (converted from a Word/Excel/PowerPoint file on the server — there is no photo; read this text as the page itself)",
             officeText,
           )}`;
     const media =
@@ -474,8 +506,24 @@ ${issues}`,
       // recognised.
       await refundUsage(gate.org.id, extractCharge);
       await refundFence(fenceCharge);
+      // A-1: the REAL reason lands in app_errors (typed marker, no contents).
+      void captureAppError(
+        "/api/intake",
+        new Error("extraction failed validation twice"),
+        { orgId: gate.org.id, code: "unreadable_twice" },
+      );
       return NextResponse.json(
-        { kind, error: joinUserError(USER_ERRORS.aiCouldNotRead) },
+        {
+          kind,
+          // A-1: advice split by INPUT — camera talk only for actual photos.
+          error: joinUserError(
+            officeFile
+              ? USER_ERRORS.aiCouldNotReadOffice
+              : file.type === "application/pdf"
+                ? USER_ERRORS.aiCouldNotReadPdf
+                : USER_ERRORS.aiCouldNotRead,
+          ),
+        },
         { status: 422 },
       );
     }

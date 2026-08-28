@@ -1,4 +1,8 @@
-import type { LedgerExtraction, MeetingNotesExtraction } from "@/lib/extraction";
+import type {
+  ConstitutionExtraction,
+  LedgerExtraction,
+  MeetingNotesExtraction,
+} from "@/lib/extraction";
 
 // ---------------------------------------------------------------------------
 // G-2 (2026-08-25, J #10): MIXED INPUT — a photo taken AFTER typing (or after
@@ -97,6 +101,19 @@ export function mergeLedgerExtractions(
   return {
     page_title: mergeScalar(existing.page_title, incoming.page_title),
     rows: [...existing.rows, ...incoming.rows],
+  };
+}
+
+/** A-5 (work order 51): several photographed pages of one constitution, sent
+ *  together from the home door. Clauses append in page order; the title keeps
+ *  the first real reading (page 1 carries it; later pages read "missing"). */
+export function mergeConstitutionExtractions(
+  existing: ConstitutionExtraction,
+  incoming: ConstitutionExtraction,
+): ConstitutionExtraction {
+  return {
+    document_title: mergeScalar(existing.document_title, incoming.document_title),
+    clauses: [...existing.clauses, ...incoming.clauses],
   };
 }
 

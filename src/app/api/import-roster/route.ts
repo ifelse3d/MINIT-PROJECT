@@ -13,6 +13,7 @@ import { chargeFence, refundFence } from "@/lib/fence";
 import { checkPageLimit, countPdfPages } from "@/lib/pdf-pages";
 import { ROUTE_AI_DEADLINE_MS } from "@/lib/ai/http";
 import { vendorFailureResponse } from "@/lib/ai/vendor-failure";
+import { fileFromRelay } from "@/lib/upload-relay-server";
 
 // A PHOTO, A PDF, OR A PASTE THE PARSER REFUSED → the text of the paste box.
 //
@@ -63,23 +64,44 @@ const rosterSchema = z.object({
 export async function POST(req: Request) {
   try {
     const form = await req.formData();
-    const file = form.get("file");
-    const hasFile = file instanceof File && file.size > 0;
+    const posted = form.get("file");
+    let resolved: File | null =
+      posted instanceof File && posted.size > 0 ? posted : null;
+    let viaRelay = false;
+    if (!resolved) {
+      // A-4 (work order 51): a roster PDF too big for Vercel's body cap
+      // (the tester's 6MB scan) arrives as a Storage path instead.
+      const relayed = await fileFromRelay(form.get("storagePath"));
+      if (relayed && !relayed.ok) {
+        return NextResponse.json(
+          { error: joinUserError(relayed.error) },
+          { status: relayed.status },
+        );
+      }
+      if (relayed) {
+        resolved = relayed.file;
+        viaRelay = true;
+      }
+    }
+    // Const from here on, so TypeScript keeps narrowing through `hasFile`.
+    const file = resolved;
+    const hasFile = file !== null;
     const pastedText = String(form.get("text") ?? "").trim();
 
-    if (!hasFile && pastedText === "") {
+    if (!file && pastedText === "") {
       return NextResponse.json(
         { error: joinUserError(USER_ERRORS.rosterNothingToRead) },
         { status: 400 },
       );
     }
-    if (hasFile && !ALLOWED.has(file.type)) {
+    if (file && !ALLOWED.has(file.type)) {
       return NextResponse.json(
         { error: joinUserError(USER_ERRORS.unsupportedImage) },
         { status: 400 },
       );
     }
-    if (hasFile && file.size > MAX_BYTES) {
+    // Relay files were already size-checked against the vendor ceiling.
+    if (file && !viaRelay && file.size > MAX_BYTES) {
       return NextResponse.json(
         { error: joinUserError(USER_ERRORS.fileTooLarge) },
         { status: 400 },
@@ -162,10 +184,21 @@ export async function POST(req: Request) {
     if (!parsed.success || parsed.data.rows.length === 0) {
       await refundUsage(gate.org.id, gate.charges[0]);
       await refundFence(fenceCharge);
+      // A-1: the REAL reason lands in app_errors (typed marker, no contents).
+      void captureAppError(
+        "/api/import-roster",
+        new Error("roster reading produced no usable rows"),
+        { orgId: gate.org.id, code: "unreadable_twice" },
+      );
       return NextResponse.json(
         {
+          // A-1: advice split by INPUT — camera talk only for actual photos.
           error: joinUserError(
-            image ? USER_ERRORS.aiCouldNotRead : USER_ERRORS.rosterTextCouldNotRead,
+            image
+              ? file?.type === "application/pdf"
+                ? USER_ERRORS.aiCouldNotReadPdf
+                : USER_ERRORS.aiCouldNotRead
+              : USER_ERRORS.rosterTextCouldNotRead,
           ),
         },
         { status: 422 },

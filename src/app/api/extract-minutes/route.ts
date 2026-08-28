@@ -18,6 +18,12 @@ import { checkPageLimit, countPdfPages } from "@/lib/pdf-pages";
 import { recordUpload } from "@/lib/record-upload";
 import { glossaryPromptBlockForReading } from "@/lib/glossary";
 import { loadGlossary } from "@/lib/glossary-server";
+import {
+  isLegacyOfficeFile,
+  isOfficeFile,
+  officeFileToText,
+} from "@/lib/office-text";
+import { fileFromRelay } from "@/lib/upload-relay-server";
 
 // ---------------------------------------------------------------------------
 // THE REAL AI CALL — photo of handwritten notes → validated extraction JSON.
@@ -52,14 +58,43 @@ export async function POST(req: Request) {
     // always runs before Vercel's 60s kill would erase all three.
     const deadlineAt = Date.now() + ROUTE_AI_DEADLINE_MS;
     const form = await req.formData();
-    const photo = form.get("photo");
-    if (!(photo instanceof File)) {
+    const posted = form.get("photo");
+    let photo: File;
+    let viaRelay = false;
+    if (posted instanceof File) {
+      photo = posted;
+    } else {
+      // A-4 (work order 51): a PDF too big for Vercel's body cap arrives as a
+      // Storage path instead of a file. fileFromRelay validates, downloads
+      // and deletes the relay object; from here on it IS a File.
+      const relayed = await fileFromRelay(form.get("storagePath"));
+      if (!relayed) {
+        return NextResponse.json(
+          { error: joinUserError(USER_ERRORS.noPhoto) },
+          { status: 400 }
+        );
+      }
+      if (!relayed.ok) {
+        return NextResponse.json(
+          { error: joinUserError(relayed.error) },
+          { status: relayed.status },
+        );
+      }
+      photo = relayed.file;
+      viaRelay = true;
+    }
+    // A-3 (拍板 3, work order 51): .docx/.pptx are welcome here too — last
+    // year's minutes live in Word, the briefing deck in PowerPoint, and
+    // "save it as a PDF first" is the exact hurdle that broke for the tester.
+    // Their text is pulled out deterministically below (no AI, no charge).
+    const officeFile = isOfficeFile(photo.name, photo.type);
+    if (isLegacyOfficeFile(photo.name, photo.type)) {
       return NextResponse.json(
-        { error: joinUserError(USER_ERRORS.noPhoto) },
+        { error: joinUserError(USER_ERRORS.legacyOfficeFile) },
         { status: 400 }
       );
     }
-    if (!ALLOWED_MIME.has(photo.type)) {
+    if (!officeFile && !ALLOWED_MIME.has(photo.type)) {
       return NextResponse.json(
         // The wording that mentions PDF, now that PDFs are accepted. Telling
         // somebody to re-save as JPEG when a PDF would have worked is the kind
@@ -68,7 +103,9 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-    if (photo.size > MAX_BYTES) {
+    // Relay files were already size-checked against the vendor ceiling
+    // (RELAY_MAX_BYTES) — the 8MB body-defence limit is for direct uploads.
+    if (!viaRelay && photo.size > MAX_BYTES) {
       return NextResponse.json(
         { error: joinUserError(USER_ERRORS.fileTooLarge) },
         { status: 400 }
@@ -82,7 +119,24 @@ export async function POST(req: Request) {
     // 40-page scan is not a long meeting, it is the wrong file.
     // See src/lib/pdf-pages.ts.
     const bytes = await photo.arrayBuffer();
-    const pages = await checkPageLimit(bytes, photo.type, "minutes");
+    // An Office file is converted BEFORE anything is charged — one that cannot
+    // be converted costs nothing, and the advice never mentions cameras.
+    let officeText: string | null = null;
+    if (officeFile) {
+      const converted = await officeFileToText(photo.name, photo.type, bytes);
+      if (!converted.ok) {
+        return NextResponse.json(
+          { error: joinUserError(USER_ERRORS.aiCouldNotReadOffice) },
+          { status: 400 },
+        );
+      }
+      officeText = converted.text;
+    }
+    // The page-count guard only understands images and PDFs; Office files are
+    // bounded by the converter's own character cap instead.
+    const pages = officeFile
+      ? ({ ok: true } as const)
+      : await checkPageLimit(bytes, photo.type, "minutes");
     if (!pages.ok) {
       return NextResponse.json(
         { error: joinUserError(tooManyPagesError(pages.pages, pages.limit)) },
@@ -118,7 +172,23 @@ export async function POST(req: Request) {
 
     // `bytes` was already read for the page count above — reading the stream a
     // second time would yield an empty buffer.
-    const imageBase64 = Buffer.from(bytes).toString("base64");
+    // A-3: an Office file reaches the model as LABELLED TEXT, not an image —
+    // same untrusted framing as the person's own typed notes (document
+    // content is data, never instructions). Same pattern as /api/intake.
+    const media =
+      officeText === null
+        ? {
+            imageBase64: Buffer.from(bytes).toString("base64"),
+            mimeType: photo.type,
+          }
+        : {};
+    const officeBlock =
+      officeText === null
+        ? ""
+        : `\n\n${untrustedBlock(
+            "THE DOCUMENT'S FULL TEXT (converted from a Word/PowerPoint file on the server — there is no photo; read this text as the page itself)",
+            officeText,
+          )}`;
     const todayIso = dayIsoMalaysia(new Date().toISOString())!;
     // 2026-08-19: the org's own vocabulary. Knowing that a member is called
     // 昶源 is what stops the model reading it as the commoner 湘源 — the exact
@@ -140,7 +210,11 @@ export async function POST(req: Request) {
             "NOTES THE PERSON TYPED BEFORE THIS READING (their own abbreviations, spellings and date hints — prefer these spellings when the handwriting matches)",
             personalContext,
           )}`;
-    const prompt = extractMeetingNotesPrompt({ orgName, todayIso, glossaryBlock, contextBlock });
+    const prompt =
+      extractMeetingNotesPrompt({ orgName, todayIso, glossaryBlock, contextBlock }) +
+      // A-3: the converted Office text rides AFTER the prompt, exactly like
+      // the person's own typed context — the prompt file itself is untouched.
+      officeBlock;
     const provider = getVisionProvider();
 
     // 2026-08-18: attach what the vendor actually charged to the ai_usage row
@@ -152,8 +226,7 @@ export async function POST(req: Request) {
     try {
       raw = await provider.extractJson({
         prompt,
-        imageBase64,
-        mimeType: photo.type,
+        ...media,
         maxOutputTokens: EXTRACT_OUTPUT_CEILING.minutes,
         onUsage,
         deadlineAt,
@@ -183,8 +256,7 @@ ${issues}`;
       try {
         raw = await provider.extractJson({
           prompt: retryPrompt,
-          imageBase64,
-          mimeType: photo.type,
+          ...media,
           maxOutputTokens: EXTRACT_OUTPUT_CEILING.minutes,
           onUsage,
           deadlineAt,
@@ -210,9 +282,25 @@ ${issues}`;
       // nothing, so they keep their credit (rule 10).
       await refundUsage(gate.org.id, gate.charges[0]);
       await refundFence(fenceCharge);
+      // A-1: the REAL reason lands in app_errors (a typed marker, never the
+      // contents — PDPA), so "the AI couldn't read it" is a diagnosable event
+      // in the ops console instead of a shrug.
+      void captureAppError(
+        "/api/extract-minutes",
+        new Error("extraction failed validation twice"),
+        { orgId: gate.org.id, code: "unreadable_twice" },
+      );
       return NextResponse.json(
         {
-          error: joinUserError(USER_ERRORS.aiCouldNotRead),
+          // A-1: advice split by INPUT. Camera advice for a photo; scan/split
+          // advice for a PDF; no camera talk at all for an Office file.
+          error: joinUserError(
+            officeFile
+              ? USER_ERRORS.aiCouldNotReadOffice
+              : photo.type === "application/pdf"
+                ? USER_ERRORS.aiCouldNotReadPdf
+                : USER_ERRORS.aiCouldNotRead,
+          ),
         },
         { status: 422 }
       );

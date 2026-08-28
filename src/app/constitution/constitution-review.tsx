@@ -32,12 +32,8 @@ import { saveConstitutionClauses } from "./actions";
 import { NewOrgBanner } from "./new-org-banner";
 import { OrgIdentityPanel } from "./org-identity-panel";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
-import {
-  isTooLargeToUpload,
-  shrinkPhotoForUpload,
-  tooLargeToUploadMessage,
-  uploadErrorMessage,
-} from "@/lib/shrink-photo";
+import { uploadErrorMessage } from "@/lib/shrink-photo";
+import { prepareUploadForSend } from "@/lib/upload-relay-client";
 import {
   sampleClauses,
   sampleConstitutionTitle,
@@ -319,12 +315,14 @@ export function ConstitutionReview({
     setAiError(null);
     setAiBusy(true);
     try {
-      // 48: shrink in the browser first — a phone photo (3–8MB) dies on
-      // Vercel's ~4.5MB body cap with a text/plain 413 our code never sees.
-      const photo = await shrinkPhotoForUpload(file);
-      if (isTooLargeToUpload(photo.size)) throw new Error(tooLargeToUploadMessage());
+      // 48 + A-4: shrink photos in the browser; relay a big PDF via Storage
+      // (a 20-40 page constitution scan is routinely over 4MB); refuse
+      // honestly what neither road can carry. One helper, every door.
+      const prepared = await prepareUploadForSend(file);
+      if (prepared.send === "refuse") throw new Error(prepared.error);
       const form = new FormData();
-      form.append("photo", photo);
+      if (prepared.send === "file") form.append("photo", prepared.file);
+      else form.append("storagePath", prepared.storagePath);
       const res = await fetch("/api/extract-constitution", {
         method: "POST",
         body: form,
