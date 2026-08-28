@@ -14,7 +14,12 @@
 ⑤ J 看过后的第二轮：豬撲滿圖示刪除（族群 sensitive，D41）、四張卡改成
 四階「不同的紫」、TAB 圖示與 App 內 logo 統一成同一份向量（D42）、
 重設密碼頁 logo 統一、how-it-works 四張示範圖重拍。
-J 照 41 号报告：push（**5 支**，40 号那 4 支 J 已 push）→ Ctrl+Shift+R。本轮无新 migration。**
+J 照 41/42 号报告：push（**9 支**，40 号那 4 支 J 已 push）→ Ctrl+Shift+R。本轮无新 migration。
+⑥ J 报「线上没改动 + LOADING 超慢 + 直接 load 不出」→ 量了线上：**新版确实已上线**
+（登入页实测是新的），**慢是真的且与本轮改动无关**——公开页 0.4s，但登入后的
+首页 HTML 要 4.4–5.9s 才串流完（TTFB 只有 23ms，串流把伺服器耗时藏起来了）。
+已修两处根因：首页四段串行查询并成一波（＋2.5s deadline），auth.getUser 每个
+请求只问一次（原本 3–4 次）。**
 
 ---
 
@@ -80,6 +85,27 @@ J 照 41 号报告：push（**5 支**，40 号那 4 支 J 已 push）→ Ctrl+Sh
   舊圖還是改版前的粗黑框卡片。三個高亮框座標同步更新，並用**顏色偵測**
   （抓 #7029E5 的 bbox）驗過框確實落在按鈕上，不是目測。
 
+- **🔴 线上效能：慢是真的，但不是本轮改动造成的**（J 报，当场量的）：
+  - 公开页（/login /terms /privacy）**0.4s**，Vercel 本身健康；新版**确实已上线**。
+  - 登入后：首页 HTML **4.4–5.9s** 才串流完、/orgs/new **12.5s**、sign-in **15.6s**。
+    ⚠️ **TTFB 只有 23ms** —— Next 的串流让「伺服器很慢」在 TTFB 上完全看不出来，
+    要看 `responseEnd − requestStart`。以后量这个页别再看 TTFB。
+  - 本机 dev 量「改动前 vs 改动后」中位数 637ms vs 596ms（n=7）——**本轮新增的
+    查询不是元凶**；元凶是登入后那棵树的串行往返次数。
+  - Supabase 从 J 的机器 ~100ms。🔴 **未决 #1（Vercel/Supabase 是否同区）到现在
+    还是没答案，而它正是最可能的放大器。**
+  - 已修：① 首页 agm/flags/usage/figures 四段串行 → 一个 Promise.all（figures
+    另带 2.5s deadline，读不到就不画那行）；② `getSessionUser`/`getMemberships`/
+    `getActiveOrg` 用 React `cache()` 每请求只算一次——原本画一页要向 auth 服务器
+    验证 3–4 次，每次一个真往返。
+  - 工具留下了：`scripts/probe-prod.mjs`（逐步计时线上，自己清测试帐号）、
+    `scripts/time-home.mjs`（本机 before/after）。
+- **⚠️ `e2e:roles` 早就在坏，不是本轮弄坏的**：设置区拆成子路由后脚本还在看
+  `/settings`（邀请码表单已搬到 `/settings/members`）。已修这一半（2 项恢复），
+  **仍有 4 项失败**，全在 collector 那条线，同样是钱区拆子路由后地址/按钮文案变了
+  （打字格已不在 `/money/receipts`）。要重新对着现在的 UI 推一遍，本轮没做。
+  在那之前**不要说「三条 e2e 全过」**。
+
 ### 现场量到的（不是听说的）
 
 - 四道关：`tsc` 0 · `eslint` **跟基准逐字相同**（把改动 git stash 起来跑基准对照，
@@ -95,7 +121,7 @@ J 照 41 号报告：push（**5 支**，40 号那 4 支 J 已 push）→ Ctrl+Sh
 
 ### 🔴 J 的事（写在 40 号报告 §4）
 
-1. **push-cabang.bat**（本机领先 **5 支**；40 号那 4 支 J 已 push，origin/main 已到 769099c）→ 线上 Ctrl+Shift+R。**本轮无新 migration。**
+1. **push-cabang.bat**（本机领先 **9 支**；40 号那 4 支 J 已 push，origin/main 已到 769099c）→ 线上 Ctrl+Shift+R。**本轮无新 migration。**
    🔴 TAB 圖示要 **Ctrl+Shift+R 兩次**或關掉分頁再開——瀏覽器對 favicon 的快取特別頑固。
 2. 看三个地方：登入页、首页（背景＋四张卡＋底下那行字）、随便一页的卡片圆角。
 3. 40 号 §3 有三个等你一句话的小事：重设密码页的小 logo 要不要一起换成砖块版；
@@ -105,7 +131,8 @@ J 照 41 号报告：push（**5 支**，40 号那 4 支 J 已 push）→ Ctrl+Sh
 
 ### ❓ 未决问题
 
-1. 🔴 Vercel/Supabase region 是否同区 —— 等 J 抄来两个值
+1. 🔴🔴 Vercel/Supabase region 是否同区 —— 等 J 抄来两个值。**升级为最高优先：
+   线上登入后每页 4–6s，这是最可能的放大器（见上面的量测）。**
 2. 助手用哪个模型 —— prompt 已解冻（D29），等 J 重跑 bench 后定（J：系统先稳）
 3. 法律实体（金流前置，D12），试点前要答
 4. 真实手写 eval：92.9% 量的仍是印刷体，且 prompt 已动、数字作废——等 J 重测
@@ -114,6 +141,7 @@ J 照 41 号报告：push（**5 支**，40 号那 4 支 J 已 push）→ Ctrl+Sh
 7. 竞赛首页主图重拍（拍板 0-9）—— 等 push 完用真机构画面拍
 8. 配套定价（管理台毛利卡等它）—— 先量成本；bench/真用量之后
 9. #10 全站按钮统一的长尾扫尾（大头已消；仍排队）
+9b. `e2e:roles` collector 那 4 项要重新对着现在的钱区 UI 推一遍（见上）
 10. 真 vendor 的合并写作效果（D37）—— 等 J 一次真额度实测
 12. （旧，小）MyInvois 官方模板逐栏对齐（B-7 后半）等 J 给原档
 13. （旧，小）check-ai.bat 还 cd 到旧资料夹 C:\dev\minit——改天一行修
