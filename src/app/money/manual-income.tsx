@@ -17,6 +17,7 @@ import { dayIsoMalaysia } from "@/lib/history";
 import { PaymentMethodToggle, type PaymentMethod } from "./payment-method-toggle";
 import { TemplateChips } from "./templates";
 import { uploadTransferProof } from "./transfer-proof-actions";
+import { AttachIcon } from "@/components/attach-icon";
 
 // ---------------------------------------------------------------------------
 // MANUAL INCOME ENTRY — the deliberate, clearly-labelled exception to the
@@ -243,7 +244,7 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
                   {slipBusy ? (
                     <>⏳ <Tri bm="AI sedang membaca…" zh="AI 读取中…" en="AI is reading…" /></>
                   ) : (
-                    <>📷 <Tri bm="Ambil gambar slip (1 tindakan AI)" zh="拍单据（用 1 次 AI 额度）" en="Photograph the slip (1 AI action)" /></>
+                    <><AttachIcon /> <Tri bm="Ambil gambar slip (1 tindakan AI)" zh="拍单据（用 1 次 AI 额度）" en="Photograph the slip (1 AI action)" /></>
                   )}
                   <input
                     type="file"

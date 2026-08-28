@@ -18,6 +18,7 @@ import { FieldRow } from "./field-row";
 import { AddRowButton, DeletableRow } from "./row-controls";
 import { useMinutes, type TextLikeField } from "./minutes-store";
 import type { ResolutionKind } from "@/lib/extraction";
+import { AttachIcon } from "@/components/attach-icon";
 
 // D-7 / J review 27-evening #30 (2026-08-28): the review GROUPS what was
 // decided instead of printing one flat transcription wall. The model labels
@@ -281,7 +282,7 @@ export function NotesReview() {
               </>
             ) : (
               <>
-                📷{" "}
+                <AttachIcon />{" "}
                 <Tri
                   bm="Ambil gambar / pilih fail (gambar atau PDF)"
                   zh="拍照或选档案（照片或 PDF）"

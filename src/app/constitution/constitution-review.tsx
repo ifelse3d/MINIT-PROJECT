@@ -37,6 +37,7 @@ import {
   sampleConstitutionTitle,
   sampleQuestions,
 } from "@/lib/sample-constitution";
+import { AttachIcon } from "@/components/attach-icon";
 
 // ---------------------------------------------------------------------------
 // CONSTITUTION screen. The keyword filter, citations and the refusal rule are
@@ -454,7 +455,7 @@ export function ConstitutionReview({
       <Card className="border-2 border-purple-200 bg-purple-50/40">
         <CardHeader>
           <CardTitle className="text-xl">
-            📷{" "}
+            <AttachIcon className="inline h-5 w-5 align-[-3px]" />{" "}
             {/* 28#5 (J, 2026-08-28): PDFs were always accepted here, but the
                 copy only said "photo" — say both. */}
             <Tri
@@ -491,7 +492,7 @@ export function ConstitutionReview({
                 </>
               ) : (
                 <>
-                  📷{" "}
+                  <AttachIcon />{" "}
                   <Tri
                     bm="Pilih fail (PDF atau gambar)"
                     zh="选一个档案（PDF 或照片）"

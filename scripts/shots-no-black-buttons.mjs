@@ -147,6 +147,7 @@ async function main() {
     ["/members", "6-members"],
     ["/calendar", "7-calendar"],
     ["/settings", "8-settings"],
+    ["/constitution", "9-constitution"],
   ];
   let total = 0;
   for (const [route, name] of routes) {

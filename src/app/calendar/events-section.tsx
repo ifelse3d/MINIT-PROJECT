@@ -16,6 +16,7 @@ import type { SimpleEvent } from "@/lib/local-events";
 import { parseLunarRecurring, type LunarRecurringRule } from "@/lib/lunar-parse";
 import type { LunarRepeatDays } from "@/lib/lunar";
 import { useLunarRepeat } from "./calendar-prefs";
+import { AttachIcon } from "@/components/attach-icon";
 
 // ---------------------------------------------------------------------------
 // EVENT ENTRY — AI paste-box first (the fast way), manual quick-add second.
@@ -177,7 +178,7 @@ export function EventsSection({ onAdd }: { onAdd: (ev: SimpleEvent) => void }) {
           />
           <div className="mt-2 flex flex-wrap items-center gap-3">
             <label className="inline-flex cursor-pointer items-center gap-2 rounded-sm border-2 border-violet-300 bg-white px-4 py-2 font-medium hover:bg-violet-100 dark:bg-white/5">
-              📎{" "}
+              <AttachIcon className="h-4 w-4" />{" "}
               {file ? (
                 file.name
               ) : (

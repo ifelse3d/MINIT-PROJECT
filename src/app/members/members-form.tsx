@@ -10,6 +10,7 @@ import {
   removeCommitteeMember,
   type MemberActionState,
 } from "./actions";
+import { AttachIcon } from "@/components/attach-icon";
 
 /** #8 (launch feedback): a term-date box that formats ITSELF — type 20260101
  *  or 1/1/2026 and it becomes 2026-01-01 on blur. The dashes are our job. */
@@ -264,7 +265,8 @@ export function ImportCommittee() {
               className={choiceCls(mode === "ai")}
             >
               <span className="block text-base font-semibold">
-                📷 <Tri bm="Gambar / PDF" zh="照片 / PDF" en="Photo / PDF" />
+                <AttachIcon className="inline h-4 w-4 align-[-2px]" />{" "}
+                <Tri bm="Gambar / PDF" zh="照片 / PDF" en="Photo / PDF" />
               </span>
               <span className="block text-sm text-muted-foreground">
                 {/* 0-2: the paid-path marker stays, the "about 1%" goes. */}

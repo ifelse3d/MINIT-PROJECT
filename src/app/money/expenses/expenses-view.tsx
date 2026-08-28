@@ -38,6 +38,7 @@ import {
   type ExpenseOutcome,
   type ExpenseRow,
 } from "./actions";
+import { AttachIcon } from "@/components/attach-icon";
 
 const EXPENSE_CATEGORIES: { value: string; bm: string; zh: string; en: string }[] = [
   { value: "Perbelanjaan acara", bm: "Perbelanjaan acara", zh: "活动开支", en: "Event spending" },
@@ -462,7 +463,7 @@ export function ExpensesView({ role }: { role: string }) {
                   <>⏳ <Tri bm="AI sedang membaca…" zh="AI 读取中…" en="AI is reading…" /></>
                 ) : (
                   <>
-                    📷{" "}
+                    <AttachIcon />{" "}
                     <Tri
                       bm="Ambil gambar / pilih fail resit (1 tindakan AI)"
                       zh="拍照或选收据档案（用 1 次 AI 额度）"

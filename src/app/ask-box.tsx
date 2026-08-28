@@ -26,7 +26,8 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowUp, Camera, RotateCcw, X } from "lucide-react";
+import { ArrowUp, RotateCcw, X } from "lucide-react";
+import { AttachIcon } from "@/components/attach-icon";
 import { Button } from "@/components/ui/button";
 import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
 import { VoiceButton } from "@/components/voice-input";
@@ -348,7 +349,7 @@ export function AskBox({
             disabled={!hasOrg || busy !== null || outOfQuota}
             onClick={() => fileInput.current?.click()}
           >
-            <Camera className="h-5 w-5" strokeWidth={2} />
+            <AttachIcon className="h-5 w-5" />
             <Tri
               bm="Ambil gambar / pilih fail"
               zh="拍照或选档案"
