@@ -22,6 +22,7 @@ import {
 import { loadEvents, saveEvents, sortedByDate, type SimpleEvent } from "@/lib/local-events";
 import { saveEvent } from "@/app/calendar/actions";
 import { renderMinutesDraftBm } from "@/lib/minutes-draft";
+import { cleanMinutesTitle, suggestMinutesTitle } from "@/lib/minutes-title";
 import { buildPastePack, type FilingRosterEntry } from "@/lib/paste-pack";
 import { dayIsoMalaysia } from "@/lib/history";
 import { type MinutesLang } from "@/lib/minutes-lang";
@@ -232,6 +233,12 @@ export type MinutesStore = {
   shownDocument: string;
   docLang: MinutesLang;
   setDocLang: Dispatch<SetStateAction<MinutesLang>>;
+  /** J 28/8 item 3: the document's NAME. `docTitle` is what the person typed
+   *  (may be ""); `suggestedTitle` is the deterministic pre-fill (type+date);
+   *  the save stores whichever of the two is non-empty. */
+  docTitle: string;
+  setDocTitle: (title: string) => void;
+  suggestedTitle: string;
   aiDraft: string | null;
   draftError: string | null;
   draftBusy: boolean;
@@ -306,6 +313,10 @@ export function MinutesProvider({
   const [storageNote, setStorageNote] = useState<SaveOutcome | null>(null);
   const [typedByHand, setTypedByHand] = useState(false);
   const [noAttendeesRecorded, setNoAttendeesRecorded] = useState(false);
+  // J 28/8 item 3: the person's own name for the document. Plain state (not
+  // tagged to the extraction object): correcting a field must not throw away
+  // a name they already typed. Reset wherever the WORKSPACE resets.
+  const [docTitle, setDocTitle] = useState("");
   /**
    * I-3 (26 号报告 §3-4): TRUE once a photo has been merged ONTO typed
    * content. In that state an empty field is a field neither the typing nor
@@ -381,6 +392,7 @@ export function MinutesProvider({
       );
       setTypedByHand(saved.typed === true);
       setNoAttendeesRecorded(saved.noAttendees === true);
+      if (typeof saved.title === "string") setDocTitle(saved.title);
       // 0-1 (26 号报告 2-1): "this meeting is already in History" must survive
       // the reload, or next month's photo of a NEW meeting silently merges
       // into last month's. Handing setSavedFor the SAME object that went into
@@ -414,6 +426,7 @@ export function MinutesProvider({
       photoPages,
       typed: typedByHand,
       noAttendees: noAttendeesRecorded,
+      title: docTitle,
       savedToHistory: alreadySaved,
     });
     if (outcome === "photo-dropped" && photoPages.length > 0) {
@@ -421,7 +434,7 @@ export function MinutesProvider({
       setPhotoPages([]);
     }
     setStorageNote(outcome === "ok" ? null : outcome);
-  }, [extraction, sourceLabel, photoDataUrl, photoPages, typedByHand, noAttendeesRecorded, restored, alreadySaved]);
+  }, [extraction, sourceLabel, photoDataUrl, photoPages, typedByHand, noAttendeesRecorded, docTitle, restored, alreadySaved]);
 
   const findEventsInMinutes = useCallback(async () => {
     setEvError(null);
@@ -531,6 +544,8 @@ export function MinutesProvider({
       if (mode === "fresh") {
         setSaveResult(null);
         setSavedFor(null);
+        // A new meeting must not inherit the previous meeting's name.
+        setDocTitle("");
       }
       // 0-3 (26 号报告 2-3): the person can keep confirming fields during the
       // 5–20 s the model spends reading. Merging onto the snapshot captured at
@@ -548,8 +563,16 @@ export function MinutesProvider({
       // I-2: keep EVERY page's photo — a merge appends, a fresh photo
       // replaces. Functional update, same reason as the extraction merge.
       const pageDataUrl = await compressPhoto(file);
+      // Migration 30: where the ORIGINAL landed in the uploads bucket, so the
+      // eventual save can link the document to its source photos.
+      const storagePath =
+        typeof (body as { storagePath?: unknown }).storagePath === "string"
+          ? ((body as { storagePath: string }).storagePath)
+          : null;
       setPhotoPages((prev) => {
-        const page = pageDataUrl ? [{ name: file.name, dataUrl: pageDataUrl }] : [];
+        const page = pageDataUrl
+          ? [{ name: file.name, dataUrl: pageDataUrl, storagePath }]
+          : [];
         return continuing ? [...prev, ...page] : page;
       });
       // I-3: a photo landing on TYPED content makes this a mixed document —
@@ -595,6 +618,7 @@ export function MinutesProvider({
     setTypedByHand(true);
     setNoAttendeesRecorded(false);
     setMixedInput(false);
+    setDocTitle("");
     // 0-1: a blank sheet is a NEW document — the previous meeting's save mark
     // must not travel onto it.
     setSaveResult(null);
@@ -613,6 +637,7 @@ export function MinutesProvider({
     setEvRows(null);
     setAiError(null);
     setStorageNote(null);
+    setDocTitle("");
     // 0-1: an empty page has been saved nowhere — without this, the "✓ Saved"
     // state of the meeting just cleared away leaked onto the blank workspace.
     setSaveResult(null);
@@ -632,6 +657,7 @@ export function MinutesProvider({
     setTypedByHand(false);
     setNoAttendeesRecorded(false);
     setMixedInput(false);
+    setDocTitle("");
     setPhotoPages([]);
     setEvRows(null);
     setAiError(null);
@@ -926,6 +952,14 @@ export function MinutesProvider({
   // "the document on screen briefly disagrees with the fields" is the exact
   // failure this guard exists to prevent.
   const [docLang, setDocLang] = useState<MinutesLang>("bm");
+
+  // J 28/8 item 3: the Google-Docs-style pre-fill — regenerated live from the
+  // confirmed facts, in the document's language. Free (no AI involved).
+  const suggestedTitle = useMemo(
+    () => suggestMinutesTitle(extraction, docLang),
+    [extraction, docLang],
+  );
+
   const [draftResult, setDraftResult] = useState<{
     for: MeetingNotesExtraction;
     lang: MinutesLang;
@@ -1017,11 +1051,20 @@ export function MinutesProvider({
       // The server re-renders the document from this extraction using the org
       // and signer from the session (Hard Rule 8); we deliberately do not send
       // a rendered document or a confirmer name.
+      // The name that gets stored: the person's own, else the suggestion —
+      // never an empty string (older rows fall back to type+date anyway).
+      const titleToStore = cleanMinutesTitle(docTitle) || suggestedTitle;
       const result = await saveConfirmedMinutes({
         extraction,
         aiDraftMd: edited ?? aiDraft ?? undefined,
         language: docLang,
         clientId: saveClientIdRef.current,
+        title: titleToStore || undefined,
+        // Migration 30: which uploads-bucket files this document was read
+        // from. Typed meetings and failed uploads simply send none.
+        photoPaths: photoPages
+          .map((p) => p.storagePath)
+          .filter((p): p is string => typeof p === "string" && p !== ""),
       });
       setSaveResult(result.ok ? "ok" : result.error ?? "error");
       if (result.ok) setSavedFor(extraction);
@@ -1034,7 +1077,7 @@ export function MinutesProvider({
     } finally {
       setSaveBusy(false);
     }
-  }, [extraction, edited, aiDraft, docLang]);
+  }, [extraction, edited, aiDraft, docLang, docTitle, suggestedTitle, photoPages]);
 
   return (
     <MinutesContext.Provider
@@ -1086,6 +1129,9 @@ export function MinutesProvider({
         shownDocument,
         docLang,
         setDocLang,
+        docTitle,
+        setDocTitle,
+        suggestedTitle,
         aiDraft,
         draftError,
         draftBusy,

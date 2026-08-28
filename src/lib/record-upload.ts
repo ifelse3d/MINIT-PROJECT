@@ -20,13 +20,19 @@ type UploadKind =
   | "expense"
   | "other";
 
+/**
+ * Returns the storage path the file landed on, or null when nothing was
+ * stored (no org, no permission, storage down). Migration 30 lets a saved
+ * minutes document remember WHICH photos it was read from — the path is that
+ * link; every existing caller that ignores the return value is unchanged.
+ */
 export async function recordUpload(
   file: File,
   kind: UploadKind,
-): Promise<void> {
+): Promise<string | null> {
   try {
     const active = await getActiveOrg();
-    if (!active || !can(active.role, "upload")) return;
+    if (!active || !can(active.role, "upload")) return null;
 
     const supabase = await getSupabaseServer();
 
@@ -39,7 +45,7 @@ export async function recordUpload(
       .upload(path, Buffer.from(await file.arrayBuffer()), {
         contentType: file.type || "application/octet-stream",
       });
-    if (storageError) return;
+    if (storageError) return null;
 
     await supabase.from("uploads").insert({
       org_id: active.id,
@@ -48,7 +54,9 @@ export async function recordUpload(
       kind,
       status: "done",
     });
+    return path;
   } catch {
     // Best-effort only — never let history-keeping break the extraction.
+    return null;
   }
 }

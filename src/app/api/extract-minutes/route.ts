@@ -203,9 +203,15 @@ ${issues}`;
     }
 
     // Phase 7: keep the photo + a history row for the active org (best-effort).
-    await recordUpload(photo, "meeting_notes");
+    // The storage path rides back so the eventual SAVE can remember which
+    // photos this document came from (migration 30, photo_paths).
+    const storagePath = await recordUpload(photo, "meeting_notes");
 
-    return NextResponse.json({ extraction: parsed.data, provider: provider.name });
+    return NextResponse.json({
+      extraction: parsed.data,
+      provider: provider.name,
+      storagePath,
+    });
   } catch (e) {
     // S-7: count the failure for the ops console — never its contents (PDPA).
     void captureAppError("/api/extract-minutes", e);

@@ -35,6 +35,7 @@ import {
   MINUTES_TITLE_PATTERN,
   type MinutesLang,
 } from "@/lib/minutes-lang";
+import { cleanMinutesTitle } from "@/lib/minutes-title";
 import { ppmLine, PPM_LINE_PATTERN } from "@/lib/minutes-compose";
 import { countUnreviewed } from "@/lib/extraction-rows";
 
@@ -70,6 +71,18 @@ export async function saveConfirmedMinutes(input: {
    * still stops the common double-tap.
    */
   clientId?: string;
+  /**
+   * J 28/8 item 3 (migration 30): the society's own name for the document —
+   * the person's typed name, else the deterministic type+date suggestion.
+   * A LABEL chosen by a human, not a fact about the meeting.
+   */
+  title?: string;
+  /**
+   * J 28/8 item 4 (migration 30): uploads-bucket paths of the source photos
+   * this document was read from. Validated below to THIS org's folder — a
+   * client must not be able to link someone else's files onto its document.
+   */
+  photoPaths?: string[];
 }): Promise<SaveMinutesState> {
   const user = await getSessionUser();
   const active = await getActiveOrg();
@@ -234,24 +247,45 @@ export async function saveConfirmedMinutes(input: {
   if (customLabel !== "") row.meeting_type_label = customLabel;
   if (clientId !== "") row.client_id = clientId;
 
-  let { data: saved, error } = await supabase
-    .from("minutes_docs")
-    .insert(row)
-    .select("id")
-    .maybeSingle();
+  // Migration 30 columns — both optional, both validated, both stripped by
+  // the ladder below when the database has not caught up yet.
+  const title = cleanMinutesTitle(String(input.title ?? ""));
+  if (title !== "") row.title = title;
+  const photoPaths = (Array.isArray(input.photoPaths) ? input.photoPaths : [])
+    .filter(
+      (p): p is string =>
+        typeof p === "string" &&
+        p.length > 0 &&
+        p.length <= 300 &&
+        // Hard Rule 5: only THIS org's folder in the uploads bucket may be
+        // linked. Anything else is discarded, not stored.
+        p.startsWith(`${active.id}/`),
+    )
+    .slice(0, 12);
+  if (photoPaths.length > 0) row.photo_paths = photoPaths;
 
-  // client_id only exists from migration 20260828000000. If the column is not
-  // there yet, retry once without it — the save must not depend on tomorrow's
-  // migration.
-  if (error && clientId !== "" && /client_id/i.test(error.message ?? "")) {
-    delete row.client_id;
-    const retry = await supabase
+  // The database is allowed to be OLDER than the code (D8: J applies
+  // migrations by hand). PostgREST fails the WHOLE insert over one unknown
+  // column, so each optional column the error names is stripped and the
+  // insert retried — newest schema stores everything, an older one stores
+  // what it knows. client_id was the first of these; now it is a ladder.
+  const optionalColumns = ["client_id", "title", "photo_paths"] as const;
+  let saved: { id: number } | null = null;
+  let error: { code?: string; message?: string } | null = null;
+  for (let attempt = 0; attempt <= optionalColumns.length; attempt++) {
+    const res = await supabase
       .from("minutes_docs")
       .insert(row)
       .select("id")
       .maybeSingle();
-    saved = retry.data;
-    error = retry.error;
+    saved = res.data;
+    error = res.error;
+    if (!error) break;
+    const named = optionalColumns.find(
+      (col) => col in row && new RegExp(col, "i").test(error?.message ?? ""),
+    );
+    if (!named) break;
+    delete row[named];
   }
 
   // 23505 on (org_id, client_id): a concurrent duplicate of THIS save won the

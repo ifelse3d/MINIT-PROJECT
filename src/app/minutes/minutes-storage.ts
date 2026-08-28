@@ -29,8 +29,12 @@ export function minutesStoreKey(): string {
   return scopedKey("minutes:v1");
 }
 
-/** I-2 (26 号报告 §3-2): one merged page, with the photo it came from. */
-export type PhotoPage = { name: string; dataUrl: string };
+/** I-2 (26 号报告 §3-2): one merged page, with the photo it came from.
+ *  `storagePath` (migration 30): where the ORIGINAL landed in the uploads
+ *  bucket — the save hands these to minutes_docs.photo_paths so History can
+ *  show the handwriting behind a saved document. Optional: older blobs, typed
+ *  pages and failed uploads simply have none. */
+export type PhotoPage = { name: string; dataUrl: string; storagePath?: string | null };
 
 export type SavedMinutes = {
   extraction: MeetingNotesExtraction;
@@ -62,6 +66,11 @@ export type SavedMinutes = {
    * has no such key, `undefined` reads as false, and the person is asked once.
    */
   noAttendees?: boolean;
+  /**
+   * The society's own name for this document (J 28/8 item 3). Optional —
+   * older blobs have none and the suggestion regenerates from the fields.
+   */
+  title?: string;
   /**
    * 0-1 (26 号报告 2-1): true when THIS workspace content has been saved to
    * the organisation's History. It has to survive a reload — next month's

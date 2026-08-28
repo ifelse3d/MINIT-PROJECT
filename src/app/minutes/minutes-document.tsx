@@ -55,6 +55,9 @@ export function MinutesDocument() {
     saveResult,
     saveToHistory,
     backToEmpty,
+    docTitle,
+    setDocTitle,
+    suggestedTitle,
     pastePack,
     evRows,
     evBusy,
@@ -385,6 +388,35 @@ export function MinutesDocument() {
                 >
                   <Tri bm="Isi kehadiran" zh="去补名单" en="Fill in attendance" /> →
                 </Link>
+              </div>
+            )}
+            {/* J 28/8 item 3: the document's NAME, asked BEFORE saving — like
+                Google Docs' title box, pre-filled so nobody has to invent one.
+                This is what History lists and what search matches. */}
+            {isReal && allReviewed && !alreadySaved && (
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="minutes-title" className="text-base font-medium">
+                  <Tri
+                    bm="Nama dokumen ini (untuk dicari semula nanti)"
+                    zh="这份记录叫什么名字？（以后要找回，就靠这个名字）"
+                    en="A name for this document (how you will find it later)"
+                  />
+                </label>
+                <input
+                  id="minutes-title"
+                  value={docTitle}
+                  maxLength={200}
+                  onChange={(e) => setDocTitle(e.target.value)}
+                  placeholder={suggestedTitle}
+                  className="h-12 w-full max-w-xl rounded-sm border-2 border-input bg-white px-3 text-base dark:bg-transparent"
+                />
+                <p className="text-sm text-muted-foreground">
+                  <Tri
+                    bm={`Biarkan kosong untuk guna cadangan MinitAI${suggestedTitle ? ` ("${suggestedTitle}")` : ""} — atau taip nama anda sendiri.`}
+                    zh={`留空就用 MinitAI 建议的名字${suggestedTitle ? `（「${suggestedTitle}」）` : ""}——也可以直接打你们自己的叫法。`}
+                    en={`Leave it empty to use MinitAI's suggestion${suggestedTitle ? ` ("${suggestedTitle}")` : ""} — or type your own.`}
+                  />
+                </p>
               </div>
             )}
             <div className="flex flex-wrap items-center gap-3">
