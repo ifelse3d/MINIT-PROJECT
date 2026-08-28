@@ -42,6 +42,11 @@ import { countUnreviewed } from "@/lib/extraction-rows";
 export type SaveMinutesState = {
   error: string | null;
   ok: boolean;
+  /** The stored row's id on success — the browser walks to the finished
+   *  document's own page (/minutes/history/<id>) with it. null when an
+   *  idempotent race made the id unrecoverable; the caller then falls back
+   *  to the history list, which still shows the document first. */
+  id?: number | null;
 };
 
 export async function saveConfirmedMinutes(input: {
@@ -218,7 +223,7 @@ export async function saveConfirmedMinutes(input: {
       .eq("client_id", clientId)
       .maybeSingle();
     if (!existingErr && existing?.id) {
-      return { error: null, ok: true };
+      return { error: null, ok: true, id: Number(existing.id) };
     }
   }
 
@@ -291,7 +296,13 @@ export async function saveConfirmedMinutes(input: {
   // 23505 on (org_id, client_id): a concurrent duplicate of THIS save won the
   // race — which means the document IS stored. That is success, not an error.
   if (error && error.code === "23505" && clientId !== "") {
-    return { error: null, ok: true };
+    const { data: winner } = await supabase
+      .from("minutes_docs")
+      .select("id")
+      .eq("org_id", active.id)
+      .eq("client_id", clientId)
+      .maybeSingle();
+    return { error: null, ok: true, id: winner?.id ? Number(winner.id) : null };
   }
 
   if (error) {
@@ -324,7 +335,7 @@ export async function saveConfirmedMinutes(input: {
   // `npm run embed:backfill`.
   if (saved?.id) indexMinutesDocInBackground(Number(saved.id));
 
-  return { error: null, ok: true };
+  return { error: null, ok: true, id: saved?.id ? Number(saved.id) : null };
 }
 
 // countUnreviewed moved to src/lib/extraction-rows.ts (K-4) — one copy for

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ConfidenceBadge } from "@/components/confidence-badge";
 import { Tri } from "@/components/language-provider";
 import { NextStepLink, PageSection } from "@/components/page-section";
+import { PhotoLightbox } from "@/components/page-thumbs";
 import { cjkSnippets, hasCjk } from "@/lib/bm-guard";
 import { MINUTES_LANGUAGES, type MinutesLang } from "@/lib/minutes-lang";
 import {
@@ -57,8 +58,10 @@ export function MinutesDocument() {
     saveBusy,
     alreadySaved,
     saveResult,
+    savedDocId,
     saveToHistory,
     backToEmpty,
+    photoPages,
     docTitle,
     setDocTitle,
     suggestedTitle,
@@ -78,6 +81,12 @@ export function MinutesDocument() {
   // text by hand. Same paste pack, same helper, same behaviour now.
   const [copiedEroses, setCopiedEroses] = useState<string | null>(null);
   const router = useRouter();
+
+  // J 28/8 evening item 5: 「在这里也没有得看回照片」 — while correcting the
+  // document, one button opens the ORIGINAL handwriting in a popup (zoom
+  // in/out inside), and closing it lands right back in the editor. State
+  // here, viewer shared (PhotoLightbox).
+  const [photoOpen, setPhotoOpen] = useState<number | null>(null);
 
   // BM GUARD (J 8/27 下午): a BM document bound for eROSES must not carry
   // Chinese. Free, deterministic scan of exactly what would be saved; the
@@ -291,16 +300,36 @@ export function MinutesDocument() {
           )}
           {isReal && allReviewed ? (
             <div className="flex flex-col gap-2">
-              <label
-                htmlFor="minutes-document"
-                className="text-base font-medium"
-              >
-                <Tri
-                  bm="Anda boleh betulkan terus di sini — ini dokumen anda."
-                  zh="您可以直接在这里修改 —— 这是您的文件。"
-                  en="You can correct it directly here — this is your document."
-                />
-              </label>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label
+                  htmlFor="minutes-document"
+                  className="text-base font-medium"
+                >
+                  <Tri
+                    bm="Anda boleh betulkan terus di sini — ini dokumen anda."
+                    zh="您可以直接在这里修改 —— 这是您的文件。"
+                    en="You can correct it directly here — this is your document."
+                  />
+                </label>
+                {/* J 28/8 evening item 5: the original handwriting, one tap
+                    away WHILE editing — a popup with zoom, never a page
+                    change, so nothing typed is disturbed. */}
+                {photoPages.length > 0 && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setPhotoOpen(0)}
+                  >
+                    📷{" "}
+                    <Tri
+                      bm={`Lihat gambar asal (${photoPages.length})`}
+                      zh={`看原稿照片（${photoPages.length}）`}
+                      en={`See the original photos (${photoPages.length})`}
+                    />
+                  </Button>
+                )}
+              </div>
               <textarea
                 id="minutes-document"
                 value={shownDocument}
@@ -333,6 +362,17 @@ export function MinutesDocument() {
                     />
                   </Button>
                 </div>
+              )}
+              {photoOpen !== null && (
+                <PhotoLightbox
+                  pages={photoPages.map((p) => ({
+                    name: p.name,
+                    src: p.dataUrl || null,
+                  }))}
+                  index={photoOpen}
+                  onIndex={setPhotoOpen}
+                  onClose={() => setPhotoOpen(null)}
+                />
               )}
             </div>
           ) : (
@@ -511,12 +551,18 @@ export function MinutesDocument() {
               <Button
                 size="lg"
                 onClick={async () => {
-                  // D-1 (work order 31, 客⑭): a successful save ENDS the
-                  // sitting — back to /minutes, which shows the clean "saved"
-                  // card. router.push is an SPA move: the layout (and the
-                  // saved mark it holds) stays mounted.
-                  const ok = await saveToHistory();
-                  if (ok) router.push("/minutes");
+                  // J 28/8 evening items 6+7: a successful save lands ON the
+                  // finished document — its own History page, with the final
+                  // preview, 🖨 Print/PDF, the photos and Edit all right
+                  // there. No more hunting through 以前的记录 to print what
+                  // you just made. (id null = an idempotent race hid the id;
+                  // the history list still shows the document first.)
+                  const res = await saveToHistory();
+                  if (res.ok) {
+                    router.push(
+                      res.id ? `/minutes/history/${res.id}` : "/minutes/history",
+                    );
+                  }
                 }}
                 // Neither the example nor an empty page may enter a real
                 // organisation's audit trail — hence isReal, not !isSample.
@@ -560,11 +606,22 @@ export function MinutesDocument() {
                   en="The minutes are saved in the organisation's history."
                 />
               </p>
-              {/* 0-1 (26 号报告 2-1): the explicit way OUT of a finished
-                  meeting. Without it the saved meeting sat in the workspace
-                  forever, and next month's photo merged into it. Safe to
-                  press: the document above is already in History. */}
+              {/* Normally the save above already walked to the finished
+                  document's page; this panel is the browser-Back view of a
+                  saved sitting. Everything it offers lives THERE now. */}
               <div className="flex flex-wrap items-center gap-3">
+                {savedDocId !== null && (
+                  <Button asChild size="lg" variant="outline">
+                    <Link href={`/minutes/history/${savedDocId}`}>
+                      📄{" "}
+                      <Tri
+                        bm="Buka dokumen siap (cetak / PDF di sana)"
+                        zh="打开成品页（打印 / PDF 都在那里）"
+                        en="Open the finished document (print / PDF there)"
+                      />
+                    </Link>
+                  </Button>
+                )}
                 <Button size="lg" onClick={backToEmpty}>
                   <Tri
                     bm="Mula mesyuarat baharu"

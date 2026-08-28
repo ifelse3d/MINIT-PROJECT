@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
 import { StepGroup } from "@/components/step-card";
@@ -84,14 +83,6 @@ export function NotesReview() {
     file: File;
     facts: KnownMeetingFacts;
   } | null>(null);
-  /**
-   * D-1 (work order 31, 客⑭): after a save, /minutes shows a clean "saved"
-   * card instead of the whole review wall wearing green ticks. This flag is
-   * the small way back IN — for adding a page to the saved meeting or fixing
-   * something — and it deliberately does not persist: a fresh visit to a
-   * saved workspace should always start at the card.
-   */
-  const [reopenSaved, setReopenSaved] = useState(false);
   const {
     sourceLabel,
     photoPages,
@@ -234,54 +225,17 @@ export function NotesReview() {
     </PageSection>
   );
 
-  // D-1: the clean completion card. The whole review UI (fields, preview,
-  // green ticks) stays out of sight until the person explicitly reopens it.
-  if (alreadySaved && !reopenSaved) {
-    return (
-      <PageSection
-        titleBm="Mesyuarat sebelum ini sudah disimpan ✓"
-        titleZh="上一场已存好 ✓"
-        titleEn="The last meeting is saved ✓"
-        summary={
-          <Tri
-            bm="Ia selamat dalam Sejarah pertubuhan anda. Halaman kerja ini sedia untuk mesyuarat yang seterusnya."
-            zh="它已经安全存进机构的「历史」里了。这个工作区随时可以开始记下一场。"
-            en="It is safe in your organisation's History. This workspace is ready for the next meeting."
-          />
-        }
-      >
-        <div className="flex flex-wrap items-center gap-3">
-          <Button size="lg" onClick={backToEmpty}>
-            <Tri
-              bm="Mula mesyuarat baharu"
-              zh="开始新的会议"
-              en="Start a new meeting"
-            />
-          </Button>
-          <Button asChild size="lg" variant="outline">
-            <Link href="/minutes/document">
-              <Tri
-                bm="Lihat dokumen yang siap"
-                zh="查看做好的文件"
-                en="See the finished document"
-              />
-            </Link>
-          </Button>
-        </div>
-        <button
-          type="button"
-          onClick={() => setReopenSaved(true)}
-          className="self-start text-sm text-muted-foreground underline underline-offset-4"
-        >
-          <Tri
-            bm="Perlu betulkan sesuatu atau tambah halaman untuk mesyuarat itu? Buka semula ruang kerja"
-            zh="要修改内容、或补拍同一场会议的另一页？重新打开工作区"
-            en="Need to fix something, or add another page of that meeting? Reopen the workspace"
-          />
-        </button>
-      </PageSection>
-    );
-  }
+  // J 28/8 evening item 1 — the bug he reported twice: "新的会议记录 still
+  // shows the previous meeting". A workspace whose meeting is ALREADY SAVED
+  // clears itself the moment this page comes up: the saved document now has
+  // its own page in History (print, photos, edit all live there, and the
+  // save walks you to it), so keeping it here only ever meant the next visit
+  // opened on last month's meeting. The old "上一场已存好" card is gone with
+  // it. An UNSAVED workspace is untouched — half-checked work still survives.
+  useEffect(() => {
+    if (alreadySaved) backToEmpty();
+  }, [alreadySaved, backToEmpty]);
+  if (alreadySaved) return null;
 
   return (
     <>

@@ -12,12 +12,142 @@ import { Tri, useTriText } from "@/components/language-provider";
 // the minutes flow, so the inline block became this shared component — one
 // implementation, both flows, and the two can never drift apart.
 //
-// A tap opens the page full-screen. `dataUrl: null` means a PDF page whose
-// pixels were never kept — the tile still exists (the upload happened; hiding
-// it would misreport the review) but the viewer says there is no preview.
+// 28/8 evening (J item 5): the full-screen viewer became PhotoLightbox — its
+// own exported component with ZOOM (＋/−, up to 4×, scroll to move around)
+// and prev/next, because the document-editing page and History need to open
+// the same viewer over a photo WITHOUT leaving what they are doing. `src:
+// null` means a PDF page whose pixels were never kept — the tile still exists
+// (the upload happened; hiding it would misreport the review) but the viewer
+// says there is no preview.
 // ---------------------------------------------------------------------------
 
 export type ThumbPage = { name: string; dataUrl: string | null };
+
+/** One page the lightbox can show — a data: URL or a signed https URL. */
+export type LightboxPage = { name: string; src: string | null };
+
+const ZOOM_STEPS = [1, 1.5, 2.2, 3, 4];
+
+export function PhotoLightbox({
+  pages,
+  index,
+  onClose,
+  onIndex,
+}: {
+  pages: LightboxPage[];
+  /** Which page is open. */
+  index: number;
+  onClose: () => void;
+  /** Move to another page (prev/next). Optional for single-photo callers. */
+  onIndex?: (i: number) => void;
+}) {
+  // Zoom is remembered WITH the page it applies to, so moving to another
+  // page derives back to fit-to-screen — no effect, no extra render.
+  const [zoomState, setZoomState] = useState({ forIndex: index, step: 0 });
+  const step = zoomState.forIndex === index ? zoomState.step : 0;
+  const setStep = (next: (s: number) => number) =>
+    setZoomState({ forIndex: index, step: next(step) });
+  const page = pages[index];
+  if (!page) return null;
+  const zoom = ZOOM_STEPS[step];
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex flex-col bg-black/80 p-3 sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+    >
+      <div
+        className="flex flex-wrap items-center justify-between gap-2 pb-2"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p className="min-w-0 flex-1 truncate text-sm font-medium text-white">
+          {page.name}
+          {pages.length > 1 ? ` · ${index + 1}/${pages.length}` : ""}
+        </p>
+        <div className="flex items-center gap-2">
+          {pages.length > 1 && onIndex && (
+            <>
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={index === 0}
+                onClick={() => onIndex(index - 1)}
+                aria-label={`Previous page`}
+              >
+                ← <Tri bm="Sebelum" zh="上一张" en="Prev" />
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={index === pages.length - 1}
+                onClick={() => onIndex(index + 1)}
+                aria-label={`Next page`}
+              >
+                <Tri bm="Seterus" zh="下一张" en="Next" /> →
+              </Button>
+            </>
+          )}
+          {page.src && (
+            <>
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={step === 0}
+                onClick={() => setStep((s) => Math.max(0, s - 1))}
+                aria-label="Zoom out"
+              >
+                −
+              </Button>
+              <span className="w-12 text-center text-sm tabular-nums text-white">
+                {Math.round(zoom * 100)}%
+              </span>
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={step === ZOOM_STEPS.length - 1}
+                onClick={() => setStep((s) => Math.min(ZOOM_STEPS.length - 1, s + 1))}
+                aria-label="Zoom in"
+              >
+                ＋
+              </Button>
+            </>
+          )}
+          <Button size="sm" variant="secondary" onClick={onClose}>
+            ✕ <Tri bm="Tutup" zh="关闭" en="Close" />
+          </Button>
+        </div>
+      </div>
+      {/* The picture scrolls inside this box when zoomed in — drag the
+          scrollbars (or swipe) to move around the page. */}
+      <div
+        className="v2-scroll flex-1 overflow-auto rounded-sm"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {page.src ? (
+          // A data: URL from the user's own device or a short-lived signed
+          // link — next/image cannot optimise either.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={page.src}
+            alt={page.name}
+            className={zoom === 1 ? "mx-auto max-h-full max-w-full object-contain" : "max-w-none"}
+            style={zoom === 1 ? undefined : { width: `${zoom * 100}%` }}
+          />
+        ) : (
+          <p className="mx-auto mt-10 max-w-md rounded-sm bg-white/90 p-6 text-base">
+            <Tri
+              bm="Fail PDF — pratonton tidak tersedia di sini."
+              zh="这是 PDF 文件 —— 这里没有预览。"
+              en="A PDF file — no preview here."
+            />
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export function PageThumbs({ pages }: { pages: ThumbPage[] }) {
   const t = useTriText();
@@ -36,8 +166,6 @@ export function PageThumbs({ pages }: { pages: ThumbPage[] }) {
             title={p.name}
           >
             {p.dataUrl ? (
-              // A data: URL from the user's own device — next/image cannot
-              // optimise it and would only add wrapper cost.
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={p.dataUrl}
@@ -62,36 +190,13 @@ export function PageThumbs({ pages }: { pages: ThumbPage[] }) {
           />
         </span>
       </div>
-      {viewPage !== null && pages[viewPage] && (
-        <div
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-black/70 p-4"
-          role="dialog"
-          aria-modal="true"
-          onClick={() => setViewPage(null)}
-        >
-          <p className="max-w-full truncate text-sm font-medium text-white">
-            {pages[viewPage].name}
-          </p>
-          {pages[viewPage].dataUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={pages[viewPage].dataUrl as string}
-              alt={pages[viewPage].name}
-              className="max-h-[80vh] max-w-full rounded-sm object-contain"
-            />
-          ) : (
-            <p className="rounded-sm bg-white/90 p-6 text-base">
-              <Tri
-                bm="Fail PDF — pratonton tidak tersedia di sini."
-                zh="这是 PDF 文件 —— 这里没有预览。"
-                en="A PDF file — no preview here."
-              />
-            </p>
-          )}
-          <Button size="lg" variant="secondary" onClick={() => setViewPage(null)}>
-            <Tri bm="Tutup" zh="关闭" en="Close" />
-          </Button>
-        </div>
+      {viewPage !== null && (
+        <PhotoLightbox
+          pages={pages.map((p) => ({ name: p.name, src: p.dataUrl }))}
+          index={viewPage}
+          onIndex={setViewPage}
+          onClose={() => setViewPage(null)}
+        />
       )}
     </>
   );

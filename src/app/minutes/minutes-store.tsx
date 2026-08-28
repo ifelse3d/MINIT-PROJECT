@@ -256,9 +256,13 @@ export type MinutesStore = {
    * save, which is correct.
    */
   alreadySaved: boolean;
-  /** Resolves true when the document reached History — D-1: the caller then
-   *  walks back to /minutes (SPA push, the layout stays mounted). */
-  saveToHistory: () => Promise<boolean>;
+  /** The stored row's id from THIS sitting's save — where the finished
+   *  document now lives (/minutes/history/<id>). */
+  savedDocId: number | null;
+  /** Resolves {ok:true, id} when the document reached History — the caller
+   *  then walks to the finished document's own page (J 28/8 evening items
+   *  6+7: preview + print RIGHT THERE, not hunted for later). */
+  saveToHistory: () => Promise<{ ok: boolean; id: number | null }>;
 
   // --- eROSES + calendar ---------------------------------------------------
   pastePack: ReturnType<typeof buildPastePack>;
@@ -339,6 +343,7 @@ export function MinutesProvider({
   // clones the extraction) unlocks saving again. See `alreadySaved` on the
   // store type for why this exists (found by scripts/e2e-minutes.mjs).
   const [savedFor, setSavedFor] = useState<MeetingNotesExtraction | null>(null);
+  const [savedDocId, setSavedDocId] = useState<number | null>(null);
   const alreadySaved = saveResult === "ok" && savedFor === extraction;
 
   // S0-3 (2026-08-25): one idempotency key per DOCUMENT, not per attempt. A
@@ -377,11 +382,39 @@ export function MinutesProvider({
     if (handed) {
       setExtraction(handed.extraction as MeetingNotesExtraction);
       setSourceLabel(handed.fileName);
-      setPhotoPages([]);
+      // 28/8 evening (last round's own "one door" gap): the home page now
+      // hands over WHERE the original landed (and a small preview when it
+      // could make one), so a meeting that started at the front door links
+      // its photos into History exactly like one photographed here.
+      setPhotoPages(
+        handed.storagePath || handed.photoDataUrl
+          ? [
+              {
+                name: handed.fileName,
+                dataUrl: handed.photoDataUrl ?? "",
+                storagePath: handed.storagePath ?? null,
+              },
+            ]
+          : [],
+      );
       setRestored(true);
       return;
     }
     const saved = loadSavedMinutes();
+    // J 28/8 evening item 1 (the bug he reported TWICE): a workspace whose
+    // meeting is ALREADY IN HISTORY does not come back. "新的会议记录" now
+    // means what it says — the saved document lives on its own History page
+    // (print, photos, edit all there); restoring it here only ever made the
+    // next visit open on last month's meeting.
+    if (saved?.savedToHistory) {
+      try {
+        localStorage.removeItem(minutesStoreKey());
+      } catch {
+        // Storage unavailable — nothing restored either way.
+      }
+      setRestored(true);
+      return;
+    }
     if (saved) {
       setExtraction(saved.extraction);
       setSourceLabel(saved.sourceLabel);
@@ -396,15 +429,8 @@ export function MinutesProvider({
       setTypedByHand(saved.typed === true);
       setNoAttendeesRecorded(saved.noAttendees === true);
       if (typeof saved.title === "string") setDocTitle(saved.title);
-      // 0-1 (26 号报告 2-1): "this meeting is already in History" must survive
-      // the reload, or next month's photo of a NEW meeting silently merges
-      // into last month's. Handing setSavedFor the SAME object that went into
-      // setExtraction keeps the identity check working; the first edit clones
-      // the extraction and unlocks everything again, exactly as before.
-      if (saved.savedToHistory) {
-        setSaveResult("ok");
-        setSavedFor(saved.extraction);
-      }
+      // (0-1's "restore the saved mark" branch is gone on purpose — a
+      // saved-to-History blob is purged above and never restored at all.)
     }
     setRestored(true);
   }, []);
@@ -547,6 +573,7 @@ export function MinutesProvider({
       if (mode === "fresh") {
         setSaveResult(null);
         setSavedFor(null);
+        setSavedDocId(null);
         // A new meeting must not inherit the previous meeting's name.
         setDocTitle("");
       }
@@ -626,6 +653,7 @@ export function MinutesProvider({
     // must not travel onto it.
     setSaveResult(null);
     setSavedFor(null);
+    setSavedDocId(null);
   }, []);
 
   /** Clean, empty page: no example, no half-read photo, nothing saved. */
@@ -645,6 +673,7 @@ export function MinutesProvider({
     // state of the meeting just cleared away leaked onto the blank workspace.
     setSaveResult(null);
     setSavedFor(null);
+    setSavedDocId(null);
     try {
       localStorage.removeItem(minutesStoreKey());
     } catch {
@@ -668,6 +697,7 @@ export function MinutesProvider({
     // onto it would be the sample-vs-real confusion all over again.
     setSaveResult(null);
     setSavedFor(null);
+    setSavedDocId(null);
   }, []);
 
   // Generic updater for one field inside the extraction tree.
@@ -1070,13 +1100,16 @@ export function MinutesProvider({
           .filter((p): p is string => typeof p === "string" && p !== ""),
       });
       setSaveResult(result.ok ? "ok" : result.error ?? "error");
-      if (result.ok) setSavedFor(extraction);
-      return result.ok === true;
+      if (result.ok) {
+        setSavedFor(extraction);
+        setSavedDocId(result.id ?? null);
+      }
+      return { ok: result.ok === true, id: result.ok ? result.id ?? null : null };
     } catch {
       setSaveResult(
         "Tidak berjaya disimpan — cuba lagi / 没有保存成功 —— 请再试一次 / Could not save — try again",
       );
-      return false;
+      return { ok: false, id: null };
     } finally {
       setSaveBusy(false);
     }
@@ -1144,6 +1177,7 @@ export function MinutesProvider({
         saveBusy,
         saveResult,
         alreadySaved,
+        savedDocId,
         saveToHistory,
         pastePack,
         filingRoster,

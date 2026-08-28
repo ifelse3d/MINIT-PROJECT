@@ -22,9 +22,13 @@ import { updateSavedMinutes } from "../actions";
 export function MinutesHistoryActions({
   docId,
   finalMd,
+  showPrint = true,
 }: {
   docId: number;
   finalMd: string;
+  /** The finished-document page renders its own big Print button — it passes
+   *  false so the same control does not appear twice. */
+  showPrint?: boolean;
 }) {
   const router = useRouter();
   const localizeError = useLocalizedError();
@@ -59,11 +63,13 @@ export function MinutesHistoryActions({
   return (
     <div className="mt-3 flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <Button asChild size="sm" variant="outline">
-          <a href={`/api/minutes-pdf?id=${docId}`} target="_blank" rel="noreferrer">
-            🖨 <Tri bm="Cetak / PDF" zh="打印 / PDF" en="Print / PDF" />
-          </a>
-        </Button>
+        {showPrint && (
+          <Button asChild size="sm" variant="outline">
+            <a href={`/api/minutes-pdf?id=${docId}`} target="_blank" rel="noreferrer">
+              🖨 <Tri bm="Cetak / PDF" zh="打印 / PDF" en="Print / PDF" />
+            </a>
+          </Button>
+        )}
         {!editing && (
           <Button
             size="sm"
@@ -76,13 +82,15 @@ export function MinutesHistoryActions({
             ✏️ <Tri bm="Pinda" zh="修改" en="Edit" />
           </Button>
         )}
-        <span className="text-sm text-muted-foreground">
-          <Tri
-            bm="PDF ini juga fail untuk 'Muat Naik Minit Mesyuarat' di eROSES."
-            zh="这份 PDF 也就是 eROSES「上传会议记录」要的那个文件。"
-            en="This PDF is also the file eROSES's 'Muat Naik Minit Mesyuarat' slot takes."
-          />
-        </span>
+        {showPrint && (
+          <span className="text-sm text-muted-foreground">
+            <Tri
+              bm="PDF ini juga fail untuk 'Muat Naik Minit Mesyuarat' di eROSES."
+              zh="这份 PDF 也就是 eROSES「上传会议记录」要的那个文件。"
+              en="This PDF is also the file eROSES's 'Muat Naik Minit Mesyuarat' slot takes."
+            />
+          </span>
+        )}
       </div>
 
       {saved && !editing && (

@@ -234,11 +234,22 @@ async function run() {
   await new Promise((r) => setTimeout(r, 5000));
   text = await page.evaluate(() => document.body.innerText);
   console.log("AFTER SAVE SNIPPET >>>", text.slice(0, 700).split(String.fromCharCode(10)).join(" | "));
-  // D-1 (work order 31): a successful save walks back to /minutes (an SPA
-  // push — no page.goto here, the app did the moving) and shows the clean
-  // completion card instead of the review wall.
-  check("D-1 first save lands on /minutes with the clean saved card",
-    saved1 && page.url().replace(/\/$/, "").endsWith("/minutes") && text.includes("上一场已存好"));
+  // J 28/8 evening items 6+7: a successful save walks TO the finished
+  // document's own page (/minutes/history/<id>) — final preview, Print/PDF
+  // and Edit right there. (Replaces the old walk-back-to-/minutes card.)
+  check("save lands on the finished document's page with Print/PDF",
+    saved1 && /\/minutes\/history\/\d+$/.test(page.url().replace(/\/$/, "")) &&
+    text.includes("打印 / PDF"));
+
+  // J 28/8 evening item 1: a saved workspace does not linger — /minutes
+  // opens ready for the NEXT meeting, not on last month's.
+  await page.goto(`${BASE}/minutes`, { waitUntil: "networkidle2" });
+  await new Promise((r) => setTimeout(r, 1000));
+  text = await page.evaluate(() => document.body.innerText);
+  check("workspace is clean after a save (new-meeting page, no saved card)",
+    !text.includes("上一场已存好") && text.includes("拍下手写的会议笔记"));
+  await page.goto(`${BASE}/minutes/document`, { waitUntil: "networkidle2" });
+  await new Promise((r) => setTimeout(r, 800));
 
   // press again if the button still exists (retry path); otherwise call it a
   // pass — the UI hiding the button after success is also a fine defence.

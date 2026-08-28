@@ -18,6 +18,7 @@ import { PAGE_SIZE, pageRange, pageSummary, parsePage } from "@/lib/list-page";
 import { Pager } from "@/components/pager";
 import { MinutesFilters } from "./filters";
 import { MinutesHistoryActions } from "./history-actions";
+import { HistoryPhotoStrip } from "./photo-strip";
 
 // /minutes/history — every confirmed minutes document saved for the active
 // org (Phase 7). User-scoped client: RLS decides visibility.
@@ -222,21 +223,34 @@ export default async function MinutesHistoryPage({
                     <div>
                       <CardTitle className="text-base">
                         {/* J item 3: the document's own NAME leads; the type +
-                            date drop to the line below. Untitled (older) rows
-                            keep exactly what they showed before. */}
-                        {title !== "" ? (
-                          title
-                        ) : (
-                          <>
-                            <Tri
-                              {...meetingTypeUiLabelTri(
-                                d.meeting_type ?? "",
-                                d.meeting_type_label,
-                              )}
-                            />
-                            {d.meeting_date ? ` — ${d.meeting_date}` : ""}
-                          </>
-                        )}
+                            date drop to the line below. 28/8 evening item 2
+                            (「没得选」): the name IS the way in — tap it and
+                            the document opens on its own page, print and all. */}
+                        <Link
+                          href={`/minutes/history/${d.id}`}
+                          className="underline-offset-4 hover:underline"
+                        >
+                          {title !== "" ? (
+                            title
+                          ) : (
+                            <>
+                              <Tri
+                                {...meetingTypeUiLabelTri(
+                                  d.meeting_type ?? "",
+                                  d.meeting_type_label,
+                                )}
+                              />
+                              {d.meeting_date ? ` — ${d.meeting_date}` : ""}
+                            </>
+                          )}
+                        </Link>
+                        {" "}
+                        <Link
+                          href={`/minutes/history/${d.id}`}
+                          className="text-sm font-normal text-muted-foreground underline underline-offset-4"
+                        >
+                          <Tri bm="Buka" zh="打开" en="Open" /> →
+                        </Link>
                       </CardTitle>
                       <CardDescription>
                         {title !== "" && (
@@ -280,37 +294,13 @@ export default async function MinutesHistoryPage({
                       {d.final_md}
                     </pre>
                   </details>
-                  {/* J item 4: the handwriting this document was read from —
-                      tap to open full size (signed link, 1 hour). Older rows
-                      (or typed meetings) simply have none; /inbox keeps every
-                      photo ever taken either way. */}
+                  {/* J item 4 + 28/8 evening item 5: the handwriting this
+                      document was read from — opens in the zooming popup
+                      (signed links, 1 hour). Older rows (or typed meetings)
+                      simply have none; /inbox keeps every photo either way. */}
                   {photos.length > 0 && (
-                    <div className="mt-3 flex flex-col gap-1.5">
-                      <p className="text-sm font-medium text-muted-foreground">
-                        <Tri
-                          bm="Gambar asal mesyuarat ini"
-                          zh="这场会议的原始照片"
-                          en="This meeting's original photos"
-                        />
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {photos.map((p, i) => (
-                          <a
-                            key={p.path}
-                            href={p.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="block overflow-hidden rounded-sm border hover:opacity-80"
-                          >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={p.url}
-                              alt={`Gambar asal ${i + 1}`}
-                              className="h-20 w-20 object-cover"
-                            />
-                          </a>
-                        ))}
-                      </div>
+                    <div className="mt-3">
+                      <HistoryPhotoStrip photos={photos} />
                     </div>
                   )}
                   <MinutesHistoryActions docId={d.id} finalMd={d.final_md} />
