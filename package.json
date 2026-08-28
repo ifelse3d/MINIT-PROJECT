@@ -13,6 +13,7 @@
     "bench": "tsx scripts/bench-models.ts",
     "economics": "tsx scripts/unit-economics.ts",
     "check:ai": "tsx scripts/check-ai-routing.ts",
+    "icons": "tsx scripts/brand-icons.ts",
     "status": "node scripts/status.mjs",
     "check:migrations": "node scripts/check-migrations.mjs",
     "seed:demo": "tsx scripts/seed-demo.ts",

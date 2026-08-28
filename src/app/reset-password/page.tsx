@@ -146,7 +146,10 @@ export default function ResetPasswordPage() {
             className="flex items-center gap-2.5 p-5 text-white"
             style={{ background: "var(--v2-grad-brand)" }}
           >
-            <BrandLogo size={32} white className="h-8 w-8" />
+            {/* The real app icon, same as /login (J 2026-08-28:
+                「統一」). drop-shadow, not box-shadow — the tile is
+                rounded and transparent outside it. */}
+            <BrandLogo size={36} className="h-9 w-9 drop-shadow-[0_4px_10px_rgba(35,12,74,0.16)]" />
             <span className="text-xl font-bold leading-none tracking-tight">{BRAND_NAME}</span>
           </div>
           <div className="flex w-full flex-col gap-5 p-6 sm:p-8">
