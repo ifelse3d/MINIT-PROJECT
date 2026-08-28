@@ -628,6 +628,31 @@ DB 時照舊明說「只在這台設備」。
 壞資料下次載入自動歸正；殘留的重複 pending 批次由 J 手動取消，settled 批次照
 規矩永久鎖存不清理）。
 
+### D33 — PdpaNote 隱私提示整個刪除（2026-08-28，J 對 37 號報告 §6-1 的回答：「刪除」）
+
+「🔒 照片只交給 AI 服務商讀取」那段（含展開詳情）從四個掛載點（首頁 AskBox、
+會議記錄、記賬、章程）連同元件一起刪除。法律層面的隱私承諾仍在 /privacy 法律文；
+被刪的只是介面上的重複提示。若日後法規或商店審核要求介面內提示，重新掛回是
+一個元件的事——但要 J 再拍板。
+
+### D34 — 逐區塊 AI 討論（2026-08-28，J 對 37 號報告 §6-2 的回答：全部區塊要、改一次算一次）
+
+核對頁四個區塊（會議資料/決議/金額說明/職位名稱）各有「跟 AI 討論」。計費：
+**每發一次訊息收 1 個 AI action（`discuss_minutes`）**，成本寫在按鈕上。
+鐵律不動：AI 只「建議」逐行改寫，人按「採用」才生效（走同一條 updateField 路，
+source_ref 記「AI 建議，您採用」）；人名與金額 prompt 與程式雙層禁改——人名
+歸名冊的 IC 姓名頂替按鈕（免額度、程式替換），金額歸記賬。
+
+### D35 — 會議記錄有名字、可列印、可修改、連回原始照片（2026-08-28，J 新七條 #3/#4）
+
+migration 30（`20260908000000`）：`minutes_docs` 加 `title`（保存前問名字，
+Google-Docs 式建議名＝類型＋日期，程式生成零額度）、`edited_at/edited_by`
+（歷史頁可就地修改，**每次修改文件末尾自動加一行「Dipinda oleh 誰 pada 幾時」**
+——J 的原話「做修改下面就要寫幾時 EDIT」）、`photo_paths`（extract 時本來就存進
+uploads bucket 的原始照片，終於連回它的會議記錄；歷史頁縮圖＋signed URL）。
+列印＝`/api/minutes-pdf`（A4、CJK 字型、pdf-lib）——同一份 PDF 就是 eROSES
+「Muat Naik Minit Mesyuarat」上傳框要的檔案。DB 落後時全部欄位自動降級（梯度）。
+
 ---
 
-*Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C) · D16 appended 2026-08-25 (Stage D) · D17 appended 2026-08-27 (work order 27, the overnight sprint) · D18–D21 appended 2026-08-27 (work order 31 §0, J's post-launch rulings) · D22–D23 appended 2026-08-27 (work order 32 §0, launch-day feedback rulings) · D24–D25 appended 2026-08-27 (the afternoon rulings: violet redesign + BM guard) · D26–D28 appended 2026-08-27 (the launch-evening 20-point list) · D29–D32 appended 2026-08-28 (the two-review session: prompt unfreeze, attendance gate, funds page, record-to-DB)*
+*Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C) · D16 appended 2026-08-25 (Stage D) · D17 appended 2026-08-27 (work order 27, the overnight sprint) · D18–D21 appended 2026-08-27 (work order 31 §0, J's post-launch rulings) · D22–D23 appended 2026-08-27 (work order 32 §0, launch-day feedback rulings) · D24–D25 appended 2026-08-27 (the afternoon rulings: violet redesign + BM guard) · D26–D28 appended 2026-08-27 (the launch-evening 20-point list) · D29–D32 appended 2026-08-28 (the two-review session: prompt unfreeze, attendance gate, funds page, record-to-DB) · D33–D35 appended 2026-08-28 (J's §6 answers + the new seven: PdpaNote deleted, per-part AI discussion, minutes named/printable/editable/photo-linked)*
