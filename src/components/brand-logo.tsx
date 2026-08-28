@@ -1,18 +1,25 @@
 // ---------------------------------------------------------------------------
-// The brand mark as an inline SVG (redesign spec §2.6): the violet gradient
-// tile with the white "M formed by two people". Vector, so it stays sharp at
-// the 28px collapsed rail and at the 64px sign-in tile alike.
+// The brand mark: J's own artwork, rendered as an image.
 //
-// 🔴 The geometry is NOT written here — it lives in src/lib/brand-mark.ts, and
-// scripts/brand-icons.ts rasterises the same numbers into the favicon, the PWA
-// icons and the iOS icon. Before 2026-08-28 those rasters came from a
-// different drawing (J's supplied PNG, a visibly paler gradient), which is why
-// the browser tab did not match the logo inside the app. One mark, two
-// renderers: change brand-mark.ts, then `npm run icons`.
+// 🔴 IT IS NOT A DRAWING WE MAINTAIN. There was once an inline-SVG "redraw" of
+// the logo here, kept because a vector stays sharp at the 28px collapsed rail.
+// It was thinner and more saturated than the real mark, so the app and the
+// browser tab showed two different logos — and when that was noticed on
+// 2026-08-28 the first fix went the wrong way and regenerated the tab FROM the
+// redraw. J caught it at once: 「MinitAI 的 LOGO 應該是這個，爲什麼你換了呢」.
+//
+// So: one mark, and it is the artwork. scripts/assets/minit-logo.png is the
+// source, `npm run icons` renders every size from it, and this component just
+// shows one. Sharpness is handled by serving the 192px file into a 28–64px
+// box rather than by redrawing it: that covers the largest use (the 64px
+// sign-in tile) on a 3x screen. It is deliberately the PWA icon — the same
+// picture at the same size, and a second copy under another name would just be
+// 67KB of identical bytes.
+//
+// aria-hidden with an empty alt: every place this appears, the word "MinitAI"
+// is already next to it in real text, so announcing the mark as well would
+// just say the name twice.
 // ---------------------------------------------------------------------------
-
-import { useId } from "react";
-import { BRAND_MARK } from "@/lib/brand-mark";
 
 export function BrandLogo({
   size = 36,
@@ -21,50 +28,19 @@ export function BrandLogo({
   size?: number;
   className?: string;
 }) {
-  // Unique gradient id per instance — two logos on one page (rail + login)
-  // must not fight over one <defs> id. useId is hydration-safe; a module
-  // counter is not (server and client would count independently).
-  const gid = `brand-grad-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
-  const box = BRAND_MARK.viewBox;
   return (
-    <svg
+    // A fixed-size icon from /public. next/image would add an optimiser round
+    // trip (and Vercel quota) for a file that is already exactly the bytes we
+    // want to serve, at exactly the size we serve it.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/icon-192.png"
+      alt=""
+      aria-hidden
       width={size}
       height={size}
-      viewBox={`0 0 ${box} ${box}`}
-      aria-hidden
       className={className}
-      focusable="false"
-    >
-      <defs>
-        <linearGradient id={gid} x1="0%" y1="0%" x2="100%" y2="100%">
-          {BRAND_MARK.gradient.map((stop) => (
-            <stop key={stop.offset} offset={stop.offset} stopColor={stop.color} />
-          ))}
-        </linearGradient>
-      </defs>
-      <rect
-        x="0"
-        y="0"
-        width={box}
-        height={box}
-        rx={BRAND_MARK.tileRadius}
-        fill={`url(#${gid})`}
-      />
-      {/* The two-people M: heads + round-capped strokes. */}
-      <g
-        fill="none"
-        stroke="#fff"
-        strokeWidth={BRAND_MARK.strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        {[...BRAND_MARK.legs, BRAND_MARK.chevron].map((d) => (
-          <path key={d} d={d} />
-        ))}
-      </g>
-      {BRAND_MARK.heads.map((head) => (
-        <circle key={head.cx} cx={head.cx} cy={head.cy} r={head.r} fill="#fff" />
-      ))}
-    </svg>
+      draggable={false}
+    />
   );
 }

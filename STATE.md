@@ -14,7 +14,7 @@
 ⑤ J 看过后的第二轮：豬撲滿圖示刪除（族群 sensitive，D41）、四張卡改成
 四階「不同的紫」、TAB 圖示與 App 內 logo 統一成同一份向量（D42）、
 重設密碼頁 logo 統一、how-it-works 四張示範圖重拍。
-J 照 43 号报告：push（**11 支**，40 号那 4 支 J 已 push）→ Ctrl+Shift+R。本轮无新 migration。
+J 照 43 号报告：push（**1 支**——前面 15 支 J 都已 push）→ Ctrl+Shift+R。本轮无新 migration。
 ⑥ J 报「线上没改动 + LOADING 超慢 + 直接 load 不出」→ 量了线上：**新版确实已上线**
 （登入页实测是新的），**慢是真的且与本轮改动无关**——公开页 0.4s，但登入后的
 首页 HTML 要 4.4–5.9s 才串流完（TTFB 只有 23ms，串流把伺服器耗时藏起来了）。
@@ -71,13 +71,17 @@ J 照 43 号报告：push（**11 支**，40 号那 4 支 J 已 push）→ Ctrl+S
   🔴 **常設規則**：以後每一個圖示／emoji／插圖／範例照片都要先對照馬來西亞
   族群與宗教讀一遍。已掃：src 無豬／酒／狗／宗教符號 emoji（唯一 🙏 在
   WhatsApp 出席訊息當「請」用，留著）；範例姓名三大族群齊全，維持這比例。
-- **D42 品牌標記只有一份**（J：「上面TAB那邊有問題，不是最新LOGO」）：
-  原因不是忘了更新，而是**本來就是兩張圖**——App 畫向量重繪，favicon/PWA/iOS
-  全從 J 8/27 給的 PNG 產（漸層偏淡、M 比例不同）。幾何搬到
-  `src/lib/brand-mark.ts`，`brand-logo.tsx` 畫 JSX、`scripts/brand-icons.ts`
-  用同一段 SVG 光柵化出 favicon.ico＋icon-512/192＋apple-touch-icon＋96。
-  換 logo＝改一個檔 → `npm run icons`。舊的 .mjs 與那張來源 PNG 已不是真相來源。
-  `BrandLogo` 的 `white` 線稿變體刪除（登入頁與重設密碼頁都用磚塊版，J：「統一」）。
+- **D42 品牌標記只有一份，而那一份是 J 給的原圖**（J：「上面TAB那邊有問題，
+  不是最新LOGO」→ 修錯方向 → J：「LOGO 應該是這個，爲什麼你換了呢」）：
+  原因不是忘了更新，而是**本來就是兩張畫**——favicon/PWA/iOS 從 J 給的
+  `scripts/assets/minit-logo.png`（**正本**）產，App 裡畫的是前人做的**向量仿製版**
+  （線較細、紫較飽和）。🔴 **我第一次把兩邊統一到仿製版，等於把 J 的正本換掉了，
+  方向錯的。** 已改正：正本是唯一真相，仿製版（`src/lib/brand-mark.ts` 與
+  `brand-logo.tsx` 的 inline SVG）**刪除**；`BrandLogo` 只是
+  `<img src="/icon-192.png">`；`npm run icons` 從那張 PNG 產出全部尺寸。
+  換 logo＝換那張 PNG → `npm run icons`。
+  `BrandLogo` 的 `white` 線稿變體也刪除（登入頁與重設密碼頁都用磚塊版，J：「統一」）。
+  ⚠️ **教訓**：兩邊不一致時，先問「哪一邊才是對的」，不要先問「怎麼統一」。
 - **四張卡改成「不同的紫」**（J）：深靛紫 #4C1D95 → 品牌紫 #7029E5 →
   紫 #9333EA → 洋紅紫 #C026D3，深色模式各給亮版。設計包原本的青／藍／洋紅
   自己就標了這個退路；J 選了它，但要求彼此仍分得出來。
@@ -102,6 +106,10 @@ J 照 43 号报告：push（**11 支**，40 号那 4 支 J 已 push）→ Ctrl+S
     这就是为什么它看起来不像主机问题。已加 `vercel.json` → `regions: ["sin1"]`。
     ⚠️ Hobby 只允许一个 region，数组多写一个会让 build 失败。数据库若搬家，
     这个必须跟着搬。
+  - ✅✅ **已部署并实测（J 已 push，`X-Vercel-Id` 现在是 `sin1::sin1::`）**：
+    公开页 0.40→**0.15s** · 登入 15.6→**3.0s** · /orgs/new 12.5→**2.0s** ·
+    **首页 4.4–5.9s → 0.34–0.66s（约 9 倍）**，page errors 0。
+    三个修正一起的结果：搬 region（最大）＋首页一波查询＋auth 每请求一次。
   - 已修：① 首页 agm/flags/usage/figures 四段串行 → 一个 Promise.all（figures
     另带 2.5s deadline，读不到就不画那行）；② `getSessionUser`/`getMemberships`/
     `getActiveOrg` 用 React `cache()` 每请求只算一次——原本画一页要向 auth 服务器
@@ -129,7 +137,7 @@ J 照 43 号报告：push（**11 支**，40 号那 4 支 J 已 push）→ Ctrl+S
 
 ### 🔴 J 的事（写在 40 号报告 §4）
 
-1. **push-cabang.bat**（本机领先 **11 支**；40 号那 4 支 J 已 push，origin/main 已到 769099c）→ 线上 Ctrl+Shift+R。**本轮无新 migration。**
+1. **push-cabang.bat**（本机领先 **1 支**；40 号那 4 支 J 已 push，origin/main 已到 769099c）→ 线上 Ctrl+Shift+R。**本轮无新 migration。**
    🔴 TAB 圖示要 **Ctrl+Shift+R 兩次**或關掉分頁再開——瀏覽器對 favicon 的快取特別頑固。
 2. 看三个地方：登入页、首页（背景＋四张卡＋底下那行字）、随便一页的卡片圆角。
 3. 40 号 §3 有三个等你一句话的小事：重设密码页的小 logo 要不要一起换成砖块版；
@@ -170,6 +178,11 @@ J 照 43 号报告：push（**11 支**，40 号那 4 支 J 已 push）→ Ctrl+S
 
 ### 2026-08-28 新增（美术三包那一场）
 
+- 🔴 **品牌 logo 的真相是 `scripts/assets/minit-logo.png`，不要再畫一張**：
+  repo 裡曾有一個手繪的向量仿製版，跟正本不一樣（線較細、紫較飽和），結果
+  App 和瀏覽器分頁長期顯示兩個不同的 logo。2026-08-28 修這件事時我還一度
+  統一到仿製版那邊，被 J 當場抓回來。現在 `BrandLogo` 只是一個 `<img>`，
+  仿製版已刪。要換 logo：換那張 PNG → `npm run icons`。
 - 🔴 **`body` 和 `.v2-root` 的背景不要改回不透明**：画布渐层是
   `.v2-root::before` 的 `z-index:-1` 层，而负 z-index 子层比 in-flow 区块背景
   **先**画（CSS 2.1 附录 E：第 2 步 vs 第 3 步）。任何一层加回不透明底色，

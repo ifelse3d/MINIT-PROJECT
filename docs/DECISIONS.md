@@ -752,20 +752,33 @@ J：「**不要用豬圖，因爲有馬來人用。要注意每一個種族的se
   沒有偏向任何一方——新增範例資料要維持這個比例。
 - `Landmark`（AGM 文件包）是通用機構建築，不是任何宗教建築。
 
-### D42 — 品牌標記只有一份，網頁與圖示檔都從它產生（2026-08-28，J：TAB 不是最新 LOGO）
+### D42 — 品牌標記只有一份，而那一份是 **J 給的原圖**（2026-08-28，兩次才對）
 
 J 指出瀏覽器分頁的圖示跟 App 裡的 logo 不一樣。查出來的原因不是「忘了更新」——
-**本來就是兩張不同的圖**：App 畫的是向量重繪（brand-logo.tsx），而 favicon／PWA／
-iOS 圖示全部是從 J 8/27 給的 `scripts/assets/minit-logo.png` 產的，那張的漸層明顯
-偏淡、M 的比例也不同。兩邊各自正確，只是從來就不是同一張畫。
+**本來就是兩張畫**：favicon／PWA／iOS 圖示是從 J 給的
+`scripts/assets/minit-logo.png` 產的（**正本**），而 App 裡畫的是前人做的
+**向量仿製版**（`brand-logo.tsx` 的 inline SVG），線條較細、紫色較飽和。
 
-定案：幾何搬到 `src/lib/brand-mark.ts`，**兩個渲染器都讀它**——`brand-logo.tsx`
-畫成 JSX，`scripts/brand-icons.ts` 用 sharp 把同一段 SVG 光柵化成
-favicon.ico（48/32/16）＋ icon-512/192＋apple-touch-icon（180，壓平在漸層深端，
-iOS 不吃透明）＋brand-logo-96。換 logo = 改一個檔 → `npm run icons`。
-舊的 `scripts/brand-icons.mjs` 與那張來源 PNG 不再是真相來源。
-順帶：`BrandLogo` 的 `white` 線稿變體刪除——登入頁和重設密碼頁都改用磚塊版了
-（J：「統一」），沒有地方再用它。
+🔴 **第一次修的方向是錯的**：我把兩邊統一到**仿製版**，等於把 J 的正本從
+分頁和 PWA 圖示上換掉。J 當場抓到：「MinitAI 的 LOGO 應該是這個，爲什麼你換了呢」。
+
+**定案：正本是唯一真相，仿製版刪除。**
+- `scripts/assets/minit-logo.png` 是來源，不准用別的東西產生這個標記，也不准重畫。
+- `scripts/brand-icons.ts`（`npm run icons`）從它產出 favicon.ico（48/32/16）、
+  icon-512／192、apple-touch-icon（180，壓平在 #7029E5，iOS 不吃透明）、
+  brand-logo-96。管線：trim 掉白邊 → 補正方 → 22% 圓角遮罩把四角切成透明
+  （白角在深色分頁上會很醜）。
+- `BrandLogo` 只是 `<img src="/icon-192.png">`。**不再是我們維護的一張畫。**
+  清晰度靠「用 192px 的檔案塞進 28–64px 的框」解決（最大用途是登入頁 64px，
+  3 倍螢幕也夠），不是靠重畫。用 PWA 那張是刻意的——同一張圖同一個尺寸，
+  再存一份只是多 67KB 一模一樣的位元組。
+- `src/lib/brand-mark.ts`（仿製版的幾何）已刪除。
+
+換 logo 的流程：換掉那張 PNG → `npm run icons`。就這樣。
+順帶：登入頁和重設密碼頁都改用磚塊版（J：「統一」），`BrandLogo` 的 `white`
+線稿變體也一併刪除。
+
+⚠️ 分頁圖示的快取特別頑固：改完要 Ctrl+Shift+R 兩次或關掉分頁重開才看得到。
 
 ---
 

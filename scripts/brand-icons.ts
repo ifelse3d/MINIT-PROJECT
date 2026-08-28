@@ -1,43 +1,61 @@
 // ---------------------------------------------------------------------------
-// BRAND ICONS — every raster copy of the mark, from the ONE vector.
+// BRAND ICONS — every copy of the mark, from J's own artwork.
 //
-// 🔴 Replaces scripts/brand-icons.mjs (2026-08-28). That script rasterised
-// scripts/assets/minit-logo.png — J's supplied artwork — while the app drew
-// the vector redraw in src/lib/brand-mark.ts. The two are visibly different
-// (the PNG's gradient is paler), so the browser tab never matched the logo in
-// the sidebar. J: 「上面TAB那邊有問題，不是最新LOGO」. Now both come from
-// brandMarkSvg(), and they cannot drift again.
+// 🔴 THE SOURCE OF TRUTH IS scripts/assets/minit-logo.png. That is the logo J
+// supplied and the one J means when he says "the MinitAI logo". Do not
+// generate the mark from anything else, and do not redraw it.
 //
-// Produces, deterministically — a logo swap is one edit to brand-mark.ts plus
-// `npm run icons`:
-//   public/icon-512.png, public/icon-192.png   — PWA icons (manifest)
-//   public/apple-touch-icon.png (180px)        — iOS home screen
-//   public/brand-logo-96.png                   — raster fallback
-//   src/app/favicon.ico                        — 48+32+16, PNG-compressed
+// History, so this is not undone a third time. There used to be TWO drawings:
+// this artwork (used for the favicon and the PWA icons) and a hand-made vector
+// "redraw" of it (used inside the app), which was thinner and more saturated
+// than the real thing. On 2026-08-28 J pointed out the browser tab did not
+// match the app; the tab was right and the app was wrong, but the first fix
+// went the wrong way and made everything use the redraw. J caught it
+// immediately: 「MinitAI 的 LOGO 應該是這個，爲什麼你換了呢」. The redraw is
+// deleted; the artwork is the only mark now.
 //
-// The tile's corners are transparent because the SVG's own rounded rect
-// leaves them so — no trim step and no alpha mask, both of which the old
-// script needed only because its source was a tile painted onto white.
+// Produces — a logo swap is: replace the PNG, then `npm run icons`:
+//   public/icon-512.png, public/icon-192.png   PWA icons (manifest); 192 is
+//                                              also what <BrandLogo> shows in
+//                                              the app — one picture, not a
+//                                              second copy under another name
+//   public/apple-touch-icon.png (180px)        iOS home screen
+//   public/brand-logo-96.png                   small raster fallback
+//   src/app/favicon.ico                        48+32+16, PNG-compressed
+//
+// The artwork is a tile painted onto a WHITE background, so the pipeline is:
+// trim the white margin → square it → apply a rounded-rect alpha mask so the
+// corners are transparent (white corners look broken on a dark browser tab).
+// The 22% mask radius was matched to the artwork's own corner by eye and is
+// verified by looking at the 512 output — change it only against that.
 //
 // ⚠️ iOS ignores transparency on the home screen and composites onto black,
-// which is why apple-touch-icon is flattened onto the tile's own end colour
-// rather than shipped with transparent corners.
+// so apple-touch-icon is flattened onto the tile's own deep violet instead.
 // ---------------------------------------------------------------------------
 import { writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
-import { BRAND_MARK, brandMarkSvg } from "../src/lib/brand-mark";
 
 const here = dirname(fileURLToPath(import.meta.url));
+const SRC = join(here, "assets", "minit-logo.png");
 const PUBLIC = join(here, "..", "public");
+const RADIUS_RATIO = 0.22;
+/** The gradient's deep end — the flat ground for iOS. */
+const FLAT = "#7029E5";
 
-/** Render the mark at one size. 1024 in the SVG then downscale: librsvg
- *  rasterises at the requested size, and going through a larger buffer keeps
- *  the round caps clean at 16px. */
-async function markPng(size: number): Promise<Buffer> {
-  const svg = Buffer.from(brandMarkSvg(1024));
-  return sharp(svg).resize(size, size).png().toBuffer();
+/** The artwork, trimmed and squared, with transparent rounded corners. */
+async function tileBuffer(): Promise<Buffer> {
+  const trimmed = await sharp(SRC).trim({ threshold: 12 }).png().toBuffer();
+  const meta = await sharp(trimmed).metadata();
+  const edge = Math.min(meta.width ?? 0, meta.height ?? 0);
+  // Square it — trim can be off by a pixel or two per side.
+  const square = await sharp(trimmed).resize(edge, edge, { fit: "cover" }).png().toBuffer();
+  const r = Math.round(edge * RADIUS_RATIO);
+  const mask = Buffer.from(
+    `<svg width="${edge}" height="${edge}"><rect x="0" y="0" width="${edge}" height="${edge}" rx="${r}" ry="${r}" fill="#fff"/></svg>`,
+  );
+  return sharp(square).composite([{ input: mask, blend: "dest-in" }]).png().toBuffer();
 }
 
 /** A valid .ico whose entries are PNG-compressed (supported everywhere that
@@ -67,29 +85,28 @@ function buildIco(pngs: { size: number; buf: Buffer }[]): Buffer {
 }
 
 async function main() {
+  const tile = await tileBuffer();
+  const at = (size: number) =>
+    sharp(tile).resize(size, size).png({ compressionLevel: 9 }).toBuffer();
+
   for (const [size, file] of [
     [512, "icon-512.png"],
     [192, "icon-192.png"],
     [96, "brand-logo-96.png"],
   ] as const) {
-    writeFileSync(join(PUBLIC, file), await markPng(size));
-    console.log(`OK public/${file} (${size}px)`);
+    const buf = await at(size);
+    writeFileSync(join(PUBLIC, file), buf);
+    console.log(`OK public/${file} (${size}px, ${Math.round(buf.length / 1024)}KB)`);
   }
 
-  // iOS: flattened onto the gradient's darkest stop, never transparent.
-  const flat = BRAND_MARK.gradient[BRAND_MARK.gradient.length - 1].color;
-  const apple = await sharp(await markPng(180))
-    .flatten({ background: flat })
-    .png()
-    .toBuffer();
+  const apple = await sharp(await at(180)).flatten({ background: FLAT }).png().toBuffer();
   writeFileSync(join(PUBLIC, "apple-touch-icon.png"), apple);
-  console.log(`OK public/apple-touch-icon.png (180px, flattened on ${flat})`);
+  console.log(`OK public/apple-touch-icon.png (180px, flattened on ${FLAT})`);
 
   const icoSizes = [48, 32, 16];
   const icoPngs: { size: number; buf: Buffer }[] = [];
-  for (const size of icoSizes) icoPngs.push({ size, buf: await markPng(size) });
-  const icoPath = join(here, "..", "src", "app", "favicon.ico");
-  writeFileSync(icoPath, buildIco(icoPngs));
+  for (const size of icoSizes) icoPngs.push({ size, buf: await at(size) });
+  writeFileSync(join(here, "..", "src", "app", "favicon.ico"), buildIco(icoPngs));
   console.log(`OK src/app/favicon.ico (${icoSizes.join("/")}px, PNG-compressed)`);
 }
 
