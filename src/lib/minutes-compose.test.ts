@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import { BRAND_NAME } from "@/lib/brand";
 import {
   checkCoverage,
+  checkMergedFacts,
   checkNames,
   composeMinutesMd,
   minutesPlanSchema,
+  SIGNATURE_LINE,
   type MinutesPlan,
 } from "@/lib/minutes-compose";
 import { emptyMeetingNotesExtraction } from "@/lib/extraction";
@@ -450,5 +452,121 @@ describe("checkNames and a Chinese document", () => {
       ],
     });
     expect(checkNames(p, ["小小班主持: 雯倩"]).ok).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// MERGED SOURCES (J 28/8 evening item 4): thirteen near-identical whiteboard
+// lines may become ONE readable sentence — "source" is then a list — as long
+// as the arithmetic still proves nothing was lost.
+// ---------------------------------------------------------------------------
+describe("checkCoverage with merged sources", () => {
+  it("counts every index inside a source list exactly once", () => {
+    const r = checkCoverage(
+      plan({
+        sections: [
+          { heading: "A", items: [{ source: [0, 1, 2], text: "merged" }] },
+        ],
+        unresolved: [{ source: 3, text: "open" }],
+      }),
+      4,
+    );
+    expect(r).toEqual({ ok: true, missing: [], duplicated: [], unknown: [] });
+  });
+
+  it("still catches an index dropped from — or repeated across — the lists", () => {
+    const r = checkCoverage(
+      plan({
+        sections: [
+          { heading: "A", items: [{ source: [0, 1], text: "merged" }] },
+          { heading: "B", items: [{ source: [1], text: "again" }] },
+        ],
+      }),
+      3,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.missing).toEqual([2]);
+    expect(r.duplicated).toEqual([1]);
+  });
+});
+
+describe("checkNames with merged sources", () => {
+  it("accepts a name that came from ANY of the merged items", () => {
+    const p = plan({
+      sections: [
+        {
+          heading: "Sasaran",
+          items: [
+            {
+              source: [0, 1],
+              text: "Sasaran ditetapkan: 宏道 10 orang, 同吉 10 orang.",
+            },
+          ],
+        },
+      ],
+    });
+    expect(checkNames(p, ["1. 宏道 10位", "2. 同吉 10位"]).ok).toBe(true);
+  });
+});
+
+describe("checkMergedFacts", () => {
+  const sources = ["1. 宏道 10位", "2. 同吉 10位", "3. 同步 5位"];
+
+  it("passes a merge that keeps every name and every count (list numbers may go)", () => {
+    const p = plan({
+      sections: [
+        {
+          heading: "Sasaran",
+          items: [
+            {
+              source: [0, 1, 2],
+              text: "Sasaran: 宏道 10 orang, 同吉 10 orang, 同步 5 orang.",
+            },
+          ],
+        },
+      ],
+    });
+    expect(checkMergedFacts(p, sources)).toEqual({ ok: true, dropped: [] });
+  });
+
+  it("catches a merge that lost one group's name or count", () => {
+    const p = plan({
+      sections: [
+        {
+          heading: "Sasaran",
+          items: [
+            {
+              // 同步 5 orang vanished in the merge — the classic omission.
+              source: [0, 1, 2],
+              text: "Sasaran: 宏道 10 orang, 同吉 10 orang.",
+            },
+          ],
+        },
+      ],
+    });
+    const r = checkMergedFacts(p, sources);
+    expect(r.ok).toBe(false);
+    expect(r.dropped).toEqual([2]);
+  });
+
+  it("leaves single-source items alone — phrasing one item is the model's job", () => {
+    const p = plan({
+      sections: [
+        { heading: "A", items: [{ source: 0, text: "Reworded entirely." }] },
+      ],
+    });
+    expect(checkMergedFacts(p, sources).ok).toBe(true);
+  });
+});
+
+describe("the signature block (J 28/8 evening item 3)", () => {
+  it("prints signature lines wide enough to sign on", () => {
+    const md = composeMinutesMd(
+      plan({ sections: [{ heading: "A", items: [{ source: 0, text: "x" }] }] }),
+      emptyMeetingNotesExtraction,
+      { orgName: "PERSATUAN UJIAN", confirmedBy: "J", dateIso: "2026-08-28" },
+    );
+    expect(md).toContain(SIGNATURE_LINE);
+    expect(SIGNATURE_LINE.length).toBeGreaterThanOrEqual(40);
   });
 });

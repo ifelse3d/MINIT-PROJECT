@@ -194,6 +194,23 @@ export async function buildMinutesPdf(params: MinutesPdfParams): Promise<Uint8Ar
         break;
       }
       case "body": {
+        // J 28/8 evening item 3 (「签名部分太窄」): a line that IS only
+        // underscores is a signature slot — draw it as a real rule, wide
+        // enough to sign on, with room above for the hand. This also fixes
+        // every already-saved document, whose stored text still carries the
+        // old 20-underscore line.
+        if (/^_{8,}$/.test(item.text.trim())) {
+          ensureRoom(40);
+          y -= 22; // space for the signature itself
+          page.drawLine({
+            start: { x: margin, y: y + 4 },
+            end: { x: margin + Math.min(280, width), y: y + 4 },
+            thickness: 0.9,
+            color: ink,
+          });
+          y -= 16;
+          break;
+        }
         for (const l of wrap(item.text, 11, false, width)) {
           ensureRoom(18);
           drawAt(l, margin, y, 11);

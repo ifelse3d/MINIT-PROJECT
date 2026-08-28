@@ -191,3 +191,23 @@ describe("eROSES paste-pack (deterministic, Hard Rule 2)", () => {
     ).toBe("3");
   });
 });
+
+describe("renderMinutesDraftBm and self-numbered notes (J 28/8 evening item 4)", () => {
+  it("prints a line that carries its own list number verbatim, not doubled", () => {
+    const e = structuredClone(sampleMeetingExtraction);
+    e.resolutions = [
+      {
+        text: { value: "1. 宏道 10位", confidence: "confirmed", source_ref: null },
+      },
+      {
+        text: { value: "决定七月办家长班", confidence: "confirmed", source_ref: null },
+      },
+    ] as typeof e.resolutions;
+    const draft = renderMinutesDraftBm(e, { orgName: "Persatuan Ujian" });
+    expect(draft).toContain("\n1. 宏道 10位");
+    expect(draft).not.toContain("1. 1. 宏道");
+    expect(draft).not.toContain("2. 1. 宏道");
+    // An unnumbered line still gets numbered by the renderer.
+    expect(draft).toContain("2. 决定七月办家长班");
+  });
+});

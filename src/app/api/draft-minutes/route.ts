@@ -7,6 +7,7 @@ import { parseMeetingNotesExtraction } from "@/lib/extraction";
 import { draftMinutesPrompt } from "@/prompts/draft-minutes";
 import {
   checkCoverage,
+  checkMergedFacts,
   checkNames,
   composeMinutesMd,
   minutesPlanSchema,
@@ -143,7 +144,10 @@ export async function POST(req: Request) {
       const names = writesInChinese(lang)
         ? { ok: true, altered: [] as number[] }
         : checkNames(parsedPlan.data, resolutionTexts, allowedRuns);
-      if (coverage.ok && names.ok) {
+      // Merging like items is allowed (J 28/8 evening) — at the price that a
+      // merged line still carries every name and figure. EVERY language.
+      const merged = checkMergedFacts(parsedPlan.data, resolutionTexts);
+      if (coverage.ok && names.ok && merged.ok) {
         plan = parsedPlan.data;
       } else {
         repair = {
@@ -151,6 +155,7 @@ export async function POST(req: Request) {
           duplicated: coverage.duplicated,
           unknown: coverage.unknown,
           altered: names.altered,
+          dropped: merged.dropped,
         };
       }
     }

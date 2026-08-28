@@ -68,7 +68,14 @@ export function renderMinutesDraftBm(
   );
   if (resolutions.length > 0) {
     lines.push("## PERKARA DIBINCANGKAN DAN KEPUTUSAN", "");
-    resolutions.forEach((r, i) => lines.push(`${i + 1}. ${r.text.value}`));
+    // J 28/8 evening item 4: a note line that CARRIES its own list number
+    // ("1. 宏道 10位") used to print as "2. 1. 宏道 10位" — the double
+    // numbering he circled. A line with its own enumerator prints verbatim;
+    // only unnumbered lines get numbered by us.
+    resolutions.forEach((r, i) => {
+      const own = /^\s*\d{1,3}[.、．)]\s/.test(r.text.value);
+      lines.push(own ? r.text.value : `${i + 1}. ${r.text.value}`);
+    });
     lines.push("");
   }
 

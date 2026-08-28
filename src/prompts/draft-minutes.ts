@@ -34,6 +34,8 @@ export type DraftMinutesPromptParams = {
     duplicated: number[];
     unknown: number[];
     altered: number[];
+    /** Sources a MERGED line lost a name or figure from (checkMergedFacts). */
+    dropped?: number[];
   };
 };
 
@@ -75,6 +77,9 @@ JSON, and nothing else:
   "unresolved": [ { "source": 0, "text": "..." } ]
 }
 
+"source" is ONE index — or a LIST of indices, [3, 4, 5], when one line of the
+document covers several items (see MERGING LIKE ITEMS below).
+
 "kind" says what the line RECORDS, and the document prints the matching formal
 label (Perbincangan / Keputusan / Tindakan) in front of it:
 - "keputusan"    — the meeting decided or agreed something.
@@ -85,11 +90,28 @@ label (Perbincangan / Keputusan / Tindakan) in front of it:
 "unresolved" take no "kind".
 
 === THE RULE THAT IS CHECKED BY CODE ===
-Every index from 0 to ${resolutionTexts.length - 1} must appear EXACTLY ONCE,
-either in a section or in "unresolved". Not zero times. Not twice. Never
+Every index from 0 to ${resolutionTexts.length - 1} must appear EXACTLY ONCE
+across the whole answer — inside exactly one item's "source" (alone or in a
+list), in a section or in "unresolved". Not zero times. Not twice. Never
 invent an index. Your answer is rejected and sent back to you if this does not
 hold, so count before you finish. If an item does not fit any section you
 devised, make a section for it — dropping it is not an option.
+
+=== MERGING LIKE ITEMS ===
+A run of items that are THE SAME KIND OF FACT repeated — a target per group, a
+leader appointed per class, a price per stall — reads terribly as one sentence
+each. Write those as ONE line that carries all of them, with
+"source": [every index it covers]. Worked example: the items
+"1. 宏道 10位", "2. 同吉 10位", "3. 同行 5位" become one keputusan —
+"Sasaran ditetapkan bagi setiap kumpulan: 宏道 10 orang, 同吉 10 orang,
+同行 5 orang." — with "source": [4, 5, 6] (their real indices). This is
+checked by code: a merged line must still contain EVERY name (any Chinese word
+of two or more characters, character for character) and EVERY number of every
+item it merges — only a leading list number like the "1." in "1. 宏道 10位"
+and single-character measure words (位, 个) may go. If an item's words would
+have to be translated away to fit the merged sentence, phrase that item on its
+own instead. Merge only items of the same kind; never merge to shorten, only
+to read the way a person would actually write the minutes.
 
 Your section headings are load-bearing: the opening summary of the document is
 built from them word for word, by code, so a heading that names something the
@@ -143,8 +165,8 @@ commonly known by in ${language} where one plainly exists; where none does,
 keep it as written. Keep every number, quantity and
 duration exactly as given.
 
-Do not add a fact that is not in the item you were given, and do not merge two
-indices into one line of text.${glossaryBlock}`;
+Do not add a fact that is not in the items you were given. A line's "source"
+must list exactly the items that line covers — nothing folded in silently.${glossaryBlock}`;
 
   if (!repair) return base;
 
@@ -156,6 +178,11 @@ indices into one line of text.${glossaryBlock}`;
       ? `CHANGED CHARACTERS (you altered a name or label — every run of Chinese ` +
         `characters you write must appear character for character in the item it ` +
         `came from): ${repair.altered.join(", ")}`
+      : "",
+    repair.dropped?.length
+      ? `MERGED AWAY (a merged line lost this item's name or number — a merged ` +
+        `line must still contain every name and every figure of every index in ` +
+        `its "source" list): ${repair.dropped.join(", ")}`
       : "",
   ]
     .filter(Boolean)
