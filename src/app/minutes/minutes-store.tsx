@@ -262,6 +262,9 @@ export type MinutesStore = {
 
   // --- eROSES + calendar ---------------------------------------------------
   pastePack: ReturnType<typeof buildPastePack>;
+  /** The committee roster (G-1) — also the name→IC-name table the document
+   *  page uses to stand official names in for Chinese ones (J 28/8 item 1). */
+  filingRoster: FilingRosterEntry[];
   evRows: EvRow[] | null;
   evBusy: boolean;
   evError: string | null;
@@ -1143,6 +1146,7 @@ export function MinutesProvider({
         alreadySaved,
         saveToHistory,
         pastePack,
+        filingRoster,
         evRows,
         evBusy,
         evError,

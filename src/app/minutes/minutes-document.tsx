@@ -9,6 +9,10 @@ import { Tri } from "@/components/language-provider";
 import { NextStepLink, PageSection } from "@/components/page-section";
 import { cjkSnippets, hasCjk } from "@/lib/bm-guard";
 import { MINUTES_LANGUAGES, type MinutesLang } from "@/lib/minutes-lang";
+import {
+  applyNameSubstitutions,
+  rosterNameSubstitutions,
+} from "@/lib/roster-names";
 import { useMinutes } from "./minutes-store";
 
 // ---------------------------------------------------------------------------
@@ -59,6 +63,7 @@ export function MinutesDocument() {
     setDocTitle,
     suggestedTitle,
     pastePack,
+    filingRoster,
     evRows,
     evBusy,
     evError,
@@ -88,6 +93,35 @@ export function MinutesDocument() {
         : [],
     [docLang, isReal, allReviewed, shownDocument, documentOrgName, documentSigner],
   );
+
+  // J 28/8 item 1: the roster already maps 喜益 → TAN XI YI (name_official,
+  // typed by a human against the IC). Offering that replacement is CODE, not
+  // AI — free, exact, nothing invented. Only shown while the BM guard flags.
+  const nameSubs = useMemo(
+    () =>
+      bmOffenders.length > 0
+        ? rosterNameSubstitutions(shownDocument, filingRoster)
+        : [],
+    [bmOffenders.length, shownDocument, filingRoster],
+  );
+
+  // J 28/8 item 2: tap a flagged line to FIND it — the editor scrolls there
+  // and selects it, which is the browser's own highlight.
+  function locateInDocument(snippet: string) {
+    const el = document.getElementById("minutes-document") as HTMLTextAreaElement | null;
+    if (!el) return;
+    const idx = el.value.indexOf(snippet);
+    if (idx === -1) return;
+    el.focus();
+    el.setSelectionRange(idx, idx + snippet.length);
+    // Rough but effective: place the selected line near the middle.
+    const lineIndex = el.value.slice(0, idx).split("\n").length - 1;
+    const totalLines = el.value.split("\n").length;
+    el.scrollTop = Math.max(
+      0,
+      (lineIndex / Math.max(1, totalLines)) * el.scrollHeight - el.clientHeight / 2,
+    );
+  }
 
   async function copyErosesValue(field: string, value: string) {
     try {
@@ -329,13 +363,64 @@ export function MinutesDocument() {
                     en={`This Bahasa Malaysia document still contains ${bmOffenders.length} line(s) of Chinese — eROSES requires full Bahasa Malaysia.`}
                   />
                 </p>
+                <p className="text-sm text-red-900/80 dark:text-red-100/80">
+                  <Tri
+                    bm="Tekan mana-mana baris — editor akan skrol ke situ dan menandakannya."
+                    zh="点任何一行 —— 编辑框会跳到那里并选中它，方便找。"
+                    en="Tap any line — the editor scrolls there and highlights it."
+                  />
+                </p>
                 <ul className="flex max-h-40 flex-col gap-1 overflow-y-auto text-sm text-red-900/90 dark:text-red-100/90">
                   {bmOffenders.map((s) => (
                     <li key={s} className="truncate">
-                      · {s}
+                      <button
+                        type="button"
+                        onClick={() => locateInDocument(s)}
+                        className="max-w-full truncate text-left underline-offset-4 hover:underline"
+                        title={s}
+                      >
+                        · {s}
+                      </button>
                     </li>
                   ))}
                 </ul>
+                {/* J 28/8 item 1: the roster's IC names, one tap, no AI. */}
+                {nameSubs.length > 0 && (
+                  <div className="flex flex-col gap-2 rounded-md border-2 border-green-400 bg-green-50 p-3 dark:bg-green-400/10">
+                    <p className="text-base font-medium text-green-900 dark:text-green-100">
+                      <Tri
+                        bm={`${nameSubs.length} nama ini ada dalam senarai AJK — nama rasmi (IC) boleh diganti terus, percuma (bukan AI):`}
+                        zh={`这里有 ${nameSubs.length} 个人名在名册里 —— 可以直接用官方（IC）姓名顶上，免费（不用 AI）：`}
+                        en={`${nameSubs.length} of these names are on the committee roster — the official (IC) names can stand in directly, free (no AI):`}
+                      />
+                    </p>
+                    <ul className="flex flex-col gap-0.5 text-sm text-green-900/90 dark:text-green-100/90">
+                      {nameSubs.map((s) => (
+                        <li key={s.from}>
+                          · {s.from} → <span className="font-semibold">{s.to}</span>
+                          {s.count > 1 ? ` (×${s.count})` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                    <div>
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        className="border-green-500"
+                        onClick={() =>
+                          setEdited(applyNameSubstitutions(shownDocument, nameSubs))
+                        }
+                      >
+                        ✓{" "}
+                        <Tri
+                          bm="Ganti dengan nama rasmi (IC)"
+                          zh="用名册的官方（IC）姓名顶上"
+                          en="Put in the official (IC) names"
+                        />
+                      </Button>
+                    </div>
+                  </div>
+                )}
                 <div className="flex flex-wrap items-center gap-2">
                   <Button size="lg" onClick={writeWithAi} disabled={draftBusy}>
                     {draftBusy ? (
@@ -362,10 +447,13 @@ export function MinutesDocument() {
                 </div>
                 <p className="text-sm text-red-900/80 dark:text-red-100/80">
                   <Tri
-                    bm="Nama ahli hendaklah menggunakan nama rasmi (IC) daripada senarai ahli."
-                    zh="人名请用名册里的官方（IC）姓名顶上。"
-                    en="Member names should use the official (IC) names from the roster."
-                  />
+                    bm="Nama yang tiada dalam senarai ahli: tambah dia (dengan nama IC) di halaman Ahli — lain kali butang di atas menggantikannya sendiri."
+                    zh="名册里没有的人名：去「成员」页把这个人（连 IC 姓名）加进去 —— 下次上面那颗按钮就会自动帮您顶上。"
+                    en="A name not on the roster: add the person (with their IC name) on the Members page — next time the button above swaps it for you."
+                  />{" "}
+                  <Link href="/members" className="underline underline-offset-4">
+                    <Tri bm="Ke halaman Ahli" zh="去成员页" en="To Members" /> →
+                  </Link>
                 </p>
               </div>
             )}
