@@ -14,7 +14,7 @@
 ⑤ J 看过后的第二轮：豬撲滿圖示刪除（族群 sensitive，D41）、四張卡改成
 四階「不同的紫」、TAB 圖示與 App 內 logo 統一成同一份向量（D42）、
 重設密碼頁 logo 統一、how-it-works 四張示範圖重拍。
-J 照 43 号报告：push（**1 支**——前面 15 支 J 都已 push）→ Ctrl+Shift+R。本轮无新 migration。
+J 照 43 号报告：push（**1 支**——其余 J 都已 push，logo 与提速都已上线生效）→ Ctrl+Shift+R。本轮无新 migration。
 ⑥ J 报「线上没改动 + LOADING 超慢 + 直接 load 不出」→ 量了线上：**新版确实已上线**
 （登入页实测是新的），**慢是真的且与本轮改动无关**——公开页 0.4s，但登入后的
 首页 HTML 要 4.4–5.9s 才串流完（TTFB 只有 23ms，串流把伺服器耗时藏起来了）。
@@ -121,6 +121,22 @@ J 照 43 号报告：push（**1 支**——前面 15 支 J 都已 push）→ Ctr
   **仍有 4 项失败**，全在 collector 那条线，同样是钱区拆子路由后地址/按钮文案变了
   （打字格已不在 `/money/receipts`）。要重新对着现在的 UI 推一遍，本轮没做。
   在那之前**不要说「三条 e2e 全过」**。
+
+- **🔴 D43 全站没有黑色按钮了：`--primary` 改成品牌紫**（J：「裏面不要有任何
+  黑色的按鈕，都換成紫色的」）。根因是 shadcn 的 `--primary` 一直是
+  `oklch(0.205 0 0)`＝炭黑，本 repo 从来没改过它，所以每一个 `bg-primary`
+  控件都是黑的（/money 与 /money/expenses 的拍照按钮、manual-income、
+  page-section 的下一步、默认 badge）。Button 组件早就在自己的 default variant
+  里硬写 `--v2-primary-fill` 绕过它——那就是「token 本身错了」的证据。
+  现在 `--primary: #7029E5`（白字 6.69:1）、dark `#7C3AED`（5.70:1）。
+  连带两处：① `text-primary`（Button/Badge 的 link variant）改用
+  `var(--v2-primary)`——primary 是**填充色**，填充紫当**文字**在深色卡片上看不见；
+  ② 分页标签的下划线本来是 `bg-foreground`（墨色），改用 `--v2-accent`。
+  ⚠️ src 里所有 `bg-black` 都是遮罩或 5% 淡底（弹窗背景、代码块、照片灯箱），
+  **不是按钮，一个都没动**。
+  验证工具：`scripts/shots-no-black-buttons.mjs` 走 8 个页面，逐个检查
+  button/label/a 的实际背景色，报告 0 个深色实心按钮。
+- **✅ logo 已修正并上线**：线上 `icon-192.png` 与本机 byte-identical，就是 J 的正本。
 
 ### 现场量到的（不是听说的）
 

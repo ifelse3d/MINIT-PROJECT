@@ -112,8 +112,16 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
+  /* 🔴 THE BRAND VIOLET, not shadcn's near-black (J, 2026-08-28:
+     「裏面不要有任何黑色的按鈕，都換成紫色的」). shadcn ships --primary as
+     oklch(0.205 0 0) — a charcoal — so every `bg-primary` control in the app
+     rendered black: the photo buttons on /minutes, /money and the expenses
+     page, the next-step link, the default badge. The Button component had
+     already worked around it by hard-coding --v2-primary-fill in its default
+     variant, which is the tell that the token itself was wrong.
+     White on #7029E5 is 6.69:1. */
+  --primary: #7029e5;
+  --primary-foreground: #ffffff;
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
@@ -164,8 +172,12 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  /* The FILL violet, matching --v2-primary-fill: white on it is 5.70:1.
+     ⚠️ Deliberately NOT the brighter #C084FC — that one is the TEXT violet for
+     dark surfaces, and white on it fails. Anything that needs violet TEXT in
+     dark mode must use var(--v2-primary), not text-primary. */
+  --primary: #7c3aed;
+  --primary-foreground: #ffffff;
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
