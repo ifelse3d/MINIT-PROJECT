@@ -86,6 +86,8 @@ echo    28.  20260906000000  link batch-derma + glosari 3 bahasa + templat
 echo         hand-over row links + trilingual glossary + templates
 echo    29.  20260907000000  rekod terus masuk DB + resit v8 (baiki serahan berganda)
 echo         record-to-DB + receipts v8 (fixes the double hand-over bug)
+echo    30.  20260908000000  nama minit + log pindaan + gambar asal
+echo         minutes title + edit log + source-photo links (28/8 review)
 echo.
 echo     0.  Keluar / Quit
 echo.
@@ -121,6 +123,7 @@ if "%pick%"=="26" set f=20260904000000_payment_method.sql& goto copy
 if "%pick%"=="27" set f=20260905000000_record_times_and_custody_batches.sql& goto copy
 if "%pick%"=="28" set f=20260906000000_custody_ids_glossary_langs_templates.sql& goto copy
 if "%pick%"=="29" set f=20260907000000_register_rows_and_receipts_v8.sql& goto copy
+if "%pick%"=="30" set f=20260908000000_minutes_title_edits_photos.sql& goto copy
 
 echo.
 echo    Nombor tak sah / not a valid number.

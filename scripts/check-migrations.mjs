@@ -70,6 +70,9 @@ const probes = [
   ["20260906000000 custody donation-id link", "remittance_batches", "client_donation_ids"],
   ["20260906000000 glossary languages", "org_glossary", "lang"],
   ["20260906000000 templates", "org_templates", "label"],
+  ["20260908000000 minutes title", "minutes_docs", "title"],
+  ["20260908000000 minutes edit log", "minutes_docs", "edited_at"],
+  ["20260908000000 minutes photo links", "minutes_docs", "photo_paths"],
 ];
 
 const headers = { apikey: key, Authorization: `Bearer ${key}` };
