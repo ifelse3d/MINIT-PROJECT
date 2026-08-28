@@ -26,7 +26,7 @@ import "server-only";
 import { getSupabaseServer } from "@/db/supabase-server";
 import { dayIsoMalaysia, monthRange } from "@/lib/history";
 
-export type HomeStats = {
+export type HomeFigures = {
   /** Minutes still at status 'draft' — started, not signed off. */
   minutesDrafts: number | null;
   /** Donations recorded against THIS Malaysian calendar month, in cents. */
@@ -39,9 +39,19 @@ export type HomeStats = {
    * warns about: a blank statement reads exactly like an empty society).
    */
   moneyRecords: { latestMonth: string | null } | null;
+};
+
+/** The figures plus the AI quota, which the page already has in hand. */
+export type HomeStats = HomeFigures & {
   /** AI actions left this month, and the allowance they are counted against. */
   aiLeft: number | null;
   aiTotal: number | null;
+};
+
+const NO_FIGURES: HomeFigures = {
+  minutesDrafts: null,
+  moneyInCents: null,
+  moneyRecords: null,
 };
 
 /**
@@ -113,25 +123,61 @@ async function unsignedMinutesDrafts(orgId: number): Promise<number | null> {
 }
 
 /**
- * All four figures, in parallel, none of them able to break the page.
- * `usage` is passed in rather than fetched: the home page already reads it
- * for the chat box, and asking Supabase for the same quota twice on every
- * visit is a query nobody would miss.
+ * 🔴 A DEADLINE, not just a catch. These three reads decorate the home page;
+ * they must never be the reason it is slow to arrive. If the database is
+ * having a bad day the figures come back null and the cards simply render
+ * without their status lines — which is the same thing that happens when a
+ * query fails, and is already what the cards are built for.
+ *
+ * 2.5s is deliberately loose: it is a backstop against a hang, not a
+ * performance budget. The queries themselves are counts and one small select.
  */
-export async function getHomeStats(
-  orgId: number,
-  usage: { totalRemaining: number; monthlyFreeQuota: number; extraCredits: number } | null,
-): Promise<HomeStats> {
+const FIGURES_DEADLINE_MS = 2500;
+
+function withDeadline<T>(work: Promise<T>, ms: number, fallback: T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<T>((resolve) => {
+    timer = setTimeout(() => resolve(fallback), ms);
+  });
+  return Promise.race([work, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
+/**
+ * The three database figures, read in parallel, none of them able to break or
+ * delay the page.
+ *
+ * 🔴 CALL THIS INSIDE THE PAGE'S ONE Promise.all, never after another await.
+ * The home page used to walk four awaits in a row — agm, org flags, usage,
+ * then these — so on a Supabase in another region every visit paid four round
+ * trips end to end. They are all independent; they belong in one wave.
+ */
+export async function getHomeFigures(orgId: number): Promise<HomeFigures> {
   const todayIso = dayIsoMalaysia(new Date().toISOString())!;
-  const [drafts, moneyIn, month] = await Promise.all([
-    unsignedMinutesDrafts(orgId).catch(() => null),
-    moneyInThisMonth(orgId, todayIso).catch(() => null),
-    latestRecordMonth(orgId).catch(() => null),
-  ]);
+  const read = (async (): Promise<HomeFigures> => {
+    const [drafts, moneyIn, month] = await Promise.all([
+      unsignedMinutesDrafts(orgId).catch(() => null),
+      moneyInThisMonth(orgId, todayIso).catch(() => null),
+      latestRecordMonth(orgId).catch(() => null),
+    ]);
+    return { minutesDrafts: drafts, moneyInCents: moneyIn, moneyRecords: month };
+  })();
+  return withDeadline(read, FIGURES_DEADLINE_MS, NO_FIGURES);
+}
+
+/**
+ * The AI card's numbers come from the quota the page already fetched for the
+ * chat box — asking Supabase for the same allowance twice on one visit is a
+ * query nobody would miss. Pure, so it composes inside the page after the one
+ * Promise.all resolves.
+ */
+export function homeStats(
+  figures: HomeFigures,
+  usage: { totalRemaining: number; monthlyFreeQuota: number; extraCredits: number } | null,
+): HomeStats {
   return {
-    minutesDrafts: drafts,
-    moneyInCents: moneyIn,
-    moneyRecords: month,
+    ...figures,
     aiLeft: usage ? usage.totalRemaining : null,
     aiTotal: usage ? usage.monthlyFreeQuota + usage.extraCredits : null,
   };

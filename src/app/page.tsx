@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Tri } from "@/components/language-provider";
 import { getActiveOrg } from "@/lib/active-org";
 import { getUsage } from "@/lib/ai/usage";
-import { getHomeStats } from "@/lib/home-stats";
+import { getHomeFigures, homeStats } from "@/lib/home-stats";
 import { dayIsoMalaysia } from "@/lib/history";
 import { computeStandardDeadlines } from "@/lib/standard-deadlines";
 import { readOrgTypeFlags } from "@/lib/org-flags";
@@ -88,15 +88,23 @@ export default async function Home() {
     );
   }
 
-  const agm = await getLatestConfirmedAgm();
+  // 🔴 ONE WAVE, NOT FOUR. These four reads have nothing to do with each
+  // other, but they used to be four awaits in a row — so on a Supabase sitting
+  // in another region every visit to the home page paid four round trips end
+  // to end, and the page got slower every time somebody added a fifth. J found
+  // it the hard way on 2026-08-28 (「refresh 了 LOADING 超慢」) right after the
+  // status lines became the fourth. If you add another read here, put it in
+  // this array; if it depends on one of these, ask whether it really does.
+  const [agm, orgFlags, usage, figures] = await Promise.all([
+    getLatestConfirmedAgm(),
+    readOrgTypeFlags(active.id),
+    getUsage(active.id).catch(() => null),
+    // Carries its own deadline: the status lines may never hold up the page.
+    getHomeFigures(active.id),
+  ]);
   // B-5: an internal committee has no annual return — no nagging about one.
-  const { orgType } = await readOrgTypeFlags(active.id);
-  const deadlines = computeStandardDeadlines(todayIso, { agm, orgType });
-  const usage = await getUsage(active.id).catch(() => null);
-  // The one live line under each task card. Reads after `usage` because it
-  // reuses the quota already fetched above rather than asking twice; the four
-  // figures inside it are read in parallel and none of them can throw.
-  const stats = await getHomeStats(active.id, usage);
+  const deadlines = computeStandardDeadlines(todayIso, { agm, orgType: orgFlags.orgType });
+  const stats = homeStats(figures, usage);
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 pb-10">
