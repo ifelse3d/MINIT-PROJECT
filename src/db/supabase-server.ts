@@ -10,6 +10,7 @@
 //                          the user's own orgs. PREFER THIS ONE for reads.
 import "server-only";
 
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -46,11 +47,26 @@ export async function getSupabaseServer(): Promise<SupabaseClient> {
   });
 }
 
-/** The logged-in user, or null. Verified against the auth server. */
-export async function getSessionUser() {
+/**
+ * The logged-in user, or null. Verified against the auth server — which means
+ * a NETWORK ROUND TRIP to Supabase Auth, not a cookie decode.
+ *
+ * 🔴 cache() is why rendering a page is not four of those. React's cache is
+ * scoped to ONE server request, so every caller in a single render shares one
+ * answer, and the next request starts clean. Before this (2026-08-28), drawing
+ * the home page asked the auth server who you were three or four separate
+ * times: getActiveOrg asks, roleForOrg asks again inside it, getUsage asks
+ * again, and the shell asks once more on its own. Each of those is a real
+ * round trip, in series, before a single card is drawn.
+ *
+ * Safe because the user cannot change halfway through rendering one page. It
+ * is NOT a cross-request cache and must never become one — that would serve
+ * one member's session to another.
+ */
+export const getSessionUser = cache(async () => {
   const supabase = await getSupabaseServer();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   return user;
-}
+});

@@ -6,6 +6,7 @@
 // returns nothing they are not entitled to see.
 import "server-only";
 
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { getSupabaseServer, getSessionUser } from "@/db/supabase-server";
 
@@ -43,8 +44,9 @@ export type ActiveOrg = {
   taxExemptStatus: string;
 };
 
-/** All orgs where the user holds a DIRECT members_roles row. */
-export async function getMemberships(): Promise<Membership[]> {
+/** All orgs where the user holds a DIRECT members_roles row.
+ *  cache(): per REQUEST, for the same reason as getSessionUser. */
+export const getMemberships = cache(async (): Promise<Membership[]> => {
   const user = await getSessionUser();
   if (!user) return [];
   const supabase = await getSupabaseServer();
@@ -60,13 +62,23 @@ export async function getMemberships(): Promise<Membership[]> {
     (data as unknown as (Membership & { org: Membership["org"] | null })[]) ??
     []
   ).filter((m): m is Membership => m.org !== null);
-}
+});
 
 /**
  * The org the user is currently working in.
  * Order: cookie value (if still accessible) → first direct membership → null.
+ *
+ * 🔴 cache(): ONE per server request. Every server page asks this, and so does
+ * the shell around it, and answering it costs an auth round trip plus two or
+ * three queries — so asking twice per page was two thirds of a second of
+ * nothing (2026-08-28, tracking down why the live app took 4-6s to draw).
+ *
+ * Safe: nothing sets the active-org cookie and then re-reads it inside the
+ * same pass (checked - the two writers, orgs/actions.ts and orgs/join/
+ * actions.ts, both redirect straight after). If you ever add a path that does,
+ * that path must not use this function to read back what it just wrote.
  */
-export async function getActiveOrg(): Promise<ActiveOrg | null> {
+export const getActiveOrg = cache(async (): Promise<ActiveOrg | null> => {
   const user = await getSessionUser();
   if (!user) return null;
   const supabase = await getSupabaseServer();
@@ -112,7 +124,7 @@ export async function getActiveOrg(): Promise<ActiveOrg | null> {
     taxExemptStatus: org.tax_exempt_status,
     role: first.role,
   };
-}
+});
 
 /** Direct role in the org, else the role held on the nearest ancestor
  *  (an HQ hq_admin "inherits" into every branch below). */
