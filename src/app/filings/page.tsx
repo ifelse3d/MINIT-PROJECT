@@ -1,4 +1,8 @@
-import { getLatestConfirmedAgm, getLatestConfirmedExtraction } from "@/db/agm";
+import { getLatestConfirmedAgm } from "@/db/agm";
+import {
+  getConfirmedMinutesDoc,
+  listConfirmedMinutes,
+} from "@/db/minutes-list";
 import { getActiveOrg } from "@/lib/active-org";
 import { readOrgTypeFlags } from "@/lib/org-flags";
 import { buildFinancialStatement } from "@/lib/financial-statement";
@@ -10,27 +14,49 @@ import { FilingsView, type FilingsFinance } from "./filings-view";
 // ---------------------------------------------------------------------------
 // /filings — thin server wrapper.
 //
-// 2026-07-28 audit: this page presented the ROS annual-return deadline under
-// the caption "Computed by the system, not the AI" while the date was actually
-// derived from a FICTIONAL sample AGM, complete with a fictional secretary
-// named as its provenance — and unlike /calendar and the home dashboard it
-// carried no "sample data" badge. The real confirmed AGM (if any) is resolved
-// here and handed to the view; when there is none, the view says so.
+// 2026-08-28 REDESIGN (J review item 6: 「申报那边怪怪就是没说申报什么…没有说
+// 给选哪一年，然后出来那些会议记录，要报什么，然后才给详细资料」+ his 12 eROSES
+// screenshots). The page now follows the portal's own shape:
+//   pick a YEAR → pick one of that year's CONFIRMED meetings → see exactly
+//   what to do with it on eROSES (register the meeting + upload the PDF), and
+//   the Annual Return section says plainly it is a separate, once-a-year job.
+//
+// ?doc=<id> selects the meeting (server-fetched so the paste values come from
+// the SIGNED row in the database — S0-5 unchanged: a filing never builds from
+// a browser draft).
 // ---------------------------------------------------------------------------
 
 export const dynamic = "force-dynamic";
 
-export default async function FilingsPage() {
-  // S0-5 (2026-08-25): the paste-pack is built from the latest CONFIRMED
-  // minutes in the database — a signed document — never from this browser's
-  // half-checked draft. Different devices now see the same pack.
-  const [agm, confirmed, active, filingRoster] = await Promise.all([
+export default async function FilingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ doc?: string | string[] }>;
+}) {
+  const sp = await searchParams;
+  const docRaw = Array.isArray(sp.doc) ? sp.doc[0] : sp.doc;
+  const docId = Number(docRaw ?? "");
+
+  const [agm, meetings, active, filingRoster] = await Promise.all([
     getLatestConfirmedAgm(),
-    getLatestConfirmedExtraction(),
+    listConfirmedMinutes(),
     getActiveOrg().catch(() => null),
-    // G-1: the paste-pack's committee field files from the REAL roster.
+    // G-1: the Annual Return's committee field files from the REAL roster.
     loadFilingRoster(),
   ]);
+
+  // The chosen meeting — or the newest confirmed one, which is what the old
+  // page always showed. An id that is not this org's resolves to null and the
+  // view says "pick a meeting" instead of guessing.
+  const selectedId =
+    Number.isInteger(docId) && docId > 0
+      ? docId
+      : meetings.length > 0
+        ? meetings[0].id
+        : null;
+  const selected =
+    selectedId !== null ? await getConfirmedMinutesDoc(selectedId) : null;
+
   // B-5: an internal committee gets no eROSES/annual-return nagging.
   const { orgType } = active
     ? await readOrgTypeFlags(active.id)
@@ -60,7 +86,8 @@ export default async function FilingsPage() {
   return (
     <FilingsView
       agm={agm}
-      confirmed={confirmed}
+      meetings={meetings}
+      selected={selected}
       orgType={orgType}
       finance={finance}
       filingRoster={filingRoster}
