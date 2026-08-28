@@ -34,6 +34,16 @@ export type IntakeParcel = {
   fileName: string;
   /** Validated on the server by the matching zod schema before it got here. */
   extraction: unknown;
+  /**
+   * 28/8 evening — where /api/intake stored the ORIGINAL in the uploads
+   * bucket, so a meeting that came through the front door links its photo
+   * into the saved document (minutes_docs.photo_paths) exactly like one
+   * photographed on /minutes. Optional: older parcels and failed uploads.
+   */
+  storagePath?: string | null;
+  /** A small JPEG preview of the page, when the home page could make one —
+   *  what the workspace thumbnails show. Optional (PDFs have none). */
+  photoDataUrl?: string | null;
   /** Date.now() when the home page wrote it. */
   at: number;
 };
@@ -98,6 +108,8 @@ function asParcel(v: unknown): IntakeParcel | null {
     kind: r.kind,
     fileName: r.fileName,
     extraction: r.extraction,
+    storagePath: typeof r.storagePath === "string" ? r.storagePath : null,
+    photoDataUrl: typeof r.photoDataUrl === "string" ? r.photoDataUrl : null,
     at: r.at,
   };
 }

@@ -31,6 +31,7 @@ import { Button } from "@/components/ui/button";
 import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
 import { VoiceButton } from "@/components/voice-input";
 import { writeIntake, type IntakeKind } from "@/lib/intake-handoff";
+import { compressPhoto } from "@/app/minutes/minutes-storage";
 import { tidyReply } from "@/lib/tidy-reply";
 import {
   AnswerSources,
@@ -70,6 +71,8 @@ type IntakeOk = {
   fileName?: string;
   extraction?: unknown;
   error?: string;
+  /** Where the original landed in the uploads bucket (28/8 evening). */
+  storagePath?: string | null;
 };
 
 const EXAMPLES = [
@@ -279,11 +282,18 @@ export function AskBox({
         );
         return;
       }
-      // Hand the finished extraction to the review page and go there.
+      // Hand the finished extraction to the review page and go there. The
+      // storage path + a small preview travel along (28/8 evening) so the
+      // front-door photo reaches the saved document's photo_paths, same as a
+      // photo taken on /minutes itself.
       writeIntake({
         kind: body.kind,
         fileName: body.fileName ?? file.name,
         extraction: body.extraction,
+        storagePath: body.storagePath ?? null,
+        photoDataUrl: file.type.startsWith("image/")
+          ? await compressPhoto(file)
+          : null,
       });
       setStaged(null);
       setQuestion("");

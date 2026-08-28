@@ -458,8 +458,10 @@ ${issues}`,
         : parsed.data;
 
     // Keep the page + a history row (best-effort), so the original stays
-    // checkable against every field Minit read off it.
-    await recordUpload(
+    // checkable against every field Minit read off it. The storage path rides
+    // back (28/8 evening) so a meeting read at the front door links its photo
+    // into the saved document, same as /api/extract-minutes.
+    const storagePath = await recordUpload(
       file,
       kind === "meeting_notes"
         ? "meeting_notes"
@@ -477,6 +479,7 @@ ${issues}`,
       fileName: file.name,
       extraction,
       provider: provider.name,
+      storagePath,
     });
   } catch (e) {
     // S-7: count the failure for the ops console — never its contents (PDPA).
