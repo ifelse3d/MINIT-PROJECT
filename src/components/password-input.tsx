@@ -78,7 +78,9 @@ export function PasswordInput({
         title={label}
         aria-pressed={shown}
         className={
-          "absolute inset-y-0 right-0 flex w-14 items-center justify-center rounded-r-[14px] transition-colors " +
+          // rounded-r-sm, not a literal: the button caps the right edge of
+          // the input, so its corner has to be whatever the input's is.
+          "absolute inset-y-0 right-0 flex w-14 items-center justify-center rounded-r-sm transition-colors " +
           (tone === "dark"
             ? "text-white/60 hover:text-white"
             : "text-muted-foreground hover:text-foreground")

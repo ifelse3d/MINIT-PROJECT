@@ -216,7 +216,7 @@ export function AIPanel({
   }
 
   return (
-    <aside className="v2-glass flex h-full w-full flex-col rounded-[28px] p-4 sm:p-5">
+    <aside className="v2-glass flex h-full w-full flex-col rounded-md p-4 sm:p-5">
       {/* Header — A-2 (work order 31, J: 「排版很不好，弄到那麼長」).
           The old header put icon + title + description + quota badge + close
           all on ONE flex row; in the narrow docked panel the badge squeezed

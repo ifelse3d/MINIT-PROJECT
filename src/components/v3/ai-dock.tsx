@@ -195,7 +195,11 @@ export function AIDock({
           // and a launcher sitting ON the 更多 tab is a mis-tap machine.
           // #5 (J review 27-evening): circular, with the logo's brand
           // gradient — not a flat fill.
-          className="v2-pill fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg md:bottom-5 md:right-5"
+          // NOT .v2-pill: that class sets a border-radius from plain CSS,
+          // which outranks the rounded-full utility and had been squaring
+          // this button off. It is one of the three things allowed a full
+          // pill radius (avatars, this button, status dots).
+          className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg transition-[background,box-shadow,filter] duration-150 md:bottom-5 md:right-5"
           style={{
             marginBottom: "env(safe-area-inset-bottom)",
             background: "var(--v2-grad-brand)",

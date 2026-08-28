@@ -41,21 +41,71 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  /* §2.4 (violet redesign spec): a five-step literal scale — 4/6/8/12/999.
-     The old calc() derivation from --radius could not produce 6/8/12. The
-     xl+ steps are pinned to 12px as a safety net; the codemod swept every
-     rounded-xl/2xl/3xl class out of src, so they should never fire. */
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 12px;
-  --radius-2xl: 12px;
-  --radius-3xl: 12px;
-  --radius-4xl: 12px;
+  /* THE RADIUS SCALE — five steps, and every one of them is a var lookup.
+     Nothing here is a literal any more: the numbers live in :root as
+     --v2-r-* (see below) so there is ONE place to change a corner.
+
+     The Tailwind step names map one notch UP from what they used to mean
+     (2026-08-28 radius pass), because that is how this codebase already
+     uses them: buttons carry rounded-sm, cards and panels carry rounded-md,
+     modals and the sign-in card carry rounded-lg. Shifting the scale
+     therefore lands each family on its intended value without touching 340
+     call sites:
+         rounded-xs  4 → 6   chips, tags, toggles, tooltips
+         rounded-sm  6 → 8   buttons, nav items, small tiles
+         rounded-md  8 → 12  cards, panels, section containers   ← the anchor
+         rounded-lg 12 → 16  modals, dialogs, the sign-in card
+     xl+ stay pinned at the card value as a safety net; the earlier codemod
+     swept rounded-xl/2xl/3xl out of src, so they should never fire. */
+  --radius-xs: var(--v2-r-xs);
+  --radius-sm: var(--v2-r-sm);
+  --radius-md: var(--v2-r-md);
+  --radius-lg: var(--v2-r-lg);
+  --radius-xl: var(--v2-r-md);
+  --radius-2xl: var(--v2-r-md);
+  --radius-3xl: var(--v2-r-md);
+  --radius-4xl: var(--v2-r-md);
 }
 
 :root {
+  /* =====================================================================
+     CORNER RADIUS — the whole app's five values, and the only place they
+     are written as numbers. Referenced by the @theme block above, so every
+     rounded-* utility resolves here; no component hard-codes a radius.
+
+     6 / 8 / 12 / 16 / 999, and 12 is the anchor: cards are 12px and
+     everything else is judged against that.
+
+       --v2-r-xs   badges, chips, tags, tooltips, segmented controls
+       --v2-r-sm   buttons, inputs, selects, textareas, nav items
+       --v2-r-md   CARDS, panels, section containers, popovers
+       --v2-r-lg   modals and dialogs, the sign-in card, the 64px logo tile
+       --v2-r-pill avatars, the floating AI button, status dots — nothing else
+
+     Nesting rule for anyone adding a corner: inner = outer − the padding
+     between them. A 12px card with 16px padding takes an 8px input, and the
+     two arcs stay concentric. If a corner looks wrong, change the padding —
+     adding a sixth radius is how a scale dies.
+
+     Two declared exceptions, both sub-6px details: checkboxes/radios at 4px
+     (below) and the 3px active-nav indicator bar.
+     ===================================================================== */
+  --v2-r-xs: 6px;
+  --v2-r-sm: 8px;
+  --v2-r-md: 12px;
+  --v2-r-lg: 16px;
+  --v2-r-pill: 999px;
+
+  /* --- the canvas ------------------------------------------------------
+     These two live at :root, not on .v2-root, because <html> needs to read
+     the flat one: the gradient is painted by .v2-root::before at z-index:-1,
+     which paints BEFORE any in-flow background (CSS 2.1 appendix E step 2 vs
+     step 3). So body and .v2-root must both stay transparent and the flat
+     ground has to sit on <html>, underneath. That is what makes the gradient
+     visible at all — see the html/body rules in @layer base. */
+  --v2-page: #f4f2fa;
+  --v2-page-grad: linear-gradient(160deg, #f3ebfe 0%, #f3f1fb 34%, #f2f6fa 70%, #f5f7fa 100%);
+
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -103,6 +153,11 @@
 }
 
 .dark {
+  /* The canvas, dark. WITHOUT the -grad line dark mode would inherit the
+     light gradient. */
+  --v2-page: #0c0918;
+  --v2-page-grad: linear-gradient(160deg, #160b33 0%, #0e0a1e 45%, #15121f 100%);
+
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -141,10 +196,20 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    /* NOT bg-background. An opaque body background paints OVER .v2-root's
+       z-index:-1 gradient layer (appendix E: negative-z children paint at
+       step 2, in-flow block backgrounds at step 3), which is exactly why the
+       canvas gradient was defined, painted, and invisible until 2026-08-28.
+       The flat ground moved to <html>, below. */
+    @apply text-foreground;
+    background: transparent;
   }
   html {
     @apply font-sans;
+    /* The ground the fixed gradient layer sits on. Flat by design: if
+       .v2-root::before is ever suppressed (reduced transparency, forced
+       colours, a route outside the shell) this is what shows. */
+    background: var(--v2-page);
     /* ROOT TEXT SIZE — A USER SETTING, NOT A CONSTANT.
        Tailwind's text-sm/text-xs and its whole spacing scale are rem-based, so
        they resolve against THIS value. That is what makes one control scale the
@@ -214,8 +279,6 @@
   /* §9: the canvas is coloured, cards are pure white, nothing white sits
      directly on white. The gradient paints on the fixed ::before below —
      NOT background-attachment: fixed (ignored on iOS Safari). */
-  --v2-page: #f4f2fa;
-  --v2-page-grad: linear-gradient(160deg, #f3ebfe 0%, #f3f1fb 34%, #f2f6fa 70%, #f5f7fa 100%);
   --v2-card: #ffffff;
   --v2-card-nested: #f8f7fc;
   --v2-card-raised: #ffffff;
@@ -249,7 +312,10 @@
   position: relative;
   min-height: 100vh;
   color: var(--v2-text);
-  background: var(--v2-page);
+  /* transparent, NOT --v2-page: the gradient below is a z-index:-1 layer and
+     any opaque background on this element hides it. The flat fallback lives
+     on <html>. */
+  background: transparent;
   font-family: var(--font-v2, "Poppins"), var(--font-sc, "Noto Sans SC"),
     ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -321,9 +387,6 @@ html:not(.minit-rail-expanded) .rail-collapsible .rail-item {
   --v2-accent-light: #c47cf9;
   --v2-grad-from: #2e1065;
   --v2-grad-to: #7c3aed;
-  --v2-page: #0c0918;
-  /* WITHOUT this line dark mode would inherit the light gradient above. */
-  --v2-page-grad: linear-gradient(160deg, #160b33 0%, #0e0a1e 45%, #15121f 100%);
   --v2-card: #141026;
   --v2-card-nested: #100c1f;
   --v2-card-raised: #1b1530;
@@ -415,8 +478,7 @@ html:not(.minit-rail-expanded) .rail-collapsible .rail-item {
 .v2-glass-strong {
   background: var(--v2-card);
   border: 1px solid var(--v2-border);
-  /* Spec §7.4/§9: cards are 8px (--v2-r-md equivalent). */
-  border-radius: 0.5rem;
+  border-radius: var(--v2-r-md);
   box-shadow: var(--v2-shadow);
 }
 
@@ -430,7 +492,7 @@ html:not(.minit-rail-expanded) .rail-collapsible .rail-item {
 
 /* --- Pill buttons (legacy class names — §2.4: buttons are 6px now) ------- */
 .v2-pill {
-  border-radius: 0.375rem;
+  border-radius: var(--v2-r-sm);
   font-weight: 600;
   transition: background 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
 }
@@ -449,6 +511,149 @@ html:not(.minit-rail-expanded) .rail-collapsible .rail-item {
   border: 1px solid var(--v2-outline-border);
 }
 
+/* --- Home task cards (2026-08-28 design pass) ----------------------------
+   The four entrances on /. They used to be a 2px near-black outline
+   (--v2-outline-border at 2px) with no shadow and no hover lift, so they
+   read as boxy and nothing said they were clickable.
+
+   Each card carries ONE accent hue on a short leash. --c may touch exactly
+   three things: the 4px top band, the icon tile (tint + glyph) and the 7px
+   status dot. NEVER the border, the background, the title, the description
+   or the status text — those stay --v2-border / --v2-card / --v2-text /
+   --v2-text-soft, so the four hues never become four themes. The dot is
+   decoration: the words beside it carry the meaning on their own, which is
+   what keeps the status line working for a colour-blind reader.
+
+   Four hues per card, not two, because the light-mode hues (#7029E5,
+   #0F766E, #2563EB, #A21CAF) are all dark: on the dark card they would be a
+   glyph you cannot see. The component passes --c-light/--c-dark and their
+   tints as literals rather than deriving them with color-mix, so an old
+   Android WebView gets the same colours as everyone else.
+
+   Sizes are rem, not the px the design prompt specifies: the text-size
+   setting scales type AND spacing together (see the html rule above), and a
+   px tile beside rem text breaks apart at "extra large". */
+.home-card {
+  --c: var(--c-light);
+  --c-soft: var(--c-light-soft);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  text-align: left;
+  text-decoration: none;
+  color: var(--v2-text);
+  background: var(--v2-card);
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-r-md);
+  box-shadow: var(--v2-shadow);
+  transition: transform 180ms ease-out, box-shadow 180ms ease-out,
+    border-color 180ms ease-out;
+}
+.dark .home-card {
+  --c: var(--c-dark);
+  --c-soft: var(--c-dark-soft);
+}
+.home-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px -6px rgba(21, 18, 31, 0.14);
+  border-color: #cbc4dc;
+}
+.dark .home-card:hover {
+  box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.5);
+  border-color: var(--v2-border-strong);
+}
+.home-card:active {
+  transform: translateY(-1px);
+}
+.home-card:focus-visible {
+  outline: 2px solid var(--v2-primary);
+  outline-offset: 2px;
+}
+
+.home-card .band {
+  height: 4px;
+  flex: 0 0 auto;
+  background: var(--c);
+}
+.home-card .body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.6875rem;
+  padding: 1rem;
+}
+.home-card .top {
+  display: flex;
+  align-items: center;
+}
+.home-card .tile {
+  display: grid;
+  place-items: center;
+  width: 2.375rem;
+  height: 2.375rem;
+  /* inner = outer − padding: a 12px card with 1rem of padding takes 8px. */
+  border-radius: var(--v2-r-sm);
+  background: var(--c-soft);
+  color: var(--c);
+}
+.home-card .tile svg {
+  width: 1.1875rem;
+  height: 1.1875rem;
+}
+.home-card .arrow {
+  margin-left: auto;
+  color: var(--v2-text-soft);
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 180ms ease-out, transform 180ms ease-out;
+}
+.home-card:hover .arrow,
+.home-card:focus-visible .arrow {
+  opacity: 0.7;
+  transform: none;
+}
+.home-card .title {
+  display: block;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.home-card .desc {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--v2-text-soft);
+}
+.home-card .stat {
+  display: flex;
+  align-items: center;
+  gap: 0.4375rem;
+  margin-top: auto;
+  font-size: 0.875rem;
+  color: var(--v2-text-soft);
+}
+.home-card .dot {
+  flex: 0 0 auto;
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border-radius: var(--v2-r-pill);
+  background: var(--c);
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-card,
+  .home-card .arrow {
+    transition-duration: 0.01ms;
+  }
+  .home-card:hover {
+    transform: none;
+  }
+  .home-card .arrow {
+    opacity: 0.7;
+    transform: none;
+  }
+}
+
 /* --- Legacy hooks kept inert -------------------------------------------- */
 /* Decorative blobs and the login photo are gone with the glass. The classes
    stay defined so an unmigrated reference renders nothing instead of a bug. */
@@ -459,6 +664,26 @@ html:not(.minit-rail-expanded) .rail-collapsible .rail-item {
 .v2-rise {
   animation: none;
 }
+
+/* --- Form controls -------------------------------------------------------
+   Inputs sit INSIDE 12px cards, so by the nesting rule they take the step
+   below: 8px. They are pinned here rather than per-call-site because in this
+   codebase inputs and cards share the same rounded-md class — separating
+   them by hand would mean classifying 340 call sites, and the next new input
+   would get it wrong anyway. Checkboxes and radios are the declared 4px
+   exception (a 6px corner on a 20px box reads as a rounded blob).
+   Unlayered on purpose: Tailwind utilities live in @layer utilities, and an
+   unlayered rule beats them, so this holds without !important. */
+:is(input, select, textarea):not([type="checkbox"], [type="radio"], [type="range"]) {
+  border-radius: var(--v2-r-sm);
+}
+input[type="checkbox"] {
+  border-radius: 4px;
+}
+/* Radios are deliberately NOT in that rule. The spec lists them with
+   checkboxes at 4px, but a radio reads as a circle by universal convention —
+   native ones ignore border-radius anyway, and squaring a custom one off
+   would make it look like a checkbox. */
 
 /* Safe-area insets for native iOS/Android shells and notched phones */
 .v2-safe {
@@ -474,7 +699,7 @@ html:not(.minit-rail-expanded) .rail-collapsible .rail-item {
 }
 .v2-scroll::-webkit-scrollbar-thumb {
   background: rgba(100, 116, 139, 0.3);
-  border-radius: 9999px;
+  border-radius: var(--v2-r-pill);
 }
 
 /* Radix sheets under reduced motion: open/close become instant, and Radix

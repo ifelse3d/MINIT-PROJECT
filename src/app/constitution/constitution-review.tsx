@@ -584,7 +584,7 @@ export function ConstitutionReview({
       <div
         className={
           isSample
-            ? "flex flex-col gap-4 rounded-lg border-2 border-amber-300 bg-amber-50/40 p-4 dark:bg-amber-400/5"
+            ? "flex flex-col gap-4 rounded-md border-2 border-amber-300 bg-amber-50/40 p-4 dark:bg-amber-400/5"
             : "contents"
         }
       >
