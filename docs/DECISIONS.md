@@ -653,6 +653,29 @@ uploads bucket 的原始照片，終於連回它的會議記錄；歷史頁縮�
 列印＝`/api/minutes-pdf`（A4、CJK 字型、pdf-lib）——同一份 PDF 就是 eROSES
 「Muat Naik Minit Mesyuarat」上傳框要的檔案。DB 落後時全部欄位自動降級（梯度）。
 
+### D36 — 保存即成品頁；已存檔的工作區即棄（2026-08-28 晚，J 八條 #1/#2/#6/#7）
+
+「保存到歷史」成功後**直接落在成品頁 `/minutes/history/<id>`**：最終預覽、
+🖨 打印/PDF（即 eROSES 上傳檔）、原始照片（縮放彈窗）、✏️ 就地修改（留痕照舊）
+全在同一頁。歷史列表每份記錄的名字就是入口（點名字＝打開成品頁）。
+配套：**已存進歷史的工作區不再還原也不再逗留**——重新進 /minutes（或本次會話內
+點「新的會議記錄」）一律是乾淨的新工作區；「上一場已存好」卡片與「重新打開工作區」
+路徑刪除。要改已存的記錄，走成品頁的「修改」。未保存的工作區照舊完整保留。
+背景：J 兩度報「開新的會議記錄還保留之前的」為 BUG；舊設計把「保存後的殘留」
+當功能（補拍同場另一頁），J 的用法證明它只造成困惑。
+
+### D37 — AI 撰寫允許「同類項合併」，代價由程式當場收（2026-08-28 晚，J 八條 #4）
+
+draft-minutes 的 plan schema：`source` 可為索引**陣列**——十三行「某班 N 位」
+可合併成一句可讀的正式句。三道算術照舊/新增：① 覆蓋檢查不變（每個索引全計劃
+恰好出現一次）；② checkNames 照舊（合併行的中文 run 須出自其任一來源）；
+③ **新 checkMergedFacts（所有語言都跑）**：合併行必須仍含每個來源的
+「兩字以上中文詞＋所有數字」（行首「1.」序號與單字量詞 位/個 可去）——
+掉一組名字或數字→退回重寫一次，仍失敗→退款不出文件。
+另：快速預覽對「自帶編號」的筆記行照印原文，不再套第二層編號（「2. 1. 宏道」修掉）。
+⚠ 真實 vendor 行為未驗證——規則在 prompt＋schema＋三道檢查裡，J 下次用真額度
+按「讓 MinitAI 寫成正式記錄」即是首次實測。
+
 ---
 
-*Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C) · D16 appended 2026-08-25 (Stage D) · D17 appended 2026-08-27 (work order 27, the overnight sprint) · D18–D21 appended 2026-08-27 (work order 31 §0, J's post-launch rulings) · D22–D23 appended 2026-08-27 (work order 32 §0, launch-day feedback rulings) · D24–D25 appended 2026-08-27 (the afternoon rulings: violet redesign + BM guard) · D26–D28 appended 2026-08-27 (the launch-evening 20-point list) · D29–D32 appended 2026-08-28 (the two-review session: prompt unfreeze, attendance gate, funds page, record-to-DB) · D33–D35 appended 2026-08-28 (J's §6 answers + the new seven: PdpaNote deleted, per-part AI discussion, minutes named/printable/editable/photo-linked)*
+*Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C) · D16 appended 2026-08-25 (Stage D) · D17 appended 2026-08-27 (work order 27, the overnight sprint) · D18–D21 appended 2026-08-27 (work order 31 §0, J's post-launch rulings) · D22–D23 appended 2026-08-27 (work order 32 §0, launch-day feedback rulings) · D24–D25 appended 2026-08-27 (the afternoon rulings: violet redesign + BM guard) · D26–D28 appended 2026-08-27 (the launch-evening 20-point list) · D29–D32 appended 2026-08-28 (the two-review session: prompt unfreeze, attendance gate, funds page, record-to-DB) · D33–D35 appended 2026-08-28 (J's §6 answers + the new seven: PdpaNote deleted, per-part AI discussion, minutes named/printable/editable/photo-linked) · D36–D37 appended 2026-08-28 evening (the eight-item round: save lands on the finished document, saved workspaces clear themselves, AI may merge like items under checkMergedFacts)*

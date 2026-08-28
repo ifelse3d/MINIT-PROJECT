@@ -5,77 +5,70 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-28 上午（MYT）· Fable 5（37 号 §6 四答＋新七条＋eROSES 截图 12 张）**
-**🔴 本场：/filings 按 eROSES 真实流程整页重做（选年→选会议→逐栏照抄＋PDF 上传）；
-会议记录命名/列印(PDF)/就地修改留痕/照片连结（migration 30）；名册 IC 姓名一键顶上；
-#31 逐区块 AI 讨论上线（1 讯息=1 action）；PdpaNote 拍板删除；#27 白条修掉。
-J 照 38 号报告 §5：贴 migration 29+30 → push（10 支）。**
+**最后更新：2026-08-28 晚（MYT）· Fable 5（J 晚间八条全做＋一道门照片连结）**
+**🔴 本场：J 的八条——①存好的工作区自清（BUG 连根拔）②历史每份可点开
+③签名线加宽（PDF 画实线，旧文件也修）④AI 撰写学会「合并同类项」（三道算术
+守门）＋预览双编号修掉 ⑤编辑框旁「看原稿照片」缩放弹窗 ⑥⑦保存直接落在
+成品页 /minutes/history/<id>（打印/修改/照片全在）⑧/filings 对不可登记
+类型先讲结论。另补：一道门照片连进保存记录。
+J 照 39 号报告 §5：push（5 支）→ Ctrl+Shift+R。本轮无新 migration。**
 
 ---
 
-## 🌙 现在在哪里（2026-08-28 上午，四答七条场收工）
+## 🌙 现在在哪里（2026-08-28 晚，八条场收工）
 
-> **已上线**：https://minit-project.vercel.app —— 37 号那 10 支 J 已 push；
-> 本机再领先 **10 支未 push**（本场）。push 是 J 的事（push-cabang.bat）。
-> 线上资料库 org：15「J」、58「avocado」、91「TESTING1」。
-> migration 1–28 APPLIED；🔴 **29（save_register_rows）与 30（20260908000000
-> minutes title/edit-log/photo_paths）都已写好、未套用**——salin-migration.bat
-> 选 29 再选 30。两支未套用时程式全部自动降级（e2e 在降级态跑过全绿）。
+> **已上线**：https://minit-project.vercel.app —— 38 号那 10 支 J 已 push（线上
+> 已见命名/修改留痕 → migration 30 已套用）；本机再领先 **5 支未 push**。
+> push 是 J 的事（push-cabang.bat）。线上 org：15「J」、58「avocado」、91「TESTING1」。
 
-### 这一场做了什么（38 号报告逐条对照）
+### 这一场做了什么（39 号报告逐条对照）
 
-- **D33 PdpaNote 删除**（J §6-1 答「删除」）：元件＋4 挂载点全拆。
-- **D34 #31 逐区块 AI 讨论**（J §6-2 答「是的、改一次算一次」）：核对页四组
-  （会议资料/决议/金额说明/职位名称）各有 DiscussSection；新计费代号
-  `discuss_minutes`（1 讯息=1 action，按钮写明）；`/api/discuss-minutes`
-  （injection-guard 覆盖、proposals 服务器过滤 index、vendor 失败退款）；
-  AI 只建议、人按「采用」走 updateField（source_ref=「AI 建议，您采用」）；
-  人名/金额 prompt+程式双层禁改。
-- **D35 会议记录：命名/列印/修改留痕/照片**（新七条 #3/#4）：
-  ① migration 30 加 `title`/`edited_at`/`edited_by`/`photo_paths`；
-  ② 保存前问名字（suggestMinutesTitle=类型+日期，零额度；留空用建议）；
-  ③ `/api/minutes-pdf?id=N`（pdf-lib+Noto subset，minutesPdfLines 纯函数有测）
-  ——历史页🖨按钮，同一份 PDF 即 eROSES「Muat Naik Minit Mesyuarat」的档案；
-  ④ 历史页就地修改（updateSavedMinutes）：**每次修改文件末尾自动加
-  「Dipinda oleh 谁 pada 几时 MYT」**，列表显示「上次修改」，改后重建 embedding；
-  ⑤ extract-minutes 回传 uploads bucket 的 storagePath → PhotoPage →
-  photo_paths（服务器校验必须 `${org.id}/` 开头），历史页 signed URL 缩图。
-  insert/update 全走「可选栏位剥离梯度」（client_id 的老招扩成清单）。
-- **/filings 整页重做**（新七条 #6=旧 #26；证据=J 桌面 12 张 eROSES 截图）：
-  三步：选年份→选那年已确认的会议（?doc=id 服务器取签好的行，S0-5 不变）→
-  「登记进 eROSES」逐栏 pack（新纯库 `eroses-meeting.ts`：Jenis 对准官方下拉
-  agm/egm/committee，其余诚实说「下拉没有、通常不用登记」；Tarikh 转
-  DD-MM-YYYY；Kaedah/Masa 明说笔记没记要自己填；人数程式数）→年度呈报独立
-  一节（AGM/EGM 才出贴值表）。财务数字/截止日期照旧。
-- **人名顶替＋华语定位**（新七条 #1/#2）：`roster-names.ts`（person_name→
-  name_official 程式替换，最长名优先，测过）——BM 红框里绿色按钮一键顶上，
-  零额度；名册没有的指去成员页。红框每行可点：textarea 卷到该行并选中。
-- **#27**：SectionTabs 的玻璃底 `w-fit`——白色长条只包药丸。
-- **形式化小步**（新七条 #5 的确定性半步）：出席表收尾印
-  「Jumlah hadir: N orang」（compose+preview 同步，测过）。
-- **bench**（§6-4）：J 说先把系统弄好——已在 38 号报告向他讲清 bench 不挡改动，
-  他准备好随时 bench-models.bat。
+- **D36 保存即成品页；已存档工作区即弃**（J 八条 #1/#2/#6/#7）：
+  ① 保存成功 → router.push 到新页 `/minutes/history/<id>`（成品预览＋🖨打印/PDF
+  ＋照片＋✏️修改＋两条出路）；saveConfirmedMinutes 回传 row id（幂等路也回）。
+  ② 历史列表：名字＝链接（点开成品页），「打开 →」并排。
+  ③ minutes-store 还原逻辑：blob 带 savedToHistory → 清 localStorage、不还原；
+  notes-review 挂载时 alreadySaved → backToEmpty()。「上一场已存好」卡删除。
+  未保存的工作区照旧保留。
+- **D37 AI 撰写合并同类项**（J 八条 #4）：plan 的 `source` 可为数组；
+  checkCoverage 展开计数；checkNames 合并行对「任一来源」；新 **checkMergedFacts**
+  （所有语言）：合并行须含每个来源的 ≥2 字中文词＋所有数字（行首序号与单字
+  量词可去），违者进 repair.dropped 重写一次。prompt 加 MERGING LIKE ITEMS
+  节（含十大观音 worked example）。快速预览：自带编号的行照印（双编号修掉）。
+  ⚠ 真 vendor 行为未验证——等 J 按一次「让 MinitAI 写成正式记录」。
+- **签名块**（J 八条 #3）：compose 的签名线 SIGNATURE_LINE=40 底线；
+  minutes-pdf 把「纯底线行」画成 ~280pt 实线＋上方留 22pt 签名空间——
+  旧文件打印同样受益（打印时画，不改存文）。
+- **照片弹窗**（J 八条 #5）：page-thumbs.tsx 抽出 PhotoLightbox（＋/− 至 4×、
+  上一张/下一张、滚动平移）；/minutes/document 编辑框右上「📷 看原稿照片」
+  按钮（不离开编辑）；历史页/成品页缩图走 HistoryPhotoStrip（同一弹窗）。
+  钱区共用的 PageThumbs 自动升级（e2e:money 全过）。
+- **/filings**（J 八条 #8，猜的具体怪点）：选中 eROSES 下拉没有的类型时，
+  第 2 步开头即「✅ 这场不用登记」，逐栏值收进 details 折叠；第 1 步给
+  agm/egm/committee 挂「可登记进 eROSES」badge。若 J 还觉得怪，请他圈。
+- **一道门照片连结**（38 号未完项）：/api/intake 回传 recordUpload 的
+  storagePath；ask-box 写进 intake parcel（外加 compressPhoto 预览图）；
+  minutes-store 还原时 seed photoPages → 保存时进 photo_paths。
+  ⚠ 全链路要真上传（2 action）才能验，未烧。
 
 ### 现场量到的（不是听说的）
 
-- 四道关：`tsc` **0** · `eslint` **21（基准逐字同）** · `vitest` **855 全过
-  （+23：pdf 5、title 4、eroses-meeting 7、roster-names 4、injection-guard
-  的 discuss 覆盖 3）** · `build` ✓
-- **e2e:minutes 全过、page errors 0**（真 DB、migration 29/30 未套用的降级态
-  ——命名框实测出现且不挡保存；/filings 新页的 S0-5 两查照过）。
-- **e2e:money 19/19 全过、page errors 0**（壳改动没扫到钱区）。
-- 截图人眼看过：/money（#27 白条已除）、/filings 三步版、/minutes/history →
-  `eval/reports/shots-20260828b/`。
-- ⚠ **没能验证的**：migration 30 套用后的 title/photo_paths 真实写入（只能验
-  降级路）；`/api/discuss-minutes` 的真实 vendor 呼叫（等 J 用真额度试）；
-  PDF 在 eROSES 上传框的实收（要 J 在 portal 试一次）；线上部署效果。
+- 四道关：`tsc` 0 · `eslint` 基准逐字同（仅行号位移，git stash 对照过）·
+  `vitest` **863 全过（+8：merged coverage/names/mergedFacts 6、签名 1、
+  预览编号 1）** · `build` ✓（新路由 /minutes/history/[id] 在案）。
+- **e2e:minutes 全过、page errors 0**（真 DB）：「save lands on the finished
+  document's page with Print/PDF」「workspace is clean after a save」都是新增
+  断言实测；S0-3 单行存储照旧。**e2e:money 19/19、page errors 0**。
+- 截图人眼看过 → `eval/reports/shots-20260828e/`（成品页、清空工作区、
+  历史列表、filings 活动会议、7-signature-eyeball.pdf 签名实线）。
+- ⚠ 没能验证的：真 vendor 的合并写作；intake 照片真上传链路；线上部署。
 
-### 🔴 J 的事（写在 38 号报告 §5/§6）
+### 🔴 J 的事（写在 39 号报告 §5/§6）
 
-1. `salin-migration.bat` 选 **29** 再选 **30** → Supabase Run → status.bat。
-2. **push-cabang.bat**（本机领先 **10 支**）→ 线上旧样先 Ctrl+Shift+R。
-3. 回答 38 号 §6：申报页重做后再看一次；「不专业」圈一份实例；出席页要不要讨论。
-   之后照旧：31 号单**场次 5**（十大观音照片→D-8、MyInvois 模板→B-7、bench G-3）。
+1. **push-cabang.bat**（本机领先 **5 支**）→ 线上 Ctrl+Shift+R。本轮无新 migration
+   （migration 29 若还没贴，钱区那条照 38 号报告；30 线上已见生效）。
+2. 回答 39 号 §6：①用真额度试一次 AI 撰写（看合并效果）；②申报页再看，还怪就圈；
+   ③老欠的「不专业」实例。
    ⚠ **8/31 23:59 竞赛截止（内部 cutoff 18:00）**；one-pager 的 [YOU] 两处还空着。
 
 ### ❓ 未决问题
@@ -88,21 +81,34 @@ J 照 38 号报告 §5：贴 migration 29+30 → push（10 支）。**
 6. /privacy 法律文的「不用於訓練」句去不去 —— 法律文要人审，J 一句话
 7. 竞赛首页主图重拍（拍板 0-9）—— 等 push 完用真机构画面拍
 8. 配套定价（管理台毛利卡等它）—— 先量成本；bench/真用量之后
-9. #10 全站按钮统一的长尾扫尾（大头已消）
-10. 首页「一道门」（/api/intake）读的会议照片还不会连进保存的记录
-    （storagePath 只在 /minutes 直拍路接了）——下轮接 intake-handoff。
+9. #10 全站按钮统一的长尾扫尾（大头已消；本场八条优先，仍排队）
+10. 真 vendor 的合并写作效果（D37）—— 等 J 一次真额度实测
 11. （旧，小）MyInvois 官方模板逐栏对齐（B-7 后半）等 J 给原档
 12. （旧，小）check-ai.bat 还 cd 到旧资料夹 C:\dev\minit——改天一行修
 
 ### ⏭ 下一个 session 从哪开始
 
-**J 验收 38 号报告（贴 29+30、push、答三问）→ 翻案开小场修；否则：
-①intake 路的照片连结（未决 10）、②#10 按钮长尾、③8/31 前的竞赛素材
-（首页主图、one-pager [YOU]）、④31 号单场次 5（J 在场）。**
+**J 验收 39 号报告（push、试 AI 撰写、申报页再看）→ 翻案开小场修；否则：
+①#10 按钮长尾、②8/31 前的竞赛素材（首页主图、one-pager [YOU]）、
+③31 号单场次 5（J 在场：D-8 正式版式、B-7 MyInvois、G-3 bench、真手写照片）。**
 
 ---
 
 ## 6. 已知陷阱（踩过的，别再踩）
+
+### 2026-08-28 晚新增（八条那一场）
+
+- **checkMergedFacts 不要再收紧回「每个中文字都要在」**：第一版连单字量词
+  （位/个）都要求出现，结果把「10位 → 10 orang」这种完全正确的马来文合并
+  当成掉字打回。现行规则（≥2 字中文词＋数字）是试出来的平衡点——名字和
+  班名全 ≥2 字，量词合法被翻译。收紧它 = 合法文件全被打回 = AI 撰写废掉。
+- **PhotoLightbox 的缩放重置不要改回 useEffect**：`useEffect(()=>setStep(0),[index])`
+  会吃一条 react-hooks/set-state-in-effect（基准外新错）。现行写法是把 zoom
+  连同它所属的 index 存成一个 state（`{forIndex, step}`），换页时在 render 里
+  派生回 0——无 effect、无额外渲染。
+- **「已存档工作区即弃」是拍板（D36），别当 bug 修回去**：restore 看到
+  savedToHistory 就清 localStorage 是故意的；「上一场已存好」卡是删除不是丢失。
+  补拍同场另一页的路已由成品页「修改」承接。e2e-minutes 对这两个行为有断言。
 
 ### 2026-08-28 新增（四答七条那一场）
 
