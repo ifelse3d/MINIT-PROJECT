@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { BrandLogo } from "@/components/brand-logo";
-import { Loader2 } from "lucide-react";
+import { Loader2, Lock, Mail } from "lucide-react";
 import { Tri, useTriText } from "@/components/language-provider";
 import { BRAND_NAME } from "@/lib/brand";
 import { PasswordInput } from "@/components/password-input";
@@ -28,6 +28,24 @@ import {
 // hq_admin adds it to an existing one). PDPA note: we never log emails or
 // errors here — failures surface in the UI only.
 // ---------------------------------------------------------------------------
+
+/**
+ * A 16px leading glyph inside a field — an envelope on the email box, a
+ * padlock on the password ones. Purely a signpost: it names the box at a
+ * glance for someone who is filling this form on a phone, which is why it is
+ * aria-hidden (the <label> already says what the field is) and
+ * pointer-events-none (a click near it must still land in the input). The
+ * input carries pl-10 to leave room.
+ */
+function FieldIcon({ icon: Icon }: { icon: typeof Mail }) {
+  return (
+    <Icon
+      aria-hidden
+      strokeWidth={1.9}
+      className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--v2-text-soft)]"
+    />
+  );
+}
 
 /** "forgot" only collects an email and asks Supabase to mail a recovery link;
  *  the new password is typed on /reset-password, where that link lands. */
@@ -267,30 +285,67 @@ export default function LoginPage() {
       <div className="flex w-full max-w-[880px] flex-col overflow-hidden rounded-lg border border-[color:var(--v2-border)] bg-[color:var(--v2-card)] shadow-[var(--v2-shadow-lg)] md:min-h-[480px] md:flex-row">
         {/* Brand panel — 42%, dark→light gradient; every word sits over the
             DARK end (§2.2 rule 4: no small text on the light end). On <md it
-            collapses to a slim strip. */}
+            collapses to a header band. `relative overflow-hidden` for the
+            decorative ring below. */}
         <div
-          className="flex items-center gap-2.5 p-6 text-white md:w-[42%] md:flex-col md:items-start md:justify-start md:gap-0 md:p-10"
+          className="relative flex items-center justify-center gap-3.5 overflow-hidden p-6 text-white md:w-[42%] md:flex-col md:items-start md:justify-start md:gap-0 md:p-10"
           style={{ background: "var(--v2-grad-brand)" }}
         >
-          {/* #14 (J review 27-evening): the wordmark and logo, a size up. */}
-          <div className="flex items-center gap-3">
-            <BrandLogo size={48} white className="h-12 w-12" />
+          {/* The ring. Without it the gradient reads as a flat block rather
+              than a surface. 7% white, so it is a shape you notice only if
+              you look for it. Decorative → aria-hidden, and dropped on the
+              mobile band where there is no room for it. */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -bottom-[84px] -right-[84px] hidden h-[230px] w-[230px] rounded-full border-[36px] border-white/[0.07] md:block"
+          />
+
+          {/* The brand leads, the greeting supports it (2026-08-28). The
+              wordmark used to be smaller than "Welcome" — on a login page the
+              person already knows they are being welcomed; what they want
+              confirmed is that this is the right product.
+
+              🔴 The logo is the REAL app icon (the violet tile), not the
+              white line-art variant. It sits straight on the gradient with no
+              chip behind it: the tile's own top-left reads fine against the
+              panel (3.96:1) and only its bottom-right edge dissolves, so a
+              single soft shadow offset down-and-right is all it needs.
+              drop-shadow, never box-shadow — the mark is a rounded tile and
+              box-shadow would draw a square behind it. The shadow is deep
+              violet rather than black (black desaturates the pixels under it
+              and reads as grime) and stays at 16%: if you can point at it, it
+              is too strong. More separation = more blur, never more dark. */}
+          <div className="relative flex items-center gap-3.5">
+            <BrandLogo
+              size={64}
+              className="h-14 w-14 drop-shadow-[0_6px_16px_rgba(35,12,74,0.16)] md:h-16 md:w-16"
+            />
             <span className="text-3xl font-bold leading-none tracking-tight">
               {BRAND_NAME}
             </span>
           </div>
-          <div className="hidden md:mt-10 md:block">
-            <p className="text-3xl font-bold leading-tight">
+          <div className="relative hidden md:mt-8 md:block">
+            <p className="text-xl font-semibold leading-tight">
               <Tri bm="Selamat datang" zh="欢迎回来" en="Welcome" />
             </p>
-            <p className="mt-3 text-pretty text-base text-white/90">
+            <p className="mt-2 max-w-[26ch] text-pretty text-base text-white/[0.84]">
               <Tri
                 bm="Pembantu pematuhan untuk persatuan & NGO"
                 zh="社团与非政府组织的合规助手"
                 en="Compliance assistant for societies & NGOs"
               />
             </p>
-            <div aria-hidden className="mt-8 h-px w-12 bg-white/40" />
+          </div>
+
+          {/* The rule used to hang under the tagline pointing at empty space,
+              which read as an unfinished element. It is a footer now, pinned
+              to the bottom of the panel with something under it. The small
+              wordmark is the ONE thing allowed on the light end of the
+              gradient: 72% white, decorative, and it repeats a word already
+              set 30px above it. */}
+          <div aria-hidden className="relative mt-auto hidden md:block">
+            <div className="mb-3 h-px w-24 bg-white/[0.28]" />
+            <span className="text-sm font-medium text-white/[0.72]">{BRAND_NAME}</span>
           </div>
         </div>
 
@@ -321,15 +376,18 @@ export default function LoginPage() {
             <span className={labelCls}>
               <Tri bm="E-mel" zh="电邮" en="Email" />
             </span>
-            <input
-              type="email"
-              autoComplete="email"
-              placeholder="you@organisation.org"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={inputCls}
-              required
-            />
+            <span className="relative block">
+              <FieldIcon icon={Mail} />
+              <input
+                type="email"
+                autoComplete="email"
+                placeholder="you@organisation.org"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={`${inputCls} pl-10`}
+                required
+              />
+            </span>
           </label>
           {/* Hidden in "forgot": that mode only needs the address. A password
               box there invites people to type the one they cannot remember. */}
@@ -337,20 +395,23 @@ export default function LoginPage() {
             <span className={labelCls}>
               <Tri bm="Kata laluan" zh="密码" en="Password" />
             </span>
-            <PasswordInput
-              autoComplete={
-                mode === "signin" ? "current-password" : "new-password"
-              }
-              placeholder="••••••••••••"
-              value={password}
-              onChange={setPassword}
-              className={inputCls}
-              // Not `required` in "forgot": a required control that is
-              // display:none blocks submit with a validation message the
-              // browser cannot even scroll to.
-              required={mode !== "forgot"}
-              minLength={mode === "signup" ? MIN_PASSWORD_LENGTH : 1}
-            />
+            <span className="relative block">
+              <FieldIcon icon={Lock} />
+              <PasswordInput
+                autoComplete={
+                  mode === "signin" ? "current-password" : "new-password"
+                }
+                placeholder="••••••••••••"
+                value={password}
+                onChange={setPassword}
+                className={`${inputCls} pl-10`}
+                // Not `required` in "forgot": a required control that is
+                // display:none blocks submit with a validation message the
+                // browser cannot even scroll to.
+                required={mode !== "forgot"}
+                minLength={mode === "signup" ? MIN_PASSWORD_LENGTH : 1}
+              />
+            </span>
             {mode === "signup" && (
               <span className="text-sm leading-relaxed text-[color:var(--v2-text-soft)]">
                 <Tri
@@ -374,15 +435,18 @@ export default function LoginPage() {
                   en="Type the password again"
                 />
               </span>
-              <PasswordInput
-                autoComplete="new-password"
-                placeholder="••••••••••••"
-                value={confirm}
-                onChange={setConfirm}
-                className={inputCls}
-                required
-                minLength={MIN_PASSWORD_LENGTH}
-              />
+              <span className="relative block">
+                <FieldIcon icon={Lock} />
+                <PasswordInput
+                  autoComplete="new-password"
+                  placeholder="••••••••••••"
+                  value={confirm}
+                  onChange={setConfirm}
+                  className={`${inputCls} pl-10`}
+                  required
+                  minLength={MIN_PASSWORD_LENGTH}
+                />
+              </span>
             </label>
           )}
 
@@ -506,7 +570,9 @@ export default function LoginPage() {
                 setError(null);
                 setNotice(null);
               }}
-              className="text-[color:var(--v2-text-soft)] underline underline-offset-2 hover:text-[color:var(--v2-text)]"
+              // Was black and permanently underlined, which read as an
+              // unstyled browser default rather than a link.
+              className="font-medium text-[color:var(--v2-primary)] underline-offset-2 hover:underline focus-visible:underline"
             >
               <Tri
                 bm="Lupa kata laluan?"
@@ -529,7 +595,7 @@ export default function LoginPage() {
               setConfirm("");
               setAgreed(false);
             }}
-            className="font-semibold text-[color:var(--v2-primary)] underline underline-offset-2"
+            className="font-medium text-[color:var(--v2-primary)] underline-offset-2 hover:underline focus-visible:underline"
           >
             {mode === "signin" ? (
               <Tri
