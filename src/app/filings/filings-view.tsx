@@ -23,7 +23,7 @@ import { ConfidenceBadge } from "@/components/confidence-badge";
 import { Tri, useTriText } from "@/components/language-provider";
 import { hasCjk } from "@/lib/bm-guard";
 import { buildPastePack, type FilingRosterEntry } from "@/lib/paste-pack";
-import { buildMeetingFormPack } from "@/lib/eroses-meeting";
+import { buildMeetingFormPack, erosesMeetingKind } from "@/lib/eroses-meeting";
 import {
   isErosesFileable,
   meetingTypeUiLabelTri,
@@ -303,7 +303,21 @@ export function FilingsView({
                           </span>
                         )}
                       </span>
+
                       <span className="flex items-center gap-2">
+                        {/* 28/8 evening item 8: say up front which meetings
+                            the portal actually takes — picking an unmarked
+                            one and only THEN being told "usually not
+                            registered" was the 怪怪的. */}
+                        {erosesMeetingKind(m.meetingType) !== null && (
+                          <Badge variant="outline" className="border-purple-300 bg-purple-50 text-purple-900">
+                            <Tri
+                              bm="Boleh didaftar di eROSES"
+                              zh="可登记进 eROSES"
+                              en="Registrable on eROSES"
+                            />
+                          </Badge>
+                        )}
                         {isErosesFileable(m.meetingType) && (
                           <Badge variant="outline" className="border-blue-300 bg-blue-50 text-blue-900">
                             <Tri
@@ -356,6 +370,66 @@ export function FilingsView({
                 en="Pick a meeting in step 1 first."
               />
             </p>
+          ) : erosesMeetingKind(selected.meetingType) === null ? (
+            // 28/8 evening item 8 (「还是怪怪的」): the page used to lay out
+            // the whole paste-the-values walk for a meeting, then admit in a
+            // footnote that this KIND of meeting is not in the portal's
+            // dropdown at all. The conclusion now comes first; the values
+            // stay one fold away for the person who wants them anyway.
+            <div className="flex flex-col gap-3">
+              <p className="rounded-md border-2 border-[color:var(--v2-border)] bg-[color:var(--v2-card)] p-4 text-base">
+                ✅{" "}
+                <Tri
+                  bm="Mesyuarat ini TIDAK perlu didaftarkan di eROSES. Dropdown portal hanya ada Mesyuarat Agung / Khas / AJK (dan pembubaran) — mesyuarat program/aktiviti seperti ini cukup disimpan dalam MinitAI. Kalau ia sebenarnya mesyuarat jawatankuasa, betulkan jenisnya pada minit itu."
+                  zh="这场会议不用登记进 eROSES。portal 的下拉里只有 常年大会 / 特别大会 / 理事会议（和解散会议）—— 像这样的活动会议，记录留在 MinitAI 就够了。要登记的会议，请在第 1 步选有「可登记进 eROSES」标记的那场；如果这场其实是理事开的会，就回去把那份记录的会议类型改成理事会议。"
+                  en="This meeting does NOT need registering on eROSES. The portal's dropdown only has general / extraordinary / committee meetings (and dissolution) — a programme/activity meeting like this one is fully served by its MinitAI record. To register a meeting, pick one tagged 'Registrable on eROSES' in step 1; if this really was a committee sitting, fix that document's meeting type."
+                />
+              </p>
+              <details>
+                <summary className="cursor-pointer text-sm text-muted-foreground underline underline-offset-4">
+                  <Tri
+                    bm="Saya nak daftarkannya juga — tunjukkan nilai medan"
+                    zh="我还是要登记它 —— 展开逐栏的值"
+                    en="I want to register it anyway — show the field values"
+                  />
+                </summary>
+                <div className="mt-3 grid gap-3">
+                  {meetingPack.map((row) => (
+                    <div key={row.field} className="rounded-sm border p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <div className="font-medium">{row.field}</div>
+                          <div className="text-sm text-muted-foreground">{row.fieldEn}</div>
+                        </div>
+                        {row.copyable && copyButton(`meeting-${row.field}`, row.value)}
+                      </div>
+                      <div className="mt-2 whitespace-normal">{row.value}</div>
+                      {row.note && (
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          <Tri {...row.note} />
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                  <div>
+                    <Button asChild size="lg" variant="outline">
+                      <a
+                        href={`/api/minutes-pdf?id=${selected.id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        📄{" "}
+                        <Tri
+                          bm="Muat turun PDF minit"
+                          zh="下载会议记录 PDF"
+                          en="Download the minutes PDF"
+                        />
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              </details>
+            </div>
           ) : (
             <>
               {selected.extraction === null && (
