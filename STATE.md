@@ -5,56 +5,70 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-29 凌晨（MYT）· Fable 5（46 号单：RESPONSIVE 工程＋J 圈的两个画面问题）**
-**🔴 本场实查到的两个好消息：① 围栏 commit e0aca2e J 已 push（main 与
-origin/main 同步）；② migration 31（fence）J 已贴——`npm run check:migrations`
-两个探针都 APPLIED，围栏已通电（e2e 快照里「干净下载（剩 3 次）」的数字
-现在是 DB 里的真话）。45 号报告里「等 J 做」的两件事都做完了；
-未决 #1 的「套用后实测一轮撞上限」仍然没做（要真 trial 帐号手撞）。**
+**最后更新：2026-08-29 晚（MYT）· Fable 5（48 号单：救 AI——tester「用不到 AI」两案同根，已修）**
+**🔴 本场结论一句话：AI 从来没坏。手机照片/扫描 PDF 超过 ~4.5MB 时，
+Vercel 平台在机房门口直接回 text/plain 413（FUNCTION_PAYLOAD_TOO_LARGE），
+请求根本没进我们的代码——所以 app_errors/ai_usage 零痕迹、客户端只好显示
+误导人的「连不上 AI」/「…」。线上实测证实（probe-payload.mjs：7.13MB 照片
+→413；6MB PDF 打 /api/import-roster→同款 413；0.09MB 对照图→AI 全管道正常，
+花 US$0.004）。修法已全部落地，等 J push。**
 
 ---
 
-## 🌙 现在在哪里（2026-08-29 凌晨，RESPONSIVE 场收工）
+## 🌙 现在在哪里（2026-08-29 晚，48 号救 AI 场收工）
 
-> **已上线**：https://minit-project.vercel.app —— 截至围栏场（e0aca2e）全部已 push。
-> **本场 3 支 commit 在本机等 push**（b9d22bd 弹窗/面板、cdc42ce 格线容器化、
-> 之后一支报告+脚本）。push 是 J 的事（push-cabang.bat）。
+> **已上线**：https://minit-project.vercel.app —— 截至 e2703f6 全部已 push
+> （46 号 RESPONSIVE 那 3 支 J 已推，本场开工实查 main == origin/main）。
+> **本场的 commit 在本机等 push**（push-cabang.bat 是 J 的事）。
 > 线上 org：15「J」、58「avocado」、91「TESTING1」。
 
-### 这一场做了什么（46 号单；47 号报告给 J 的版本在 _J-要做的事）
+### 这一场做了什么（48 号单＋追加第二案；49 号报告给 J 的版本在 _J-要做的事）
 
-- **0-1 弹窗被顶栏切掉（J 截图）**：根因不是 z-index——玻璃顶栏的
-  `backdrop-filter` 会成为 fixed 后代的包含块（CSS 规定），所以从顶栏里
-  打开的确认弹窗，它的「全屏」其实是那 56px 的顶栏，卡片开在视窗顶被切头。
-  修法：`Modal` 与 `CommandPalette` 一律 `createPortal(document.body)`；
-  Modal 卡片 `max-h-full`＋内部滚动（90vh 在矮窗还会爆）；issue-controls
-  两个自绘弹窗补同款矮窗保护。1366×450 矮窗实拍：完整置中 ✓。
-- **0-2 Ask MinitAI 盖住顶栏（J 红笔）**：桌面 rail 改 `top-14 bottom-0`
-  （rem，跟字级一起缩放）z-30（顶栏 z-40 之下）；把「右推」从包着顶栏的
-  wrapper 挪到只包内容的内层 div——顶栏永远整条；手机 sheet 加
-  `max-h-[calc(100dvh-4.5rem)]` 不碰顶栏。另修：面板宽度上限改成跟视窗
-  连动（平板 768 原本能拉到 640 只剩 128px 内容）。
-- **1A 病历**：`scripts/shots-responsive.mjs`——全站 37 页 × 375/768/1366/1920
-  × 亮/暗 = 300 张，headless、零 AI 额度、ZZZ 帐号即建即删，
-  图在 `eval/reports/shots-responsive/`。抽查结论：站点整体健康（前几场
-  的壳工程起效了），真破版只有一处——/filings 截止日期行在 375 被挤成
-  一字一行（光杆 flex-1 basis 0），补 `min-w-[10rem]` 让日期徽章下折。
-  全站 page errors 0。
-- **1B 修壳（系统性，不是逐页）**：15 处还看视窗断点的宽度敏感格线全部
-  改成 container variants（sm:→@xl:、md:→@3xl:、lg:→@4xl:，量 <main>
-  的实宽）；日历两栏、members/glossary 表单行同改；settings 的
-  「侧栏 vs 顶部标签条」切换改 @4xl——面板开着时自动退成标签条，
-  不再压扁表单。证据照 proof-1B-home-dock-open-1366.png：1366 开满
-  640 面板，首页卡片 2×2 不是四根竹竿。
-- **D**：围栏新组件进了矩阵——/settings/plan 仪表（375/1366 都好）、
-  财报页「PDF（带水印）/干净版」按钮、/filings 锁着的复制按钮、
-  e2e 里的 PERCUBAAN 水印，全部如常。
+- **证实（先证实，再动刀）**：`scripts/probe-payload.mjs`——ZZZ 帐号打线上，
+  canvas 生 7.13MB 噪点 JPEG POST /api/extract-minutes → **HTTP 413
+  text/plain FUNCTION_PAYLOAD_TOO_LARGE**（没进代码，零扣费）；6MB 假 PDF
+  POST /api/import-roster → 同款死法（第二案同根）；0.09MB canvas 画的 BM
+  会议记录 → 200＋完整 extraction（US$0.004，授权 ≤$0.05 内）。跑完 ZZZ
+  全删。`SKIP_SMALL=1` 可跳过要花钱的对照。
+- **修①·浏览器端先缩图再上传**：新共用 helper `src/lib/shrink-photo.ts`
+  （21 支测试）——canvas 缩到长边 ≤2000px q0.8，仍 >3.5MB 逐阶再降；
+  EXIF 方向用 createImageBitmap `imageOrientation:"from-image"` 烤进像素；
+  HEIC 解不了/任何失败＝原图照送（helper 永不成为新死点）。接到全部
+  八个照片门：minutes 拍照、money 账本、expense 单据、constitution、
+  events、首页 intake（ask-box）、roster 照片（members）、开机构时的章程
+  （create-org-form）＋转账凭证（manual-income）。
+- **修②·诚实前置挡**：缩完仍 >4MB（PDF 缩不了）＝上传前就用三语句挡下
+  （USER_ERRORS.fileTooLargeForUpload：「照片靠近点只拍有字的；PDF 分几份
+  传」）。上限常数一处：`UPLOAD_HARD_LIMIT_BYTES = 4MB`（档头注明为什么：
+  Vercel ~4.5MB 硬顶留余量给 multipart）。伺服器 MAX_BYTES 8MB 防御层没动。
+- **修③·413 不再叫「连不上 AI」**：`uploadErrorMessage(status, serverError)`
+  ——有伺服器 JSON error 用它；413 无 JSON＝「文件太大」句；其余
+  aiUnavailable。九个门全换上。
+- **修④·members 第二案**：两处 `"…"` 后备字全灭（全站 grep 过仅此一处）；
+  fetch throw → 新 USER_ERRORS.networkNoCharge（「没连上，一分没扣」）；
+  AI 错误与表单错误合并成**一条**错误栏（useActionState 的旧 state.error
+  无法命令式清掉——记「当时那个 state 物件」比对身份来隐藏，errorHiddenFor
+  模式），逃生口挪到错误行旁边、busy 时按钮自任进度条。本机重演 tester
+  操作（空框按 Import 出旧红字→丢 6MB PDF）：红框只剩一条、讲人话——
+  证据照 `eval/reports/proof-48-members-big-pdf.png`（scripts/proof-48-members.mjs 重拍）。
+- **修⑤·server action 的隐形 1MB**：转账凭证走 server action，Next 预设
+  bodySizeLimit 1MB——比谁的承诺都小，>1MB 截图一直传不上。next.config.ts
+  设 4400kb（>4MB＋multipart 余量、<Vercel 4.5MB）；uploadTransferProof
+  的 throw 也接住了（不再无声炸）。
 - **四道关＋e2e**：tsc 0 · eslint 22（21 错+1 警告，逐字同基准）·
-  vitest 889 全过 · build ✓ · **e2e:minutes 与 e2e:money 全过、
-  page errors 0**（真 DB、next start，migration 31 通电状态下跑的）。
-- 手机底栏 4 格、桌面侧栏七组、路由、文案、三语：一律没动（拍板照旧）。
+  vitest **910 全过（+21 shrink-photo）** · build ✓ · **e2e:minutes 与
+  e2e:money 全过、page errors 0**（真 DB、next start）。
+- 没动：Vercel 设定/env、migration（仍 31 支）、线上真 org、AI 路由、prompt。
 
-### 本场之前的上一场（D44 免费围栏；45 号报告）
+### 上一场（46 号单 RESPONSIVE；47 号报告）
+
+弹窗被玻璃顶栏切头（backdrop-filter 包含块）→ Modal/CommandPalette 一律
+createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容；全站
+37 页×4 宽×亮暗 300 张病历（scripts/shots-responsive.mjs），真破版仅
+/filings 一处已修；15 处视窗断点格线改 container variants。详见 47 号报告
+与 §6 的 RESPONSIVE 陷阱条目。
+
+### 再上一场（D44 免费围栏；45 号报告）
 
 - **地基**：migration `20260909000000_free_fence.sql`（第 31 支，✅ 已套用，2026-08-29 探针实测）——
   `fence_usage` 表（每 org 一行，docs_made / pages_uploaded / clean_downloads，
@@ -116,28 +130,29 @@ origin/main 同步）；② migration 31（fence）J 已贴——`npm run check:
 - localStorage 里已存的旧文件文本（工作区草稿）不在锁内：锁的是成品页与
   文件出口，工作区是进行中的自己的字。
 
-### 现场量到的（不是听说的，2026-08-29 凌晨本场实测）
+### 现场量到的（不是听说的，2026-08-29 晚本场实测）
 
-- `git status`：工作树干净；e0aca2e 已在 origin/main（J 已 push）。
-- `npm run check:migrations` 实跑：**1–31 全 APPLIED**（fence_usage 列探针＋
-  fence_charge RPC 探针都 APPLIED）——围栏已通电。
-- 四道关：`tsc` 0 · `eslint` 22（21 错+1 警告，同基准）· `vitest` 889 全过 ·
+- 开工时 `git status` 干净、main == origin/main（46 号那 3 支 J 已 push）。
+- **线上 413 实测**（probe-payload.mjs，两轮）：7.13MB JPEG → 413 text/plain
+  「FUNCTION_PAYLOAD_TOO_LARGE」；6MB PDF 打 /api/import-roster → 同款；
+  0.09MB 对照图 → 200＋extraction，ai_usage 记 cost_micros=4121
+  （US$0.004，gemini-3.5-flash-lite）。ZZZ org/user 两轮都删干净。
+- 四道关：`tsc` 0 · `eslint` 22（21 错+1 警告，同基准）· `vitest` 910 全过 ·
   `build` ✓。
 - **e2e:minutes 全过、e2e:money 全过，page errors 0**（真 DB，`next start`）。
-- 300 张矩阵截图全站 page errors 0；proof-0-1 / proof-0-2 / proof-1B 三组
-  证据照在 `eval/reports/shots-responsive/`。
-- ⚠ 没能验证的：围栏的**真挡下**（文件第 6 份、收据第 21 张、第 21 页、
-  第 4 次干净下载各撞一次——要真 trial 帐号手工撞，脚本撞会烧 AI 额度）；
-  真 vendor 合并写作（D37 旧项）；1366 实体笔电的真机观感（截图是 headless）。
+- 本机重演第二案：一条红框、三语人话（proof-48-members-big-pdf.png）。
+- ⚠ 没能验证的：**线上**修好后的真机验证（要等 J push 后 tester 手机实拍）；
+  真 HEIC 大图在真手机浏览器上的行为（helper 的 HEIC 退路只有单元测试）；
+  围栏真挡下（未决 #1 照旧）；真 vendor 合并写作（D37 旧项）。
 
-### 🔴 J 的事（详见 47 号报告）
+### 🔴 J 的事（详见 49 号报告）
 
-1. **push-cabang.bat**（本场 3 支）→ 1–3 分钟后线上自动更新 → Ctrl+Shift+R。
-2. 验收 5 分钟：①任何页点头像→退出——弹窗应该完整在屏幕中间（把浏览器
-   窗口拉矮也不被切）；②开 Ask MinitAI——顶栏（搜索框/EN/月亮/头像）应该
-   整条还在，面板从顶栏下面开始；③手机上开面板——同样不盖顶栏。
-3. 之前欠的照旧：真额度试 AI 撰写／申报页圈位置／「不专业」实例／
-  「把之前的拿出来讨论」清单——你开口就开工。
+1. **push-cabang.bat**（本场 commit）→ 1–3 分钟后线上自动更新。
+2. **叫 tester 再试一次**：手机重开那个页面（或 Ctrl+Shift+R），直接拍照
+   上传。现在会自动缩图再送；真的太大会看到「这个文件太大…」的三语说明，
+   不再是「连不上 AI」。
+3. bench 那个视窗：AI 修好了，你有空就可以跑了（双击 bench-models.bat）。
+4. 之前欠的照旧：真额度试 AI 撰写／「把之前的拿出来讨论」清单——你开口就开工。
 
 ### ❓ 未决问题
 
@@ -161,6 +176,9 @@ origin/main 同步）；② migration 31（fence）J 已贴——`npm run check:
 
 ### ⏭ 下一个 session 从哪开始
 
+**先看 tester 的回报**：J push 完、tester 重试后若照片路还有问题，
+`node scripts/probe-payload.mjs` 一跑便知是不是传输层（零额度就能证伪；
+加 SKIP_SMALL=1 跳过要花钱的对照）。
 **J 说围栏做好后要「把之前的拿出来讨论」——这是他点名的下一步，先谈再做。**
 清单底稿：39 号 §6 三问、31 号单场次 5（J 在场）、eROSES Penyata Tahunan
 逐栏（要 J 帐号）、语音 B、章程「还要的事情」、#10 长尾、e2e:roles 4 项、
@@ -172,6 +190,29 @@ RESPONSIVE 方面：J 看完 47 号报告若再圈出破版，贴 46 号单同�
 ---
 
 ## 6. 已知陷阱（踩过的，别再踩）
+
+### 2026-08-29 晚新增（48 号救 AI 场）
+
+- 🔴 **Vercel 对 serverless 请求体有 ~4.5MB 硬上限，超了回 text/plain 413，
+  根本不进我们的代码**——所以 app_errors 0 行＋ai_usage 0 行＋客户端红框
+  「连不上 AI」三件事同时出现时，先怀疑它。本机 dev 没这个限制，
+  「本机都好好的」不算反证。**判断方法：`node scripts/probe-payload.mjs`
+  一跑便知（零额度即可证实/证伪；SKIP_SMALL=1 跳过花钱的对照）。修法：
+  客户端缩图＋4MB 前置挡，常数只写在 `src/lib/shrink-photo.ts` 一处。**
+  这是「上限要装得下同路径其他上限允许的最大件」的镜像：平台上限比
+  我们的 8MB 承诺小，而且它不是我们写的。
+- ⚠ **server action 的 bodySizeLimit 预设 1MB**——比路由的 8MB、平台的
+  4.5MB 都小，而且失败是 throw 不是 outcome。转账凭证 >1MB 一直传不上，
+  没人报过错。改在 next.config.ts（4400kb）；新的「文件走 server action」
+  路先想这条。
+- ⚠ **客户端后备错误字串是最后一道人话防线，写「…」＝把平台故障翻译成
+  三个点**（members 案，tester 只看到三个点）。规矩：fetch 的 catch 与
+  非 JSON 回应一律走 `uploadErrorMessage()`/USER_ERRORS，占位符一个不留
+  （全站 grep `?? "…"` 已清零）。
+- 💡 **useActionState 的旧 state.error 无法命令式清掉**——要「按下别的
+  按钮时隐藏旧表单错误」，记住当时那个 state 物件、按身份比对着隐藏
+  （members-form 的 errorHiddenFor）；下次 dispatch 产生新物件自然复显。
+  两套互不相识的错误栏会同屏叠两条红框。
 
 ### 2026-08-29 凌晨新增（RESPONSIVE 场）
 
@@ -532,7 +573,8 @@ RESPONSIVE 方面：J 看完 47 号报告若再圈出破版，贴 46 号单同�
 ### 关于 git 与环境
 
 - **在沙盒／非互动环境不要跑任何会等待输入的指令。**
-- **「已 commit」不等于「已 push」。**（本轮：**全部已 commit、未 push 共 3 支。**）
+- **「已 commit」不等于「已 push」。**（本轮：**48 号单的 commit 已全部落地、
+  等 J push。**）
 - **卡住的 `git push` 会留下僵尸行程与 stale `index.lock`。**
 - **沙盒的挂载点删不掉档案。**
 - **Windows 上不要用 `| head`；长 commit 讯息写成档案再 `git commit -F <path>`，
