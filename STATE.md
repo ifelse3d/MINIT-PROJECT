@@ -5,24 +5,36 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-29 晚（MYT）· Fable 5（48 号单：救 AI——tester「用不到 AI」两案同根，已修）**
-**🔴 本场结论一句话：AI 从来没坏。手机照片/扫描 PDF 超过 ~4.5MB 时，
-Vercel 平台在机房门口直接回 text/plain 413（FUNCTION_PAYLOAD_TOO_LARGE），
-请求根本没进我们的代码——所以 app_errors/ai_usage 零痕迹、客户端只好显示
-误导人的「连不上 AI」/「…」。线上实测证实（probe-payload.mjs：7.13MB 照片
-→413；6MB PDF 打 /api/import-roster→同款 413；0.09MB 对照图→AI 全管道正常，
-花 US$0.004）。修法已全部落地，等 J push。**
+**最后更新：2026-08-29 凌晨（MYT）· Fable 5（讨论场：50 号二十条＋tester 整批回馈＋J 亲测九条 → 51 号过夜总单拍板）**
+**🔴 本场结论一句话：J 已点头 51 号计划（包A 上传与AI读文件 → 包B Members/Glossary
+改造 → 小修包 → eROSES 大改版 → AI 智能建议场 → 品质场 → 助手 → 上线后第一批）。
+全部拍板与各包规格写在 `C:\dev\_J-要做的事\51-過夜施工總單與開場PROMPT-20260829.md`
+——下一个 session 照那份开工，不再问。48 号的修 J 已 push 上线（0ca62e7，
+git 查证 main == origin/main；「等 push」旧话作废）。**
 
 ---
 
-## 🌙 现在在哪里（2026-08-29 晚，48 号救 AI 场收工）
+## 🌙 现在在哪里（2026-08-29 凌晨，讨论场收工）
 
-> **已上线**：https://minit-project.vercel.app —— 截至 e2703f6 全部已 push
-> （46 号 RESPONSIVE 那 3 支 J 已推，本场开工实查 main == origin/main）。
-> **本场的 commit 在本机等 push**（push-cabang.bat 是 J 的事）。
+> **已上线**：https://minit-project.vercel.app —— 截至 **0ca62e7 全部已 push**
+> （8/29 凌晨 git 查证 main == origin/main；48 号的修在线上生效）。
 > 线上 org：15「J」、58「avocado」、91「TESTING1」。
 
-### 这一场做了什么（48 号单＋追加第二案；49 号报告给 J 的版本在 _J-要做的事）
+### 这一场做了什么（讨论场，无代码改动）
+
+- 收齐三批输入：J 对 50 号二十条的回覆、tester SH 的整批截图回馈
+  （members 日期/错误/表格化、glossary、attendance、choose file、AI 读 PDF、
+  BM 按钮没反应）、J 自己在线上 TESTING1 的九条实测。
+- 全部拍板（demo 对照帐号、收 .pptx/.docx、大 PDF 直传 Storage、理事表单
+  **删任期结束**、同名+备注栏、敬语 dropdown、云端多份草稿一次做完整、
+  money 录入两套合一＋Purpose 每行 dropdown、模板弹窗裸样式与 C17 同款）
+  ＋各包规格 ＋ eROSES Penyata Tahunan 九步完整清单（J 给的 17 张截图在
+  `C:\Users\User\Desktop\Penyata Kewangan screenshot`，B10 结案）——
+  **全部写进 51 号檔**，下一个 session 一贴就跑。
+- 教训（已犯已认）：① J 早 push 了还叫他 push——说「等 push」前必先
+  `git status -sb` 查证；② J 按顺序拍的截图要**全部按顺序看完**，不准抽样。
+
+### 上一场（48 号单＋追加第二案；49 号报告给 J 的版本在 _J-要做的事）
 
 - **证实（先证实，再动刀）**：`scripts/probe-payload.mjs`——ZZZ 帐号打线上，
   canvas 生 7.13MB 噪点 JPEG POST /api/extract-minutes → **HTTP 413
@@ -60,7 +72,7 @@ Vercel 平台在机房门口直接回 text/plain 413（FUNCTION_PAYLOAD_TOO_LARG
   e2e:money 全过、page errors 0**（真 DB、next start）。
 - 没动：Vercel 设定/env、migration（仍 31 支）、线上真 org、AI 路由、prompt。
 
-### 上一场（46 号单 RESPONSIVE；47 号报告）
+### 再上一场（46 号单 RESPONSIVE；47 号报告）
 
 弹窗被玻璃顶栏切头（backdrop-filter 包含块）→ Modal/CommandPalette 一律
 createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容；全站
@@ -68,7 +80,7 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
 /filings 一处已修；15 处视窗断点格线改 container variants。详见 47 号报告
 与 §6 的 RESPONSIVE 陷阱条目。
 
-### 再上一场（D44 免费围栏；45 号报告）
+### 更早一场（D44 免费围栏；45 号报告）
 
 - **地基**：migration `20260909000000_free_fence.sql`（第 31 支，✅ 已套用，2026-08-29 探针实测）——
   `fence_usage` 表（每 org 一行，docs_made / pages_uploaded / clean_downloads，
@@ -145,14 +157,14 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
   真 HEIC 大图在真手机浏览器上的行为（helper 的 HEIC 退路只有单元测试）；
   围栏真挡下（未决 #1 照旧）；真 vendor 合并写作（D37 旧项）。
 
-### 🔴 J 的事（详见 49 号报告）
+### 🔴 J 的事
 
-1. **push-cabang.bat**（本场 commit）→ 1–3 分钟后线上自动更新。
-2. **叫 tester 再试一次**：手机重开那个页面（或 Ctrl+Shift+R），直接拍照
-   上传。现在会自动缩图再送；真的太大会看到「这个文件太大…」的三语说明，
-   不再是「连不上 AI」。
-3. bench 那个视窗：AI 修好了，你有空就可以跑了（双击 bench-models.bat）。
-4. 之前欠的照旧：真额度试 AI 撰写／「把之前的拿出来讨论」清单——你开口就开工。
+1. **开新 session 贴 51 号檔灰框那段**（过夜跑；51 号檔开头有使用说明）。
+2. 过夜跑完的早上：看最新报告 →（若有 migration 32）照报告指示贴 →
+   **push-cabang.bat**。
+3. **叫 tester 再试一次照片路**（48 号修已上线：自动缩图＋人话错误）；
+   PDF/PPT 的问题就是过夜包 A 在修的。
+4. bench 那个视窗：你有空就跑（双击 bench-models.bat）。
 
 ### ❓ 未决问题
 
@@ -176,16 +188,14 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
 
 ### ⏭ 下一个 session 从哪开始
 
-**先看 tester 的回报**：J push 完、tester 重试后若照片路还有问题，
-`node scripts/probe-payload.mjs` 一跑便知是不是传输层（零额度就能证伪；
-加 SKIP_SMALL=1 跳过要花钱的对照）。
-**J 说围栏做好后要「把之前的拿出来讨论」——这是他点名的下一步，先谈再做。**
-清单底稿：39 号 §6 三问、31 号单场次 5（J 在场）、eROSES Penyata Tahunan
-逐栏（要 J 帐号）、语音 B、章程「还要的事情」、#10 长尾、e2e:roles 4 项、
-首页主图重拍、竞赛材料（J 自己定 30/31 交，**不催**）。
-围栏方面：照未决 #1 用真 trial 帐号撞一轮上限；「大的」仍等 J 开口。
-RESPONSIVE 方面：J 看完 47 号报告若再圈出破版，贴 46 号单同一段 PROMPT
-继续（病历脚本已在，SHOTS_ROUTES/SHOTS_WIDTHS 可只重拍一角）。
+**照 51 号檔跑，别的不用想**：
+`C:\dev\_J-要做的事\51-過夜施工總單與開場PROMPT-20260829.md`
+——§2 包A（上传与AI读文件）→ §3 包B（Members/Glossary）→ §4 小修包，
+每包收尾 checkpoint（四道关＋e2e＋覆写 STATE＋报告＋commit）才开下一包。
+之后的场（也都在 51 号 §5）：⑤ eROSES 大改版（17 张截图为教材）→
+⑥ AI 智能建议场 → ⑦ 品质场 → ⑧ 助手＋AI 代办 → ⑨ 上线后第一批。
+竞赛材料 J 自己定 30/31 交，**不催**。
+RESPONSIVE：J 若再圈破版，贴 46 号单同段 PROMPT 继续。
 
 ---
 
