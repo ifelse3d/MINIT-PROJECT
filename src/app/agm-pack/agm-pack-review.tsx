@@ -295,7 +295,7 @@ export function AgmPackReview({
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 @xl:grid-cols-3">
             <label className="flex flex-col gap-1">
               <span className="text-base font-semibold">
                 <Tri bm="Tarikh" zh="日期" en="Date" />

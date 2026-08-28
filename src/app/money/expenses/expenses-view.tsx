@@ -503,7 +503,7 @@ export function ExpensesView({ role }: { role: string }) {
               </p>
             )}
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 @xl:grid-cols-2">
               <label className="flex flex-col gap-1 sm:col-span-2">
                 <span className="text-base font-semibold">
                   <Tri bm="Perihal" zh="说明（买了什么/付了什么）" en="Description" />

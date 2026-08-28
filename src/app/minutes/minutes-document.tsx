@@ -687,7 +687,7 @@ export function MinutesDocument() {
                   </div>
                   <ConfidenceBadge level={row.confidence} />
                 </div>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div className="mt-3 grid gap-3 @xl:grid-cols-2">
                   <div className="rounded-md bg-blue-50 p-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="text-sm font-medium text-muted-foreground">

@@ -30,10 +30,12 @@ export function SettingsNav({ showSystem }: { showSystem: boolean }) {
 
   return (
     <>
-      {/* ≥1024px: the one settings column. */}
+      {/* Wide content column: the one settings column. @4xl (not lg:) — the
+          column must answer to the room actually left (AI dock open = less),
+          not the window (work order 46 §1). */}
       <nav
         aria-label="Settings"
-        className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-[var(--subnav-w)] shrink-0 overflow-y-auto border-r border-[color:var(--v2-border)] bg-[color:var(--v2-card)] px-3 pb-6 lg:block"
+        className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-[var(--subnav-w)] shrink-0 overflow-y-auto border-r border-[color:var(--v2-border)] bg-[color:var(--v2-card)] px-3 pb-6 @4xl:block"
       >
         {/* #12: the way back — the main rail is hidden inside settings. */}
         <Link
@@ -86,10 +88,11 @@ export function SettingsNav({ showSystem }: { showSystem: boolean }) {
         ))}
       </nav>
 
-      {/* <1024px: a scrolling tab strip pinned under the top bar. */}
+      {/* Narrow content column: a scrolling tab strip pinned under the top
+          bar (container-measured, same rule as above). */}
       <nav
         aria-label="Settings"
-        className="v2-scroll sticky top-14 z-30 -mx-4 flex gap-1 overflow-x-auto border-b border-[color:var(--v2-border)] bg-[color:var(--v2-card)] px-4 py-2 sm:-mx-6 sm:px-6 lg:hidden"
+        className="v2-scroll sticky top-14 z-30 -mx-4 flex gap-1 overflow-x-auto border-b border-[color:var(--v2-border)] bg-[color:var(--v2-card)] px-4 py-2 sm:-mx-6 sm:px-6 @4xl:hidden"
       >
         {groups.flatMap((g) => g.children).map((item) => {
           const active = isActivePath(pathname, item.href, item.exact);

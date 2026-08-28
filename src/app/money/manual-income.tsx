@@ -273,7 +273,7 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
                 )}
               </div>
             )}
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 @xl:grid-cols-2">
               <label className="flex flex-col gap-1">
                 <span className="text-base font-semibold">
                   <Tri bm="Jenis pendapatan" zh="收入类型" en="Income type" />

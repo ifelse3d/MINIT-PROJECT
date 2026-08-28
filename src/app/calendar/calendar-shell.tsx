@@ -189,7 +189,7 @@ export function CalendarShell({
       />
 
       {/* Grid + sidebar fill the width; sidebar stacks below on mobile */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid grid-cols-1 gap-6 @4xl:grid-cols-[minmax(0,1fr)_340px] @5xl:grid-cols-[minmax(0,1fr)_380px]">
         <ActivityCalendar
           serverRecords={records}
           month={month}

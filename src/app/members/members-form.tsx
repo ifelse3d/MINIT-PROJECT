@@ -64,7 +64,7 @@ export function AddCommitteeRow() {
 
   return (
     <form action={formAction} className="flex flex-col gap-3">
-      <div className="grid gap-3 md:grid-cols-[1.1fr_1fr_1.2fr_0.8fr_0.8fr_auto] md:items-end">
+      <div className="grid gap-3 @3xl:grid-cols-[1.1fr_1fr_1.2fr_0.8fr_0.8fr_auto] @3xl:items-end">
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium text-muted-foreground">
             <Tri bm="Jawatan" zh="职位" en="Position" />

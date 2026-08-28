@@ -64,7 +64,7 @@ export function AppearanceRows() {
             />
           </span>
         </div>
-        <div className="grid gap-2.5 sm:grid-cols-2">
+        <div className="grid gap-2.5 @xl:grid-cols-2">
           {TEXT_SIZES.map((size) => {
             const label = TEXT_SIZE_LABELS[size];
             const selected = textSize === size;

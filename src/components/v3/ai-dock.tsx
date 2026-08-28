@@ -40,7 +40,18 @@ const OPEN_KEY = "minit.ai-dock.open";
 const DESKTOP_QUERY = "(min-width: 768px)";
 
 function clampWidth(w: number): number {
-  return Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, Math.round(w)));
+  // The fixed 640 ceiling let a tablet (768px, isDesktop) drag the rail out
+  // until the page kept 128px — a column no layout survives. The ceiling now
+  // also answers to the window: the page keeps at least ~380px beside the
+  // rail (plus the 248px nav rail where it exists, ≥1024). Client-only
+  // callers everywhere (restore effect, drag, nudge), so window is safe.
+  let max = MAX_WIDTH;
+  if (typeof window !== "undefined") {
+    const vw = window.innerWidth;
+    const room = vw >= 1024 ? vw - 248 - 380 : vw - 380;
+    max = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, room));
+  }
+  return Math.min(max, Math.max(MIN_WIDTH, Math.round(w)));
 }
 
 export type AIDockState = ReturnType<typeof useAIDock>;

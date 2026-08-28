@@ -183,7 +183,7 @@ export default async function PlanPage() {
               en="Free-plan limits (lifetime, never reset)"
             />
           </p>
-          <div className="grid gap-2 text-base sm:grid-cols-2">
+          <div className="grid gap-2 text-base @xl:grid-cols-2">
             <p>
               <Tri bm="Dokumen dibuat" zh="已做文件" en="Documents made" />:{" "}
               <span className="font-semibold tabular-nums">

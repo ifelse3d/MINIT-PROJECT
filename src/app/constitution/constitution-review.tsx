@@ -743,7 +743,7 @@ export function ConstitutionReview({
                   />
                 </div>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 @xl:grid-cols-2">
                 <div className="rounded-md border border-green-200 bg-white/60 p-3 dark:bg-white/5">
                   <div className="text-sm text-muted-foreground">
                     <Tri

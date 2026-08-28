@@ -53,7 +53,7 @@ export function FleetCharts({
   return (
     <div className="flex flex-col gap-4">
       {/* The totals, lined up. */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 @xl:grid-cols-2 @4xl:grid-cols-4">
         <StatCard
           label={<Tri bm="Pertubuhan" zh="机构数" en="Organisations" />}
           value={String(orgs.length)}

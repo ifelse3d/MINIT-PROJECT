@@ -160,7 +160,7 @@ export function EInvoisPack({
           <div className="flex flex-col gap-3">
             {/* B-7 (拍板 37): the month at a glance — real layout, not a
                 monospace dump pretending to be a report. */}
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 @xl:grid-cols-2 @4xl:grid-cols-4">
               <div className="rounded-md border-2 border-[color:var(--v2-border)] bg-white/60 p-3 dark:bg-white/5">
                 <p className="text-sm text-muted-foreground">
                   <Tri

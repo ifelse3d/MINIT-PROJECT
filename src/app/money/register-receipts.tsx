@@ -312,7 +312,7 @@ export function RegisterAndReceipts() {
         )}
 
         {/* One card per donation — no sideways scroll (small registers only) */}
-        <div className={donations.length >= 8 ? "hidden" : "grid gap-3 sm:grid-cols-2"}>
+        <div className={donations.length >= 8 ? "hidden" : "grid gap-3 @xl:grid-cols-2"}>
           {shown.map((d) => {
             const waLink = d.receiptNo
               ? buildWaMeLink(

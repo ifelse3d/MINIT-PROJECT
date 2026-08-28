@@ -321,7 +321,7 @@ export function CreateOrgForm({
             en="This organisation is…"
           />
         </legend>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid gap-2 @xl:grid-cols-2">
           {(
             [
               {
@@ -378,7 +378,7 @@ export function CreateOrgForm({
         <legend className="text-base font-semibold">
           <Tri bm="Pelan" zh="配套" en="Plan" />
         </legend>
-        <div className="grid gap-2 sm:grid-cols-3">
+        <div className="grid gap-2 @xl:grid-cols-3">
           {(
             [
               {

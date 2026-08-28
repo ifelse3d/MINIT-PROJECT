@@ -769,7 +769,11 @@ export function FilingsView({
                   key={`${d.kind}-${d.dueDateIso}`}
                   className="flex flex-wrap items-center gap-3 rounded-sm border p-4"
                 >
-                  <div className="flex-1">
+                  {/* min-w: with a bare flex-1 (basis 0) the title column
+                      could be squeezed to one character per line on a phone
+                      before flex-wrap ever kicked in — the date and badge
+                      wrap below instead (46 病歷, w375 filings). */}
+                  <div className="min-w-[10rem] flex-1">
                     <p className="font-medium">
                       <Tri bm={label.bm} zh={label.zh} en={label.en} />
                     </p>

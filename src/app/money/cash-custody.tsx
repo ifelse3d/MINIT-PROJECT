@@ -261,7 +261,7 @@ export function CashCustody() {
               </table>
             </div>
           ) : (
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-2 @xl:grid-cols-2">
               {cashRows.map((d) => (
                 <CashRowCard key={d.id} d={d} selected={selected.has(d.id)} onToggle={toggle} />
               ))}
@@ -305,7 +305,7 @@ export function CashCustody() {
 
         {/* WHO IS HOLDING HOW MUCH — receipted rows only, same 口徑 as above. */}
         {balances.length > 0 && (
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 @xl:grid-cols-2">
             {balances.map((b) => (
               <div key={b.collector} className="rounded-sm border p-4">
                 <p className="font-medium">{b.collector}</p>

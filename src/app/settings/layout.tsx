@@ -20,9 +20,9 @@ export default async function SettingsLayout({ children }: { children: ReactNode
   const active = await getActiveOrg();
   const showSystem = active !== null && can(active.role, "manage_org");
   return (
-    <div className="flex flex-col gap-4 lg:-my-6 lg:flex-row lg:gap-0">
+    <div className="flex flex-col gap-4 @4xl:-my-6 @4xl:flex-row @4xl:gap-0">
       <SettingsNav showSystem={showSystem} />
-      <div className="min-w-0 flex-1 lg:py-8 lg:pl-8">
+      <div className="min-w-0 flex-1 @4xl:py-8 @4xl:pl-8">
         <div className="w-full max-w-[760px]">{children}</div>
       </div>
     </div>

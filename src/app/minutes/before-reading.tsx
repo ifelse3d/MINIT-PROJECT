@@ -71,7 +71,7 @@ export function BeforeReading({
         />
       </p>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 @xl:grid-cols-3">
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium text-muted-foreground">
             <Tri bm="Jenis mesyuarat" zh="这是什么会议" en="What kind of meeting" />

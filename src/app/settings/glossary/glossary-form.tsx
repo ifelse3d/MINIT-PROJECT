@@ -46,7 +46,7 @@ export function AddTermForm() {
 
   return (
     <form action={formAction} className="flex flex-col gap-3">
-      <div className="grid gap-3 md:grid-cols-[1.4fr_1fr] md:items-end">
+      <div className="grid gap-3 @3xl:grid-cols-[1.4fr_1fr] @3xl:items-end">
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium text-muted-foreground">
             <Tri
@@ -76,7 +76,7 @@ export function AddTermForm() {
         </label>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-3 @3xl:grid-cols-2">
         {others.map((l) => (
           <label key={l} className="flex flex-col gap-1">
             <span className="text-sm font-medium text-muted-foreground">
