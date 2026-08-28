@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Tri } from "@/components/language-provider";
 import { getActiveOrg } from "@/lib/active-org";
 import { getUsage } from "@/lib/ai/usage";
+import { getHomeStats } from "@/lib/home-stats";
 import { dayIsoMalaysia } from "@/lib/history";
 import { computeStandardDeadlines } from "@/lib/standard-deadlines";
 import { readOrgTypeFlags } from "@/lib/org-flags";
@@ -92,6 +93,10 @@ export default async function Home() {
   const { orgType } = await readOrgTypeFlags(active.id);
   const deadlines = computeStandardDeadlines(todayIso, { agm, orgType });
   const usage = await getUsage(active.id).catch(() => null);
+  // The one live line under each task card. Reads after `usage` because it
+  // reuses the quota already fetched above rather than asking twice; the four
+  // figures inside it are read in parallel and none of them can throw.
+  const stats = await getHomeStats(active.id, usage);
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 pb-10">
@@ -104,7 +109,7 @@ export default async function Home() {
       </Suspense>
 
       {/* 1 — the four task cards: what MinitAI makes, one tap each (A-1). */}
-      <TaskCards />
+      <TaskCards stats={stats} />
 
       {/* 2 — THE box: photo / file / typing, mixed; type first, then
           confirm to send; MinitAI asks back when unsure. Card ④ focuses it. */}

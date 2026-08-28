@@ -1,7 +1,22 @@
 "use client";
 
+import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
+import { ArrowRight, Banknote, ChartColumn, FilePen, Sparkles } from "lucide-react";
 import { Tri } from "@/components/language-provider";
+import {
+  aiLine,
+  minutesLine,
+  moneyLine,
+  statementLine,
+  type Line,
+} from "@/lib/home-card-lines";
+// TYPE-ONLY on purpose: home-stats.ts is "server-only", and importing any
+// runtime value from it here would drag the Supabase server client into the
+// browser bundle (which is exactly what next build refuses to do). A type
+// import is erased at compile time, so the contract is shared and the code
+// is not.
+import type { HomeStats } from "@/lib/home-stats";
 
 // ---------------------------------------------------------------------------
 // THE FOUR TASK CARDS (A-1, work order 27 — J 2026-08-26 #1, 拍板①).
@@ -21,52 +36,114 @@ import { Tri } from "@/components/language-provider";
 //     second copy of it.
 //
 // The chat box stays put underneath (拍板①: "聊天框保留在卡下方常驻").
+//
+// 2026-08-28 design pass. The cards were a 2px near-black outline with no
+// shadow and no hover state — boxy, and nothing said they could be clicked.
+// Now: a 4px accent band, the emoji replaced by a line icon in a tinted tile,
+// a hover lift with a sliding arrow, and ONE live status line each. The
+// styling lives in globals.css (.home-card) with the rules about how far each
+// accent hue is allowed to reach.
+//
+// 🔴 The emoji had to go for a reason beyond taste: 📝📋📊✨ are drawn by the
+// operating system, so the first screen of the product looked like three
+// different products across Windows, Android and iOS.
+//
+// The status lines are the part that keeps the page alive — the bands are a
+// one-time lift, the numbers change every week. A figure that cannot be read
+// renders NO line at all (see home-stats.ts): never a 0, never a placeholder.
 // ---------------------------------------------------------------------------
 
 /** The chat box textarea carries this id so card ④ can hand focus to it. */
 export const ASK_INPUT_ID = "minit-ask-input";
 
-const CARD_CLASS =
-  "flex min-h-28 flex-col justify-between gap-2 rounded-md border-2 " +
-  "border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] p-4 " +
-  "text-left transition-colors hover:border-[color:var(--v2-primary)] " +
-  "hover:bg-[color:var(--v2-primary-soft)]";
+/**
+ * Each card's accent, light and dark. Four literal pairs rather than a
+ * color-mix() derivation: the light hues are all dark colours, so on the dark
+ * card they would be a glyph nobody can see, and the two tints are the exact
+ * values the design was checked at (glyph-on-tile clears 3:1 in both modes).
+ * These four hues are the only non-violet colour in the app.
+ */
+type Hue = { light: string; lightSoft: string; dark: string; darkSoft: string };
 
-function CardBody({
+const HUE_MINUTES: Hue = {
+  light: "#7029E5",
+  lightSoft: "#ECE3FC",
+  dark: "#A78BFA",
+  darkSoft: "rgba(167,139,250,0.16)",
+};
+const HUE_MONEY: Hue = {
+  light: "#0F766E",
+  lightSoft: "#E0EDEC",
+  dark: "#5EEAD4",
+  darkSoft: "rgba(94,234,212,0.15)",
+};
+const HUE_STATEMENT: Hue = {
+  light: "#2563EB",
+  lightSoft: "#E3EBFC",
+  dark: "#60A5FA",
+  darkSoft: "rgba(96,165,250,0.16)",
+};
+const HUE_AI: Hue = {
+  light: "#A21CAF",
+  lightSoft: "#F3E2F5",
+  dark: "#E879F9",
+  darkSoft: "rgba(232,121,249,0.16)",
+};
+
+function hueVars(hue: Hue): CSSProperties {
+  return {
+    "--c-light": hue.light,
+    "--c-light-soft": hue.lightSoft,
+    "--c-dark": hue.dark,
+    "--c-dark-soft": hue.darkSoft,
+  } as CSSProperties;
+}
+
+function CardInner({
   icon,
-  bm,
-  zh,
-  en,
-  subBm,
-  subZh,
-  subEn,
+  title,
+  desc,
+  line,
 }: {
-  icon: string;
-  bm: string;
-  zh: string;
-  en: string;
-  subBm: string;
-  subZh: string;
-  subEn: string;
+  icon: ReactNode;
+  title: Line;
+  desc: Line;
+  line: Line | null;
 }) {
   return (
     <>
-      <span aria-hidden className="text-3xl leading-none">
-        {icon}
-      </span>
-      <span className="flex flex-col gap-0.5">
-        <span className="text-lg font-semibold leading-snug text-[color:var(--v2-text)]">
-          <Tri bm={bm} zh={zh} en={en} />
+      <span className="band" aria-hidden />
+      <span className="body">
+        <span className="top">
+          <span className="tile" aria-hidden>
+            {icon}
+          </span>
+          <span className="arrow" aria-hidden>
+            <ArrowRight />
+          </span>
         </span>
-        <span className="text-sm leading-snug text-[color:var(--v2-text-soft)]">
-          <Tri bm={subBm} zh={subZh} en={subEn} />
+        <span>
+          <span className="title">
+            <Tri bm={title.bm} zh={title.zh} en={title.en} />
+          </span>
+          <span className="desc">
+            <Tri bm={desc.bm} zh={desc.zh} en={desc.en} />
+          </span>
         </span>
+        {/* No line rather than an empty row: a status row with nothing in it
+            is worse than a card that never promised one. */}
+        {line && (
+          <span className="stat">
+            <span className="dot" aria-hidden />
+            <Tri bm={line.bm} zh={line.zh} en={line.en} />
+          </span>
+        )}
       </span>
     </>
   );
 }
 
-export function TaskCards() {
+export function TaskCards({ stats }: { stats: HomeStats }) {
   // Container variants (J #1, 2026-08-28): columns follow the CONTENT
   // column's width, not the viewport's — with the AI dock open on a 14"
   // laptop the old lg:grid-cols-4 forced four skinny towers.
@@ -75,58 +152,66 @@ export function TaskCards() {
       aria-label="Tugas / 任务 / Tasks"
       className="grid grid-cols-1 gap-3 @md:grid-cols-2 @4xl:grid-cols-4"
     >
-      <Link href="/minutes" className={CARD_CLASS}>
-        <CardBody
-          icon="📝"
-          bm="Minit mesyuarat"
-          zh="会议记录"
-          en="Meeting minutes"
-          subBm="Gambar nota → laporan mesyuarat rasmi"
-          subZh="拍下笔记 → 正式的会议报告"
-          subEn="Photo of notes → a formal meeting report"
+      <Link href="/minutes" className="home-card" style={hueVars(HUE_MINUTES)}>
+        <CardInner
+          icon={<FilePen strokeWidth={1.75} />}
+          title={{ bm: "Minit mesyuarat", zh: "会议记录", en: "Meeting minutes" }}
+          desc={{
+            bm: "Gambar nota → laporan mesyuarat rasmi",
+            zh: "拍下笔记 → 正式的会议报告",
+            en: "Photo of notes → a formal meeting report",
+          }}
+          line={minutesLine(stats.minutesDrafts)}
         />
       </Link>
-      <Link href="/money" className={CARD_CLASS}>
-        <CardBody
-          icon="🧾"
-          bm="Rekod wang & derma"
-          zh="记钱 · 捐款"
-          en="Record money & donations"
-          subBm="Lejar, resit bernombor, serah wang"
-          subZh="账页、连号收据、交现金"
-          subEn="Ledger, numbered receipts, cash hand-over"
+
+      <Link href="/money" className="home-card" style={hueVars(HUE_MONEY)}>
+        <CardInner
+          icon={<Banknote strokeWidth={1.75} />}
+          title={{ bm: "Rekod wang & derma", zh: "记钱 · 捐款", en: "Record money & donations" }}
+          desc={{
+            bm: "Lejar, resit bernombor, serah wang",
+            zh: "账页、连号收据、交现金",
+            en: "Ledger, numbered receipts, cash hand-over",
+          }}
+          line={moneyLine(stats.moneyInCents)}
         />
       </Link>
-      <Link href="/money/report" className={CARD_CLASS}>
-        <CardBody
-          icon="📊"
-          bm="Penyata kewangan"
-          zh="财报"
-          en="Financial statement"
-          subBm="Kira masuk & keluar mengikut tempoh"
-          subZh="按期间算出收支表"
-          subEn="Income & spending, by period"
+
+      <Link href="/money/report" className="home-card" style={hueVars(HUE_STATEMENT)}>
+        <CardInner
+          icon={<ChartColumn strokeWidth={1.75} />}
+          title={{ bm: "Penyata kewangan", zh: "财报", en: "Financial statement" }}
+          desc={{
+            bm: "Kira masuk & keluar mengikut tempoh",
+            zh: "按期间算出收支表",
+            en: "Income & spending, by period",
+          }}
+          line={statementLine(stats.moneyRecords)}
         />
       </Link>
+
       {/* ④ is a BUTTON: it hands focus to the chat box below, it does not
           navigate — the box is the feature, not a page about the feature. */}
       <button
         type="button"
-        className={CARD_CLASS}
+        className="home-card"
+        style={hueVars(HUE_AI)}
         onClick={() => {
           const input = document.getElementById(ASK_INPUT_ID);
           input?.scrollIntoView({ behavior: "smooth", block: "center" });
           input?.focus({ preventScroll: true });
         }}
       >
-        <CardBody
-          icon="✨"
-          bm="Serah kepada AI"
-          zh="交给 AI"
-          en="Hand it to AI"
-          subBm="Tanya, atau letak apa sahaja di tangan anda"
-          subZh="问问题，或把手上的东西丢给它"
-          subEn="Ask, or drop in whatever you are holding"
+        <CardInner
+          icon={<Sparkles strokeWidth={1.75} />}
+          title={{ bm: "Serah kepada AI", zh: "交给 AI", en: "Hand it to AI" }}
+          desc={{
+            bm: "Tanya, atau letak apa sahaja di tangan anda",
+            zh: "问问题，或把手上的东西丢给它",
+            en: "Ask, or drop in whatever you are holding",
+          }}
+          line={aiLine(stats.aiLeft, stats.aiTotal)}
         />
       </button>
     </section>
