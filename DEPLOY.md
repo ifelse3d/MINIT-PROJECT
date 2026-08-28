@@ -3,6 +3,42 @@
 Written for beginners. Follow top to bottom. Nothing here requires a credit
 card (Vercel Hobby + Supabase Free are enough for the competition demo).
 
+
+## 🔴 The function region must match the database region (2026-08-28)
+
+`vercel.json` pins Vercel's Serverless Functions to **`sin1` (Singapore)**.
+That is not a preference — it is the fix for the app being unusably slow.
+
+**How it was found.** J reported the live app taking forever to load. Measured:
+
+| | |
+|---|---|
+| Public pages (`/login`, `/terms`, `/privacy`) | **0.4s** |
+| A logged-in page (the home page) | **4.4–5.9s** to finish streaming |
+| First hit of a route after a deploy (cold) | **12–15s** |
+| Time the database itself spends on a query | **14ms** |
+
+The database doing 14ms of work while the page takes 4.5 seconds means the time
+is travel, not work. Two headers settle where:
+
+- `X-Vercel-Id: sin1::iad1::…` — the request enters at Singapore, but the
+  **function runs in `iad1`, Washington D.C.**
+- `db.<ref>.supabase.co` resolves to `2406:da18:…`, which AWS's own published
+  ip-ranges.json lists as **`ap-southeast-1`, Singapore.**
+
+So every question the app asked the database crossed the Pacific and came back —
+roughly 250ms each — and a logged-in page asks eight to twelve of them.
+
+**Do not remove this file, and do not change the region on its own.** If the
+database is ever moved, this must move with it; they belong in the same region
+or every page in the app pays for it. (Hobby plans allow exactly one region,
+which is why the array has one entry — adding a second fails the build.)
+
+The same round trips are also why `getSessionUser` / `getActiveOrg` are wrapped
+in React `cache()` and why the home page reads in one `Promise.all`: when a
+round trip costs 250ms, doing them in series is the whole bill.
+
+
 ## 0. THE IRON RULE (read this before anything else)
 
 > **Every migration must be applied BEFORE the code that needs it is deployed.**
