@@ -49,8 +49,8 @@ const FRAMES: readonly {
     en: "Photograph the handwritten notes — or type them in.",
     hi: {
       left: "10.9%",
-      top: "64.0%",
-      width: "9.4%",
+      top: "62.4%",
+      width: "26.3%",
       height: "6.4%",
       labelBm: "Tekan di sini",
       labelZh: "现在按这里",
@@ -65,7 +65,7 @@ const FRAMES: readonly {
     en: `${BRAND_NAME} reads every line. Smudged ones are flagged for you to check.`,
     hi: {
       left: "11.1%",
-      top: "44.8%",
+      top: "44.7%",
       width: "84.0%",
       height: "10.5%",
       labelBm: "Semak baris kuning di sini",
@@ -83,7 +83,7 @@ const FRAMES: readonly {
     // rows are gone from the real page — the walkthrough IS the demo).
     hi: {
       left: "10.9%",
-      top: "69.2%",
+      top: "61.2%",
       width: "24.7%",
       height: "6.9%",
       labelBm: "Sahkan di sini",
