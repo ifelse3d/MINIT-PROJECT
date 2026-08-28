@@ -5,6 +5,7 @@ import {
   BookOpen,
   Building2,
   CalendarClock,
+  CircleDollarSign,
   ClipboardList,
   Coins,
   CreditCard,
@@ -20,7 +21,6 @@ import {
   MessageSquare,
   MoreHorizontal,
   Palette,
-  PiggyBank,
   Receipt,
   ScrollText,
   ClipboardCheck,
@@ -110,7 +110,15 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/money/report", icon: BarChart3, bm: "Penyata kewangan", zh: "财报", en: "Financial statement" },
   // D31 (J review 27-evening #24, 2026-08-28): "现在还有多少钱" — the running
   // cash balance, amount hidden behind an eye by default. Not the statement.
-  { href: "/money/balance", icon: PiggyBank, bm: "Baki semasa", zh: "现有资金", en: "Current funds" },
+  // 🔴 NOT a piggy bank (J, 2026-08-28: 「不要用豬圖，因爲有馬來人用」). A pig
+  // is haram imagery for the Muslim majority this product is built for, and a
+  // sidebar icon is not the place to make somebody flinch. The same check
+  // applies to anything added later — read every new glyph against every race
+  // and faith in Malaysia before it ships.
+  // (Vault was tried first and rejected: at rail size its dial reads as an X,
+  // i.e. as "cancel". This is the one round glyph in the sidebar, so it is
+  // also the easiest row to find by shape.)
+  { href: "/money/balance", icon: CircleDollarSign, bm: "Baki semasa", zh: "现有资金", en: "Current funds" },
   { href: "/money/history", icon: ClipboardList, bm: "Sejarah resit", zh: "收据历史", en: "Receipt history" },
   // The calendar: the society's OWN activities (plus statutory deadlines as
   // reminders). J's launch feedback #7 (2026-08-27 evening): it is not a
