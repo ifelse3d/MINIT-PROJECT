@@ -40,9 +40,12 @@ vi.mock("@/lib/ai/provider", async (importOriginal) => {
   return { ...real, getVisionProvider: () => ({ name: "fake", extractJson }) };
 });
 
-vi.mock("@/lib/pdf-pages", () => ({
-  checkPageLimit: async () => ({ ok: true, pages: 1 }),
-}));
+// importOriginal keeps countPdfPages (the D44 fence uses it) — the STATE §6
+// trap: a vi.mock that misses a newly-imported export 500s the whole file.
+vi.mock("@/lib/pdf-pages", async (importOriginal) => {
+  const real = await importOriginal<typeof import("@/lib/pdf-pages")>();
+  return { ...real, checkPageLimit: async () => ({ ok: true, pages: 1 }) };
+});
 
 vi.mock("@/lib/glossary-server", () => ({ loadGlossary: async () => [] }));
 vi.mock("@/lib/record-upload", () => ({ recordUpload: async () => {} }));

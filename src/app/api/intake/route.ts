@@ -34,7 +34,8 @@ import { extractLedgerPrompt } from "@/prompts/extract-ledger";
 import { extractConstitutionPrompt } from "@/prompts/extract-constitution";
 import { dayIsoMalaysia } from "@/lib/history";
 import { recordUpload } from "@/lib/record-upload";
-import { checkPageLimit } from "@/lib/pdf-pages";
+import { chargeFence, refundFence } from "@/lib/fence";
+import { checkPageLimit, countPdfPages } from "@/lib/pdf-pages";
 import { ROUTE_AI_DEADLINE_MS, VendorTimeoutError } from "@/lib/ai/http";
 import { vendorFailureResponse } from "@/lib/ai/vendor-failure";
 import { isOfficeFile, officeFileToText } from "@/lib/office-text";
@@ -201,6 +202,23 @@ export async function POST(req: Request) {
     if (!gate.ok) {
       return NextResponse.json(gate.body, { status: gate.status });
     }
+
+    // D44 fence: lifetime 20 AI-read pages on the free plan (photo = 1,
+    // Office file = 1 — its text is bounded by the converter's own cap).
+    // Refunded on every path where the person ends up with nothing, including
+    // "unknown kind": the forced re-send will charge the same file again.
+    const pageCount = officeFile
+      ? 1
+      : file.type === "application/pdf"
+        ? ((await countPdfPages(bytes)) ?? 1)
+        : 1;
+    const fenceGate = await chargeFence(gate.org, { pages: pageCount });
+    if (!fenceGate.ok) {
+      await refundUsage(gate.org.id, gate.charges[0]);
+      return NextResponse.json(fenceGate.body, { status: fenceGate.status });
+    }
+    const fenceCharge = fenceGate.charge;
+
     const orgName = gate.org.name;
     const todayIso = dayIsoMalaysia(new Date().toISOString())!;
     // F-10: an Office file reaches the model as LABELLED TEXT, not an image.
@@ -250,10 +268,14 @@ export async function POST(req: Request) {
         // instead of an answer is the one thing a refund means). Until tonight
         // this path both kept the charge and swallowed the error.
         await refundUsage(gate.org.id, gate.charges[0]);
+        await refundFence(fenceCharge);
         return vendorFailureResponse("/api/intake", e, gate.org.id);
       }
 
       if (!classification || !isHandled(classification.kind)) {
+        // The forced re-send with kind= will charge these pages again —
+        // one file must not cost its pages twice.
+        await refundFence(fenceCharge);
         // Honest outcome, not a guess: we know we could not place this page.
         // The classify action is still charged — the model did run. The box
         // turns this into a question ("is it minutes, a ledger page, or the
@@ -300,6 +322,8 @@ export async function POST(req: Request) {
       if (forcedKind) {
         await refundUsage(gate.org.id, gate.charges[0]);
       }
+      // Nothing was read — the fence pages go back on both branches.
+      await refundFence(fenceCharge);
       return NextResponse.json(
         {
           kind,
@@ -329,11 +353,14 @@ export async function POST(req: Request) {
       // telling someone their month is used up when they should simply retry is a
       // dead end. (Found in review, 2026-07-28.)
       if (!(e instanceof QuotaExceededError)) {
+        await refundFence(fenceCharge);
         return NextResponse.json(
           { error: joinUserError(USER_ERRORS.serverError) },
           { status: 500 },
         );
       }
+      // The extract never ran; the pages go back with it.
+      await refundFence(fenceCharge);
       // Quota ran out between the two charges: tell them the file was recognised
       // so the classify action was not wasted from their point of view.
       return NextResponse.json(
@@ -402,6 +429,7 @@ export async function POST(req: Request) {
       // P-1: and the failure is recorded — `catch {}` is how app_errors stayed
       // at 0 rows through the id=5 incident.
       await refundUsage(gate.org.id, extractCharge);
+      await refundFence(fenceCharge);
       return vendorFailureResponse("/api/intake", e, gate.org.id);
     }
 
@@ -431,6 +459,7 @@ ${issues}`,
         // through to "could not read"; every path refunds.
         if (e instanceof VendorTimeoutError || e instanceof VendorOutputTruncatedError) {
           await refundUsage(gate.org.id, extractCharge);
+          await refundFence(fenceCharge);
           return vendorFailureResponse("/api/intake", e, gate.org.id);
         }
         void captureAppError("/api/intake", e, { orgId: gate.org.id });
@@ -444,6 +473,7 @@ ${issues}`,
       // /api/extract-minutes. The classify action stays charged: the file WAS
       // recognised.
       await refundUsage(gate.org.id, extractCharge);
+      await refundFence(fenceCharge);
       return NextResponse.json(
         { kind, error: joinUserError(USER_ERRORS.aiCouldNotRead) },
         { status: 422 },

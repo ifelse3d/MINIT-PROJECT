@@ -88,6 +88,9 @@ echo    29.  20260907000000  rekod terus masuk DB + resit v8 (baiki serahan berg
 echo         record-to-DB + receipts v8 (fixes the double hand-over bug)
 echo    30.  20260908000000  nama minit + log pindaan + gambar asal
 echo         minutes title + edit log + source-photo links (28/8 review)
+echo    31.  20260909000000  pagar pelan percuma / the free fence (D44)
+echo         5 dokumen, 20 resit, 20 muka surat, 3 muat turun bersih
+echo         + org 15/58/91 jadi Standard (org anda sendiri / your own orgs)
 echo.
 echo     0.  Keluar / Quit
 echo.
@@ -124,6 +127,7 @@ if "%pick%"=="27" set f=20260905000000_record_times_and_custody_batches.sql& got
 if "%pick%"=="28" set f=20260906000000_custody_ids_glossary_langs_templates.sql& goto copy
 if "%pick%"=="29" set f=20260907000000_register_rows_and_receipts_v8.sql& goto copy
 if "%pick%"=="30" set f=20260908000000_minutes_title_edits_photos.sql& goto copy
+if "%pick%"=="31" set f=20260909000000_free_fence.sql& goto copy
 
 echo.
 echo    Nombor tak sah / not a valid number.

@@ -16,7 +16,8 @@ import { parseLedgerExtraction } from "@/lib/extraction";
 import { extractLedgerPrompt } from "@/prompts/extract-ledger";
 import { dayIsoMalaysia } from "@/lib/history";
 import { recordUpload } from "@/lib/record-upload";
-import { checkPageLimit } from "@/lib/pdf-pages";
+import { chargeFence, refundFence } from "@/lib/fence";
+import { checkPageLimit, countPdfPages } from "@/lib/pdf-pages";
 import { ROUTE_AI_DEADLINE_MS, VendorTimeoutError } from "@/lib/ai/http";
 import { vendorFailureResponse } from "@/lib/ai/vendor-failure";
 
@@ -91,6 +92,17 @@ export async function POST(req: Request) {
       return NextResponse.json(gate.body, { status: gate.status });
     }
 
+    // D44 fence: the free plan's AI reading is a LIFETIME 20 pages (1 photo =
+    // 1 page). Charged with the action; refunded wherever the action is.
+    const pageCount =
+      photo.type === "application/pdf" ? ((await countPdfPages(bytes)) ?? 1) : 1;
+    const fenceGate = await chargeFence(gate.org, { pages: pageCount });
+    if (!fenceGate.ok) {
+      await refundUsage(gate.org.id, gate.charges[0]);
+      return NextResponse.json(fenceGate.body, { status: fenceGate.status });
+    }
+    const fenceCharge = fenceGate.charge;
+
     // 2026-07-28 audit: the organisation name used to come from the multipart
     // FORM, i.e. from the browser, and was then interpolated straight into the
     // LLM prompt — a prompt-injection surface for no benefit at all, since the
@@ -127,6 +139,7 @@ export async function POST(req: Request) {
       // and until 2026-08-20 it was the only one that charged for failing.
       // P-1: the failure is also recorded now (app_errors) — see id=5.
       await refundUsage(gate.org.id, gate.charges[0]);
+      await refundFence(fenceCharge);
       return vendorFailureResponse("/api/extract-ledger", e, gate.org.id);
     }
 
@@ -156,6 +169,7 @@ ${issues}`;
         // means "split the file". Both refund.
         if (e instanceof VendorTimeoutError || e instanceof VendorOutputTruncatedError) {
           await refundUsage(gate.org.id, gate.charges[0]);
+          await refundFence(fenceCharge);
           return vendorFailureResponse("/api/extract-ledger", e, gate.org.id);
         }
         void captureAppError("/api/extract-ledger", e, { orgId: gate.org.id });
@@ -167,6 +181,7 @@ ${issues}`;
       // Two attempts, nothing readable came back: the person is left with
       // nothing, so they keep their credit (rule 10).
       await refundUsage(gate.org.id, gate.charges[0]);
+      await refundFence(fenceCharge);
       return NextResponse.json(
         {
           error: joinUserError(USER_ERRORS.aiCouldNotRead),

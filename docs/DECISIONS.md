@@ -780,6 +780,48 @@ J 指出瀏覽器分頁的圖示跟 App 裡的 logo 不一樣。查出來的原�
 
 ⚠️ 分頁圖示的快取特別頑固：改完要 Ctrl+Shift+R 兩次或關掉分頁重開才看得到。
 
+### D43 — 全站不准有黑色按鈕，`--primary` 就是品牌紫（2026-08-28，J）
+
+J：「裏面不要有任何黑色的按鈕，都換成紫色的」。根因是 shadcn 預設的
+`--primary` 一直是炭黑而本 repo 從未改過它。定案：`--primary: #7029E5`
+（白字 6.69:1）、深色 `#7C3AED`（5.70:1）；`text-primary` 類文字用途改走
+`var(--v2-primary)`（填充紫當文字在深色卡上看不見）。src 裡的 `bg-black`
+全是遮罩／燈箱底，不是按鈕，一個都沒動。驗證工具
+`scripts/shots-no-black-buttons.mjs` 逐頁檢查實際背景色。
+（本條做在 2026-08-28 下午場，當時漏了補進這份檔，2026-08-28 晚補記。）
+
+### D44 — 免費圍欄：終身 5 份文件・20 張收據・20 頁・3 次乾淨下載（2026-08-28，J）
+
+J 的原話拆出來的四條圍欄，全部**終身制**（用完不重置；刪掉東西**不退次數**
+——數的是「做過」，不是「現存」）：
+
+| 圍欄 | 免費版 | 計數點 |
+|---|---|---|
+| 文件 | **5 份** | 會議記錄保存進歷史＋文件包（AGM/財報/銀行摘錄/e-Invois）的**乾淨**產出 |
+| 收據 | **20 張** | 開立時擋（receipts 表 gap-free 不可刪，count(*) 就是真話） |
+| 上傳 | **20 頁** | AI 讀的頁數：照片 1 張=1 頁、PDF 一頁=1 頁；貼上的文字不算 |
+| 乾淨下載 | **3 次** | 只管文件線；**收據永遠乾淨、永遠不吃這 3 次**（不然送 20 張是假的） |
+
+**「看得到、拿不走」**：免費版所有文件預覽（畫面上的全文、PDF 檢視、打印）
+一律壓 PERCUBAAN 浮水印＋禁複製；乾淨檔只從計次的「乾淨下載」出去。
+截圖擋不住，但截走的也帶浮水印——鎖因此是真的。
+
+- 終身制是 J 自己的理由：「一個月其實也只開 1-2 次會議，只能靠錢記錄那邊賺取」
+  ——按月重置等於永遠用不完；轉付費的引擎是錢區（收據 20 張）。
+- **誰被圍**：不是看 plan 字串（開組織時自選 standard 不算付費）——看
+  `monthly_free_quota > 15`（開通=J 手動 SQL 抬 quota，跟 /settings/plan
+  的「已選未開通」判斷同一條算術）。demo org 永不圍（CONTOH 禁令）。
+- 讀取失敗**開著失敗**（資料庫打嗝不准給付費社團蓋浮水印）；計數失敗
+  **關著失敗**（數不了就不交乾淨檔——跟 AI 計量同一條誠實規則）；
+  fence_charge 不存在（migration 沒套）＝完全照舊（D8）。
+- 廠商沒到達就退頁數（與 ai_usage 退款同義，退款路一一並排）。
+- 上限數字只寫在 `src/lib/plans.ts`（PLANS.trial.fence）；資料庫只記發生過
+  什麼（fence_usage 表＋fence_charge()，migration 20260909000000，內含把
+  J 的 15/58/91 三個 org 標成 standard/quota 100）。
+- 價格仍未定（D12 照舊）——付費按鈕依然是「聯絡我們」。
+- ⚠️ 已知後果，說在前面：章程常常 20–40 頁，免費 20 頁上限＝免費版基本
+  傳不完一本完整章程。這是圍欄在做事，不是 bug；要開口子等 J 說。
+
 ---
 
-*Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C) · D16 appended 2026-08-25 (Stage D) · D17 appended 2026-08-27 (work order 27, the overnight sprint) · D18–D21 appended 2026-08-27 (work order 31 §0, J's post-launch rulings) · D22–D23 appended 2026-08-27 (work order 32 §0, launch-day feedback rulings) · D24–D25 appended 2026-08-27 (the afternoon rulings: violet redesign + BM guard) · D26–D28 appended 2026-08-27 (the launch-evening 20-point list) · D29–D32 appended 2026-08-28 (the two-review session: prompt unfreeze, attendance gate, funds page, record-to-DB) · D33–D35 appended 2026-08-28 (J's §6 answers + the new seven: PdpaNote deleted, per-part AI discussion, minutes named/printable/editable/photo-linked) · D36–D37 appended 2026-08-28 evening (the eight-item round: save lands on the finished document, saved workspaces clear themselves, AI may merge like items under checkMergedFacts) · D38–D40 appended 2026-08-28 (the design pass: one five-step radius scale shifted a notch, the canvas gradient that was being painted and covered, the four rebuilt home cards and the sign-in brand panel) · D41–D42 appended 2026-08-28 (J's review of it: no piggy bank and a standing check on imagery for every community, and one brand mark that both the page and the icon files are generated from)*
+*Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C) · D16 appended 2026-08-25 (Stage D) · D17 appended 2026-08-27 (work order 27, the overnight sprint) · D18–D21 appended 2026-08-27 (work order 31 §0, J's post-launch rulings) · D22–D23 appended 2026-08-27 (work order 32 §0, launch-day feedback rulings) · D24–D25 appended 2026-08-27 (the afternoon rulings: violet redesign + BM guard) · D26–D28 appended 2026-08-27 (the launch-evening 20-point list) · D29–D32 appended 2026-08-28 (the two-review session: prompt unfreeze, attendance gate, funds page, record-to-DB) · D33–D35 appended 2026-08-28 (J's §6 answers + the new seven: PdpaNote deleted, per-part AI discussion, minutes named/printable/editable/photo-linked) · D36–D37 appended 2026-08-28 evening (the eight-item round: save lands on the finished document, saved workspaces clear themselves, AI may merge like items under checkMergedFacts) · D38–D40 appended 2026-08-28 (the design pass: one five-step radius scale shifted a notch, the canvas gradient that was being painted and covered, the four rebuilt home cards and the sign-in brand panel) · D41–D42 appended 2026-08-28 (J's review of it: no piggy bank and a standing check on imagery for every community, and one brand mark that both the page and the icon files are generated from) · D43–D44 appended 2026-08-28 night (no black buttons — the primary token is brand purple; and the free fence: lifetime 5 documents · 20 receipts · 20 pages · 3 clean downloads, watermarked previews, clean files only through counted doors)*

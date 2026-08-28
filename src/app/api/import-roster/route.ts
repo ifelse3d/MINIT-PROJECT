@@ -9,7 +9,8 @@ import {
 import { getVisionProvider } from "@/lib/ai/provider";
 import { createUsageRecorder, refundUsage, requireAiQuota } from "@/lib/ai/usage";
 import { readRosterPrompt } from "@/prompts/read-roster";
-import { checkPageLimit } from "@/lib/pdf-pages";
+import { chargeFence, refundFence } from "@/lib/fence";
+import { checkPageLimit, countPdfPages } from "@/lib/pdf-pages";
 import { ROUTE_AI_DEADLINE_MS } from "@/lib/ai/http";
 import { vendorFailureResponse } from "@/lib/ai/vendor-failure";
 
@@ -112,6 +113,21 @@ export async function POST(req: Request) {
     const gate = await requireAiQuota(["import_roster"], { cap: "upload" });
     if (!gate.ok) return NextResponse.json(gate.body, { status: gate.status });
 
+    // D44 fence: lifetime 20 AI-read pages on the free plan. Pasted TEXT is
+    // not an upload — only the file path spends pages.
+    const pageCount =
+      hasFile && bytes
+        ? file.type === "application/pdf"
+          ? ((await countPdfPages(bytes)) ?? 1)
+          : 1
+        : 0;
+    const fenceGate = await chargeFence(gate.org, { pages: pageCount });
+    if (!fenceGate.ok) {
+      await refundUsage(gate.org.id, gate.charges[0]);
+      return NextResponse.json(fenceGate.body, { status: fenceGate.status });
+    }
+    const fenceCharge = fenceGate.charge;
+
     const provider = getVisionProvider("extract");
     const onUsage = createUsageRecorder(gate.org.id, gate.charges[0]);
 
@@ -138,12 +154,14 @@ export async function POST(req: Request) {
     } catch (e) {
       // P-1: the failure is also recorded now (app_errors) — see id=5.
       await refundUsage(gate.org.id, gate.charges[0]);
+      await refundFence(fenceCharge);
       return vendorFailureResponse("/api/import-roster", e, gate.org.id);
     }
 
     const parsed = rosterSchema.safeParse(raw);
     if (!parsed.success || parsed.data.rows.length === 0) {
       await refundUsage(gate.org.id, gate.charges[0]);
+      await refundFence(fenceCharge);
       return NextResponse.json(
         {
           error: joinUserError(

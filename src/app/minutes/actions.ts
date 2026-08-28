@@ -19,6 +19,7 @@
 import { getSupabaseServer, getSessionUser } from "@/db/supabase-server";
 import { indexMinutesDocInBackground } from "@/lib/ai/minutes-index";
 import { getActiveOrg } from "@/lib/active-org";
+import { chargeFence, refundFence } from "@/lib/fence";
 import { getDocumentIdentity } from "@/lib/doc-identity";
 import { parseMeetingNotesExtraction } from "@/lib/extraction";
 import { normaliseMeetingType } from "@/lib/meeting-types";
@@ -227,6 +228,16 @@ export async function saveConfirmedMinutes(input: {
     }
   }
 
+  // D44 fence: saving a set of minutes into history IS "making a document" —
+  // the free plan covers 5, lifetime. Charged after the idempotency
+  // short-circuit (re-saving the same confirmation is never charged twice);
+  // refunded below on every path where nothing new was stored.
+  const fenceGate = await chargeFence(active, { docs: 1 });
+  if (!fenceGate.ok) {
+    return { error: fenceGate.body.error, ok: false };
+  }
+  const fenceCharge = fenceGate.charge;
+
   const customLabel = (extraction.meeting_type_label ?? "").trim();
   const row: Record<string, unknown> = {
     org_id: active.id,
@@ -302,6 +313,9 @@ export async function saveConfirmedMinutes(input: {
       .eq("org_id", active.id)
       .eq("client_id", clientId)
       .maybeSingle();
+    // The concurrent twin's insert won — ONE document exists, and the twin's
+    // save charged for it. This charge bought nothing; give it back.
+    await refundFence(fenceCharge);
     return { error: null, ok: true, id: winner?.id ? Number(winner.id) : null };
   }
 
@@ -315,6 +329,7 @@ export async function saveConfirmedMinutes(input: {
       error.code === "23514" ||
       error.code === "42703" ||
       /meeting_type/i.test(error.message ?? "");
+    await refundFence(fenceCharge); // nothing was stored
     return {
       error: behind
         ? joinUserError(USER_ERRORS.databaseBehind)

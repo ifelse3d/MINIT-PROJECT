@@ -13,7 +13,8 @@ import { parseMeetingNotesExtraction } from "@/lib/extraction";
 import { extractMeetingNotesPrompt } from "@/prompts/extract-meeting-notes";
 import { untrustedBlock } from "@/prompts/untrusted";
 import { dayIsoMalaysia } from "@/lib/history";
-import { checkPageLimit } from "@/lib/pdf-pages";
+import { chargeFence, refundFence } from "@/lib/fence";
+import { checkPageLimit, countPdfPages } from "@/lib/pdf-pages";
 import { recordUpload } from "@/lib/record-upload";
 import { glossaryPromptBlockForReading } from "@/lib/glossary";
 import { loadGlossary } from "@/lib/glossary-server";
@@ -96,6 +97,18 @@ export async function POST(req: Request) {
       return NextResponse.json(gate.body, { status: gate.status });
     }
 
+    // D44 fence: the free plan's AI reading is a LIFETIME 20 pages (1 photo =
+    // 1 page). Charged with the action; refunded wherever the action is —
+    // a failed read must not eat pages twice on the retry.
+    const pageCount =
+      photo.type === "application/pdf" ? ((await countPdfPages(bytes)) ?? 1) : 1;
+    const fenceGate = await chargeFence(gate.org, { pages: pageCount });
+    if (!fenceGate.ok) {
+      await refundUsage(gate.org.id, gate.charges[0]);
+      return NextResponse.json(fenceGate.body, { status: fenceGate.status });
+    }
+    const fenceCharge = fenceGate.charge;
+
     // 2026-07-28 audit: the organisation name used to come from the multipart
     // FORM, i.e. from the browser, and was then interpolated straight into the
     // LLM prompt — a prompt-injection surface for no benefit at all, since the
@@ -152,6 +165,7 @@ export async function POST(req: Request) {
       // P-1: the failure is also RECORDED now — `catch {}` here is how the
       // ai_usage id=5 incident left app_errors at 0 rows.
       await refundUsage(gate.org.id, gate.charges[0]);
+      await refundFence(fenceCharge);
       return vendorFailureResponse("/api/extract-minutes", e, gate.org.id);
     }
 
@@ -183,6 +197,7 @@ ${issues}`;
         // through to "could not read"; every path refunds.
         if (e instanceof VendorTimeoutError || e instanceof VendorOutputTruncatedError) {
           await refundUsage(gate.org.id, gate.charges[0]);
+          await refundFence(fenceCharge);
           return vendorFailureResponse("/api/extract-minutes", e, gate.org.id);
         }
         void captureAppError("/api/extract-minutes", e, { orgId: gate.org.id });
@@ -194,6 +209,7 @@ ${issues}`;
       // Two attempts, nothing readable came back: the person is left with
       // nothing, so they keep their credit (rule 10).
       await refundUsage(gate.org.id, gate.charges[0]);
+      await refundFence(fenceCharge);
       return NextResponse.json(
         {
           error: joinUserError(USER_ERRORS.aiCouldNotRead),

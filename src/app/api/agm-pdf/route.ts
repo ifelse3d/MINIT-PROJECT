@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
 import { z } from "zod";
 import { buildAgmPackPdf } from "@/lib/agm-pdf";
+import { getActiveOrg } from "@/lib/active-org";
+import { chargeFence, getFenceLimits } from "@/lib/fence";
+import { stampFenceWatermark } from "@/lib/fence-watermark";
 import { getDocumentIdentity, NOT_SIGNED_IN } from "@/lib/doc-identity";
 import { loadFilingRoster } from "@/app/minutes/roster-actions";
 import { sampleAgmPackParams } from "@/lib/sample-roster";
@@ -25,6 +28,10 @@ import { sampleAgmPackParams } from "@/lib/sample-roster";
 
 const bodySchema = z.object({
   sample: z.boolean().optional(),
+  /** D44: a fenced org asks for the clean (no-watermark) file explicitly —
+   *  it spends one lifetime document + one clean download. Ignored (always
+   *  clean) for paid orgs and for the sample. */
+  clean: z.boolean().optional(),
   year: z.number().int().min(2000).max(2100).optional(),
   meetingDateIso: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   meetingTimeText: z.string().min(1).max(60).optional(),
@@ -87,6 +94,17 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
+  // D44 fence — decided BEFORE the (expensive) build so a blocked clean
+  // request costs nothing. The sample path above is deliberately outside the
+  // fence: CONTOH 禁令, the demo never blocks anybody.
+  const active = await getActiveOrg().catch(() => null); // cached; identity already resolved it
+  const fenceLimits = active ? await getFenceLimits(active) : null;
+  if (fenceLimits && facts.clean === true && active) {
+    // A clean pack export is both "making a document" and "taking it out".
+    const fence = await chargeFence(active, { docs: 1, downloads: 1 });
+    if (!fence.ok) return NextResponse.json(fence.body, { status: fence.status });
+  }
+
   const bytes = await buildAgmPackPdf(
     {
       year: facts.year,
@@ -109,7 +127,11 @@ export async function POST(request: Request): Promise<Response> {
     },
     { sample: false },
   );
-  return pdfResponse(bytes, `pek-agm-${facts.year}.pdf`);
+  const out =
+    fenceLimits && facts.clean !== true
+      ? await stampFenceWatermark(new Uint8Array(bytes))
+      : bytes;
+  return pdfResponse(out, `pek-agm-${facts.year}.pdf`);
 }
 
 function pdfResponse(bytes: Uint8Array, filename: string): Response {

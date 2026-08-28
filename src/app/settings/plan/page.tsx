@@ -3,6 +3,7 @@ import { Tri } from "@/components/language-provider";
 import { getSupabase } from "@/db/supabase";
 import { getActiveOrg } from "@/lib/active-org";
 import { getUsage } from "@/lib/ai/usage";
+import { getFenceState } from "@/lib/fence";
 import { PLANS, PLAN_ORDER, planById, type Plan } from "@/lib/plans";
 import { UsageBar } from "@/components/usage-bar";
 import { loadUsageByPerson } from "../usage-by-person";
@@ -67,12 +68,14 @@ export default async function PlanPage() {
     );
   }
 
-  const [plan, usage, usageByPerson] = await Promise.all([
+  const [plan, usage, usageByPerson, fenceState] = await Promise.all([
     loadPlan(active.id),
     getUsage(active.id).catch(() => null),
     // K-2's by-member split — lived on the old long /settings page; since the
     // §1-13 split it belongs here with the rest of the usage story.
     loadUsageByPerson(active.id),
+    // D44: the free fence's lifetime meters. null = this org is not fenced.
+    getFenceState(active).catch(() => null),
   ]);
   const contactEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "";
 
@@ -170,6 +173,52 @@ export default async function PlanPage() {
           )}
       </div>
 
+      {/* D44: the free fence's lifetime meters — only for fenced orgs. */}
+      {fenceState && (
+        <div className="v2-glass flex flex-col gap-3 p-5">
+          <p className="text-base font-semibold">
+            <Tri
+              bm="Had pelan percuma (seumur hidup, tidak reset)"
+              zh="免费版额度（终身计算，不会重置）"
+              en="Free-plan limits (lifetime, never reset)"
+            />
+          </p>
+          <div className="grid gap-2 text-base sm:grid-cols-2">
+            <p>
+              <Tri bm="Dokumen dibuat" zh="已做文件" en="Documents made" />:{" "}
+              <span className="font-semibold tabular-nums">
+                {fenceState.counters.docsMade} / {fenceState.limits.docsMade}
+              </span>
+            </p>
+            <p>
+              <Tri bm="Resit dikeluarkan" zh="已开收据" en="Receipts issued" />:{" "}
+              <span className="font-semibold tabular-nums">
+                {fenceState.counters.receipts} / {fenceState.limits.receipts}
+              </span>
+            </p>
+            <p>
+              <Tri bm="Muka surat dibaca AI" zh="AI 已读页数" en="AI-read pages" />:{" "}
+              <span className="font-semibold tabular-nums">
+                {fenceState.counters.pagesUploaded} / {fenceState.limits.uploadPages}
+              </span>
+            </p>
+            <p>
+              <Tri bm="Muat turun bersih" zh="干净下载" en="Clean downloads" />:{" "}
+              <span className="font-semibold tabular-nums">
+                {fenceState.counters.cleanDownloads} / {fenceState.limits.cleanDownloads}
+              </span>
+            </p>
+          </div>
+          <p className="text-sm text-[color:var(--v2-text-soft)]">
+            <Tri
+              bm="Paparan dokumen pada pelan percuma bertera air; fail bersih keluar melalui muat turun yang dikira di atas. Resit sentiasa bersih. Memadam dokumen tidak memulangkan kiraan."
+              zh="免费版看到的文件都带水印；干净文件走上面计次的下载。收据永远是干净的。删掉东西不会退回次数。"
+              en="On the free plan, document views are watermarked; clean files leave through the counted downloads above. Receipts are always clean. Deleting things does not give counts back."
+            />
+          </p>
+        </div>
+      )}
+
       {/* Comparison table */}
       <div className="v2-glass overflow-x-auto p-0">
         <table className="w-full text-base">
@@ -202,6 +251,49 @@ export default async function PlanPage() {
                 {PLAN_ORDER.map((id) => (
                   <td key={id} className="px-4 py-3 tabular-nums">
                     {featureCell(PLANS[id], row.key)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+            {/* D44: the fence rows — what "free vs paid" concretely means. */}
+            {(
+              [
+                {
+                  key: "docsMade",
+                  bm: "Dokumen (seumur hidup)",
+                  zh: "文件数（终身）",
+                  en: "Documents (lifetime)",
+                },
+                {
+                  key: "receipts",
+                  bm: "Resit bernombor (seumur hidup)",
+                  zh: "编号收据（终身）",
+                  en: "Numbered receipts (lifetime)",
+                },
+                {
+                  key: "uploadPages",
+                  bm: "Muka surat bacaan AI (seumur hidup)",
+                  zh: "AI 可读页数（终身）",
+                  en: "AI-read pages (lifetime)",
+                },
+                {
+                  key: "cleanDownloads",
+                  bm: "Muat turun bersih (seumur hidup)",
+                  zh: "干净下载（终身）",
+                  en: "Clean downloads (lifetime)",
+                },
+              ] as const
+            ).map((row) => (
+              <tr
+                key={row.key}
+                className="border-b border-[color:var(--v2-border)]"
+              >
+                <td className="px-4 py-3 text-[color:var(--v2-text-soft)]">
+                  <Tri bm={row.bm} zh={row.zh} en={row.en} />
+                </td>
+                {PLAN_ORDER.map((id) => (
+                  <td key={id} className="px-4 py-3 tabular-nums">
+                    {PLANS[id].fence ? PLANS[id].fence[row.key] : "∞"}
                   </td>
                 ))}
               </tr>

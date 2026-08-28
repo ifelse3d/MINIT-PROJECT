@@ -3,6 +3,8 @@ import { getSupabaseServer, getSessionUser } from "@/db/supabase-server";
 import { getActiveOrg } from "@/lib/active-org";
 import { buildMinutesPdf } from "@/lib/minutes-pdf";
 import { captureAppError } from "@/lib/app-errors";
+import { chargeFence, getFenceLimits } from "@/lib/fence";
+import { stampFenceWatermark } from "@/lib/fence-watermark";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
 
 // ---------------------------------------------------------------------------
@@ -75,17 +77,39 @@ export async function GET(request: Request): Promise<Response> {
       );
     }
 
-    const bytes = await buildMinutesPdf({
-      finalMd: row.final_md,
-      title: row.title ?? null,
-    });
+    let bytes: Uint8Array = new Uint8Array(
+      await buildMinutesPdf({
+        finalMd: row.final_md,
+        title: row.title ?? null,
+      }),
+    );
+
+    // D44 fence: a free org VIEWS and PRINTS this for free — watermarked.
+    // The clean file (the one eROSES's upload slot takes) leaves only through
+    // ?clean=1, which spends one of the plan's lifetime clean downloads.
+    const wantClean =
+      new URL(request.url).searchParams.get("clean") === "1";
+    const fenceLimits = await getFenceLimits(active);
+    let disposition = "inline";
+    if (fenceLimits) {
+      if (wantClean) {
+        const fence = await chargeFence(active, { downloads: 1 });
+        if (!fence.ok) {
+          return NextResponse.json(fence.body, { status: fence.status });
+        }
+        disposition = "attachment"; // a counted download IS a download
+      } else {
+        bytes = await stampFenceWatermark(bytes);
+      }
+    }
+
     const datePart = row.meeting_date ?? String(id);
     return new Response(new Uint8Array(bytes), {
       headers: {
         "Content-Type": "application/pdf",
         // inline: opens in the browser's viewer, where Print lives; the same
         // viewer's Save button produces the file eROSES's upload slot takes.
-        "Content-Disposition": `inline; filename="minit-${datePart}.pdf"`,
+        "Content-Disposition": `${disposition}; filename="minit-${datePart}.pdf"`,
         "Cache-Control": "no-store",
       },
     });

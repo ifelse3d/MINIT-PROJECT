@@ -73,6 +73,7 @@ const probes = [
   ["20260908000000 minutes title", "minutes_docs", "title"],
   ["20260908000000 minutes edit log", "minutes_docs", "edited_at"],
   ["20260908000000 minutes photo links", "minutes_docs", "photo_paths"],
+  ["20260909000000 free fence counters (D44)", "fence_usage", "docs_made"],
 ];
 
 const headers = { apikey: key, Authorization: `Bearer ${key}` };
@@ -124,6 +125,31 @@ for (const [label, table, column] of probes) {
   const body = ok ? "" : (await r.text()).slice(0, 120).replace(/\s+/g, " ");
   console.log(
     `${ok ? "[ APPLIED  ]" : "[ NOT YET  ]"} ${"20260907000000 save_register_rows() RPC".padEnd(46)} rpc/save_register_rows${ok ? "" : "   " + body}`,
+  );
+}
+
+// 2026-08-28 (D44): fence_charge() exists-probe. Called with org_id 0 — that
+// org can never exist, so the FK aborts the transaction and NOTHING is
+// written; any answer except 404/PGRST202 ("function not found") proves the
+// function is there. The table itself is probed in the list above.
+{
+  const r = await fetch(`${url}/rest/v1/rpc/fence_charge`, {
+    method: "POST",
+    headers: { ...headers, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      p_org_id: 0,
+      p_docs: 0,
+      p_pages: 0,
+      p_downloads: 0,
+      p_max_docs: 0,
+      p_max_pages: 0,
+      p_max_downloads: 0,
+    }),
+  });
+  const text = await r.text();
+  const ok = r.status !== 404 && !/PGRST202/.test(text);
+  console.log(
+    `${ok ? "[ APPLIED  ]" : "[ NOT YET  ]"} ${"20260909000000 fence_charge() RPC (D44)".padEnd(46)} rpc/fence_charge${ok ? "" : "   " + text.slice(0, 120).replace(/\s+/g, " ")}`,
   );
 }
 

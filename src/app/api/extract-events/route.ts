@@ -6,6 +6,7 @@ import { recordUpload } from "@/lib/record-upload";
 import { getVisionProvider } from "@/lib/ai/provider";
 import { createUsageRecorder, refundUsage, requireAiQuota } from "@/lib/ai/usage";
 import { parseEventsExtraction } from "@/lib/extraction";
+import { chargeFence, refundFence } from "@/lib/fence";
 import { extractEventsPrompt } from "@/prompts/extract-events";
 import { SAMPLE_ORG_NAME } from "@/lib/sample-data";
 import { dayIsoMalaysia } from "@/lib/history";
@@ -104,6 +105,18 @@ export async function POST(req: Request) {
       return NextResponse.json(gate.body, { status: gate.status });
     }
 
+    // D44 fence: a PHOTO spends one of the free plan's lifetime 20 pages.
+    // Pasted text and spreadsheet/CSV text cost no pages (same rule as the
+    // roster door: text is not an upload page).
+    const fenceGate = await chargeFence(gate.org, {
+      pages: imageBase64 ? 1 : 0,
+    });
+    if (!fenceGate.ok) {
+      await refundUsage(gate.org.id, gate.charges[0]);
+      return NextResponse.json(fenceGate.body, { status: fenceGate.status });
+    }
+    const fenceCharge = fenceGate.charge;
+
     const todayIso = dayIsoMalaysia(new Date().toISOString())!;
     const prompt = extractEventsPrompt({
       orgName: SAMPLE_ORG_NAME,
@@ -123,6 +136,7 @@ export async function POST(req: Request) {
       // A refusal must never eat someone's quota (CLAUDE.md rule 10).
       // P-1: the failure is also recorded now (app_errors) — see id=5.
       await refundUsage(gate.org.id, gate.charges[0]);
+      await refundFence(fenceCharge);
       return vendorFailureResponse("/api/extract-events", e, gate.org.id);
     }
 
@@ -143,6 +157,7 @@ ${issues}`;
         // P-1: a timeout is a timeout — not "rewrite the plan". Both refund.
         if (e instanceof VendorTimeoutError) {
           await refundUsage(gate.org.id, gate.charges[0]);
+          await refundFence(fenceCharge);
           return vendorFailureResponse("/api/extract-events", e, gate.org.id);
         }
         void captureAppError("/api/extract-events", e, { orgId: gate.org.id });
@@ -153,6 +168,7 @@ ${issues}`;
     if (!parsed || !parsed.success) {
       // Two attempts, nothing readable came back: the person keeps the credit.
       await refundUsage(gate.org.id, gate.charges[0]);
+      await refundFence(fenceCharge);
       return NextResponse.json(
         { error: joinUserError(USER_ERRORS.aiCouldNotRead) },
         { status: 422 }

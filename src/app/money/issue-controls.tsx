@@ -36,6 +36,7 @@ export function IssueControls({
     issueBusy,
     issueNotice,
     setIssueNotice,
+    issueFenceMessage,
   } = useRegister();
 
   const [confirmIssue, setConfirmIssue] = useState(false);
@@ -305,6 +306,19 @@ export function IssueControls({
             zh="登记簿里有实物捐赠，但数据库还没更新到支持它（migration 25）。收据没有生成，东西也不会丢 —— 记录安全地等着。请系统管理员跑完那支 migration 再试一次。"
             en="The register contains an in-kind donation, but the database has not been updated for it yet (migration 25). No receipts were issued and nothing is lost — the rows wait safely. Ask whoever runs the system to apply that migration, then try again."
           />
+        </p>
+      )}
+      {issueNotice === "fence" && (
+        <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+          {/* D44: the server's ready trilingual sentence — limit + upgrade
+              path. Nothing was written; the rows wait safely. */}
+          {issueFenceMessage ?? (
+            <Tri
+              bm="Had resit pelan percuma sudah digunakan. Naik taraf di Tetapan → Pelan."
+              zh="免费版的收据额度已用完。请到 设置 → 订阅方案 升级。"
+              en="The free plan's receipt allowance is used up. Upgrade under Settings → Plan."
+            />
+          )}
         </p>
       )}
       {issueNotice === "error" && (

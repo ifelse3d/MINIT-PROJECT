@@ -22,6 +22,22 @@ export const TBD_PRICING = <T>(placeholder: T): T => placeholder;
 
 export type PlanId = "trial" | "standard" | "hq";
 
+/**
+ * The free fence (D44, J's numbers, 2026-08-28). LIFETIME totals — they never
+ * reset, and deleting a document does not give the count back ("數做過的，
+ * 不是數現存的"). `null` on a plan = no fence at all.
+ */
+export type FenceLimits = {
+  /** Official documents made: minutes saved to history + clean pack exports. */
+  docsMade: number;
+  /** Numbered receipts issued (counted from the receipts table itself). */
+  receipts: number;
+  /** Pages the AI has read: 1 photo = 1 page, 1 PDF page = 1 page. */
+  uploadPages: number;
+  /** Clean (no-watermark) document downloads. Receipts never count here. */
+  cleanDownloads: number;
+};
+
 export type Plan = {
   id: PlanId;
   /** Display names, all three languages. */
@@ -39,6 +55,8 @@ export type Plan = {
     /** The month-end e-Invois pack pages. */
     einvois: boolean;
   };
+  /** Lifetime free-fence caps (D44). null = unlimited (paid plans). */
+  fence: FenceLimits | null;
   /** RM/month. null = price not announced yet (all of them, deliberately). */
   priceRm: number | null;
 };
@@ -56,6 +74,10 @@ export const PLANS: Record<PlanId, Plan> = {
     maxRootOrgs: 1,
     maxBranches: null,
     features: { branchHierarchy: false, einvois: true },
+    // DECIDED (J 2026-08-28, D44) — LIFETIME, not monthly: a society only
+    // meets 1-2 times a month, so a monthly reset would never run out. The
+    // conversion engine is the money side (20 receipts), by design.
+    fence: { docsMade: 5, receipts: 20, uploadPages: 20, cleanDownloads: 3 },
     priceRm: null, // free while it lasts; duration TBD
   },
   standard: {
@@ -65,6 +87,7 @@ export const PLANS: Record<PlanId, Plan> = {
     maxRootOrgs: TBD_PRICING(1),
     maxBranches: null,
     features: { branchHierarchy: false, einvois: true },
+    fence: null, // paid = no fence (D44)
     priceRm: null, // TBD_PRICING — announced when costs are measured
   },
   hq: {
@@ -74,6 +97,7 @@ export const PLANS: Record<PlanId, Plan> = {
     maxRootOrgs: TBD_PRICING(1),
     maxBranches: TBD_PRICING(25),
     features: { branchHierarchy: true, einvois: true },
+    fence: null, // paid = no fence (D44)
     priceRm: null, // TBD_PRICING
   },
 };

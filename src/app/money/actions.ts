@@ -22,6 +22,7 @@
 // logged; donor_masked is stored alongside for list views.
 import { getSupabaseServer } from "@/db/supabase-server";
 import { getActiveOrg } from "@/lib/active-org";
+import { checkReceiptFence } from "@/lib/fence";
 import { maskName } from "@/lib/mask";
 import { can } from "@/lib/roles";
 import { containsSampleDonation } from "@/lib/sample-guard";
@@ -84,6 +85,13 @@ export type IssueResult =
        *  (donations.payment_method): it would be stored as cash and start
        *  being chased as "cash in somebody's hands" that never existed. */
       reason: "no_org" | "readonly" | "failed" | "needs_prefix" | "sample" | "db_behind";
+    }
+  | {
+      saved: false;
+      /** D44 — the free plan's 20 lifetime receipts are used up. `message`
+       *  carries the ready trilingual sentence (limit + upgrade path). */
+      reason: "fence";
+      message: string;
     }
   | { saved: true; receiptNos: Record<string, string> };
 
@@ -152,6 +160,14 @@ export async function issueAndSaveReceipts(
   // buttons, but the UI is not the authority — a receipt number is permanent,
   // so the refusal lives here, before anything is written.
   if (containsSampleDonation(rows)) return { saved: false, reason: "sample" };
+
+  // D44 fence: the free plan covers 20 numbered receipts, lifetime — counted
+  // from the receipts table itself (gap-free, never deleted, so count(*) is
+  // the truth). Refused BEFORE the RPC so no numbers are burned finding out.
+  const fence = await checkReceiptFence(active, rows.length);
+  if (!fence.ok) {
+    return { saved: false, reason: "fence", message: fence.body.error };
+  }
 
   const supabase = await getSupabaseServer();
 

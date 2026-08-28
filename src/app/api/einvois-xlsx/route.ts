@@ -4,6 +4,8 @@ import { einvoisXlsxBodySchema } from "@/lib/document-request";
 import { buildMonthEndPack, EInvoisError } from "@/lib/einvois";
 import { buildEInvoisXlsxFiles } from "@/lib/einvois-xlsx";
 import { getSupabaseServer } from "@/db/supabase-server";
+import { getActiveOrg } from "@/lib/active-org";
+import { chargeFence, getFenceLimits } from "@/lib/fence";
 import { getDocumentIdentity, NOT_SIGNED_IN } from "@/lib/doc-identity";
 import type { RegisterDonation } from "@/lib/receipts";
 
@@ -55,6 +57,18 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
   const { month, fileIndex } = parsed.data;
+
+  // D44 fence: an .xlsx cannot carry a watermark, so for a fenced org the
+  // month-end pack is always the clean artifact — one pack export spends one
+  // lifetime document + one clean download. Charged on the FIRST file only:
+  // a >100-donation month splits into several files, and they are one pack.
+  if (fileIndex === 0) {
+    const active = await getActiveOrg().catch(() => null); // cached; identity already resolved it
+    if (active && (await getFenceLimits(active))) {
+      const fence = await chargeFence(active, { docs: 1, downloads: 1 });
+      if (!fence.ok) return NextResponse.json(fence.body, { status: fence.status });
+    }
+  }
 
   const supabase = await getSupabaseServer();
   const query = (select: string) =>

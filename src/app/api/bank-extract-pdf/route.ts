@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
 import { z } from "zod";
 import { buildBankExtractPdf } from "@/lib/agm-pdf";
+import { getActiveOrg } from "@/lib/active-org";
+import { chargeFence, getFenceLimits } from "@/lib/fence";
+import { stampFenceWatermark } from "@/lib/fence-watermark";
 import { getDocumentIdentity, NOT_SIGNED_IN } from "@/lib/doc-identity";
 import { getLatestConfirmedExtraction } from "@/db/agm";
 import { sampleConfirmedMinutes } from "@/lib/sample-roster";
@@ -21,7 +24,12 @@ import { dayIsoMalaysia } from "@/lib/history";
 //     page. The real organisation's letterhead never touches fiction.
 // PDPA (Hard Rule 5): the output carries names — NEVER log it.
 
-const bodySchema = z.object({ sample: z.boolean().optional() });
+const bodySchema = z.object({
+  sample: z.boolean().optional(),
+  /** D44: fenced orgs get a watermarked extract unless they spend a lifetime
+   *  document + clean download on the clean one (a bank only takes clean). */
+  clean: z.boolean().optional(),
+});
 
 /** MinutesForExtract's type set is the classic three; the widened meeting
  *  types (planning, festival, …) print as committee-meeting extracts. */
@@ -49,6 +57,14 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     // --- REAL: the latest CONFIRMED minutes, from the database. ------------
+    // D44 fence — decided before the build; sample above stays outside it.
+    const active = await getActiveOrg().catch(() => null); // cached; identity already resolved it
+    const fenceLimits = active ? await getFenceLimits(active) : null;
+    if (fenceLimits && parsed.data.clean === true && active) {
+      const fence = await chargeFence(active, { docs: 1, downloads: 1 });
+      if (!fence.ok) return NextResponse.json(fence.body, { status: fence.status });
+    }
+
     const confirmed = await getLatestConfirmedExtraction();
     if (!confirmed) {
       return NextResponse.json(
@@ -84,7 +100,11 @@ export async function POST(request: Request): Promise<Response> {
       },
       { sample: false },
     );
-    return pdfResponse(bytes, `petikan-bank-${e.meeting_date.value || "minit"}.pdf`);
+    const out =
+      fenceLimits && parsed.data.clean !== true
+        ? await stampFenceWatermark(new Uint8Array(bytes))
+        : bytes;
+    return pdfResponse(out, `petikan-bank-${e.meeting_date.value || "minit"}.pdf`);
   } catch (err) {
     // buildBankResolutionExtractBm refuses (draft / no signatory resolution)
     // by throwing — the refusal reason is a user-facing sentence.

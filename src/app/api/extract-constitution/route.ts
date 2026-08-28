@@ -14,7 +14,8 @@ import { createUsageRecorder, refundUsage, requireAiQuota } from "@/lib/ai/usage
 import { parseConstitutionExtraction } from "@/lib/extraction";
 import { extractConstitutionPrompt } from "@/prompts/extract-constitution";
 import { recordUpload } from "@/lib/record-upload";
-import { checkPageLimit } from "@/lib/pdf-pages";
+import { chargeFence, refundFence } from "@/lib/fence";
+import { checkPageLimit, countPdfPages } from "@/lib/pdf-pages";
 import { ROUTE_AI_DEADLINE_MS, VendorTimeoutError } from "@/lib/ai/http";
 import { vendorFailureResponse } from "@/lib/ai/vendor-failure";
 
@@ -107,6 +108,18 @@ export async function POST(req: Request) {
       return NextResponse.json(gate.body, { status: gate.status });
     }
 
+    // D44 fence: the free plan's AI reading is a LIFETIME 20 pages — which a
+    // full constitution alone can exceed. That is the fence working, not a
+    // bug: the refusal names the limit and the upgrade path.
+    const pageCount =
+      file.type === "application/pdf" ? ((await countPdfPages(bytes)) ?? 1) : 1;
+    const fenceGate = await chargeFence(gate.org, { pages: pageCount });
+    if (!fenceGate.ok) {
+      await refundUsage(gate.org.id, gate.charges[0]);
+      return NextResponse.json(fenceGate.body, { status: fenceGate.status });
+    }
+    const fenceCharge = fenceGate.charge;
+
     const imageBase64 = Buffer.from(bytes).toString("base64");
     const prompt = extractConstitutionPrompt({ orgName: gate.org.name });
     // A constitution can run to 30+ pages — the one genuinely expensive job.
@@ -138,6 +151,7 @@ export async function POST(req: Request) {
       // for a failed read hurt most exactly here.
       // P-1: the failure is also recorded now (app_errors) — see id=5.
       await refundUsage(gate.org.id, gate.charges[0]);
+      await refundFence(fenceCharge);
       return vendorFailureResponse("/api/extract-constitution", e, gate.org.id);
     }
 
@@ -167,6 +181,7 @@ ${issues}`;
         // means "split the file", not "retake the photo". Both refund.
         if (e instanceof VendorTimeoutError || e instanceof VendorOutputTruncatedError) {
           await refundUsage(gate.org.id, gate.charges[0]);
+          await refundFence(fenceCharge);
           return vendorFailureResponse("/api/extract-constitution", e, gate.org.id);
         }
         void captureAppError("/api/extract-constitution", e, { orgId: gate.org.id });
@@ -177,6 +192,7 @@ ${issues}`;
     if (!parsed || !parsed.success) {
       // Two attempts, nothing readable came back: the person keeps the credit.
       await refundUsage(gate.org.id, gate.charges[0]);
+      await refundFence(fenceCharge);
       return NextResponse.json(
         { error: joinUserError(USER_ERRORS.aiCouldNotRead) },
         { status: 422 },

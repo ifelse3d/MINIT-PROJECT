@@ -4,6 +4,7 @@ import {
   listConfirmedMinutes,
 } from "@/db/minutes-list";
 import { getActiveOrg } from "@/lib/active-org";
+import { getFenceState } from "@/lib/fence";
 import { readOrgTypeFlags } from "@/lib/org-flags";
 import { buildFinancialStatement } from "@/lib/financial-statement";
 import { dayIsoMalaysia } from "@/lib/history";
@@ -83,6 +84,9 @@ export default async function FilingsPage({
     }
   }
 
+  // D44: null = paid org, the view stays exactly as it was.
+  const fenceState = active ? await getFenceState(active) : null;
+
   return (
     <FilingsView
       agm={agm}
@@ -91,6 +95,9 @@ export default async function FilingsPage({
       orgType={orgType}
       finance={finance}
       filingRoster={filingRoster}
+      fence={
+        fenceState ? { downloadsRemaining: fenceState.remaining.downloads } : null
+      }
     />
   );
 }

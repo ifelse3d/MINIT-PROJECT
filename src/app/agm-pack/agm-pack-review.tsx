@@ -52,12 +52,16 @@ export function AgmPackReview({
   mode,
   roster,
   confirmedResolutions,
+  fence = null,
 }: {
   mode: "real" | "sample";
   /** The DATABASE roster (display names) — [] = none recorded yet. */
   roster: { position: string; personName: string }[];
   /** Resolutions of the latest CONFIRMED minutes, or null when none exist. */
   confirmedResolutions: string[] | null;
+  /** D44: non-null = free (fenced) org. The default download is watermarked
+   *  and free; the clean file spends 1 lifetime document + 1 clean download. */
+  fence?: { docsRemaining: number; downloadsRemaining: number } | null;
 }) {
   const t = useTriText();
   const todayIso = dayIsoMalaysia(new Date().toISOString())!;
@@ -84,7 +88,7 @@ export function AgmPackReview({
     [mode, confirmedResolutions],
   );
 
-  async function downloadPack() {
+  async function downloadPack(clean = false) {
     setError(null);
     setBusy("pack");
     try {
@@ -99,6 +103,8 @@ export function AgmPackReview({
             meetingTimeText: timeText.trim(),
             venue: venue.trim(),
             noticePeriodDays: NOTICE_DAYS_DEFAULT,
+            // D44: on a fenced org the clean file is the counted door.
+            ...(clean ? { clean: true } : {}),
           },
           `pek-agm-${year}.pdf`,
         );
@@ -110,13 +116,13 @@ export function AgmPackReview({
     }
   }
 
-  async function downloadBankExtract() {
+  async function downloadBankExtract(clean = false) {
     setError(null);
     setBusy("bank");
     try {
       await downloadFromApi(
         "/api/bank-extract-pdf",
-        mode === "sample" ? { sample: true } : {},
+        mode === "sample" ? { sample: true } : clean ? { clean: true } : {},
         "petikan-bank.pdf",
       );
     } catch (e) {
@@ -125,6 +131,17 @@ export function AgmPackReview({
       setBusy(null);
     }
   }
+
+  /** D44: one line on what a clean export costs, shown beside the buttons. */
+  const fenceCostNote = fence ? (
+    <span className="text-sm text-[color:var(--v2-text-soft)]">
+      <Tri
+        bm={`Pelan percuma: versi bersih menggunakan 1 dokumen (baki ${fence.docsRemaining}) + 1 muat turun bersih (baki ${fence.downloadsRemaining}).`}
+        zh={`免费版：干净版会用掉 1 份文件（剩 ${fence.docsRemaining}）＋ 1 次干净下载（剩 ${fence.downloadsRemaining}）。`}
+        en={`Free plan: the clean version spends 1 document (${fence.docsRemaining} left) + 1 clean download (${fence.downloadsRemaining} left).`}
+      />
+    </span>
+  ) : null;
 
   const errorBanner = (where: "pack" | "bank") =>
     error && error.where === where ? (
@@ -185,7 +202,7 @@ export function AgmPackReview({
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             {errorBanner("pack")}
-            <Button onClick={downloadPack} size="lg" disabled={busy !== null} className="self-start">
+            <Button onClick={() => downloadPack(false)} size="lg" disabled={busy !== null} className="self-start">
               {busy === "pack" ? (
                 <Tri bm="Sedang menyiapkan…" zh="正在准备…" en="Preparing…" />
               ) : (
@@ -196,7 +213,7 @@ export function AgmPackReview({
               )}
             </Button>
             {errorBanner("bank")}
-            <Button onClick={downloadBankExtract} size="lg" variant="outline" disabled={busy !== null} className="self-start">
+            <Button onClick={() => downloadBankExtract(false)} size="lg" variant="outline" disabled={busy !== null} className="self-start">
               {busy === "bank" ? (
                 <Tri bm="Sedang menyiapkan…" zh="正在准备…" en="Preparing…" />
               ) : (
@@ -383,21 +400,42 @@ export function AgmPackReview({
             </p>
           )}
           {errorBanner("pack")}
-          <Button
-            onClick={downloadPack}
-            size="lg"
-            disabled={busy !== null || !factsReady}
-            className="self-start"
-          >
-            {busy === "pack" ? (
-              <Tri bm="Sedang menyiapkan…" zh="正在准备…" en="Preparing…" />
-            ) : (
-              <>
-                <Download className="h-5 w-5" strokeWidth={2} />
-                <Tri bm="Muat turun pek AGM" zh="下载大会文件包" en="Download the AGM pack" /> (PDF)
-              </>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              onClick={() => downloadPack(false)}
+              size="lg"
+              disabled={busy !== null || !factsReady}
+            >
+              {busy === "pack" ? (
+                <Tri bm="Sedang menyiapkan…" zh="正在准备…" en="Preparing…" />
+              ) : (
+                <>
+                  <Download className="h-5 w-5" strokeWidth={2} />
+                  {fence ? (
+                    <Tri
+                      bm="Pek AGM (bertera air)"
+                      zh="大会文件包（带水印）"
+                      en="AGM pack (watermarked)"
+                    />
+                  ) : (
+                    <Tri bm="Muat turun pek AGM" zh="下载大会文件包" en="Download the AGM pack" />
+                  )}{" "}
+                  (PDF)
+                </>
+              )}
+            </Button>
+            {fence && (
+              <Button
+                onClick={() => downloadPack(true)}
+                size="lg"
+                variant="outline"
+                disabled={busy !== null || !factsReady}
+              >
+                <Tri bm="Versi bersih" zh="干净版" en="Clean version" />
+              </Button>
             )}
-          </Button>
+          </div>
+          {fenceCostNote}
         </CardContent>
       </Card>
 
@@ -449,21 +487,50 @@ export function AgmPackReview({
                 ))}
               </div>
               {errorBanner("bank")}
-              <Button
-                onClick={downloadBankExtract}
-                size="lg"
-                disabled={busy !== null}
-                className="self-start"
-              >
-                {busy === "bank" ? (
-                  <Tri bm="Sedang menyiapkan…" zh="正在准备…" en="Preparing…" />
-                ) : (
-                  <>
-                    <Download className="h-5 w-5" strokeWidth={2} />
-                    <Tri bm="Muat turun petikan bank" zh="下载银行摘录" en="Download the bank extract" /> (PDF)
-                  </>
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  onClick={() => downloadBankExtract(false)}
+                  size="lg"
+                  disabled={busy !== null}
+                >
+                  {busy === "bank" ? (
+                    <Tri bm="Sedang menyiapkan…" zh="正在准备…" en="Preparing…" />
+                  ) : (
+                    <>
+                      <Download className="h-5 w-5" strokeWidth={2} />
+                      {fence ? (
+                        <Tri
+                          bm="Petikan bank (bertera air)"
+                          zh="银行摘录（带水印）"
+                          en="Bank extract (watermarked)"
+                        />
+                      ) : (
+                        <Tri bm="Muat turun petikan bank" zh="下载银行摘录" en="Download the bank extract" />
+                      )}{" "}
+                      (PDF)
+                    </>
+                  )}
+                </Button>
+                {fence && (
+                  <Button
+                    onClick={() => downloadBankExtract(true)}
+                    size="lg"
+                    variant="outline"
+                    disabled={busy !== null}
+                  >
+                    <Tri bm="Versi bersih" zh="干净版" en="Clean version" />
+                  </Button>
                 )}
-              </Button>
+              </div>
+              {fence && (
+                <p className="text-sm text-[color:var(--v2-text-soft)]">
+                  <Tri
+                    bm="Bank hanya menerima versi BERSIH — versi bertera air untuk semakan sahaja."
+                    zh="银行只收干净版 —— 带水印的只用来自己核对。"
+                    en="A bank only takes the CLEAN version — the watermarked one is for checking."
+                  />
+                </p>
+              )}
             </>
           )}
         </CardContent>

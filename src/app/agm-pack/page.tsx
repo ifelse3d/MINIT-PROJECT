@@ -1,4 +1,6 @@
 import { getLatestConfirmedExtraction } from "@/db/agm";
+import { getActiveOrg } from "@/lib/active-org";
+import { getFenceState } from "@/lib/fence";
 import { loadFilingRoster } from "@/app/minutes/roster-actions";
 import { AgmPackReview } from "./agm-pack-review";
 
@@ -18,19 +20,30 @@ export default async function AgmPackPage({
   searchParams: Promise<{ contoh?: string }>;
 }) {
   const sp = await searchParams;
-  const [roster, confirmed] = await Promise.all([
+  const [roster, confirmed, active] = await Promise.all([
     loadFilingRoster(),
     getLatestConfirmedExtraction(),
+    getActiveOrg().catch(() => null),
   ]);
   const resolutions =
     confirmed?.extraction.resolutions
       .map((r) => r.text.value.trim())
       .filter((r) => r !== "") ?? null;
+  // D44: null = paid org, the screen stays exactly as it was.
+  const fenceState = active ? await getFenceState(active) : null;
   return (
     <AgmPackReview
       mode={sp.contoh === "1" ? "sample" : "real"}
       roster={roster.map((m) => ({ position: m.position, personName: m.name }))}
       confirmedResolutions={resolutions}
+      fence={
+        fenceState
+          ? {
+              docsRemaining: fenceState.remaining.docs,
+              downloadsRemaining: fenceState.remaining.downloads,
+            }
+          : null
+      }
     />
   );
 }

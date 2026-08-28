@@ -5,6 +5,9 @@ import { buildFinancialStatement, StatementError } from "@/lib/financial-stateme
 import { buildStatementPdf } from "@/lib/financial-statement-pdf";
 import { loadStatementRows } from "@/app/money/report/data";
 import { dayIsoMalaysia } from "@/lib/history";
+import { getActiveOrg } from "@/lib/active-org";
+import { chargeFence, getFenceLimits } from "@/lib/fence";
+import { stampFenceWatermark } from "@/lib/fence-watermark";
 import { getDocumentIdentity, NOT_SIGNED_IN } from "@/lib/doc-identity";
 
 // POST /api/financial-report-pdf — body: { fromIso, toIso } ONLY.
@@ -20,6 +23,9 @@ const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 const bodySchema = z.object({
   fromIso: z.string().regex(ISO_DAY),
   toIso: z.string().regex(ISO_DAY),
+  /** D44: fenced orgs get a watermarked statement unless they spend a
+   *  lifetime document + clean download on the clean one. */
+  clean: z.boolean().optional(),
 });
 
 export const runtime = "nodejs";
@@ -35,6 +41,14 @@ export async function POST(request: Request): Promise<Response> {
       { error: joinUserError(USER_ERRORS.downloadFailed) },
       { status: 400 },
     );
+  }
+
+  // D44 fence — decided before the build so a blocked request costs nothing.
+  const active = await getActiveOrg().catch(() => null); // cached; identity already resolved it
+  const fenceLimits = active ? await getFenceLimits(active) : null;
+  if (fenceLimits && parsed.data.clean === true && active) {
+    const fence = await chargeFence(active, { docs: 1, downloads: 1 });
+    if (!fence.ok) return NextResponse.json(fence.body, { status: fence.status });
   }
 
   const rows = await loadStatementRows(identity.orgId, parsed.data);
@@ -59,13 +73,18 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const todayIso = dayIsoMalaysia(new Date().toISOString())!;
-  const bytes = await buildStatementPdf({
-    orgName: identity.orgName,
-    orgRegistrationNo: identity.ppmNo ?? undefined,
-    statement,
-    confirmedBy: identity.confirmedBy,
-    confirmedOnIso: todayIso,
-  });
+  let bytes: Uint8Array = new Uint8Array(
+    await buildStatementPdf({
+      orgName: identity.orgName,
+      orgRegistrationNo: identity.ppmNo ?? undefined,
+      statement,
+      confirmedBy: identity.confirmedBy,
+      confirmedOnIso: todayIso,
+    }),
+  );
+  if (fenceLimits && parsed.data.clean !== true) {
+    bytes = await stampFenceWatermark(bytes);
+  }
   return new Response(new Uint8Array(bytes), {
     headers: {
       "Content-Type": "application/pdf",

@@ -41,12 +41,18 @@ vi.mock("@/lib/ai/provider", () => ({
 
 // The two page-limit calls: the generic "unknown" cap at the top of the route
 // passes; the per-kind cap (checked once the kind is known) rejects.
-vi.mock("@/lib/pdf-pages", () => ({
-  checkPageLimit: async (_bytes: ArrayBuffer, _mime: string, kind: string) =>
-    kind === "unknown"
-      ? { ok: true, pages: 10 }
-      : { ok: false, pages: 10, limit: 5 },
-}));
+// importOriginal keeps countPdfPages (the D44 fence uses it) — the STATE §6
+// trap: a vi.mock that misses a newly-imported export 500s the whole file.
+vi.mock("@/lib/pdf-pages", async (importOriginal) => {
+  const real = await importOriginal<typeof import("@/lib/pdf-pages")>();
+  return {
+    ...real,
+    checkPageLimit: async (_bytes: ArrayBuffer, _mime: string, kind: string) =>
+      kind === "unknown"
+        ? { ok: true, pages: 10 }
+        : { ok: false, pages: 10, limit: 5 },
+  };
+});
 
 vi.mock("@/lib/glossary-server", () => ({ loadGlossary: async () => [] }));
 vi.mock("@/lib/record-upload", () => ({ recordUpload: async () => {} }));

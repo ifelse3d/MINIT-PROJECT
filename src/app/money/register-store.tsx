@@ -86,7 +86,10 @@ export type IssueNotice =
   | "needs_prefix"
   | "sample"
   /** D-1: an in-kind row needs migration 25 in the database first. */
-  | "db_behind";
+  | "db_behind"
+  /** D44: the free plan's 20 lifetime receipts are used up. The exact
+   *  trilingual sentence rides in issueFenceMessage. */
+  | "fence";
 
 export type RegisterStore = {
   // --- identity, resolved on the server (never client-chosen) --------------
@@ -201,6 +204,8 @@ export type RegisterStore = {
   issueBusy: boolean;
   issueNotice: IssueNotice | null;
   setIssueNotice: Dispatch<SetStateAction<IssueNotice | null>>;
+  /** D44: the server's ready-made sentence for issueNotice === "fence". */
+  issueFenceMessage: string | null;
   /**
    * 拍板 0-6 (work order 32): record a hand-over of HAND-PICKED rows. The
    * dialog supplies the date (default today, editable — people record later
@@ -335,6 +340,7 @@ export function RegisterProvider({
   const [custodyLocalOnly, setCustodyLocalOnly] = useState(false);
   const [issueBusy, setIssueBusy] = useState(false);
   const [issueNotice, setIssueNotice] = useState<IssueNotice | null>(null);
+  const [issueFenceMessage, setIssueFenceMessage] = useState<string | null>(null);
 
   // Same three states as /minutes, and for the same reason:
   //   isRealLedger    — a ledger photo has been read.
@@ -782,6 +788,14 @@ export function RegisterProvider({
         setIssueNotice("db_behind");
         return;
       }
+      if (result.reason === "fence") {
+        // D44: the free plan's lifetime receipts are used up. Nothing was
+        // written; the rows wait safely. The server's sentence names the
+        // limit and the upgrade path.
+        setIssueFenceMessage(result.message);
+        setIssueNotice("fence");
+        return;
+      }
       setIssueNotice("error");
     } catch {
       setIssueNotice("error");
@@ -1078,6 +1092,7 @@ export function RegisterProvider({
         issueBusy,
         issueNotice,
         setIssueNotice,
+        issueFenceMessage,
         handOverSelected,
         updateBatch,
         cancelBatch,

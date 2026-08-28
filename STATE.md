@@ -5,192 +5,165 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-28（MYT）· Opus 5（J 给的美术三包：圆角尺度 / 首页背景＋四张卡 / 登入页）**
-**🔴 本场只动外观，没动功能、路由或文案。① 圆角收成五个具名 token（6/8/12/16/999）
-且整条尺度上移一阶——顺手修好「一直是圆角方块」的浮动 AI 按钮；② 画布渐层其实
-一直有画、被两层不透明底色盖住——底色移到 <html>，body 与 .v2-root 全透明；
-③ 首页四张卡重做（色带／图示砖／hover 抬起／一行真数据），emoji 全删；
-④ 登入页换真 app icon（drop-shadow 不是 box-shadow）、品牌字大于「欢迎回来」。
-⑤ J 看过后的第二轮：豬撲滿圖示刪除（族群 sensitive，D41）、四張卡改成
-四階「不同的紫」、TAB 圖示與 App 內 logo 統一成同一份向量（D42）、
-重設密碼頁 logo 統一、how-it-works 四張示範圖重拍。
-J 照 43 号报告：push（**1 支**——其余 J 都已 push，logo 与提速都已上线生效）→ Ctrl+Shift+R。本轮无新 migration。
-⑥ J 报「线上没改动 + LOADING 超慢 + 直接 load 不出」→ 量了线上：**新版确实已上线**
-（登入页实测是新的），**慢是真的且与本轮改动无关**——公开页 0.4s，但登入后的
-首页 HTML 要 4.4–5.9s 才串流完（TTFB 只有 23ms，串流把伺服器耗时藏起来了）。
-已修两处根因：首页四段串行查询并成一波（＋2.5s deadline），auth.getUser 每个
-请求只问一次（原本 3–4 次）。**
+**最后更新：2026-08-28 深夜（MYT）· Fable 5（D44 免费围栏整包）**
+**🔴 本场做了 J 拍板的「免费与付费的围栏」（D44，终身制不重置、删了不退次数）：
+免费版 = 文件 5 份 · 收据 20 张 · AI 读 20 页（照片 1 张=1 页）· 干净下载 3 次；
+预览一律 PERCUBAAN 浮水印＋禁复制，干净档只从计次的「干净下载」出去；
+收据 20 张每张都正常下载发送（不吃那 3 次）。谁被围：`monthly_free_quota ≤ 15`
+（开通=手动 SQL 抬 quota；自选 standard 未开通照围）；demo org 永不围。
+migration **20260909000000（第 31 支，🚧 未套用）**建 fence_usage 表＋
+fence_charge() 原子记账，并把 J 的 15/58/91 三个 org 标成 standard/quota 100
+（不然 Demo 截图全是浮水印）。migration 没套用之前：**看得到围栏 UI 和浮水印
+（那只要 quota 一读），但计数与挡下不生效（fail-open，D8）——所以套用前
+围栏是「装了没通电」。上限数字只写在 src/lib/plans.ts（PLANS.trial.fence）。
+上一场（美术三包＋提速）全部已上线，速度已解（sin1，首页 0.34–0.66s）。**
 
 ---
 
-## 🌙 现在在哪里（2026-08-28，美术三包收工）
+## 🌙 现在在哪里（2026-08-28 深夜，围栏场收工）
 
-> **已上线**：https://minit-project.vercel.app —— 39 号那 5 支 **J 已 push**
-> （origin/main 已同步）。40 号那 4 支 J 也已 push（origin/main = 769099c）；
-> 本机现在领先 **5 支未 push**（J 看完之后的第二轮）。
+> **已上线**：https://minit-project.vercel.app —— 截至 44 号报告的**全部** commit
+> J 都已 push（含 logo 修正与提速；晚间实测 main 与 origin/main 同步）。
+> 本场围栏的 commit 在本机等 push；migration 31 等 J 手贴（salin-migration.bat 选 31）。
 > push 是 J 的事（push-cabang.bat）。线上 org：15「J」、58「avocado」、91「TESTING1」。
 
-### 这一场做了什么（J 给的三个 zip；40 号报告逐条对照）
+### 这一场做了什么（D44 免费围栏；45 号报告逐条对照）
 
-- **D38 圆角只剩五个值，整条尺度上移一阶**：`--v2-r-xs/sm/md/lg/pill = 6/8/12/16/999`
-  写在 `:root`，`@theme` 的 `--radius-*` 全改成 `var()` 查表——**全 app 没有一个
-  元件自己写圆角数字**。Tailwind 阶名意义整体上移（`rounded-md` 8→12），因为这个
-  repo 本来就是「按钮 sm / 卡片 md / 弹窗 lg」在用，挪尺度＝每族刚好落位，
-  **不必动 340 个呼叫点**。输入框用一条不分层元素选择器钉在 8px（巢状规则
-  inner = outer − padding）。checkbox 4px 例外；radio 故意不在里面（圆形是惯例）。
-  顺手修掉两个既有错：`.v2-pill` 的 border-radius 一直压过 `rounded-full`，所以
-  J 8/27 指定「圆形」的浮动 AI 按钮其实一直是圆角方块；tab 的圆角比装它的
-  tab list 还大（12 vs 8）。badge→xs、ai-panel 的 `rounded-[28px]`→md、
-  password-input 的 `rounded-r-[14px]`→sm，src 里已无任何 off-scale 圆角。
-- **D39 画布渐层一直有画，只是被盖住**：`.v2-root::before` 是 `z-index:-1`，
-  而负 z-index 子层（附录 E 第 2 步）比 in-flow 区块背景（第 3 步）**先**画，
-  所以 `body{bg-background}` 和 `.v2-root{background:--v2-page}` **两层**都盖在
-  上面（包里只猜到一层）。定案：`--v2-page`/`--v2-page-grad` 搬到 `:root`/`.dark`，
-  `html` 拿平色当底，`body` 与 `.v2-root` 都 transparent。实测 body/root 皆
-  `rgba(0,0,0,0)`、渐层层在画。
-- **D40 首页四张卡重做**：2px 近黑框 → 1px 淡框＋阴影＋12px 圆角＋顶上 4px 色带
-  ＋图示砖＋hover 抬 3px 滑出箭头。**📝📋📊✨ 四个 emoji 全删**（OS 画的，同一个
-  首页在三个平台像三个产品），改用专案本来就有的 lucide 线条图示。`--c` 只准碰
-  色带／图示砖／圆点三处，边框卡底文字一律照旧 token。深色另给四个亮版（不是
-  color-mix 推导，旧 Android WebView 也要一样）。
-  新增 `src/lib/home-stats.ts`（server：草稿数／本月进账／最新记录月／AI 余额，
-  每支各自 catch，读不到＝null）＋ `src/lib/home-card-lines.ts`（纯函式，13 支测试）。
-  🔴 **三态规则**：null 读不到→整行不画；0 读得到且真没有→写成邀请；n→数字。
-  `moneyRecords` 是双层 null（外层＝读不到，内层＝真的没有），因为「你没有记录」
-  是一句断言，不能靠一次失败的查询讲出口。
-- **登入页**（同 D40 尾段）：白色线稿 M → 真正的 app icon（`BrandLogo` 砖块版，
-  本来就有向量），直接放渐层上、无白底无外框；分离靠 `filter: drop-shadow()`
-  **不是 box-shadow**（砖块外面透明，box-shadow 会画出方形阴影）；阴影是深紫
-  `rgba(35,12,74,.16)` 单层，要更分离就加模糊不加黑。品牌字级 > 「欢迎回来」；
-  加装饰环；左下那条「指着空气」的线下面补上小 wordmark；电邮／密码栏加前置
-  图示；「忘记密码？」黑底线 → 紫色。<md 收成顶部横幅（环与多余文字自动收起）。
+- **地基**：migration `20260909000000_free_fence.sql`（第 31 支，🚧 未套用）——
+  `fence_usage` 表（每 org 一行，docs_made / pages_uploaded / clean_downloads，
+  累计不退；RLS 开、无 policy＝只有 service role 能碰，app_errors 同款）＋
+  `fence_charge()`（SELECT…FOR UPDATE 原子「检查＋记账」，正数收费会越界就整笔
+  拒绝，负数退次数地板 0；只授权 service_role，spend_ai_credit 同款门禁）＋
+  把 J 的 org 15/58/91 标 standard / quota 100（走 privileged-columns 解锁路）。
+  收据**不在**这张表：receipts gap-free 不可删，count(*) 就是真话。
+- **纯逻辑** `src/lib/fence-core.ts`（13 支测试）：状态计算、挡谁先挡、RPC 结果
+  解析、三语拒绝句（都带数字与「设置 → 订阅方案」的路）。数字唯一真相在
+  `src/lib/plans.ts` 的 `PLANS.trial.fence`（5/20/20/3，standard/hq = null）。
+- **I/O** `src/lib/fence.ts`：`getFenceLimits`（谁被围：quota ≤ 15；demo 永不围；
+  读失败**开着败**——打嗝不准给付费社团盖水印）、`chargeFence`（RPC 缺席=
+  完全照旧 D8；其他失败**关着败**——数不了就不交干净档）、`refundFence`
+  （厂商没到达就退，与 refundUsage 并排）、`checkReceiptFence`。
+- **浮水印** `src/lib/fence-watermark.ts`：把生成完的 PDF 重开、每页盖
+  「PERCUBAAN · 免費版 · FREE PLAN」斜章×2＋页脚一行不透明说明（裁掉斜章
+  也留痕）；中文字走 subsetNotoFor，字型拿不到就退 Helvetica 不炸。**关着败**：
+  盖不上章就报错，绝不把干净档漏给免费 org。2 支测试（页数不变、还能重开）。
+- **七个上传门全装页闸**（extract-minutes / ledger / constitution / expense /
+  events / import-roster / intake）：photo=1 页、PDF=实页数、贴字=0 页、Office
+  档=1 页；在 AI 扣费之后收、便宜拒绝在前；**每一条 refundUsage 旁边都有
+  refundFence**（intake 的 unknown-kind 422 也退——强制重送会再收一次）。
+- **文件线**：minutes 保存动作收 docs:1（幂等重存不重复收；23505 输给并发
+  双胞胎会退）；`/api/minutes-pdf` 免费版默认浮水印 inline（看＋打印免费），
+  `?clean=1` 收 downloads:1 转 attachment；agm-pdf / bank-extract / financial-report
+  加 `clean:true` 参数（干净=docs:1+downloads:1，默认=浮水印）；einvois-xlsx
+  没法盖水印＝每次导出就是干净档（fileIndex 0 收一次，多档一包只收一包），
+  按钮门口写明要花什么。sample/CONTOH 路完全在围栏外（禁令照旧）。
+- **收据闸**：issueAndSaveReceipts 在 RPC 之前数 receipts 行，trial 超 20 张整批
+  拒绝（reason:"fence"＋现成三语句），一个号码都不烧；register-store /
+  issue-controls 渲染那句话。已开收据永远干净下载（J 拍板）。
+- **画面**：`src/components/fence-ui.tsx` —— `FenceLock`（选不了字、copy/右键
+  拦截、三行斜水印、附一句为什么）用在 minutes 成品页全文；`FenceCleanDownload`
+  （干净下载（剩 N）按钮，402 时把服务器句子原地显示）用在成品页与 /filings；
+  /filings 免费版复制按钮全锁（🔒 复制（付费版））；/settings/plan 加终身
+  仪表卡（4 个 x/y）＋对照表 4 行（trial 数字 vs ∞）。
+- **四道关**：`tsc` 0 · `vitest` **889 全过（+13 fence-core、+2 watermark）** ·
+  `eslint` 与基准逐字同类同数（22 = 21 错 + 1 警告，stash 对照跑过）· `build` ✓ ·
+  **e2e:minutes 全过、e2e:money 全过，page errors 0**（真 DB＋next start；
+  e2e 的 trial org 真的踩到了围栏 UI——快照里看得到「打印/PDF（带水印）」
+  「干净下载（剩 3 次）」与 PERCUBAAN 水印，而计数因 RPC 未套用 fail-open，
+  流程全通，正好验证了 D8 的「装了没通电」形态）。
+- 探针与工具跟上：`npm run check:migrations` 新增 fence_usage 列探针＋
+  fence_charge RPC 探针（org 0 的 FK 会中止事务，探针零写入）；
+  `salin-migration.bat` 新增第 31 项。
+- **e2e:roles 那 4 项 collector 失败照旧未修**（上一场的旧账，不是本场弄的）；
+  修好前不说「三条 e2e 全过」。
+- D43（全站无黑按钮，--primary=品牌紫）这次补记进了 `docs/DECISIONS.md`
+  （上一场做完但漏写档）。
 
-- **D41 圖示的族群 sensitive（J 看完第一輪後）**：`/money/balance` 的
-  `PiggyBank` 刪除——豬對穆斯林使用者是 haram 意象。換 `CircleDollarSign`
-  （中途試過 `Vault`，側欄尺寸下轉盤像一個 ✕，被讀成「取消」，退回）。
-  🔴 **常設規則**：以後每一個圖示／emoji／插圖／範例照片都要先對照馬來西亞
-  族群與宗教讀一遍。已掃：src 無豬／酒／狗／宗教符號 emoji（唯一 🙏 在
-  WhatsApp 出席訊息當「請」用，留著）；範例姓名三大族群齊全，維持這比例。
-- **D42 品牌標記只有一份，而那一份是 J 給的原圖**（J：「上面TAB那邊有問題，
-  不是最新LOGO」→ 修錯方向 → J：「LOGO 應該是這個，爲什麼你換了呢」）：
-  原因不是忘了更新，而是**本來就是兩張畫**——favicon/PWA/iOS 從 J 給的
-  `scripts/assets/minit-logo.png`（**正本**）產，App 裡畫的是前人做的**向量仿製版**
-  （線較細、紫較飽和）。🔴 **我第一次把兩邊統一到仿製版，等於把 J 的正本換掉了，
-  方向錯的。** 已改正：正本是唯一真相，仿製版（`src/lib/brand-mark.ts` 與
-  `brand-logo.tsx` 的 inline SVG）**刪除**；`BrandLogo` 只是
-  `<img src="/icon-192.png">`；`npm run icons` 從那張 PNG 產出全部尺寸。
-  換 logo＝換那張 PNG → `npm run icons`。
-  `BrandLogo` 的 `white` 線稿變體也刪除（登入頁與重設密碼頁都用磚塊版，J：「統一」）。
-  ⚠️ **教訓**：兩邊不一致時，先問「哪一邊才是對的」，不要先問「怎麼統一」。
-- **四張卡改成「不同的紫」**（J）：深靛紫 #4C1D95 → 品牌紫 #7029E5 →
-  紫 #9333EA → 洋紅紫 #C026D3，深色模式各給亮版。設計包原本的青／藍／洋紅
-  自己就標了這個退路；J 選了它，但要求彼此仍分得出來。
-- **how-it-works 四張示範圖重拍**（跑 `scripts/howitworks-shots.mjs`）：
-  舊圖還是改版前的粗黑框卡片。三個高亮框座標同步更新，並用**顏色偵測**
-  （抓 #7029E5 的 bbox）驗過框確實落在按鈕上，不是目測。
+### ⚠️ 围栏的已知后果（设计使然，不是 bug）
 
-- **🔴 线上效能：慢是真的，但不是本轮改动造成的**（J 报，当场量的）：
-  - 公开页（/login /terms /privacy）**0.4s**，Vercel 本身健康；新版**确实已上线**。
-  - 登入后：首页 HTML **4.4–5.9s** 才串流完、/orgs/new **12.5s**、sign-in **15.6s**。
-    ⚠️ **TTFB 只有 23ms** —— Next 的串流让「伺服器很慢」在 TTFB 上完全看不出来，
-    要看 `responseEnd − requestStart`。以后量这个页别再看 TTFB。
-  - 本机 dev 三个版本各跑 7 次（中位数）：**本轮改动之前 630ms · 现在线上那版
-    637ms · 加了并行与 cache 之后 596ms**。⚠️ 第一次只比了后两个（都含本轮改动），
-    是 J 追问「为什么改完就坏」才补测第一个——**本轮 UI 改动 +7ms，不是元凶**。
-    以后回答「是不是我弄的」，基准要取「改动之前」，不是「我修之前」。
-  - 🔴🔴 **根因查到了，是确定的事实不是猜**：Vercel 函数跑在 **iad1（华盛顿）**
-    （响应头 `X-Vercel-Id: sin1::iad1::…`），Supabase 在 **ap-southeast-1（新加坡）**
-    （`db.<ref>.supabase.co` → `2406:da18:…`，对照 AWS 官方 ip-ranges.json）。
-    数据库自己只花 **14ms**（`x-envoy-upstream-service-time`）——4.5 秒全是
-    **新加坡↔华盛顿来回**，一页排队十几趟。公开页不问数据库，所以 0.4s，
-    这就是为什么它看起来不像主机问题。已加 `vercel.json` → `regions: ["sin1"]`。
-    ⚠️ Hobby 只允许一个 region，数组多写一个会让 build 失败。数据库若搬家，
-    这个必须跟着搬。
-  - ✅✅ **已部署并实测（J 已 push，`X-Vercel-Id` 现在是 `sin1::sin1::`）**：
-    公开页 0.40→**0.15s** · 登入 15.6→**3.0s** · /orgs/new 12.5→**2.0s** ·
-    **首页 4.4–5.9s → 0.34–0.66s（约 9 倍）**，page errors 0。
-    三个修正一起的结果：搬 region（最大）＋首页一波查询＋auth 每请求一次。
-  - 已修：① 首页 agm/flags/usage/figures 四段串行 → 一个 Promise.all（figures
-    另带 2.5s deadline，读不到就不画那行）；② `getSessionUser`/`getMemberships`/
-    `getActiveOrg` 用 React `cache()` 每请求只算一次——原本画一页要向 auth 服务器
-    验证 3–4 次，每次一个真往返。
-  - 工具留下了：`scripts/probe-prod.mjs`（逐步计时线上，自己清测试帐号）、
-    `scripts/time-home.mjs`（本机 before/after）。
-- **⚠️ `e2e:roles` 早就在坏，不是本轮弄坏的**：设置区拆成子路由后脚本还在看
-  `/settings`（邀请码表单已搬到 `/settings/members`）。已修这一半（2 项恢复），
-  **仍有 4 项失败**，全在 collector 那条线，同样是钱区拆子路由后地址/按钮文案变了
-  （打字格已不在 `/money/receipts`）。要重新对着现在的 UI 推一遍，本轮没做。
-  在那之前**不要说「三条 e2e 全过」**。
-
-- **🔴 D43 全站没有黑色按钮了：`--primary` 改成品牌紫**（J：「裏面不要有任何
-  黑色的按鈕，都換成紫色的」）。根因是 shadcn 的 `--primary` 一直是
-  `oklch(0.205 0 0)`＝炭黑，本 repo 从来没改过它，所以每一个 `bg-primary`
-  控件都是黑的（/money 与 /money/expenses 的拍照按钮、manual-income、
-  page-section 的下一步、默认 badge）。Button 组件早就在自己的 default variant
-  里硬写 `--v2-primary-fill` 绕过它——那就是「token 本身错了」的证据。
-  现在 `--primary: #7029E5`（白字 6.69:1）、dark `#7C3AED`（5.70:1）。
-  连带两处：① `text-primary`（Button/Badge 的 link variant）改用
-  `var(--v2-primary)`——primary 是**填充色**，填充紫当**文字**在深色卡片上看不见；
-  ② 分页标签的下划线本来是 `bg-foreground`（墨色），改用 `--v2-accent`。
-  ⚠️ src 里所有 `bg-black` 都是遮罩或 5% 淡底（弹窗背景、代码块、照片灯箱），
-  **不是按钮，一个都没动**。
-  验证工具：`scripts/shots-no-black-buttons.mjs` 走 8 个页面，逐个检查
-  button/label/a 的实际背景色，报告 0 个深色实心按钮。
-- **✅ logo 已修正并上线**：线上 `icon-192.png` 与本机 byte-identical，就是 J 的正本。
+- 章程常 20–40 页 > 免费 20 页 ⇒ 免费版基本传不完一本完整章程。要开口子等 J。
+- 转账证明照片、贴上的文字、Office/表格转文字**不占页数**（钱区免费是引流
+  引擎；页数只数 AI 读的「纸」）。
+- 上传门的「还剩几页」目前只显示在 /settings/plan 与拒绝讯息里，没有印在每个
+  上传按钮旁（要做得每页发 fence 状态，本场没做——诚实记下）。
+- localStorage 里已存的旧文件文本（工作区草稿）不在锁内：锁的是成品页与
+  文件出口，工作区是进行中的自己的字。
 
 ### 现场量到的（不是听说的）
 
-- 四道关：`tsc` 0 · `eslint` **跟基准逐字相同**（把改动 git stash 起来跑基准对照，
-  diff 空）· `vitest` **876 全过（+13：home-card-lines 三态／复数／三语）** · `build` ✓
-- **e2e:minutes 全过、e2e:money 全过，page errors 0**（真 DB）。
-- 截图脚本 `scripts/shots-design-20260828.mjs`（建测试帐号→塞 3 份草稿＋2 笔捐款
-  →各页截图→全删）；图在 `eval/reports/shots-design-20260828/`，人眼看过：
-  桌机／手机／深色／全新社团空状态／hover 都对。
-- 浏览器实测数值（非目测）：token = 6/8/12/16/999；`.home-card` 圆角 `12px`、
-  边框 `1px solid rgb(226,222,236)`；`body`/`.v2-root` 背景皆透明；
-  四行状态字真有数据（3 份草稿／RM8,450.00／2026-08／15 of 15）。
-- ⚠ 没能验证的：线上部署后的实机观感（等 J push）；真 vendor 的合并写作（D37 旧项）。
+- 四道关：`tsc` 0 · `eslint` 与基准同数同类（22 = 21 错 + 1 警告；stash 起来跑过
+  基准对照，无新增）· `vitest` **889 全过（+15：fence-core 13、watermark 2）** ·
+  `build` ✓。
+- **e2e:minutes 全过、e2e:money 全过，page errors 0**（真 DB，`next start` 正式版）。
+  e2e 的 trial org 实际渲染出围栏 UI（带水印打印钮、「干净下载（剩 3 次）」、
+  PERCUBAAN 水印行）——画面这一半不用等 migration。
+- `npm run check:migrations` 实跑：1–30 全 APPLIED；**31（fence）两个探针都
+  NOT YET**——这就是「装了没通电」的证据，J 贴完再跑一次应变 APPLIED。
+- ⚠ 没能验证的：migration 31 套用后的**真计数与真挡下**（要 J 贴完、push 完，
+  用 TESTING1 以外的 trial org 各撞一次上限）；真 vendor 合并写作（D37 旧项）。
 
-### 🔴 J 的事（写在 40 号报告 §4）
+### 🔴 J 的事（详见 45 号报告）
 
-1. **push-cabang.bat**（本机领先 **1 支**；40 号那 4 支 J 已 push，origin/main 已到 769099c）→ 线上 Ctrl+Shift+R。**本轮无新 migration。**
-   🔴 TAB 圖示要 **Ctrl+Shift+R 兩次**或關掉分頁再開——瀏覽器對 favicon 的快取特別頑固。
-2. 看三个地方：登入页、首页（背景＋四张卡＋底下那行字）、随便一页的卡片圆角。
-3. 40 号 §3 有三个等你一句话的小事：重设密码页的小 logo 要不要一起换成砖块版；
-   四张卡的颜色会不会太花（要改回全紫是一分钟）；旧的 39 号 §6 三问仍未答
-   （真额度试 AI 撰写／申报页再看／「不专业」实例）。
-   ⚠ **8/31 23:59 竞赛截止（内部 cutoff 18:00）**；one-pager 的 [YOU] 两处还空着。
+1. **salin-migration.bat → 选 31** → Supabase SQL Editor 贴上 → Run
+   （「Success. No rows returned」= 成功；这支也会把你的三个 org 标成付费版，
+   不然你自己看到的全是水印）。
+2. **push-cabang.bat**（本场 **1 支**）→ 线上 Ctrl+Shift+R。
+3. 看四个地方：任一份历史会议记录（应有「打印（带水印）」+「干净下载」两个钮
+   ——你的 org 是付费版，应该**看不到**这些、一切照旧才对）；用一个新注册的
+   试用帐号看同一页（应该**看得到**水印）；/settings/plan（付费版无仪表，
+   试用版有四条 x/y）；开收据页照旧。
+4. 之前欠你答复的三问照旧（真额度试 AI 撰写／申报页圈位置／「不专业」实例）
+   ——你有空再说。
 
 ### ❓ 未决问题
 
-1. ✅ **已答（2026-08-28，自己查到的，不用 J 抄）：两边本来就不同区。**
-   Vercel 函数在 **iad1（华盛顿）**（`X-Vercel-Id: sin1::iad1::…`），
-   Supabase 在 **ap-southeast-1（新加坡）**（`db.<ref>.supabase.co` 解析到
-   `2406:da18:…`，对照 AWS 官方 ip-ranges.json）。已加 `vercel.json`
-   把函数钉到 `sin1`。**效果要 push 后才知道**——J push 完请回报首页还慢不慢。
+1. **migration 31 未套用**——套用前围栏只有画面没有牙（fail-open，D8）。
+   套用后要实测一轮：文件第 6 份、收据第 21 张、第 21 页、第 4 次干净下载，
+   各撞一次看被挡＋讯息对不对。
 2. 助手用哪个模型 —— prompt 已解冻（D29），等 J 重跑 bench 后定（J：系统先稳）
 3. 法律实体（金流前置，D12），试点前要答
 4. 真实手写 eval：92.9% 量的仍是印刷体，且 prompt 已动、数字作废——等 J 重测
 5. Supabase 邮件模板＋Site URL 还停 localhost（J 一分钟改）
 6. /privacy 法律文的「不用於訓練」句去不去 —— 法律文要人审，J 一句话
-7. 竞赛首页主图重拍（拍板 0-9）—— 等 push 完用真机构画面拍
-8. 配套定价（管理台毛利卡等它）—— 先量成本；bench/真用量之后
+7. 竞赛首页主图重拍（拍板 0-9）—— push 已全上线，条件已齐，工程排队中
+8. 配套定价（管理台毛利卡等它）—— 先量成本；围栏已立，价格牌之后挂（D44/D12）
 9. #10 全站按钮统一的长尾扫尾（大头已消；仍排队）
-9b. `e2e:roles` collector 那 4 项要重新对着现在的钱区 UI 推一遍（见上）
+9b. `e2e:roles` collector 那 4 项要重新对着现在的钱区 UI 推一遍
 10. 真 vendor 的合并写作效果（D37）—— 等 J 一次真额度实测
+11. 免费版上传门旁没有「还剩几页」的常驻提示（只在 /settings/plan 和拒绝讯息
+    里）——要不要补，等围栏通电后看真用户反应
 12. （旧，小）MyInvois 官方模板逐栏对齐（B-7 后半）等 J 给原档
 13. （旧，小）check-ai.bat 还 cd 到旧资料夹 C:\dev\minit——改天一行修
 
 ### ⏭ 下一个 session 从哪开始
 
-**J 说的「大的等下才一起讨论」——等他开口。在那之前：
-①J 验收本场美术（push、三个地方看一遍）→ 翻案开小场修；
-②#10 按钮长尾、③8/31 前的竞赛素材（首页主图、one-pager [YOU]）、
-④31 号单场次 5（J 在场：D-8 正式版式、B-7 MyInvois、G-3 bench、真手写照片）。**
+**J 说围栏做好后要「把之前的拿出来讨论」——这是他点名的下一步，先谈再做。**
+清单底稿：39 号 §6 三问、31 号单场次 5（J 在场）、eROSES Penyata Tahunan
+逐栏（要 J 帐号）、语音 B、章程「还要的事情」、#10 长尾、e2e:roles 4 项、
+首页主图重拍、竞赛材料（J 自己定 30/31 交，**不催**）。
+围栏方面：migration 31 套用后照未决 #1 实测一轮；「大的」仍等 J 开口。
 
 ---
 
 ## 6. 已知陷阱（踩过的，别再踩）
+
+### 2026-08-28 深夜新增（围栏场）
+
+- 🔴 **围栏的失败方向是一张固定的表，别改反**：读「谁被围」失败＝**不围**
+  （打嗝不准给付费社团盖水印）；fence_charge 记不了帐＝**不给干净档**（跟 AI
+  计量同一条诚实规则）；RPC/表不存在（migration 31 没套）＝**完全照旧**（D8）。
+  三个方向各有理由，写在 src/lib/fence.ts 档头——改任何一个先读那段。
+- 🔴 **migration 31 没套用时「围栏不挡人」不是 bug**，是「装了没通电」的
+  刻意形态（fail-open）。别在 DB 落后时把 fail-open 改成 fail-closed——那会
+  把所有 trial org 一夜锁死。
+- ⚠ **`onClick={fn}` 会把 MouseEvent 当第一个参数塞给 fn** ——
+  `downloadPack(clean?: boolean)` 这种带可选布尔的处理器直接挂上去，event
+  会被当成 `clean=true`，免费用户白拿干净档。一律 `onClick={() => fn(false)}`
+  （agm-pack-review 两处差点中招，tsc 抓到的）。
+- ⚠ **给「文件出口」加新参数时，sample/CONTOH 路要先排除在外**（禁令：示范
+  永不挡真用户）。本场三条 PDF 路都是 sample 分支先 return 再进围栏。
+- 💡 **「服务器端才是闸，前端只是显示」在围栏上再次生效**：所有 remaining
+  数字都是渲染当下的快照，真拒绝只发生在 route/action 里；改 UI 数字骗不过闸。
 
 ### 2026-08-28 新增（美术三包那一场）
 
@@ -567,14 +540,14 @@ J 手贴 migration 的步骤：记事本开档 → `Ctrl+A` `Ctrl+C` → Supabas
 | 位置 | 放什么 |
 |---|---|
 | 根目录 | `CLAUDE.md`（规则）· `STATE.md`（这份）· `BUILD_PLAN.md` · `PROMPTS.md` · `DEPLOY.md`（⚠ 过期，上线照 `docs/上线与截图-给J的步骤.md`）· `README.md` · `AGENTS.md` |
-| `docs/` | `DECISIONS.md`（D1–**D35**）· `功能盤點-計劃vs實作.md` · `产品缺口盘点.md` · `上线与截图-给J的步骤.md` · `换模型手册.md` · `AI-API-选型与成本.md` · 其余照旧 |
+| `docs/` | `DECISIONS.md`（D1–**D44**）· `功能盤點-計劃vs實作.md` · `产品缺口盘点.md` · `上线与截图-给J的步骤.md` · `换模型手册.md` · `AI-API-选型与成本.md` · 其余照旧 |
 | 品牌 | `src/lib/brand.ts`（BRAND_NAME="MinitAI"，D23）· **紫色**（D24）：logo 原图 `scripts/assets/minit-logo.png`、向量版 `src/components/brand-logo.tsx` · 重生图标：`node scripts/brand-icons.mjs` · tokens 都在 `globals.css` 的 `.v2-root` |
 | 定价／毛利 | `src/lib/unit-economics.ts` + `npm run economics`（价目表查证日 `PRICES_CHECKED_ON`） |
 | AI 分流设定 | `.env.example` 的 AI 段 + `npm run check:ai` |
 | 模型对比 | `npm run bench`（--dry-run / --mock）· `bench-models.bat` · 报告在 `eval/reports/model-bench-<日期>.md` |
 | 「到底做了没有」 | `npm run status` / `status.bat` |
 | 示范章程（CONTOH） | `public/contoh/undang-undang-tubuh-contoh.pdf`（8 页 BM 完整章程，虚构社团）· 文字版 `docs/contoh-undang-undang-tubuh.md` · 重生 `npm run contoh:constitution`。十条条文与 `src/lib/sample-constitution.ts` **逐字相同**、印出来的页码对得上 `page_ref`，所以拿它测 `/constitution` 上传时**答案是已知的** |
-| migration | `supabase/migrations/`（**30 支；29、30 未套用**）· `salin-migration.bat`（30 项）· `npm run check:migrations`（含 save_register_rows RPC 探针＋title/edited_at/photo_paths 探针） |
+| migration | `supabase/migrations/`（**31 支；1–30 已套用（探针实测），31（fence，D44）未套用**）· `salin-migration.bat`（31 项）· `npm run check:migrations`（含 save_register_rows／fence_charge RPC 探针） |
 | 给 J 双击的 `.bat` | `status.bat` · `salin-migration.bat` · `salin-env-vercel.bat` · `push-cabang.bat` · `bench-models.bat`。🔴 `push-to-github.bat` 不能用；⚠ `check-ai.bat` 还指旧资料夹 |
 | `competition/` | 顶层＝当前版（**[YOU] 两处还空着**）；`screenshots/` 60 张旧配色（拍板 0-9：只重拍首页主图，未拍——未决 7） |
 | `eval/reports/` | 整夹 gitignore；只有 `SUMMARY.md` 例外 |

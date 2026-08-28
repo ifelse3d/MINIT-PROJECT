@@ -11,6 +11,8 @@ import {
 import { Tri } from "@/components/language-provider";
 import { getSupabaseServer } from "@/db/supabase-server";
 import { getActiveOrg } from "@/lib/active-org";
+import { getFenceState } from "@/lib/fence";
+import { FenceCleanDownload, FenceLock } from "@/components/fence-ui";
 import { meetingTypeUiLabelTri } from "@/lib/meeting-types";
 import { formatMytDateTime } from "@/lib/history";
 import { MINUTES_STATUS_LABEL, labelFor } from "@/lib/status-labels";
@@ -129,6 +131,9 @@ export default async function MinutesDocPage({
   const title = (d.title ?? "").trim();
   const typeLabel = meetingTypeUiLabelTri(d.meeting_type ?? "", d.meeting_type_label);
 
+  // D44: null = paid org, everything stays exactly as it was.
+  const fence = await getFenceState(active);
+
   // The handwriting behind this document — short-lived signed links into the
   // private uploads bucket, same idiom as the list page.
   const paths = Array.isArray(d.photo_paths)
@@ -209,22 +214,50 @@ export default async function MinutesDocPage({
                 target="_blank"
                 rel="noreferrer"
               >
-                🖨 <Tri bm="Cetak / PDF" zh="打印 / PDF" en="Print / PDF" />
+                🖨{" "}
+                {fence ? (
+                  <Tri
+                    bm="Cetak / PDF (bertera air)"
+                    zh="打印 / PDF（带水印）"
+                    en="Print / PDF (watermarked)"
+                  />
+                ) : (
+                  <Tri bm="Cetak / PDF" zh="打印 / PDF" en="Print / PDF" />
+                )}
               </a>
             </Button>
-            <span className="text-sm text-muted-foreground">
-              <Tri
-                bm="PDF ini juga fail untuk 'Muat Naik Minit Mesyuarat' di eROSES."
-                zh="这份 PDF 也就是 eROSES「上传会议记录」要的那个文件。"
-                en="This PDF is also the file eROSES's 'Muat Naik Minit Mesyuarat' slot takes."
+            {/* D44: the clean file (the one eROSES takes) is the counted door. */}
+            {fence && (
+              <FenceCleanDownload
+                href={`/api/minutes-pdf?id=${d.id}`}
+                fallbackName={`minit-${d.meeting_date ?? d.id}.pdf`}
+                remaining={fence.remaining.downloads}
               />
+            )}
+            <span className="text-sm text-muted-foreground">
+              {fence ? (
+                <Tri
+                  bm="Fail untuk 'Muat Naik Minit Mesyuarat' di eROSES ialah versi BERSIH — guna butang muat turun bersih."
+                  zh="eROSES「上传会议记录」要的是干净版 —— 请用「干净下载」按钮。"
+                  en="The file eROSES's upload slot takes is the CLEAN one — use the clean-download button."
+                />
+              ) : (
+                <Tri
+                  bm="PDF ini juga fail untuk 'Muat Naik Minit Mesyuarat' di eROSES."
+                  zh="这份 PDF 也就是 eROSES「上传会议记录」要的那个文件。"
+                  en="This PDF is also the file eROSES's 'Muat Naik Minit Mesyuarat' slot takes."
+                />
+              )}
             </span>
           </div>
 
-          {/* The finished document itself — the final look-over. */}
-          <pre className="whitespace-pre-wrap rounded-md border bg-muted/40 p-4 text-sm leading-relaxed">
-            {d.final_md}
-          </pre>
+          {/* The finished document itself — the final look-over. D44: for a
+              fenced org the on-screen text is watermarked and not copyable. */}
+          <FenceLock active={fence !== null}>
+            <pre className="whitespace-pre-wrap rounded-md border bg-muted/40 p-4 text-sm leading-relaxed">
+              {d.final_md}
+            </pre>
+          </FenceLock>
 
           <HistoryPhotoStrip photos={photos} />
 

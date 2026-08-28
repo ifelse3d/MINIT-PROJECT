@@ -11,7 +11,8 @@ import { parseExpenseExtraction } from "@/lib/extraction";
 import { extractExpensePrompt } from "@/prompts/extract-expense";
 import { dayIsoMalaysia } from "@/lib/history";
 import { recordUpload } from "@/lib/record-upload";
-import { checkPageLimit } from "@/lib/pdf-pages";
+import { chargeFence, refundFence } from "@/lib/fence";
+import { checkPageLimit, countPdfPages } from "@/lib/pdf-pages";
 import { ROUTE_AI_DEADLINE_MS, VendorTimeoutError } from "@/lib/ai/http";
 import { vendorFailureResponse } from "@/lib/ai/vendor-failure";
 
@@ -84,6 +85,17 @@ export async function POST(req: Request) {
     if (!gate.ok) {
       return NextResponse.json(gate.body, { status: gate.status });
     }
+
+    // D44 fence: lifetime 20 AI-read pages on the free plan (1 photo = 1 page).
+    const pageCount =
+      photo.type === "application/pdf" ? ((await countPdfPages(bytes)) ?? 1) : 1;
+    const fenceGate = await chargeFence(gate.org, { pages: pageCount });
+    if (!fenceGate.ok) {
+      await refundUsage(gate.org.id, gate.charges[0]);
+      return NextResponse.json(fenceGate.body, { status: fenceGate.status });
+    }
+    const fenceCharge = fenceGate.charge;
+
     const orgName = gate.org.name;
 
     const imageBase64 = Buffer.from(bytes).toString("base64");
@@ -100,6 +112,7 @@ export async function POST(req: Request) {
       // The vendor was never usefully reached — the action is refunded.
       // P-1: the failure is also recorded now (app_errors) — see id=5.
       await refundUsage(gate.org.id, gate.charges[0]);
+      await refundFence(fenceCharge);
       return vendorFailureResponse("/api/extract-expense", e, gate.org.id);
     }
 
@@ -121,6 +134,7 @@ ${issues}`;
         // P-1: a timeout is a timeout — not "retake the photo". Both refund.
         if (e instanceof VendorTimeoutError) {
           await refundUsage(gate.org.id, gate.charges[0]);
+          await refundFence(fenceCharge);
           return vendorFailureResponse("/api/extract-expense", e, gate.org.id);
         }
         void captureAppError("/api/extract-expense", e, { orgId: gate.org.id });
@@ -131,6 +145,7 @@ ${issues}`;
     if (!parsed || !parsed.success) {
       // Two attempts, nothing readable: the person keeps their action (rule 10).
       await refundUsage(gate.org.id, gate.charges[0]);
+      await refundFence(fenceCharge);
       return NextResponse.json(
         { error: joinUserError(USER_ERRORS.aiCouldNotRead) },
         { status: 422 }

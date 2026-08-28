@@ -24,7 +24,14 @@ import { useRegister } from "./register-store";
 // is never amber, unlike the StepCard it replaces.
 // ---------------------------------------------------------------------------
 
-export function EInvoisPack() {
+export function EInvoisPack({
+  fence = null,
+}: {
+  /** D44: non-null = free (fenced) org. An .xlsx cannot be watermarked, so
+   *  every pack export is the clean artifact — it spends 1 lifetime document
+   *  + 1 clean download, and the button says so before it is pressed. */
+  fence?: { docsRemaining: number; downloadsRemaining: number } | null;
+} = {}) {
   const t = useTriText();
   const { donations, documentOrgName, availableMonths, setError } = useRegister();
 
@@ -280,6 +287,18 @@ export function EInvoisPack() {
                 </>
               )}
             </Button>
+            {/* D44: an .xlsx has no watermarked preview — the cost is said on
+                the button's doorstep, before it is pressed (the old rule:
+                which road costs money is written ON the button). */}
+            {fence && (
+              <p className="text-sm text-[color:var(--v2-text-soft)]">
+                <Tri
+                  bm={`Pelan percuma: muat turun ini menggunakan 1 dokumen (baki ${fence.docsRemaining}) + 1 muat turun bersih (baki ${fence.downloadsRemaining}).`}
+                  zh={`免费版：这个下载会用掉 1 份文件（剩 ${fence.docsRemaining}）＋ 1 次干净下载（剩 ${fence.downloadsRemaining}）。`}
+                  en={`Free plan: this download spends 1 document (${fence.docsRemaining} left) + 1 clean download (${fence.downloadsRemaining} left).`}
+                />
+              </p>
+            )}
           </div>
         ) : einvois.error ? (
           /* AUDIT FIX: `einvois.error` was computed and then NEVER rendered,

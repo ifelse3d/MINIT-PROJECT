@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Tri } from "@/components/language-provider";
 import { PageSection } from "@/components/page-section";
 import { getActiveOrg } from "@/lib/active-org";
+import { getFenceState } from "@/lib/fence";
 import {
   buildFinancialStatement,
   type FinancialStatement,
@@ -66,6 +67,9 @@ export default async function MoneyReportPage({
       </div>
     );
   }
+
+  // D44: null = paid org, the page stays exactly as it was.
+  const fenceState = await getFenceState(active);
 
   // The period: ?dari & ?hingga when valid, else THIS YEAR SO FAR.
   // §1-7 (work order 32): the default used to be this month — J's two receipts
@@ -321,7 +325,18 @@ export default async function MoneyReportPage({
             )}
 
             <div className="flex flex-wrap items-center gap-3">
-              <DownloadStatementButton fromIso={period.fromIso} toIso={period.toIso} />
+              <DownloadStatementButton
+                fromIso={period.fromIso}
+                toIso={period.toIso}
+                fence={
+                  fenceState
+                    ? {
+                        docsRemaining: fenceState.remaining.docs,
+                        downloadsRemaining: fenceState.remaining.downloads,
+                      }
+                    : null
+                }
+              />
               <p className="text-sm text-muted-foreground">
                 <Tri
                   bm="PDF membawa kepala surat pertubuhan dan baris audit — sesuai untuk mesyuarat atau juruaudit."

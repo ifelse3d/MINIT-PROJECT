@@ -20,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ConfidenceBadge } from "@/components/confidence-badge";
+import { FenceCleanDownload } from "@/components/fence-ui";
 import { Tri, useTriText } from "@/components/language-provider";
 import { hasCjk } from "@/lib/bm-guard";
 import { buildPastePack, type FilingRosterEntry } from "@/lib/paste-pack";
@@ -88,6 +89,7 @@ export function FilingsView({
   orgType = null,
   finance = null,
   filingRoster = [],
+  fence = null,
 }: {
   agm: ConfirmedAgm | null;
   /** Every confirmed minutes document, newest first (server, org-scoped). */
@@ -98,6 +100,9 @@ export function FilingsView({
   orgType?: "registered" | "committee" | null;
   /** F-3: computed financial figures for the annual return, or null. */
   finance?: FilingsFinance | null;
+  /** D44: non-null = free (fenced) org — copy locked, PDF watermarked, the
+   *  clean file leaves through the counted clean-download button. */
+  fence?: { downloadsRemaining: number } | null;
   /** G-1: the committee roster (with IC names) the paste-pack files from. */
   filingRoster?: FilingRosterEntry[];
 }) {
@@ -168,20 +173,26 @@ export function FilingsView({
     }
   }
 
-  const copyButton = (key: string, value: string, disabled = false) => (
-    <Button
-      size="sm"
-      variant="outline"
-      disabled={disabled || value === "—"}
-      onClick={() => copyValue(key, value)}
-    >
-      {copied === key ? (
-        <>✓ <Tri bm="Disalin" zh="已复制" en="Copied" /></>
-      ) : (
-        <Tri bm="Salin" zh="复制" en="Copy" />
-      )}
-    </Button>
-  );
+  const copyButton = (key: string, value: string, disabled = false) =>
+    fence ? (
+      // D44: on the free plan the pack is view-only — copy is a paid door.
+      <Button size="sm" variant="outline" disabled>
+        🔒 <Tri bm="Salin (pelan berbayar)" zh="复制（付费版）" en="Copy (paid plan)" />
+      </Button>
+    ) : (
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={disabled || value === "—"}
+        onClick={() => copyValue(key, value)}
+      >
+        {copied === key ? (
+          <>✓ <Tri bm="Disalin" zh="已复制" en="Copied" /></>
+        ) : (
+          <Tri bm="Salin" zh="复制" en="Copy" />
+        )}
+      </Button>
+    );
 
   const meetingName = (m: ConfirmedMinutesListItem) => {
     if (m.title) return m.title;
@@ -411,7 +422,7 @@ export function FilingsView({
                       )}
                     </div>
                   ))}
-                  <div>
+                  <div className="flex flex-wrap items-center gap-3">
                     <Button asChild size="lg" variant="outline">
                       <a
                         href={`/api/minutes-pdf?id=${selected.id}`}
@@ -419,13 +430,28 @@ export function FilingsView({
                         rel="noreferrer"
                       >
                         📄{" "}
-                        <Tri
-                          bm="Muat turun PDF minit"
-                          zh="下载会议记录 PDF"
-                          en="Download the minutes PDF"
-                        />
+                        {fence ? (
+                          <Tri
+                            bm="PDF minit (bertera air)"
+                            zh="会议记录 PDF（带水印）"
+                            en="Minutes PDF (watermarked)"
+                          />
+                        ) : (
+                          <Tri
+                            bm="Muat turun PDF minit"
+                            zh="下载会议记录 PDF"
+                            en="Download the minutes PDF"
+                          />
+                        )}
                       </a>
                     </Button>
+                    {fence && (
+                      <FenceCleanDownload
+                        href={`/api/minutes-pdf?id=${selected.id}`}
+                        fallbackName={`minit-${selected.id}.pdf`}
+                        remaining={fence.downloadsRemaining}
+                      />
+                    )}
                   </div>
                 </div>
               </details>
@@ -480,19 +506,44 @@ export function FilingsView({
                     rel="noreferrer"
                   >
                     📄{" "}
-                    <Tri
-                      bm="Muat turun PDF minit (untuk kotak Muat Naik)"
-                      zh="下载会议记录 PDF（就是上传框要的文件）"
-                      en="Download the minutes PDF (the file the upload box takes)"
-                    />
+                    {fence ? (
+                      <Tri
+                        bm="PDF minit (bertera air — pratonton)"
+                        zh="会议记录 PDF（带水印预览）"
+                        en="Minutes PDF (watermarked preview)"
+                      />
+                    ) : (
+                      <Tri
+                        bm="Muat turun PDF minit (untuk kotak Muat Naik)"
+                        zh="下载会议记录 PDF（就是上传框要的文件）"
+                        en="Download the minutes PDF (the file the upload box takes)"
+                      />
+                    )}
                   </a>
                 </Button>
-                <span className="text-sm text-muted-foreground">
-                  <Tri
-                    bm="PDF, bawah 25MB — sama seperti templat portal."
-                    zh="PDF、25MB 以内 —— 符合网站的要求。"
-                    en="PDF, under 25MB — what the portal accepts."
+                {/* D44: the file the portal's upload slot takes is the CLEAN
+                    one — for a fenced org that is the counted download. */}
+                {fence && (
+                  <FenceCleanDownload
+                    href={`/api/minutes-pdf?id=${selected.id}`}
+                    fallbackName={`minit-${selected.id}.pdf`}
+                    remaining={fence.downloadsRemaining}
                   />
+                )}
+                <span className="text-sm text-muted-foreground">
+                  {fence ? (
+                    <Tri
+                      bm="Kotak Muat Naik eROSES perlukan versi BERSIH (PDF, bawah 25MB) — guna butang muat turun bersih."
+                      zh="eROSES 上传框要的是干净版（PDF、25MB 以内）—— 请用「干净下载」按钮。"
+                      en="The eROSES upload slot needs the CLEAN version (PDF, under 25MB) — use the clean-download button."
+                    />
+                  ) : (
+                    <Tri
+                      bm="PDF, bawah 25MB — sama seperti templat portal."
+                      zh="PDF、25MB 以内 —— 符合网站的要求。"
+                      en="PDF, under 25MB — what the portal accepts."
+                    />
+                  )}
                 </span>
               </div>
             </>
