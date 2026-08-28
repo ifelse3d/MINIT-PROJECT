@@ -516,19 +516,21 @@ html:not(.minit-rail-expanded) .rail-collapsible .rail-item {
    (--v2-outline-border at 2px) with no shadow and no hover lift, so they
    read as boxy and nothing said they were clickable.
 
-   Each card carries ONE accent hue on a short leash. --c may touch exactly
-   three things: the 4px top band, the icon tile (tint + glyph) and the 7px
-   status dot. NEVER the border, the background, the title, the description
-   or the status text — those stay --v2-border / --v2-card / --v2-text /
-   --v2-text-soft, so the four hues never become four themes. The dot is
+   Each card carries ONE accent on a short leash, and since 2026-08-28 all
+   four are VIOLETS (J: 「我覺得可以放不同的紫」) — the family walks from deep
+   indigo violet to fuchsia so the cards stay tellable apart while the page
+   stays one colour. --c may touch exactly three things: the 4px top band, the
+   icon tile (tint + glyph) and the 7px status dot. NEVER the border, the
+   background, the title, the description or the status text — those stay
+   --v2-border / --v2-card / --v2-text / --v2-text-soft. The dot is
    decoration: the words beside it carry the meaning on their own, which is
    what keeps the status line working for a colour-blind reader.
 
-   Four hues per card, not two, because the light-mode hues (#7029E5,
-   #0F766E, #2563EB, #A21CAF) are all dark: on the dark card they would be a
-   glyph you cannot see. The component passes --c-light/--c-dark and their
-   tints as literals rather than deriving them with color-mix, so an old
-   Android WebView gets the same colours as everyone else.
+   Four values per card, not two, because the light-mode hues are all dark
+   colours: on the dark card they would be a glyph you cannot see. The
+   component passes --c-light/--c-dark and their tints as literals rather than
+   deriving them with color-mix, so an old Android WebView gets the same
+   colours as everyone else.
 
    Sizes are rem, not the px the design prompt specifies: the text-size
    setting scales type AND spacing together (see the html rule above), and a

@@ -57,35 +57,48 @@ import type { HomeStats } from "@/lib/home-stats";
 export const ASK_INPUT_ID = "minit-ask-input";
 
 /**
- * Each card's accent, light and dark. Four literal pairs rather than a
- * color-mix() derivation: the light hues are all dark colours, so on the dark
- * card they would be a glyph nobody can see, and the two tints are the exact
- * values the design was checked at (glyph-on-tile clears 3:1 in both modes).
- * These four hues are the only non-violet colour in the app.
+ * Each card's accent, light and dark.
+ *
+ * FOUR VIOLETS, not four different colours (J, 2026-08-28: 「我覺得可以放不同
+ * 的紫」). The design pack shipped teal / blue / magenta beside the brand
+ * violet and flagged the trade itself — four hues plus the brand is five
+ * colours on one screen. J took the exit it offered, but a step further than
+ * "all four the same": the cards walk the purple family from deep indigo
+ * violet to fuchsia, so they stay tellable apart while the page stays one
+ * colour. Nothing else changes — the hue still only touches the band, the
+ * tile and the dot.
+ *
+ * Four literal pairs rather than a color-mix() derivation: the light hues are
+ * all dark colours, so on the dark card they would be a glyph nobody can see,
+ * and the tints are the exact values checked (glyph-on-tile clears 3:1 in
+ * both modes). An old Android WebView gets the same colours as everyone else.
  */
 type Hue = { light: string; lightSoft: string; dark: string; darkSoft: string };
 
+// Deep indigo violet -> brand violet -> purple -> fuchsia. Every light value
+// clears 4.3:1 on white, so the glyph is safe on its own 13% tint; every dark
+// value is the light one's readable counterpart on the dark card.
 const HUE_MINUTES: Hue = {
-  light: "#7029E5",
+  light: "#4C1D95",
+  lightSoft: "#E8E2F1",
+  dark: "#C4B5FD",
+  darkSoft: "rgba(196,181,253,0.16)",
+};
+const HUE_MONEY: Hue = {
+  light: "#7029E5", // the brand violet itself
   lightSoft: "#ECE3FC",
   dark: "#A78BFA",
   darkSoft: "rgba(167,139,250,0.16)",
 };
-const HUE_MONEY: Hue = {
-  light: "#0F766E",
-  lightSoft: "#E0EDEC",
-  dark: "#5EEAD4",
-  darkSoft: "rgba(94,234,212,0.15)",
-};
 const HUE_STATEMENT: Hue = {
-  light: "#2563EB",
-  lightSoft: "#E3EBFC",
-  dark: "#60A5FA",
-  darkSoft: "rgba(96,165,250,0.16)",
+  light: "#9333EA",
+  lightSoft: "#F1E4FC",
+  dark: "#C084FC",
+  darkSoft: "rgba(192,132,252,0.16)",
 };
 const HUE_AI: Hue = {
-  light: "#A21CAF",
-  lightSoft: "#F3E2F5",
+  light: "#C026D3",
+  lightSoft: "#F7E3F9",
   dark: "#E879F9",
   darkSoft: "rgba(232,121,249,0.16)",
 };
