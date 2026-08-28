@@ -5,31 +5,58 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-28 深夜（MYT）· Fable 5（D44 免费围栏整包）**
-**🔴 本场做了 J 拍板的「免费与付费的围栏」（D44，终身制不重置、删了不退次数）：
-免费版 = 文件 5 份 · 收据 20 张 · AI 读 20 页（照片 1 张=1 页）· 干净下载 3 次；
-预览一律 PERCUBAAN 浮水印＋禁复制，干净档只从计次的「干净下载」出去；
-收据 20 张每张都正常下载发送（不吃那 3 次）。谁被围：`monthly_free_quota ≤ 15`
-（开通=手动 SQL 抬 quota；自选 standard 未开通照围）；demo org 永不围。
-migration **20260909000000（第 31 支，🚧 未套用）**建 fence_usage 表＋
-fence_charge() 原子记账，并把 J 的 15/58/91 三个 org 标成 standard/quota 100
-（不然 Demo 截图全是浮水印）。migration 没套用之前：**看得到围栏 UI 和浮水印
-（那只要 quota 一读），但计数与挡下不生效（fail-open，D8）——所以套用前
-围栏是「装了没通电」。上限数字只写在 src/lib/plans.ts（PLANS.trial.fence）。
-上一场（美术三包＋提速）全部已上线，速度已解（sin1，首页 0.34–0.66s）。**
+**最后更新：2026-08-29 凌晨（MYT）· Fable 5（46 号单：RESPONSIVE 工程＋J 圈的两个画面问题）**
+**🔴 本场实查到的两个好消息：① 围栏 commit e0aca2e J 已 push（main 与
+origin/main 同步）；② migration 31（fence）J 已贴——`npm run check:migrations`
+两个探针都 APPLIED，围栏已通电（e2e 快照里「干净下载（剩 3 次）」的数字
+现在是 DB 里的真话）。45 号报告里「等 J 做」的两件事都做完了；
+未决 #1 的「套用后实测一轮撞上限」仍然没做（要真 trial 帐号手撞）。**
 
 ---
 
-## 🌙 现在在哪里（2026-08-28 深夜，围栏场收工）
+## 🌙 现在在哪里（2026-08-29 凌晨，RESPONSIVE 场收工）
 
-> **已上线**：https://minit-project.vercel.app —— 截至 44 号报告的**全部** commit
-> J 都已 push（含 logo 修正与提速；晚间实测 main 与 origin/main 同步）。
-> 本场围栏的 commit 在本机等 push；migration 31 等 J 手贴（salin-migration.bat 选 31）。
-> push 是 J 的事（push-cabang.bat）。线上 org：15「J」、58「avocado」、91「TESTING1」。
+> **已上线**：https://minit-project.vercel.app —— 截至围栏场（e0aca2e）全部已 push。
+> **本场 3 支 commit 在本机等 push**（b9d22bd 弹窗/面板、cdc42ce 格线容器化、
+> 之后一支报告+脚本）。push 是 J 的事（push-cabang.bat）。
+> 线上 org：15「J」、58「avocado」、91「TESTING1」。
 
-### 这一场做了什么（D44 免费围栏；45 号报告逐条对照）
+### 这一场做了什么（46 号单；47 号报告给 J 的版本在 _J-要做的事）
 
-- **地基**：migration `20260909000000_free_fence.sql`（第 31 支，🚧 未套用）——
+- **0-1 弹窗被顶栏切掉（J 截图）**：根因不是 z-index——玻璃顶栏的
+  `backdrop-filter` 会成为 fixed 后代的包含块（CSS 规定），所以从顶栏里
+  打开的确认弹窗，它的「全屏」其实是那 56px 的顶栏，卡片开在视窗顶被切头。
+  修法：`Modal` 与 `CommandPalette` 一律 `createPortal(document.body)`；
+  Modal 卡片 `max-h-full`＋内部滚动（90vh 在矮窗还会爆）；issue-controls
+  两个自绘弹窗补同款矮窗保护。1366×450 矮窗实拍：完整置中 ✓。
+- **0-2 Ask MinitAI 盖住顶栏（J 红笔）**：桌面 rail 改 `top-14 bottom-0`
+  （rem，跟字级一起缩放）z-30（顶栏 z-40 之下）；把「右推」从包着顶栏的
+  wrapper 挪到只包内容的内层 div——顶栏永远整条；手机 sheet 加
+  `max-h-[calc(100dvh-4.5rem)]` 不碰顶栏。另修：面板宽度上限改成跟视窗
+  连动（平板 768 原本能拉到 640 只剩 128px 内容）。
+- **1A 病历**：`scripts/shots-responsive.mjs`——全站 37 页 × 375/768/1366/1920
+  × 亮/暗 = 300 张，headless、零 AI 额度、ZZZ 帐号即建即删，
+  图在 `eval/reports/shots-responsive/`。抽查结论：站点整体健康（前几场
+  的壳工程起效了），真破版只有一处——/filings 截止日期行在 375 被挤成
+  一字一行（光杆 flex-1 basis 0），补 `min-w-[10rem]` 让日期徽章下折。
+  全站 page errors 0。
+- **1B 修壳（系统性，不是逐页）**：15 处还看视窗断点的宽度敏感格线全部
+  改成 container variants（sm:→@xl:、md:→@3xl:、lg:→@4xl:，量 <main>
+  的实宽）；日历两栏、members/glossary 表单行同改；settings 的
+  「侧栏 vs 顶部标签条」切换改 @4xl——面板开着时自动退成标签条，
+  不再压扁表单。证据照 proof-1B-home-dock-open-1366.png：1366 开满
+  640 面板，首页卡片 2×2 不是四根竹竿。
+- **D**：围栏新组件进了矩阵——/settings/plan 仪表（375/1366 都好）、
+  财报页「PDF（带水印）/干净版」按钮、/filings 锁着的复制按钮、
+  e2e 里的 PERCUBAAN 水印，全部如常。
+- **四道关＋e2e**：tsc 0 · eslint 22（21 错+1 警告，逐字同基准）·
+  vitest 889 全过 · build ✓ · **e2e:minutes 与 e2e:money 全过、
+  page errors 0**（真 DB、next start，migration 31 通电状态下跑的）。
+- 手机底栏 4 格、桌面侧栏七组、路由、文案、三语：一律没动（拍板照旧）。
+
+### 本场之前的上一场（D44 免费围栏；45 号报告）
+
+- **地基**：migration `20260909000000_free_fence.sql`（第 31 支，✅ 已套用，2026-08-29 探针实测）——
   `fence_usage` 表（每 org 一行，docs_made / pages_uploaded / clean_downloads，
   累计不退；RLS 开、无 policy＝只有 service role 能碰，app_errors 同款）＋
   `fence_charge()`（SELECT…FOR UPDATE 原子「检查＋记账」，正数收费会越界就整笔
@@ -69,8 +96,8 @@ fence_charge() 原子记账，并把 J 的 15/58/91 三个 org 标成 standard/q
   `eslint` 与基准逐字同类同数（22 = 21 错 + 1 警告，stash 对照跑过）· `build` ✓ ·
   **e2e:minutes 全过、e2e:money 全过，page errors 0**（真 DB＋next start；
   e2e 的 trial org 真的踩到了围栏 UI——快照里看得到「打印/PDF（带水印）」
-  「干净下载（剩 3 次）」与 PERCUBAAN 水印，而计数因 RPC 未套用 fail-open，
-  流程全通，正好验证了 D8 的「装了没通电」形态）。
+  「干净下载（剩 3 次）」与 PERCUBAAN 水印；当时 RPC 未套用是 fail-open，
+  现在 31 已套用、计数走真 DB）。
 - 探针与工具跟上：`npm run check:migrations` 新增 fence_usage 列探针＋
   fence_charge RPC 探针（org 0 的 FK 会中止事务，探针零写入）；
   `salin-migration.bat` 新增第 31 项。
@@ -89,37 +116,34 @@ fence_charge() 原子记账，并把 J 的 15/58/91 三个 org 标成 standard/q
 - localStorage 里已存的旧文件文本（工作区草稿）不在锁内：锁的是成品页与
   文件出口，工作区是进行中的自己的字。
 
-### 现场量到的（不是听说的）
+### 现场量到的（不是听说的，2026-08-29 凌晨本场实测）
 
-- 四道关：`tsc` 0 · `eslint` 与基准同数同类（22 = 21 错 + 1 警告；stash 起来跑过
-  基准对照，无新增）· `vitest` **889 全过（+15：fence-core 13、watermark 2）** ·
+- `git status`：工作树干净；e0aca2e 已在 origin/main（J 已 push）。
+- `npm run check:migrations` 实跑：**1–31 全 APPLIED**（fence_usage 列探针＋
+  fence_charge RPC 探针都 APPLIED）——围栏已通电。
+- 四道关：`tsc` 0 · `eslint` 22（21 错+1 警告，同基准）· `vitest` 889 全过 ·
   `build` ✓。
-- **e2e:minutes 全过、e2e:money 全过，page errors 0**（真 DB，`next start` 正式版）。
-  e2e 的 trial org 实际渲染出围栏 UI（带水印打印钮、「干净下载（剩 3 次）」、
-  PERCUBAAN 水印行）——画面这一半不用等 migration。
-- `npm run check:migrations` 实跑：1–30 全 APPLIED；**31（fence）两个探针都
-  NOT YET**——这就是「装了没通电」的证据，J 贴完再跑一次应变 APPLIED。
-- ⚠ 没能验证的：migration 31 套用后的**真计数与真挡下**（要 J 贴完、push 完，
-  用 TESTING1 以外的 trial org 各撞一次上限）；真 vendor 合并写作（D37 旧项）。
+- **e2e:minutes 全过、e2e:money 全过，page errors 0**（真 DB，`next start`）。
+- 300 张矩阵截图全站 page errors 0；proof-0-1 / proof-0-2 / proof-1B 三组
+  证据照在 `eval/reports/shots-responsive/`。
+- ⚠ 没能验证的：围栏的**真挡下**（文件第 6 份、收据第 21 张、第 21 页、
+  第 4 次干净下载各撞一次——要真 trial 帐号手工撞，脚本撞会烧 AI 额度）；
+  真 vendor 合并写作（D37 旧项）；1366 实体笔电的真机观感（截图是 headless）。
 
-### 🔴 J 的事（详见 45 号报告）
+### 🔴 J 的事（详见 47 号报告）
 
-1. **salin-migration.bat → 选 31** → Supabase SQL Editor 贴上 → Run
-   （「Success. No rows returned」= 成功；这支也会把你的三个 org 标成付费版，
-   不然你自己看到的全是水印）。
-2. **push-cabang.bat**（本场 **1 支**）→ 线上 Ctrl+Shift+R。
-3. 看四个地方：任一份历史会议记录（应有「打印（带水印）」+「干净下载」两个钮
-   ——你的 org 是付费版，应该**看不到**这些、一切照旧才对）；用一个新注册的
-   试用帐号看同一页（应该**看得到**水印）；/settings/plan（付费版无仪表，
-   试用版有四条 x/y）；开收据页照旧。
-4. 之前欠你答复的三问照旧（真额度试 AI 撰写／申报页圈位置／「不专业」实例）
-   ——你有空再说。
+1. **push-cabang.bat**（本场 3 支）→ 1–3 分钟后线上自动更新 → Ctrl+Shift+R。
+2. 验收 5 分钟：①任何页点头像→退出——弹窗应该完整在屏幕中间（把浏览器
+   窗口拉矮也不被切）；②开 Ask MinitAI——顶栏（搜索框/EN/月亮/头像）应该
+   整条还在，面板从顶栏下面开始；③手机上开面板——同样不盖顶栏。
+3. 之前欠的照旧：真额度试 AI 撰写／申报页圈位置／「不专业」实例／
+  「把之前的拿出来讨论」清单——你开口就开工。
 
 ### ❓ 未决问题
 
-1. **migration 31 未套用**——套用前围栏只有画面没有牙（fail-open，D8）。
-   套用后要实测一轮：文件第 6 份、收据第 21 张、第 21 页、第 4 次干净下载，
-   各撞一次看被挡＋讯息对不对。
+1. **围栏真挡下未实测**（migration 31 已套用 ✅，通电了）：文件第 6 份、
+   收据第 21 张、第 21 页、第 4 次干净下载，各撞一次看被挡＋讯息对不对
+   ——要一个真 trial 帐号手工撞（脚本撞会烧 AI 额度）。
 2. 助手用哪个模型 —— prompt 已解冻（D29），等 J 重跑 bench 后定（J：系统先稳）
 3. 法律实体（金流前置，D12），试点前要答
 4. 真实手写 eval：92.9% 量的仍是印刷体，且 prompt 已动、数字作废——等 J 重测
@@ -141,11 +165,35 @@ fence_charge() 原子记账，并把 J 的 15/58/91 三个 org 标成 standard/q
 清单底稿：39 号 §6 三问、31 号单场次 5（J 在场）、eROSES Penyata Tahunan
 逐栏（要 J 帐号）、语音 B、章程「还要的事情」、#10 长尾、e2e:roles 4 项、
 首页主图重拍、竞赛材料（J 自己定 30/31 交，**不催**）。
-围栏方面：migration 31 套用后照未决 #1 实测一轮；「大的」仍等 J 开口。
+围栏方面：照未决 #1 用真 trial 帐号撞一轮上限；「大的」仍等 J 开口。
+RESPONSIVE 方面：J 看完 47 号报告若再圈出破版，贴 46 号单同一段 PROMPT
+继续（病历脚本已在，SHOTS_ROUTES/SHOTS_WIDTHS 可只重拍一角）。
 
 ---
 
 ## 6. 已知陷阱（踩过的，别再踩）
+
+### 2026-08-29 凌晨新增（RESPONSIVE 场）
+
+- 🔴 **`backdrop-filter`（还有 `filter`/`transform`）的祖先会变成 fixed 后代的
+  包含块**——玻璃顶栏里开的 `fixed inset-0` 弹窗，「全屏」其实是 56px 的
+  顶栏，卡片开在视窗顶被切头（J 的截图就是这个）。**修法：弹窗类组件一律
+  `createPortal(document.body)`（Modal 与 CommandPalette 已改）；判断方法：
+  弹窗位置诡异，先往上找带 filter/transform/backdrop-filter 的祖先。**
+  以后在顶栏/AI 面板（motion 有 transform）里新加任何 fixed 组件，先想这条。
+- ⚠ **flex-wrap 行里的光杆 `flex-1`（basis 0）永远不会触发换行**——它先把
+  自己压成一字一行（/filings 截止日期行在 375 的惨状）。**修法：标题列给
+  `min-w-[10rem] flex-1`，右侧的日期/徽章就会整块下折**（clause-book 的
+  `min-w-56 flex-1` 是同款正确写法）。
+- ⚠ **fullPage 截图会把 fixed 元素（手机底栏、浮动按钮）画在长图中段**——
+  那是拼接假象，不是破版。看 375 长图时先想起这条再喊修。
+- 💡 **弹窗矮窗保护的正确写法是 `max-h-full`＋`overflow-y-auto`**（相对带
+  padding 的 flex 容器量），不是 `max-h-[90vh]`——300px 高的窗 90vh 还是爆。
+- 💡 **视口宽的「答案」全在 <main> 的 @container 上**：宽度敏感的格线/分栏
+  一律用 @xl:/@3xl:/@4xl:（对照表：sm:→@xl、md:→@3xl、lg:→@4xl）。
+  例外只有 bare 路由（/login、legal——没有 @container，viewport 断点照旧）。
+  另注意 card-header 自带具名 @container/card-header——别在 CardHeader 里
+  用不具名容器变体，会量到卡头不是量到页。
 
 ### 2026-08-28 深夜新增（围栏场）
 
@@ -484,7 +532,7 @@ fence_charge() 原子记账，并把 J 的 15/58/91 三个 org 标成 standard/q
 ### 关于 git 与环境
 
 - **在沙盒／非互动环境不要跑任何会等待输入的指令。**
-- **「已 commit」不等于「已 push」。**（本轮：**全部已 commit、未 push 共 10 支。**）
+- **「已 commit」不等于「已 push」。**（本轮：**全部已 commit、未 push 共 3 支。**）
 - **卡住的 `git push` 会留下僵尸行程与 stale `index.lock`。**
 - **沙盒的挂载点删不掉档案。**
 - **Windows 上不要用 `| head`；长 commit 讯息写成档案再 `git commit -F <path>`，
@@ -547,7 +595,7 @@ J 手贴 migration 的步骤：记事本开档 → `Ctrl+A` `Ctrl+C` → Supabas
 | 模型对比 | `npm run bench`（--dry-run / --mock）· `bench-models.bat` · 报告在 `eval/reports/model-bench-<日期>.md` |
 | 「到底做了没有」 | `npm run status` / `status.bat` |
 | 示范章程（CONTOH） | `public/contoh/undang-undang-tubuh-contoh.pdf`（8 页 BM 完整章程，虚构社团）· 文字版 `docs/contoh-undang-undang-tubuh.md` · 重生 `npm run contoh:constitution`。十条条文与 `src/lib/sample-constitution.ts` **逐字相同**、印出来的页码对得上 `page_ref`，所以拿它测 `/constitution` 上传时**答案是已知的** |
-| migration | `supabase/migrations/`（**31 支；1–30 已套用（探针实测），31（fence，D44）未套用**）· `salin-migration.bat`（31 项）· `npm run check:migrations`（含 save_register_rows／fence_charge RPC 探针） |
+| migration | `supabase/migrations/`（**31 支；1–31 全部已套用（2026-08-29 探针实测）**）· `salin-migration.bat`（31 项）· `npm run check:migrations`（含 save_register_rows／fence_charge RPC 探针） |
 | 给 J 双击的 `.bat` | `status.bat` · `salin-migration.bat` · `salin-env-vercel.bat` · `push-cabang.bat` · `bench-models.bat`。🔴 `push-to-github.bat` 不能用；⚠ `check-ai.bat` 还指旧资料夹 |
 | `competition/` | 顶层＝当前版（**[YOU] 两处还空着**）；`screenshots/` 60 张旧配色（拍板 0-9：只重拍首页主图，未拍——未决 7） |
 | `eval/reports/` | 整夹 gitignore；只有 `SUMMARY.md` 例外 |
