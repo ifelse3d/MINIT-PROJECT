@@ -26,7 +26,7 @@ import { can, permissionError } from "@/lib/roles";
 import { isSampleMeetingExtraction } from "@/lib/sample-guard";
 import { renderMinutesDraftBm } from "@/lib/minutes-draft";
 import { joinUserError, inputProblemError, USER_ERRORS } from "@/lib/user-errors";
-import { dayIsoMalaysia } from "@/lib/history";
+import { dayIsoMalaysia, formatMytDateTime } from "@/lib/history";
 import { BRAND_NAME } from "@/lib/brand";
 import {
   isMinutesLang,
@@ -329,6 +329,124 @@ export async function saveConfirmedMinutes(input: {
 
 // countUnreviewed moved to src/lib/extraction-rows.ts (K-4) — one copy for
 // this save gate AND /api/draft-minutes, instead of two "keep in sync" twins.
+
+// ---------------------------------------------------------------------------
+// EDITING A SAVED DOCUMENT (J review 2026-08-28, item 4: 「没得作修改。做修改
+// 下面就要写几时 EDIT」).
+//
+// The rule that makes this safe to allow: every edit APPENDS a visible line
+// to the document itself — "Dipinda oleh <who> pada <when MYT>" — so the
+// paper trail survives printing, uploading to eROSES, everything. The
+// edited_at / edited_by columns (migration 30) carry the same fact for the
+// History list; when they do not exist yet the in-document line still does
+// the honest work. The ORIGINAL audit line is never touched.
+// ---------------------------------------------------------------------------
+
+export async function updateSavedMinutes(input: {
+  id: number;
+  finalMd: string;
+}): Promise<SaveMinutesState> {
+  const user = await getSessionUser();
+  const active = await getActiveOrg();
+  if (!user || !active) {
+    return {
+      error:
+        "Sila log masuk semula / 请重新登入 / Please sign in again",
+      ok: false,
+    };
+  }
+  if (!can(active.role, "minutes_write")) {
+    return { error: permissionError("minutes_write"), ok: false };
+  }
+  const identity = await getDocumentIdentity();
+  if (!identity) {
+    return {
+      error: "Sila log masuk semula / 请重新登入 / Please sign in again",
+      ok: false,
+    };
+  }
+
+  const id = Number(input.id);
+  const body = String(input.finalMd ?? "").replace(/\r\n/g, "\n").trim();
+  if (!Number.isInteger(id) || id <= 0 || body === "") {
+    return {
+      error:
+        "Dokumen kosong tidak boleh disimpan / 不能保存空的文件 / An empty document cannot be saved",
+      ok: false,
+    };
+  }
+  if (body.length > MAX_DRAFT_CHARS) {
+    return {
+      error:
+        "Dokumen terlalu panjang / 文件太长 / The document is too long",
+      ok: false,
+    };
+  }
+
+  const supabase = await getSupabaseServer();
+  // Prove the row exists in THIS org before touching it (Hard Rule 5 on top
+  // of RLS) — and that there is something to differ from.
+  const { data: existing, error: readError } = await supabase
+    .from("minutes_docs")
+    .select("id, final_md")
+    .eq("org_id", active.id)
+    .eq("id", id)
+    .maybeSingle();
+  if (readError || !existing) {
+    return {
+      error:
+        "Rekod tidak dijumpai / 找不到这份记录 / That document was not found",
+      ok: false,
+    };
+  }
+  if (String(existing.final_md ?? "").replace(/\r\n/g, "\n").trim() === body) {
+    // Nothing changed — do not stamp an edit that did not happen.
+    return { error: null, ok: true };
+  }
+
+  const nowIso = new Date().toISOString();
+  const stamp = formatMytDateTime(nowIso);
+  const editLine = `_Dipinda oleh ${identity.confirmedBy} pada ${stamp} / Edited by ${identity.confirmedBy} on ${stamp}_`;
+  const finalMd = `${body}\n${editLine}`;
+
+  // Same ladder as the insert: edited_at/edited_by are migration 30 — when
+  // the database has not caught up, the update still lands with the
+  // in-document line carrying the log.
+  const update: Record<string, unknown> = {
+    final_md: finalMd,
+    edited_at: nowIso,
+    edited_by: identity.confirmedBy,
+  };
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { error } = await supabase
+      .from("minutes_docs")
+      .update(update)
+      .eq("org_id", active.id)
+      .eq("id", id);
+    if (!error) {
+      // The stored document changed — its search index must follow (same
+      // fire-and-forget contract as the save; a miss is caught by backfill).
+      indexMinutesDocInBackground(id);
+      return { error: null, ok: true };
+    }
+    const named = ["edited_at", "edited_by"].find(
+      (col) => col in update && new RegExp(col, "i").test(error.message ?? ""),
+    );
+    if (!named) {
+      return {
+        error:
+          "Tidak berjaya disimpan — cuba lagi / 没有保存成功 —— 请再试一次 / Could not save — try again",
+        ok: false,
+      };
+    }
+    delete update[named];
+  }
+  return {
+    error:
+      "Tidak berjaya disimpan — cuba lagi / 没有保存成功 —— 请再试一次 / Could not save — try again",
+    ok: false,
+  };
+}
 
 /** A saved minutes document is a page or two of text; anything far past that
  *  is not a document someone typed, so it is not stored. */

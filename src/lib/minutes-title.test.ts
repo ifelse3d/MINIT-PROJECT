@@ -10,7 +10,7 @@ function withFacts(over: {
   const e = structuredClone(emptyMeetingNotesExtraction);
   if (over.type !== undefined) {
     e.meeting_type = {
-      value: over.type,
+      value: over.type as typeof e.meeting_type.value,
       confidence: "confirmed",
       source_ref: { location: "t", snippet: over.type },
     };
