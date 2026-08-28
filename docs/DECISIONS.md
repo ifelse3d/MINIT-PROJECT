@@ -735,6 +735,38 @@ color-mix 推導，舊 Android WebView 也要一樣）。
 看起來像髒污），單層 16%：要更分離就加模糊半徑，永遠不要加黑。
 品牌字級大於「歡迎回來」——登入頁的人已經知道自己被歡迎，要確認的是站對了產品。
 
+### D41 — 圖示要過「馬來西亞每一個族群」這一關；豬撲滿刪除（2026-08-28，J）
+
+J：「**不要用豬圖，因爲有馬來人用。要注意每一個種族的sensitive**」。
+
+`/money/balance`（現有資金）本來掛 lucide 的 `PiggyBank`。豬對這個產品的主要
+使用者（穆斯林）是 haram 意象，側欄圖示不是讓人皺眉的地方。已換成
+`CircleDollarSign`。（中間試過 `Vault`，在側欄尺寸下轉盤看起來像一個 ✕，
+會被讀成「取消」，退回。）
+
+🔴 **這是一條常設規則，不是一次性修正**：以後每加一個圖示、emoji、插圖或範例
+照片，都要先對照馬來西亞的族群與宗教讀一遍再上線。已掃過的現況：
+- src 全域沒有豬／酒／狗／宗教符號的 emoji（唯一的 🙏 在 WhatsApp 出席確認
+  訊息裡，當「請／謝謝」用，馬來語圈普遍使用，留著）。
+- 範例姓名三大族群都有（Lim/Tan/Wong、Siti/Ahmad/Nurul、Muthu/Kumar/A-L），
+  沒有偏向任何一方——新增範例資料要維持這個比例。
+- `Landmark`（AGM 文件包）是通用機構建築，不是任何宗教建築。
+
+### D42 — 品牌標記只有一份，網頁與圖示檔都從它產生（2026-08-28，J：TAB 不是最新 LOGO）
+
+J 指出瀏覽器分頁的圖示跟 App 裡的 logo 不一樣。查出來的原因不是「忘了更新」——
+**本來就是兩張不同的圖**：App 畫的是向量重繪（brand-logo.tsx），而 favicon／PWA／
+iOS 圖示全部是從 J 8/27 給的 `scripts/assets/minit-logo.png` 產的，那張的漸層明顯
+偏淡、M 的比例也不同。兩邊各自正確，只是從來就不是同一張畫。
+
+定案：幾何搬到 `src/lib/brand-mark.ts`，**兩個渲染器都讀它**——`brand-logo.tsx`
+畫成 JSX，`scripts/brand-icons.ts` 用 sharp 把同一段 SVG 光柵化成
+favicon.ico（48/32/16）＋ icon-512/192＋apple-touch-icon（180，壓平在漸層深端，
+iOS 不吃透明）＋brand-logo-96。換 logo = 改一個檔 → `npm run icons`。
+舊的 `scripts/brand-icons.mjs` 與那張來源 PNG 不再是真相來源。
+順帶：`BrandLogo` 的 `white` 線稿變體刪除——登入頁和重設密碼頁都改用磚塊版了
+（J：「統一」），沒有地方再用它。
+
 ---
 
-*Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C) · D16 appended 2026-08-25 (Stage D) · D17 appended 2026-08-27 (work order 27, the overnight sprint) · D18–D21 appended 2026-08-27 (work order 31 §0, J's post-launch rulings) · D22–D23 appended 2026-08-27 (work order 32 §0, launch-day feedback rulings) · D24–D25 appended 2026-08-27 (the afternoon rulings: violet redesign + BM guard) · D26–D28 appended 2026-08-27 (the launch-evening 20-point list) · D29–D32 appended 2026-08-28 (the two-review session: prompt unfreeze, attendance gate, funds page, record-to-DB) · D33–D35 appended 2026-08-28 (J's §6 answers + the new seven: PdpaNote deleted, per-part AI discussion, minutes named/printable/editable/photo-linked) · D36–D37 appended 2026-08-28 evening (the eight-item round: save lands on the finished document, saved workspaces clear themselves, AI may merge like items under checkMergedFacts) · D38–D40 appended 2026-08-28 (the design pass: one five-step radius scale shifted a notch, the canvas gradient that was being painted and covered, the four rebuilt home cards and the sign-in brand panel)*
+*Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C) · D16 appended 2026-08-25 (Stage D) · D17 appended 2026-08-27 (work order 27, the overnight sprint) · D18–D21 appended 2026-08-27 (work order 31 §0, J's post-launch rulings) · D22–D23 appended 2026-08-27 (work order 32 §0, launch-day feedback rulings) · D24–D25 appended 2026-08-27 (the afternoon rulings: violet redesign + BM guard) · D26–D28 appended 2026-08-27 (the launch-evening 20-point list) · D29–D32 appended 2026-08-28 (the two-review session: prompt unfreeze, attendance gate, funds page, record-to-DB) · D33–D35 appended 2026-08-28 (J's §6 answers + the new seven: PdpaNote deleted, per-part AI discussion, minutes named/printable/editable/photo-linked) · D36–D37 appended 2026-08-28 evening (the eight-item round: save lands on the finished document, saved workspaces clear themselves, AI may merge like items under checkMergedFacts) · D38–D40 appended 2026-08-28 (the design pass: one five-step radius scale shifted a notch, the canvas gradient that was being painted and covered, the four rebuilt home cards and the sign-in brand panel) · D41–D42 appended 2026-08-28 (J's review of it: no piggy bank and a standing check on imagery for every community, and one brand mark that both the page and the icon files are generated from)*

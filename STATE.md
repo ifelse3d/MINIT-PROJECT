@@ -11,14 +11,18 @@
 一直有画、被两层不透明底色盖住——底色移到 <html>，body 与 .v2-root 全透明；
 ③ 首页四张卡重做（色带／图示砖／hover 抬起／一行真数据），emoji 全删；
 ④ 登入页换真 app icon（drop-shadow 不是 box-shadow）、品牌字大于「欢迎回来」。
-J 照 40 号报告：push（4 支）→ Ctrl+Shift+R。本轮无新 migration。**
+⑤ J 看过后的第二轮：豬撲滿圖示刪除（族群 sensitive，D41）、四張卡改成
+四階「不同的紫」、TAB 圖示與 App 內 logo 統一成同一份向量（D42）、
+重設密碼頁 logo 統一、how-it-works 四張示範圖重拍。
+J 照 41 号报告：push（**5 支**，40 号那 4 支 J 已 push）→ Ctrl+Shift+R。本轮无新 migration。**
 
 ---
 
 ## 🌙 现在在哪里（2026-08-28，美术三包收工）
 
 > **已上线**：https://minit-project.vercel.app —— 39 号那 5 支 **J 已 push**
-> （origin/main 已同步）。本机现在领先 **4 支未 push**（本场的美术改动）。
+> （origin/main 已同步）。40 号那 4 支 J 也已 push（origin/main = 769099c）；
+> 本机现在领先 **5 支未 push**（J 看完之后的第二轮）。
 > push 是 J 的事（push-cabang.bat）。线上 org：15「J」、58「avocado」、91「TESTING1」。
 
 ### 这一场做了什么（J 给的三个 zip；40 号报告逐条对照）
@@ -56,6 +60,26 @@ J 照 40 号报告：push（4 支）→ Ctrl+Shift+R。本轮无新 migration。
   加装饰环；左下那条「指着空气」的线下面补上小 wordmark；电邮／密码栏加前置
   图示；「忘记密码？」黑底线 → 紫色。<md 收成顶部横幅（环与多余文字自动收起）。
 
+- **D41 圖示的族群 sensitive（J 看完第一輪後）**：`/money/balance` 的
+  `PiggyBank` 刪除——豬對穆斯林使用者是 haram 意象。換 `CircleDollarSign`
+  （中途試過 `Vault`，側欄尺寸下轉盤像一個 ✕，被讀成「取消」，退回）。
+  🔴 **常設規則**：以後每一個圖示／emoji／插圖／範例照片都要先對照馬來西亞
+  族群與宗教讀一遍。已掃：src 無豬／酒／狗／宗教符號 emoji（唯一 🙏 在
+  WhatsApp 出席訊息當「請」用，留著）；範例姓名三大族群齊全，維持這比例。
+- **D42 品牌標記只有一份**（J：「上面TAB那邊有問題，不是最新LOGO」）：
+  原因不是忘了更新，而是**本來就是兩張圖**——App 畫向量重繪，favicon/PWA/iOS
+  全從 J 8/27 給的 PNG 產（漸層偏淡、M 比例不同）。幾何搬到
+  `src/lib/brand-mark.ts`，`brand-logo.tsx` 畫 JSX、`scripts/brand-icons.ts`
+  用同一段 SVG 光柵化出 favicon.ico＋icon-512/192＋apple-touch-icon＋96。
+  換 logo＝改一個檔 → `npm run icons`。舊的 .mjs 與那張來源 PNG 已不是真相來源。
+  `BrandLogo` 的 `white` 線稿變體刪除（登入頁與重設密碼頁都用磚塊版，J：「統一」）。
+- **四張卡改成「不同的紫」**（J）：深靛紫 #4C1D95 → 品牌紫 #7029E5 →
+  紫 #9333EA → 洋紅紫 #C026D3，深色模式各給亮版。設計包原本的青／藍／洋紅
+  自己就標了這個退路；J 選了它，但要求彼此仍分得出來。
+- **how-it-works 四張示範圖重拍**（跑 `scripts/howitworks-shots.mjs`）：
+  舊圖還是改版前的粗黑框卡片。三個高亮框座標同步更新，並用**顏色偵測**
+  （抓 #7029E5 的 bbox）驗過框確實落在按鈕上，不是目測。
+
 ### 现场量到的（不是听说的）
 
 - 四道关：`tsc` 0 · `eslint` **跟基准逐字相同**（把改动 git stash 起来跑基准对照，
@@ -71,7 +95,8 @@ J 照 40 号报告：push（4 支）→ Ctrl+Shift+R。本轮无新 migration。
 
 ### 🔴 J 的事（写在 40 号报告 §4）
 
-1. **push-cabang.bat**（本机领先 **4 支**）→ 线上 Ctrl+Shift+R。**本轮无新 migration。**
+1. **push-cabang.bat**（本机领先 **5 支**；40 号那 4 支 J 已 push，origin/main 已到 769099c）→ 线上 Ctrl+Shift+R。**本轮无新 migration。**
+   🔴 TAB 圖示要 **Ctrl+Shift+R 兩次**或關掉分頁再開——瀏覽器對 favicon 的快取特別頑固。
 2. 看三个地方：登入页、首页（背景＋四张卡＋底下那行字）、随便一页的卡片圆角。
 3. 40 号 §3 有三个等你一句话的小事：重设密码页的小 logo 要不要一起换成砖块版；
    四张卡的颜色会不会太花（要改回全紫是一分钟）；旧的 39 号 §6 三问仍未答
@@ -90,7 +115,6 @@ J 照 40 号报告：push（4 支）→ Ctrl+Shift+R。本轮无新 migration。
 8. 配套定价（管理台毛利卡等它）—— 先量成本；bench/真用量之后
 9. #10 全站按钮统一的长尾扫尾（大头已消；仍排队）
 10. 真 vendor 的合并写作效果（D37）—— 等 J 一次真额度实测
-11. 重设密码页的 32px logo 还是白色线稿版（40 号 §3.1，等 J 一句话）
 12. （旧，小）MyInvois 官方模板逐栏对齐（B-7 后半）等 J 给原档
 13. （旧，小）check-ai.bat 还 cd 到旧资料夹 C:\dev\minit——改天一行修
 
