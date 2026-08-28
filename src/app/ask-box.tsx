@@ -27,7 +27,7 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowUp, RotateCcw, X } from "lucide-react";
-import { AttachIcon } from "@/components/attach-icon";
+import { AttachIcon, ChooseFileLabel } from "@/components/attach-icon";
 import { Button } from "@/components/ui/button";
 import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
 import { VoiceButton } from "@/components/voice-input";
@@ -350,10 +350,12 @@ export function AskBox({
             onClick={() => fileInput.current?.click()}
           >
             <AttachIcon className="h-5 w-5" />
-            <Tri
-              bm="Ambil gambar / pilih fail"
-              zh="拍照或选档案"
-              en="Take a photo / choose a file"
+            {/* Brackets differ from the standard label on purpose: this one
+                also takes Word and Excel. */}
+            <ChooseFileLabel
+              bm="gambar, PDF, Word atau Excel"
+              zh="照片、PDF、Word 或 Excel"
+              en="photo, PDF, Word or Excel"
             />
           </Button>
         </div>

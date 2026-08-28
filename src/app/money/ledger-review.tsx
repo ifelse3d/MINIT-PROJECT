@@ -21,7 +21,7 @@ import { TypeDonations } from "./type-donations";
 import { ManualIncomeForm } from "./manual-income";
 import { RoundList } from "./round-list";
 import { useRegister } from "./register-store";
-import { AttachIcon } from "@/components/attach-icon";
+import { AttachIcon, ChooseFileLabel } from "@/components/attach-icon";
 
 // ---------------------------------------------------------------------------
 // /money — STEP 1: read a page of the donation ledger, then check what the AI
@@ -178,11 +178,7 @@ export function LedgerReview() {
             ) : (
               <>
                 <AttachIcon />{" "}
-                <Tri
-                  bm="Ambil gambar / pilih fail (gambar atau PDF)"
-                  zh="拍照或选档案（照片或 PDF）"
-                  en="Take a photo / choose a file (photo or PDF)"
-                />
+                <ChooseFileLabel />
               </>
             )}
             <input

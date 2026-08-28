@@ -16,7 +16,7 @@ import type { SimpleEvent } from "@/lib/local-events";
 import { parseLunarRecurring, type LunarRecurringRule } from "@/lib/lunar-parse";
 import type { LunarRepeatDays } from "@/lib/lunar";
 import { useLunarRepeat } from "./calendar-prefs";
-import { AttachIcon } from "@/components/attach-icon";
+import { AttachIcon, ChooseFileLabel } from "@/components/attach-icon";
 
 // ---------------------------------------------------------------------------
 // EVENT ENTRY — AI paste-box first (the fast way), manual quick-add second.
@@ -182,7 +182,9 @@ export function EventsSection({ onAdd }: { onAdd: (ev: SimpleEvent) => void }) {
               {file ? (
                 file.name
               ) : (
-                <Tri bm="atau lampirkan gambar / Excel" zh="或附上照片 / Excel" en="or attach photo / Excel" />
+                // Brackets differ from the standard label on purpose: this
+                // picker takes a spreadsheet and does NOT take a PDF.
+                <ChooseFileLabel bm="gambar atau Excel" zh="照片或 Excel" en="photo or Excel" />
               )}
               <input
                 type="file"

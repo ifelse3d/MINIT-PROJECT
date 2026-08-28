@@ -154,6 +154,21 @@ async function main() {
     await page.goto(`${BASE}${route}`, { waitUntil: "networkidle2" });
     await new Promise((r) => setTimeout(r, 700));
     await page.screenshot({ path: path.join(OUT, `${name}.png`), fullPage: true });
+    const pickers = await page.evaluate(() => {
+      const seen = new Set();
+      // Anything wrapping a file input, plus any control already using the
+      // standard wording (the chat box keeps its input as a sibling ref).
+      for (const inp of document.querySelectorAll('input[type="file"]')) {
+        const holder = inp.closest("label, button, div");
+        if (holder) seen.add((holder.textContent ?? "").trim().replace(/\s+/g, " ").slice(0, 70));
+      }
+      for (const b of document.querySelectorAll("button, label")) {
+        const t = (b.textContent ?? "").trim().replace(/\s+/g, " ");
+        if (/^(Choose a file|选一个档案|Pilih fail)/.test(t)) seen.add(t.slice(0, 70));
+      }
+      return [...seen];
+    });
+    for (const t of pickers) console.log("      picker: " + t);
     const dark = await darkButtons(page);
     total += dark.length;
     console.log(`${route.padEnd(18)} ${dark.length === 0 ? "no dark buttons" : "⛔ " + dark.length}`);

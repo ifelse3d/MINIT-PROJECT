@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tri } from "@/components/language-provider";
+import { ChooseFileLabel } from "@/components/attach-icon";
 import {
   addGlossaryTerm,
   deleteGlossaryTerm,
@@ -220,7 +221,7 @@ export function ImportGlossary() {
             </Button>
             <label className="flex items-center gap-2 text-base">
               <span className="text-muted-foreground">
-                <Tri bm="atau muat naik fail:" zh="或者上传档案：" en="or upload a file:" />
+                <ChooseFileLabel bm="Excel atau CSV" zh="Excel 或 CSV" en="Excel or CSV" />
               </span>
               <input
                 type="file"

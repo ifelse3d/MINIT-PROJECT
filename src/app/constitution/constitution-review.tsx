@@ -37,7 +37,7 @@ import {
   sampleConstitutionTitle,
   sampleQuestions,
 } from "@/lib/sample-constitution";
-import { AttachIcon } from "@/components/attach-icon";
+import { AttachIcon, ChooseFileLabel } from "@/components/attach-icon";
 
 // ---------------------------------------------------------------------------
 // CONSTITUTION screen. The keyword filter, citations and the refusal rule are
@@ -493,11 +493,7 @@ export function ConstitutionReview({
               ) : (
                 <>
                   <AttachIcon />{" "}
-                  <Tri
-                    bm="Pilih fail (PDF atau gambar)"
-                    zh="选一个档案（PDF 或照片）"
-                    en="Choose a file (PDF or photo)"
-                  />
+                  <ChooseFileLabel />
                 </>
               )}
               <input

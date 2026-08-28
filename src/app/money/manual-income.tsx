@@ -17,7 +17,7 @@ import { dayIsoMalaysia } from "@/lib/history";
 import { PaymentMethodToggle, type PaymentMethod } from "./payment-method-toggle";
 import { TemplateChips } from "./templates";
 import { uploadTransferProof } from "./transfer-proof-actions";
-import { AttachIcon } from "@/components/attach-icon";
+import { AttachIcon, ChooseFileLabel, UsesOneAiAction } from "@/components/attach-icon";
 
 // ---------------------------------------------------------------------------
 // MANUAL INCOME ENTRY — the deliberate, clearly-labelled exception to the
@@ -244,7 +244,7 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
                   {slipBusy ? (
                     <>⏳ <Tri bm="AI sedang membaca…" zh="AI 读取中…" en="AI is reading…" /></>
                   ) : (
-                    <><AttachIcon /> <Tri bm="Ambil gambar slip (1 tindakan AI)" zh="拍单据（用 1 次 AI 额度）" en="Photograph the slip (1 AI action)" /></>
+                    <><AttachIcon /> <ChooseFileLabel /></>
                   )}
                   <input
                     type="file"
@@ -260,6 +260,7 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
                     }}
                   />
                 </label>
+                <UsesOneAiAction />
                 {slipDone && (
                   <p className="rounded-md bg-green-50 px-3 py-2 text-sm font-medium text-green-900 dark:bg-green-400/10 dark:text-green-100">
                     ✓{" "}
@@ -333,15 +334,11 @@ export function ManualIncomeForm({ onAdd, defaultCollector, onSlipPhoto, slipBus
                     </span>
                     <label className="flex flex-wrap items-center gap-2 text-sm">
                       <span className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border-2 border-[color:var(--v2-outline-border)] px-3 py-1.5 font-medium hover:bg-accent">
-                        📎{" "}
+                        <AttachIcon className="h-4 w-4" />{" "}
                         {proofFile ? (
                           <Tri bm="Tukar gambar bukti" zh="换一张截图" en="Change the screenshot" />
                         ) : (
-                          <Tri
-                            bm="Lampirkan gambar bukti pindahan"
-                            zh="附上转账截图"
-                            en="Attach the transfer screenshot"
-                          />
+                          <ChooseFileLabel />
                         )}
                         <input
                           type="file"

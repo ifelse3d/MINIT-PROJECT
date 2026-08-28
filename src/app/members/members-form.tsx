@@ -10,7 +10,7 @@ import {
   removeCommitteeMember,
   type MemberActionState,
 } from "./actions";
-import { AttachIcon } from "@/components/attach-icon";
+import { AttachIcon, ChooseFileLabel } from "@/components/attach-icon";
 
 /** #8 (launch feedback): a term-date box that formats ITSELF — type 20260101
  *  or 1/1/2026 and it becomes 2026-01-01 on blur. The dashes are our job. */
@@ -322,11 +322,7 @@ Setiausaha, 林小美
             <div className="flex flex-col gap-3">
               <label className="flex flex-wrap items-center gap-3 text-base">
                 <span className="text-muted-foreground">
-                  <Tri
-                    bm="Pilih gambar atau PDF senarai:"
-                    zh="选名单的照片或 PDF："
-                    en="Choose a photo or PDF of the list:"
-                  />
+                  <ChooseFileLabel />
                 </span>
                 <input
                   type="file"
@@ -376,11 +372,9 @@ Setiausaha, 林小美
               {mode === "file" && (
                 <label className="flex items-center gap-2 text-base">
                   <span className="text-muted-foreground">
-                    <Tri
-                      bm="atau muat naik fail:"
-                      zh="或者上传档案："
-                      en="or upload a file:"
-                    />
+                    {/* Brackets differ on purpose: this picker takes a
+                        spreadsheet, not a photo. */}
+                    <ChooseFileLabel bm="Excel atau CSV" zh="Excel 或 CSV" en="Excel or CSV" />
                   </span>
                   <input
                     type="file"
