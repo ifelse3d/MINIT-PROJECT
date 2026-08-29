@@ -23,10 +23,17 @@
 // specifically on the condition that the spend is bounded. See api/chat/route.ts.
 // ---------------------------------------------------------------------------
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowUp, RotateCcw, X } from "lucide-react";
+import { ConfirmedAction } from "@/components/confirm-delete";
+import {
+  matchPreparedAnswer,
+  preparedButtonFor,
+  PREPARED_FREE_NOTE,
+  SUGGESTED_QUESTIONS,
+} from "@/lib/prepared-answers";
 import { AttachIcon, ChooseFileLabel, UploadLimitNote } from "@/components/attach-icon";
 import { Button } from "@/components/ui/button";
 import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
@@ -68,6 +75,9 @@ type Turn = {
   /** Clickable "this came from the 12 June meeting" links. */
   sources?: AnswerSource[] | null;
   lookups?: string[] | null;
+  /** K1 (work order 82): answered by the prepared layer — no AI, no quota,
+   *  and excluded from the history /api/chat sees. */
+  free?: boolean;
 };
 
 type ChatOk = {
@@ -95,23 +105,11 @@ type IntakeOk = {
   storagePath?: string | null;
 };
 
-const EXAMPLES = [
-  {
-    bm: "Bila saya kena hantar Penyata Tahunan?",
-    zh: "年度呈报什么时候要交？",
-    en: "When do I have to file the Annual Return?",
-  },
-  {
-    bm: "Macam mana nak buat resit derma?",
-    zh: "捐款收据要怎么做？",
-    en: "How do I make a donation receipt?",
-  },
-  {
-    bm: "Apa itu e-Invois?",
-    zh: "e-Invois 是什么？",
-    en: "What is e-Invois?",
-  },
-];
+// K1 (work order 82): the SAME chips as the floating panel, owned by the
+// prepared layer — every one is answered for free (tests pin each language).
+// The old home wordings ("Macam mana nak buat resit derma?" etc.) still hit
+// the matcher, so nobody's muscle memory breaks.
+const EXAMPLES = SUGGESTED_QUESTIONS;
 
 export function AskBox({
   hasOrg,
@@ -168,11 +166,40 @@ export function AskBox({
    */
   const constitutionResumeRef = useRef<ConstitutionReadResume | null>(null);
 
+  // K5 (work order 82): after a send, bring the newest bubble AND the input
+  // (they are adjacent now) into view. A ref, not state: nothing re-renders,
+  // and hydrating an old conversation on page load must NOT yank the page.
+  const flowEndRef = useRef<HTMLDivElement | null>(null);
+  const scrollPending = useRef(false);
+  useEffect(() => {
+    if (!scrollPending.current) return;
+    flowEndRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    if (busy === null) scrollPending.current = false;
+  }, [turns, busy]);
+
   const outOfQuota = remaining !== null && remaining <= 0;
 
   async function send(text: string) {
     const q = text.trim();
     if (!q || busy || outOfQuota) return;
+    // K1 (work order 82): the free layer answers first — zero AI, zero quota.
+    const hit = matchPreparedAnswer(q);
+    if (hit) {
+      setError(null);
+      setQuestion("");
+      scrollPending.current = true;
+      setTurns((prev) => [
+        ...prev,
+        { role: "user", text: q, free: true },
+        {
+          role: "assistant",
+          text: hit.entry.answer[hit.lang],
+          button: preparedButtonFor(hit.entry),
+          free: true,
+        },
+      ]);
+      return;
+    }
     // 2026-08-18: "Start again" used to be reachable WHILE an answer was on its
     // way. Tapping it emptied the conversation, then the late answer landed in
     // the empty one — an answer sitting there with no question above it. Every
@@ -180,7 +207,12 @@ export function AskBox({
     const seq = ++sendSeq.current;
     setError(null);
     setQuestion("");
-    const history = turns.map((x) => ({ role: x.role, text: x.text }));
+    scrollPending.current = true;
+    // Free (prepared) exchanges are navigation, not context — they stay out
+    // of the history so they never eat the turn cap or a prompt token.
+    const history = turns
+      .filter((x) => !x.free)
+      .map((x) => ({ role: x.role, text: x.text }));
     setTurns((prev) => [...prev, { role: "user", text: q }]);
     setBusy("chat");
     try {
@@ -797,6 +829,131 @@ export function AskBox({
           </p>
         )}
 
+        {/* --- the conversation — ABOVE the input (K5, work order 82) --------
+            tester 8/30: "問問題的在上面回答在下面，要問另一個問題時還要移上去".
+            The flow now reads like the floating panel: messages on top, the
+            input at the bottom, so the newest answer always sits NEXT to the
+            box for the follow-up — the same logic on both surfaces. */}
+        {turns.length > 0 && (
+          <div className="flex flex-col gap-3">
+            {turns.map((turn, i) =>
+              turn.role === "user" ? (
+                <p
+                  key={i}
+                  className="self-end rounded-md rounded-br-md bg-[color:var(--v2-primary-fill)] px-4 py-3 text-lg text-white sm:max-w-[80%]"
+                >
+                  {turn.text}
+                </p>
+              ) : (
+                <div
+                  key={i}
+                  className="self-start rounded-md rounded-bl-md border-2 border-[color:var(--v2-border)] bg-white/80 px-4 py-3 sm:max-w-[85%] dark:bg-white/10"
+                >
+                  <p className="text-lg whitespace-pre-line">{turn.text}</p>
+                  {turn.button && (
+                    // h-auto + whitespace-normal: the destination label can be a
+                    // full sentence ("Money: donation register, numbered
+                    // receipts, custody handover, e-Invois pack"), and the button
+                    // base class is whitespace-nowrap — so it ran off the right
+                    // edge of the screen instead of wrapping.
+                    <Button
+                      asChild
+                      className="mt-3 h-auto py-2.5 text-left leading-snug whitespace-normal"
+                    >
+                      <Link href={turn.button.href}>
+                        <Tri
+                          bm={`Buka: ${turn.button.bm}`}
+                          zh={`打开：${turn.button.zh}`}
+                          en={`Open: ${turn.button.en}`}
+                        />{" "}
+                        →
+                      </Link>
+                    </Button>
+                  )}
+                  {/* K1 ④: a prepared answer says so — honest about being free. */}
+                  {turn.free && (
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      ⚡{" "}
+                      <Tri
+                        bm={PREPARED_FREE_NOTE.bm}
+                        zh={PREPARED_FREE_NOTE.zh}
+                        en={PREPARED_FREE_NOTE.en}
+                      />
+                    </p>
+                  )}
+                  <AnswerSources sources={turn.sources ?? []} lookups={turn.lookups ?? []} />
+                </div>
+              ),
+            )}
+
+            {/* Waiting has to have a place to happen. Without this the only
+                sign that anything is coming was the small word on the send
+                button. */}
+            {busy === "chat" && (
+              <div className="self-start rounded-md rounded-bl-md border-2 border-[color:var(--v2-border)] bg-white/80 px-4 py-3 sm:max-w-[85%] dark:bg-white/10">
+                <p className="text-lg">
+                  ⏳{" "}
+                  <Tri
+                    bm="MinitAI sedang berfikir… tunggu sekejap."
+                    zh="MinitAI 正在想…… 请稍等。"
+                    en="MinitAI is thinking… one moment."
+                  />
+                </p>
+              </div>
+            )}
+
+            {/* K2-adjacent (work order 82): ONE compact row — the clear button
+                (confirming first, §1-10) and the short counter. The old
+                two-line explainer moved into the panel's ? popup; here the
+                footer already says what costs what. */}
+            {busy === null && turns.some((x) => x.role === "assistant") && (
+              <div className="flex flex-wrap items-center gap-3">
+                <ConfirmedAction
+                  onConfirm={() => {
+                    // Anything still in flight belongs to the conversation being
+                    // thrown away — make sure it cannot land in the new one.
+                    sendSeq.current++;
+                    setTurns([]);
+                    setTurnsLeft(null);
+                    setError(null);
+                  }}
+                  body={
+                    <Tri
+                      bm="Padam perbualan ini dan mula semula? Kuota bulanan tidak terjejas."
+                      zh="把这轮对话清掉、重新开始？本月用量不受影响。"
+                      en="Clear this conversation and start fresh? The monthly allowance is unaffected."
+                    />
+                  }
+                  confirmLabel={
+                    <Tri bm="Padam perbualan" zh="清除对话" en="Clear conversation" />
+                  }
+                  trigger={(open) => (
+                    <Button variant="outline" onClick={open}>
+                      <RotateCcw className="h-5 w-5" strokeWidth={2} />
+                      <Tri bm="Padam perbualan" zh="清除对话" en="Clear conversation" />
+                    </Button>
+                  )}
+                />
+                {turnsLeft !== null && (
+                  <span className="text-sm text-muted-foreground">
+                    <Tri
+                      bm={`Boleh tanya ${turnsLeft} lagi dalam perbualan ini`}
+                      zh={`这轮还能问 ${turnsLeft} 题`}
+                      en={`${turnsLeft} left in this conversation`}
+                    />
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {error && (
+          <p className="rounded-md border-2 border-red-300 bg-red-50 p-4 text-base font-medium whitespace-pre-line text-red-900 dark:bg-red-400/10 dark:text-red-100">
+            {localizeError(error)}
+          </p>
+        )}
+
         {/* Type a question — or type context for the staged file. Enter sends;
             Shift+Enter makes a new line. One Send button for both paths (A-2):
             with a file staged it sends the file (plus the typed words as hints
@@ -881,6 +1038,10 @@ export function AskBox({
           </Button>
         </form>
 
+        {/* K5: the newest answer sits right above this anchor and the input —
+            scrolled into view together after every send. */}
+        <div ref={flowEndRef} aria-hidden />
+
         {turns.length === 0 && hasOrg && (
           <div className="flex flex-wrap gap-2">
             {EXAMPLES.map((ex) => (
@@ -897,112 +1058,6 @@ export function AskBox({
           </div>
         )}
       </div>
-
-      {error && (
-        <p className="mt-4 rounded-md border-2 border-red-300 bg-red-50 p-4 text-base font-medium whitespace-pre-line text-red-900 dark:bg-red-400/10 dark:text-red-100">
-          {localizeError(error)}
-        </p>
-      )}
-
-      {/* --- the conversation ---------------------------------------------- */}
-      {turns.length > 0 && (
-        <div className="mt-5 flex flex-col gap-3">
-          {turns.map((turn, i) =>
-            turn.role === "user" ? (
-              <p
-                key={i}
-                className="self-end rounded-md rounded-br-md bg-[color:var(--v2-primary-fill)] px-4 py-3 text-lg text-white sm:max-w-[80%]"
-              >
-                {turn.text}
-              </p>
-            ) : (
-              <div
-                key={i}
-                className="self-start rounded-md rounded-bl-md border-2 border-[color:var(--v2-border)] bg-white/80 px-4 py-3 sm:max-w-[85%] dark:bg-white/10"
-              >
-                <p className="text-lg whitespace-pre-line">{turn.text}</p>
-                {turn.button && (
-                  // h-auto + whitespace-normal: the destination label can be a
-                  // full sentence ("Money: donation register, numbered
-                  // receipts, custody handover, e-Invois pack"), and the button
-                  // base class is whitespace-nowrap — so it ran off the right
-                  // edge of the screen instead of wrapping.
-                  <Button
-                    asChild
-                    className="mt-3 h-auto py-2.5 text-left leading-snug whitespace-normal"
-                  >
-                    <Link href={turn.button.href}>
-                      <Tri
-                        bm={`Buka: ${turn.button.bm}`}
-                        zh={`打开：${turn.button.zh}`}
-                        en={`Open: ${turn.button.en}`}
-                      />{" "}
-                      →
-                    </Link>
-                  </Button>
-                )}
-                <AnswerSources sources={turn.sources ?? []} lookups={turn.lookups ?? []} />
-              </div>
-            ),
-          )}
-
-          {/* Waiting has to have a place to happen. Without this the only
-              sign that anything is coming was the small word on the send
-              button, so the next thing the eye lands on is "Start again" —
-              which reads as "this is stuck, press me". */}
-          {busy === "chat" && (
-            <div className="self-start rounded-md rounded-bl-md border-2 border-[color:var(--v2-border)] bg-white/80 px-4 py-3 sm:max-w-[85%] dark:bg-white/10">
-              <p className="text-lg">
-                ⏳{" "}
-                <Tri
-                  bm="MinitAI sedang berfikir… tunggu sekejap."
-                  zh="MinitAI 正在想…… 请稍等。"
-                  en="MinitAI is thinking… one moment."
-                />
-              </p>
-            </div>
-          )}
-
-          {/* Offered only once there is an answer to start again FROM, and
-              never while one is on its way. */}
-          {busy === null && turns.some((x) => x.role === "assistant") && (
-            <div className="flex flex-col gap-1">
-              <div className="flex flex-wrap items-center gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    // Anything still in flight belongs to the conversation being
-                    // thrown away — make sure it cannot land in the new one.
-                    sendSeq.current++;
-                    setTurns([]);
-                    setTurnsLeft(null);
-                    setError(null);
-                  }}
-                >
-                  <RotateCcw className="h-5 w-5" strokeWidth={2} />
-                  <Tri bm="Padam perbualan" zh="清除对话" en="Clear conversation" />
-                </Button>
-                {turnsLeft !== null && (
-                  <span className="text-base text-muted-foreground">
-                    <Tri
-                      bm={`Boleh tanya ${turnsLeft} soalan lagi dalam perbualan ini · perbualan baharu bermula semula, kuota bulanan tidak terjejas`}
-                      zh={`这轮对话还能问 ${turnsLeft} 题 · 换新对话会重置，不影响本月用量`}
-                      en={`${turnsLeft} questions left in this conversation · a new conversation resets this, the monthly allowance is unaffected`}
-                    />
-                  </span>
-                )}
-              </div>
-              <p className="text-sm text-muted-foreground">
-                <Tri
-                  bm="Perbualan yang terlalu panjang jadi perlahan — padamkannya bila satu topik selesai."
-                  zh="对话太长会变慢，告一段落建议清除。"
-                  en="A very long conversation gets slow — clear it when a topic is done."
-                />
-              </p>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* --- what this costs, always visible ------------------------------- */}
       <p className="mt-5 border-t-2 border-[color:var(--v2-border)] pt-3 text-base text-muted-foreground">
