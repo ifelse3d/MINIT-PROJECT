@@ -567,7 +567,19 @@ export function FilingsView({
               bm="Di eROSES: Pertubuhan → Penyata Tahunan → Tambah → pilih tahun. Ia dibina daripada mesyuarat agung (AGM/EGM) tahun itu."
               zh="在 eROSES 网站：Pertubuhan → Penyata Tahunan → Tambah → 选年份。它要用那一年的会员大会（AGM/EGM）资料。"
               en="On eROSES: Pertubuhan → Penyata Tahunan → Tambah → pick the year. It is built from that year's general meeting (AGM/EGM)."
-            />
+            />{" "}
+            {/* D3 (work order 56): the full nine-step walkthrough. */}
+            <Link
+              href={selected ? `/filings/eroses?doc=${selected.id}` : "/filings/eroses"}
+              className="underline underline-offset-4"
+            >
+              <Tri
+                bm="Panduan langkah demi langkah"
+                zh="一步一步带你填"
+                en="Step-by-step guide"
+              />{" "}
+              →
+            </Link>
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">

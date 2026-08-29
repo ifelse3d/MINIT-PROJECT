@@ -4,11 +4,10 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ConfidenceBadge } from "@/components/confidence-badge";
 import { Tri } from "@/components/language-provider";
 import { NextStepLink, PageSection } from "@/components/page-section";
 import { PhotoLightbox } from "@/components/page-thumbs";
-import { cjkSnippets, hasCjk } from "@/lib/bm-guard";
+import { cjkSnippets } from "@/lib/bm-guard";
 import { MINUTES_LANGUAGES, type MinutesLang } from "@/lib/minutes-lang";
 import {
   applyNameSubstitutions,
@@ -66,7 +65,6 @@ export function MinutesDocument() {
     docTitle,
     setDocTitle,
     suggestedTitle,
-    pastePack,
     filingRoster,
     evRows,
     evBusy,
@@ -75,12 +73,6 @@ export function MinutesDocument() {
     confirmEvent,
   } = useMinutes();
 
-  // --- one-tap copy for each eROSES value ----------------------------------
-  // 2026-08-07 (user: "为什么不做可以直接 click copy，不需要 user highlight 再 copy")
-  // /filings already had this button (filings-view.tsx) while this screen — the
-  // one a secretary actually finishes a meeting on — made them drag-select the
-  // text by hand. Same paste pack, same helper, same behaviour now.
-  const [copiedEroses, setCopiedEroses] = useState<string | null>(null);
   const router = useRouter();
 
   // J 28/8 evening item 5: 「在这里也没有得看回照片」 — while correcting the
@@ -131,17 +123,6 @@ export function MinutesDocument() {
       0,
       (lineIndex / Math.max(1, totalLines)) * el.scrollHeight - el.clientHeight / 2,
     );
-  }
-
-  async function copyErosesValue(field: string, value: string) {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopiedEroses(field);
-      setTimeout(() => setCopiedEroses(null), 1500);
-    } catch {
-      // clipboard blocked (insecure origin / permission) — the value is still
-      // on screen and selectable, so this degrades instead of breaking.
-    }
   }
 
   /** Minit must not write an official document from unconfirmed facts. */
@@ -626,6 +607,30 @@ export function MinutesDocument() {
                   en="The minutes are saved in the organisation's history."
                 />
               </p>
+              {/* D3 (拍板 9): saved → the question. The full guide (all nine
+                  eROSES steps, every value with a COPY button) lives on its
+                  own page. */}
+              {savedDocId !== null && (
+                <p className="rounded-md border-2 border-[#a855f7]/40 bg-purple-50/60 p-3 text-base font-medium dark:bg-purple-400/10">
+                  🏛️{" "}
+                  <Tri
+                    bm="Mahu failkan ke eROSES?"
+                    zh="要呈报 eROSES 吗？"
+                    en="File this to eROSES?"
+                  />{" "}
+                  <Link
+                    href={`/filings/eroses?doc=${savedDocId}`}
+                    className="underline underline-offset-4"
+                  >
+                    <Tri
+                      bm="Panduan langkah demi langkah"
+                      zh="一步一步带你填"
+                      en="Step-by-step guide"
+                    />{" "}
+                    →
+                  </Link>
+                </p>
+              )}
               {/* Normally the save above already walked to the finished
                   document's page; this panel is the browser-Back view of a
                   saved sitting. Everything it offers lives THERE now. */}
@@ -668,99 +673,10 @@ export function MinutesDocument() {
         )}
       </PageSection>
 
-      <PageSection
-        step={5}
-        titleBm="Nilai untuk ditampal ke eROSES"
-        titleZh="要贴进 eROSES 的内容"
-        titleEn="Values to paste into eROSES"
-        summary={
-          <Tri
-            bm="eROSES ialah laman web Jabatan Pendaftaran Pertubuhan (ROS) tempat penyata tahunan difailkan. Salin nilai di sini satu-satu ke dalam borang di laman itu."
-            zh="eROSES 是社团注册局（ROS）用来提交年度报告的官方网站。把这里的内容一项一项复制、贴进那个网站的表格。"
-            en="eROSES is the Registry of Societies' website where the annual return is filed. Copy each value here into the matching box on that website."
-          />
-        }
-      >
-        {notReady ? (
-          <p className="rounded-md border-2 border-dashed p-4 text-base text-muted-foreground">
-            {notReady}
-          </p>
-        ) : (
-        <div>
-          <p className="mb-4 rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
-            ⚠{" "}
-            <Tri
-              bm="Semak nama medan dengan portal sebenar sebelum menghantar. Nama medan di laman ROS boleh berubah."
-              zh="送出前请先跟正式网站上的栏位名称核对一次。ROS 网站上的栏位名称有可能改动。"
-              en="Check the field names against the live portal before you submit — the names on the ROS site can change."
-            />
-          </p>
-          <div className="grid gap-3">
-            {pastePack.map((row) => (
-              <div key={row.erosesField} className="rounded-sm border p-4">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <div className="font-medium">{row.erosesField}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {row.erosesFieldEn}
-                    </div>
-                  </div>
-                  <ConfidenceBadge level={row.confidence} />
-                </div>
-                <div className="mt-3 grid gap-3 @xl:grid-cols-2">
-                  <div className="rounded-md bg-blue-50 p-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="text-sm font-medium text-muted-foreground">
-                        <Tri bm="Nilai untuk ditampal" zh="要粘贴的值" en="Value to paste" />
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={row.value === "—"}
-                        onClick={() => copyErosesValue(row.erosesField, row.value)}
-                      >
-                        {copiedEroses === row.erosesField ? (
-                          <>
-                            ✓ <Tri bm="Disalin" zh="已复制" en="Copied" />
-                          </>
-                        ) : (
-                          <Tri bm="Salin" zh="复制" en="Copy" />
-                        )}
-                      </Button>
-                    </div>
-                    <div className="mt-1 whitespace-normal">{row.value}</div>
-                    {/* BM guard: eROSES fields must be Bahasa Malaysia. */}
-                    {hasCjk(row.value) && (
-                      <div className="mt-1 text-sm font-medium text-red-700 dark:text-red-300">
-                        🛑{" "}
-                        <Tri
-                          bm="Nilai ini masih berbahasa Cina — eROSES perlukan Bahasa Malaysia. Betulkan medan asalnya, atau salin daripada dokumen BM yang ditulis AI."
-                          zh="这一格还有华语 —— eROSES 要马来文。请回去改这一栏，或从 AI 写好的马来文文件里取。"
-                          en="This value still contains Chinese — eROSES needs Bahasa Malaysia. Fix the source field, or take it from the AI-written BM document."
-                        />
-                      </div>
-                    )}
-                    {row.note && (
-                      <div className="mt-1 text-sm text-muted-foreground">
-                        {row.note}
-                      </div>
-                    )}
-                  </div>
-                  <div className="rounded-md bg-amber-50 p-3">
-                    <div className="text-sm font-medium text-muted-foreground">
-                      <Tri bm="Sumber (dari nota)" zh="来源（取自记录）" en="Source (from the notes)" />
-                    </div>
-                    <div className="mt-1 whitespace-normal font-mono text-sm text-muted-foreground">
-                      {row.source || "—"}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        )}
-      </PageSection>
+      {/* D3 (work order 56, 拍板 9): the "values to paste into eROSES" block
+          that used to live HERE moved to /filings/eroses — the step-by-step
+          guide asked for AFTER the document is saved, where the whole return
+          (not just this meeting's values) is walked through. */}
 
       <PageSection
         titleBm="Acara dalam minit ini"

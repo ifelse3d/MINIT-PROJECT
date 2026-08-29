@@ -5,15 +5,18 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-29 下午（MYT）· Fable 5（56 号 eROSES 大改版场进行中：D0 ✅ D1 ✅ D2 ✅）**
-**🔴 本场状态一句话：56 号总单进行中，三包已完。D0（57 号）：45s 长尝试修
-「AI took too long」＋章程页 A-5＋Office 直传＋Q16b。D1（58 号）：钱录入
-两表合一＋eROSES Penyata Kewangan 对照表。D2（59 号）：审计员名单（/members）、
-Maklumat Am＋银行户口（设置→机构）、活动报告生成（/filings/laporan，真 vendor
-实测 $0.0007 起草成稿）——**新 migration 34/35 只写档等 J 贴**（未贴 fail-open
-全实测）。四道关全绿（eslint 21 基准、vitest 976）＋三条 e2e 全绿。
-接下来：包 D3（§5 主菜：存好后问「要呈报 eROSES 吗？」→ 九步引导＋每值 COPY）。
-J 的事：贴 migration 32/33/34/35 → push-cabang.bat → 叫 tester。**
+**最后更新：2026-08-29 下午（MYT）· Fable 5（56 号 eROSES 大改版场：D0 ✅ D1 ✅ D2 ✅ D3 ✅ 全单收工）**
+**🔴 本场状态一句话：56 号总单四包全部做完（57/58/59/60 号报告）。
+D0：45s 长尝试修「AI took too long」（CONTOH 42s 实测）＋章程页 A-5＋Office
+直传＋Q16b。D1：钱录入两表合一＋eROSES Penyata Kewangan 对照表。D2：审计员
+名单／Maklumat Am＋银行户口／活动报告生成（migration 34/35 只写档）。
+D3（主菜）：存好会议记录→问「要呈报 eROSES 吗？」→ /filings/eroses 九步引导
+（每值 COPY；步 5 真 UI 实测「1.1 Derma=16,252.00」；成品页旧 paste 区块搬走）。
+四道关全绿（eslint 21 基准、vitest 976）＋三条 e2e 全绿＋四支新探针全 PASS
+（真 vendor 两次：CONTOH $0.052、laporan $0.0007；其余零 AI 费）。
+🔴 J 的事：贴 migration 32/33/34/35（salin-migration.bat）→ push-cabang.bat →
+叫 tester（清单在 60 号报告＋55 号报告末尾）→ 登入 eROSES 顺手下载官方
+Penyata Kewangan 模板（60 号报告第 5 点）。**
 
 ---
 
@@ -22,6 +25,26 @@ J 的事：贴 migration 32/33/34/35 → push-cabang.bat → 叫 tester。**
 > **已上线**：https://minit-project.vercel.app —— 截至 0ca62e7 已 push；
 > 51 号＋56 号的 commit 等 J push-cabang.bat。
 > 线上 org：15「J」、58「avocado」、91「TESTING1」。
+
+### 这一场做了什么（56 号 eROSES 场 · 包 D3 ✅，60 号报告——主菜）
+
+- **拍板 9 落地**：/minutes/document 的「要贴进 eROSES 的内容」区块删除；
+  保存落地页（/minutes/history/[id]）与 alreadySaved 面板问
+  「要呈报 eROSES 吗？」→ `/filings/eroses?doc=<id>`；/filings 第 3 卡同款门。
+- **/filings/eroses 九步引导**（照 J 的 17 张截图＝portal 的 Langkah rail）：
+  server 聚值（pastePack/roster/auditors/Maklumat Am/banks/推导数/
+  buildPenyataKewangan，财年区间取 orgs.financial_year_start）→ client 只
+  渲染＋COPY。缺值格子指路（/members、设置→机构、/filings/laporan）；
+  34/35 未贴＝「migration N」人话；非 AGM/EGM＝amber 拒绝照旧；步 1 带
+  Pengurusan Mesyuarat 前置引导；步 9 讲 Seksyen 54A。
+- **步 5 = D1-2 对照表上屏**：非零格「BM 标签 + 16,252.00 + N 笔记录 + COPY」＋
+  总计对照＋Nota kiraan（assumed/实物/pending/undated）＋官方模板指路
+  （拍板 7：公网无原档、在 portal 登入墙内——J 下载，报告有留言）。
+- **测过**：tsc 0 · eslint 21 · vitest 976 · build ✓ · e2e ×3 ✓ ·
+  `probe-d3-56.mjs` **30 项 PASS**（打字 AGM→存→问句→引导九步全在、
+  旧区块消失、三格金额对到分、COPY 真复制；零 AI 费）。
+- ⚠ 没能验证的：引导文案 vs 真 portal 逐字对版（等 J 圈）；34/35 贴上后
+  步 2/4 显示真值的路。
 
 ### 这一场做了什么（56 号 eROSES 场 · 包 D2 ✅，59 号报告）
 
@@ -392,15 +415,12 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
 
 ### ⏭ 下一个 session 从哪开始
 
-**⑤ eROSES 大改版进行中（56 号总单，J 已拍板不用再问）**：
-包 D0 ✅（57 号报告）→ **接下来是包 D1**（§3：C-14① 两表合并＋
-钱区科目↔eROSES 1.1–2.4 对照，纯 TS 先于 UI，动钱区必跑 e2e:money）→
-包 D2（§4：Juruaudit／银行户口＋会员数栏／活动报告，migration 34 号起只写档）→
-包 D3（§5 主菜：存好后问「要呈报 eROSES 吗？」→ 九步引导＋每值 COPY；
-**做之前先看完** `C:\Users\User\Desktop\Penyata Kewangan screenshot` 17 张截图）。
-每包收尾照 §7：四道关＋e2e＋覆写 STATE＋报告（58 号起）＋全 commit。
-之后场次照旧：⑥ AI 智能建议 → ⑦ 品质场（draft_minutes 退款线索在 57 号报告）→
-⑧ 助手＋AI 代办 → ⑨ 上线后第一批。
+**⑤ eROSES 大改版（56 号总单）全部做完**（D0=57、D1=58、D2=59、D3=60 号报告）。
+接下来照 51 号 §5 的场次顺序（J 已点头）：
+**⑥ AI 智能建议场** → ⑦ 品质场（线索：draft_minutes 三笔退款，57 号报告；
+敬语/职衔 AI 对人，B-7 地基已铺）→ ⑧ 助手＋AI 代办 → ⑨ 上线后第一批。
+**等 J 反馈的**：引导文案 vs 真 portal 对版（J 圈哪步不对改哪步）；
+migration 32–35 贴上后 tester 重试清单（60 号＋55 号报告）。
 竞赛材料 J 自己定 30/31 交，**不催**。
 RESPONSIVE：J 若再圈破版，贴 46 号单同段 PROMPT 继续。
 
@@ -408,11 +428,18 @@ RESPONSIVE：J 若再圈破版，贴 46 号单同段 PROMPT 继续。
 
 ## 6. 已知陷阱（踩过的，别再踩）
 
-### 2026-08-29 下午新增（56 号场 · 包 D2）
+### 2026-08-29 下午新增（56 号场 · 包 D2/D3）
 
 - ⚠ **PostgREST 批量 insert 的每个物件「键」必须完全一致**（PGRST102
   "All object keys must match"）——第二笔少带一个 venue_text，整批 400。
   可选栏位在批量里写 null，不要省略。
+- ⚠ **render 里定义元件会吃 `react-hooks/static-components`（error，
+  基准外）**——每次渲染都是新元件、state 全重置。元件一律模组级；要
+  hook（useTriText/useState）就让元件自己调，不要从父层闭包里拿。
+- ⚠ **`navigator.clipboard.writeText` 的 rejection 要 `.catch`**——无头/
+  权限被拒时 unhandled rejection 算 page error（探针会红）。UI 规矩：
+  剪贴簿失败＝降级（值仍可手选），绝不炸。无头 Chrome 测复制要在
+  **开页之前** `overridePermissions`，事后授权来不及。
 
 ### 2026-08-29 午后新增（56 号场 · 包 D1）
 

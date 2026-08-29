@@ -166,6 +166,31 @@ export default async function MinutesDocPage({
         </Link>
       </div>
 
+      {/* D3 (work order 56, 拍板 9): the save lands HERE — so here is where
+          the app asks "file it to eROSES?". The guide walks all nine portal
+          steps with a COPY button per value. */}
+      {d.status === "confirmed" && (
+        <p className="rounded-md border-2 border-[#a855f7]/40 bg-purple-50/60 p-4 text-base font-medium dark:bg-purple-400/10">
+          🏛️{" "}
+          <Tri
+            bm="Mahu failkan mesyuarat ini ke eROSES?"
+            zh="要把这场会议呈报 eROSES 吗？"
+            en="File this meeting to eROSES?"
+          />{" "}
+          <Link
+            href={`/filings/eroses?doc=${d.id}`}
+            className="underline underline-offset-4"
+          >
+            <Tri
+              bm="Panduan langkah demi langkah"
+              zh="一步一步带你填"
+              en="Step-by-step guide"
+            />{" "}
+            →
+          </Link>
+        </p>
+      )}
+
       <Card>
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
