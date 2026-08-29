@@ -173,6 +173,26 @@ export function FilingsView({
     }
   }
 
+  // §1-11 (work order 69): the lock must be REAL. A disabled copy button next
+  // to freely-selectable text was a fake lock — J: 「別讓評審 demo 時被抓包」.
+  // Chosen: the FenceLock family's treatment on the VALUE itself (no text
+  // selection, copy/cut/context-menu intercepted), consistent with the
+  // finished-minutes page, rather than un-locking the text — D44's decision
+  // was "view-only on the free plan" and this makes the view-only true.
+  const packValue = (value: React.ReactNode) =>
+    fence ? (
+      <span
+        className="select-none"
+        onCopy={(e) => e.preventDefault()}
+        onCut={(e) => e.preventDefault()}
+        onContextMenu={(e) => e.preventDefault()}
+      >
+        {value}
+      </span>
+    ) : (
+      <>{value}</>
+    );
+
   const copyButton = (key: string, value: string, disabled = false) =>
     fence ? (
       // D44: on the free plan the pack is view-only — copy is a paid door.
@@ -414,7 +434,7 @@ export function FilingsView({
                         </div>
                         {row.copyable && copyButton(`meeting-${row.field}`, row.value)}
                       </div>
-                      <div className="mt-2 whitespace-normal">{row.value}</div>
+                      <div className="mt-2 whitespace-normal">{packValue(row.value)}</div>
                       {row.note && (
                         <p className="mt-1 text-sm text-muted-foreground">
                           <Tri {...row.note} />
@@ -478,7 +498,7 @@ export function FilingsView({
                       {row.copyable && copyButton(`meeting-${row.field}`, row.value)}
                     </div>
                     <div className="mt-2 whitespace-normal">
-                      {row.value}
+                      {packValue(row.value)}
                       {hasCjk(row.value) && (
                         <div className="mt-1 text-sm font-medium text-red-700 dark:text-red-300">
                           🛑{" "}
@@ -608,7 +628,7 @@ export function FilingsView({
                         <div className="text-sm text-muted-foreground">{row.erosesFieldEn}</div>
                       </TableCell>
                       <TableCell className="max-w-72 whitespace-normal">
-                        {row.value}
+                        {packValue(row.value)}
                         {/* BM guard (J 8/27): eROSES fields must be BM. */}
                         {hasCjk(row.value) && (
                           <div className="mt-1 text-sm font-medium text-red-700 dark:text-red-300">

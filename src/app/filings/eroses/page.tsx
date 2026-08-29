@@ -1,49 +1,32 @@
 import Link from "next/link";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tri } from "@/components/language-provider";
-import { getActiveOrg } from "@/lib/active-org";
-import { getSupabaseServer } from "@/db/supabase-server";
-import { dayIsoMalaysia } from "@/lib/history";
-import {
-  getConfirmedMinutesDoc,
-  listConfirmedMinutes,
-} from "@/db/minutes-list";
-import { loadFilingRoster } from "@/app/minutes/roster-actions";
-import { readOrgTypeFlags } from "@/lib/org-flags";
-import { buildPastePack } from "@/lib/paste-pack";
-import { loadStatementRows } from "@/app/money/report/data";
-import {
-  buildPenyataKewangan,
-  type PenyataExpenseInput,
-  type PenyataKewangan,
-} from "@/lib/eroses-penyata";
-import { ErosesGuide, type GuideAuditor, type GuideMaklumat } from "./eroses-guide";
+import { flowQuery, loadFlowBase, meetingLabelOf } from "./flow-data";
 
 // ---------------------------------------------------------------------------
-// /filings/eroses — the STEP-BY-STEP Annual Return guide (D3, work order 56;
-// J's own 17 eROSES screenshots are the curriculum). Nine steps, matching the
-// portal's own "Langkah penyata tahunan" rail: each step explains what THAT
-// eROSES page asks, puts Minit's matching values beside it with one COPY
-// button per value, and — where a value is missing — says exactly which page
-// records it (the D1/D2 holes, now filled).
+// /filings/eroses — the DOOR, not the work (H2, work order 69; J #12: 「一進來
+// 只有幾個 CARD，問他是要報什麼做什麼…不是所有都擠在一個」).
 //
-// Server component: every value is read HERE under RLS and computed by
-// TypeScript (Hard Rule 2). The client component only renders and copies.
-// The screenshots themselves are J's own org's data and are NOT shipped —
-// the guide describes the portal in words (拍板: 截图是教材不进产品).
+// Three cards, three jobs, three addresses (Hard Rule 13):
+//   * register a meeting  → /filings/eroses/mesyuarat
+//   * the Annual Return   → /filings/eroses/penyata (the nine-step flow)
+//   * the deadlines       → /filings/eroses/tarikh
+//
+// ?doc=<id> (from the finished-minutes page's "file this?" question) rides
+// along into whichever card is chosen, so the meeting stays chosen.
 // ---------------------------------------------------------------------------
 
 export const dynamic = "force-dynamic";
 
-const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
-
-export default async function ErosesGuidePage({
+export default async function ErosesEntryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ doc?: string | string[]; dari?: string; hingga?: string }>;
+  searchParams: Promise<{ doc?: string | string[] }>;
 }) {
   const sp = await searchParams;
-  const active = await getActiveOrg().catch(() => null);
-  if (!active) {
+  const base = await loadFlowBase(sp.doc);
+
+  if (!base.active) {
     return (
       <div className="mx-auto w-full max-w-3xl pb-10">
         <p className="v2-glass p-5 text-base">
@@ -60,127 +43,80 @@ export default async function ErosesGuidePage({
     );
   }
 
-  const docRaw = Array.isArray(sp.doc) ? sp.doc[0] : sp.doc;
-  const docId = Number(docRaw ?? "");
-  const todayIso = dayIsoMalaysia(new Date().toISOString())!;
+  const q = flowQuery(sp);
+  const selectedLabel = base.selected ? meetingLabelOf(base.selected) : null;
 
-  // G3-5 (work order 68 §5-5): who this guide is even FOR, said out loud.
-  const { orgType } = await readOrgTypeFlags(active.id);
-
-  const supabase = await getSupabaseServer();
-  const [meetings, filingRoster, auditorsRead, orgRead, banksRead, branchesRead] =
-    await Promise.all([
-      listConfirmedMinutes(),
-      loadFilingRoster(),
-      supabase
-        .from("auditors")
-        .select("person_name, name_official, email, appointed_on, status")
-        .eq("org_id", active.id)
-        .order("id", { ascending: true }),
-      supabase
-        .from("orgs")
-        .select("phone, financial_year_start, members_registered, members_voting")
-        .eq("id", active.id)
-        .maybeSingle(),
-      supabase
-        .from("org_bank_accounts")
-        .select("bank_name, account_no")
-        .eq("org_id", active.id)
-        .order("id", { ascending: true }),
-      supabase
-        .from("orgs")
-        .select("id", { count: "exact", head: true })
-        .eq("parent_org_id", active.id),
-    ]);
-
-  const selectedId =
-    Number.isInteger(docId) && docId > 0
-      ? docId
-      : meetings.length > 0
-        ? meetings[0].id
-        : null;
-  const selected =
-    selectedId !== null ? await getConfirmedMinutesDoc(selectedId) : null;
-  const pastePack =
-    selected?.extraction != null
-      ? buildPastePack(selected.extraction, filingRoster)
-      : null;
-
-  // Auditors (migration 34) — a database that is behind answers with an
-  // error; the guide then says so instead of pretending "no auditors".
-  const auditors: GuideAuditor[] | null = auditorsRead.error
-    ? null
-    : ((auditorsRead.data ?? []) as GuideAuditor[]);
-
-  // Maklumat Am (migration 35) — same fail-open shape.
-  const maklumat: GuideMaklumat | null = orgRead.error
-    ? null
-    : {
-        phone: (orgRead.data?.phone as string | null) ?? null,
-        financialYearStart:
-          (orgRead.data?.financial_year_start as string | null) ?? null,
-        membersRegistered:
-          (orgRead.data?.members_registered as number | null) ?? null,
-        membersVoting: (orgRead.data?.members_voting as number | null) ?? null,
-        banks: banksRead.error
-          ? []
-          : ((banksRead.data ?? []) as { bank_name: string; account_no: string }[]).map(
-              (b) => ({ bankName: b.bank_name, accountNo: b.account_no }),
-            ),
-      };
-  const branchCount = branchesRead.count ?? 0;
-  const committeeCount = filingRoster.length;
-
-  // The financial year: ?dari/?hingga override, else the recorded financial
-  // year start (D2-2), else the calendar year. TypeScript sums every cell
-  // (Hard Rule 2) via eroses-penyata.ts.
-  let fromIso = `${todayIso.slice(0, 4)}-01-01`;
-  let toIso = todayIso;
-  const fyStart = maklumat?.financialYearStart ?? null;
-  if (fyStart && ISO_DAY.test(fyStart)) {
-    // The most recent financial year START on or before today.
-    const monthDay = fyStart.slice(5);
-    const thisYearStart = `${todayIso.slice(0, 4)}-${monthDay}`;
-    fromIso =
-      thisYearStart <= todayIso
-        ? thisYearStart
-        : `${Number(todayIso.slice(0, 4)) - 1}-${monthDay}`;
-  }
-  if (ISO_DAY.test(sp.dari ?? "")) fromIso = sp.dari as string;
-  if (ISO_DAY.test(sp.hingga ?? "")) toIso = sp.hingga as string;
-
-  let penyata: PenyataKewangan | null = null;
-  const rows = await loadStatementRows(active.id, { fromIso, toIso });
-  if (rows) {
-    const KNOWN = new Set(["recorded", "submitted", "approved", "paid", "rejected"]);
-    penyata = buildPenyataKewangan({
-      donations: rows.donations.map((d) => ({
-        amountCents: d.amountCents,
-        purpose: d.purpose,
-        donatedAtIso: d.donatedAtIso,
-        kind: d.kind === "in_kind" ? "in_kind" : "cash",
-      })),
-      expenses: rows.expenses.map((e) => ({
-        amountCents: e.amountCents,
-        category: e.category,
-        spentAtIso: e.spentAtIso,
-        // Rows older than the claim flow have no status — they were direct
-        // records of money already spent.
-        status: (KNOWN.has(e.status ?? "")
-          ? e.status
-          : "recorded") as PenyataExpenseInput["status"],
-      })),
-      from: fromIso,
-      to: toIso,
-    });
-  }
+  const cards: {
+    href: string;
+    icon: string;
+    titleBm: string;
+    titleZh: string;
+    titleEn: string;
+    bm: string;
+    zh: string;
+    en: string;
+    probe: string;
+  }[] = [
+    {
+      href: `/filings/eroses/mesyuarat${q}`,
+      icon: "🗓️",
+      titleBm: "Daftar Mesyuarat",
+      titleZh: "登记会议",
+      titleEn: "Register a meeting",
+      bm: "Daftarkan satu mesyuarat di Pengurusan Mesyuarat dan muat naik PDF minitnya — panduan salin-tampal.",
+      zh: "把一场会议登记进 Pengurusan Mesyuarat、上传会议记录 PDF —— 一格一格带你贴。",
+      en: "Register one meeting under Pengurusan Mesyuarat and upload its minutes PDF — a copy-paste guide.",
+      probe: "card-mesyuarat",
+    },
+    {
+      href: `/filings/eroses/penyata${q}`,
+      icon: "📋",
+      titleBm: "Penyata Tahunan",
+      titleZh: "年度呈报",
+      titleEn: "Annual Return",
+      bm: "Kerja sekali setahun (perlu AGM): sembilan langkah portal, satu langkah satu halaman, nilai siap disalin.",
+      zh: "一年一次的大件事（要有 AGM）：portal 的九步，一步一页，值都替你算好等着复制。",
+      en: "The once-a-year job (needs an AGM): the portal's nine steps, one page each, every value ready to copy.",
+      probe: "card-penyata",
+    },
+    {
+      href: "/filings/eroses/tarikh",
+      icon: "⏰",
+      titleBm: "Tarikh Akhir",
+      titleZh: "看截止日",
+      titleEn: "Deadlines",
+      bm: "Bila penyata tahunan perlu dihantar, dan tarikh akhir lain yang sedang berjalan.",
+      zh: "年报什么时候要交、还有哪些截止日在倒数。",
+      en: "When the Annual Return is due, and every other deadline on the clock.",
+      probe: "card-tarikh",
+    },
+  ];
 
   return (
-    <>
-      {/* G3-5: LOUD empty states — a tester who lands here with an internal
-          committee or an empty history must never conclude "没做任何东西". */}
-      {orgType === "committee" && (
-        <div className="mx-auto mb-4 w-full max-w-3xl rounded-md border-2 border-amber-400 bg-amber-50 p-5 dark:bg-amber-400/10">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 pb-10">
+      <div className="flex flex-col gap-2">
+        <h1 className="text-3xl font-semibold tracking-tight">
+          <span className="v2-gradient-text">
+            <Tri bm="eROSES — nak buat apa?" zh="eROSES —— 要办哪一件事？" en="eROSES — what are you here to do?" />
+          </span>
+        </h1>
+        <p className="text-base text-muted-foreground">
+          <Tri
+            bm="Pilih kerja anda — setiap satu ada halaman panduannya sendiri."
+            zh="选你要办的事 —— 每一件都有自己的引导页。"
+            en="Pick the job — each one has its own guided pages."
+          />
+        </p>
+        {selectedLabel && (
+          <p className="text-sm text-muted-foreground">
+            <Tri bm="Mesyuarat dipilih:" zh="已选的会议：" en="Selected meeting:" />{" "}
+            <span className="font-medium text-[color:var(--v2-text)]">{selectedLabel}</span>
+          </p>
+        )}
+      </div>
+
+      {base.orgType === "committee" && (
+        <div className="rounded-md border-2 border-amber-400 bg-amber-50 p-5 dark:bg-amber-400/10">
           <p className="text-xl font-bold text-amber-900 dark:text-amber-100">
             🏛️{" "}
             <Tri
@@ -191,73 +127,37 @@ export default async function ErosesGuidePage({
           </p>
           <p className="mt-2 text-base text-amber-900/90 dark:text-amber-100/90">
             <Tri
-              bm="Hanya pertubuhan berdaftar (PPM/ROS) memfailkan Penyata Tahunan. Untuk mencuba panduan ini, buka pertubuhan jenis “berdaftar”."
-              zh="只有注册社团（PPM/ROS）需要交年报。想试这份引导，请用「注册社团」类型的机构。"
-              en="Only a registered society (PPM/ROS) files the Annual Return. To try this guide, use an organisation of the “registered” type."
+              bm="Kad di bawah kekal untuk rujukan sahaja."
+              zh="下面的卡片仅供参考。"
+              en="The cards below stay for reference only."
             />
           </p>
         </div>
       )}
-      {meetings.length === 0 && (
-        <div className="mx-auto mb-4 w-full max-w-3xl rounded-md border-2 border-[#a855f7]/50 bg-purple-50/70 p-5 dark:bg-purple-400/10">
-          <p className="text-xl font-bold">
-            1️⃣{" "}
-            <Tri
-              bm="Langkah pertama: simpan satu minit mesyuarat yang DISAHKAN dahulu."
-              zh="第一步：先去存一份确认过的会议记录。"
-              en="First step: save one CONFIRMED set of minutes."
-            />
-          </p>
-          <p className="mt-2 text-base text-muted-foreground">
-            <Tri
-              bm="Panduan ini mengisi Penyata Tahunan daripada minit yang sudah disahkan — sejarah anda masih kosong, jadi belum ada apa-apa untuk diisi."
-              zh="这份引导是用已确认的会议记录来填年报的 —— 您的历史还是空的，所以现在没有东西可填。"
-              en="This guide fills the Annual Return from confirmed minutes — your history is still empty, so there is nothing to fill in yet."
-            />
-          </p>
-          <p className="mt-3">
-            <Link
-              href="/minutes"
-              className="inline-block rounded-md bg-[color:var(--v2-primary-fill,#7c3aed)] px-5 py-2.5 text-base font-semibold text-white"
-            >
-              <Tri
-                bm="Rekod mesyuarat sekarang"
-                zh="现在去记录会议"
-                en="Record a meeting now"
-              />{" "}
-              →
-            </Link>
-          </p>
-        </div>
-      )}
-      <ErosesGuide
-      meetings={meetings.map((m) => ({
-        id: m.id,
-        label:
-          m.title ??
-          `${m.meetingTypeLabel ?? m.meetingType}${m.meetingDateIso ? ` — ${m.meetingDateIso}` : ""}`,
-        meetingType: m.meetingType,
-      }))}
-      selectedId={selected?.id ?? null}
-      selectedLabel={
-        selected
-          ? (selected.title ??
-            `${selected.meetingTypeLabel ?? selected.meetingType}${selected.meetingDateIso ? ` — ${selected.meetingDateIso}` : ""}`)
-          : null
-      }
-      selectedMeetingType={selected?.meetingType ?? null}
-      pastePack={pastePack}
-      auditors={auditors}
-      maklumat={maklumat}
-      committeeCount={committeeCount}
-      branchCount={branchCount}
-      missingOfficialCount={
-        filingRoster.filter((m) => (m.nameOfficial ?? "").trim() === "").length
-      }
-      penyata={penyata}
-      fromIso={fromIso}
-      toIso={toIso}
-    />
-    </>
+
+      <div className="grid gap-4 @2xl:grid-cols-3">
+        {cards.map((c) => (
+          <Link key={c.probe} href={c.href} className="group" data-probe={c.probe}>
+            <Card className="h-full transition group-hover:border-[color:var(--v2-primary)]">
+              <CardContent className="flex h-full flex-col gap-2 pt-6">
+                <div className="text-3xl">{c.icon}</div>
+                <div className="text-lg font-semibold">
+                  {c.titleBm}
+                  <span className="block text-base font-normal text-muted-foreground">
+                    <Tri bm="" zh={c.titleZh} en={c.titleEn} />
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  <Tri bm={c.bm} zh={c.zh} en={c.en} />
+                </p>
+                <span className="mt-auto pt-2 text-base font-medium text-[color:var(--v2-primary)]">
+                  <Tri bm="Mula" zh="进去" en="Open" /> →
+                </span>
+              </CardContent>
+            </Card>
+          </Link>
+        ))}
+      </div>
+    </div>
   );
 }

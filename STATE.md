@@ -5,11 +5,12 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-30 凌晨（MYT）· Fable 5（69 号 eROSES 重构+名册场：包 H1 ✅，H2 进行中）**
-**🔴 本场（69 号）状态一句话：包 H1 名册补完做完（74 号报告）——列内
-Edit、email/Negeri 欄（migration 37 只写档等 J 贴）、「加常见职位」一键
-起表＋章程对照、Excel 模板 8 欄照表头认欄、敬语分组、文案图标全上；
-四道关＋三条 e2e＋probe-h1-69 18 项全 PASS。下面是上一场（68 号）的快照：**
+**最后更新：2026-08-30 凌晨（MYT）· Fable 5（69 号 eROSES 重构+名册场：H1 ✅ H2 ✅，H3 进行中）**
+**🔴 本场（69 号）状态一句话：H1 名册补完（74 号报告）＋ H2 eROSES flow
+重构主菜（75 号报告）都收工——入口三张卡、年报九步一步一页（Hard Rule
+13）、缺值原地填、每步介面型示意图、/filings 假锁改真锁；probe-h1 18 项
+＋probe-h2 51 项全 PASS，四道关＋三条 e2e 全绿。migration 37 只写档等 J
+贴。下面是上一场（68 号）的快照：**
 **⑦ 品质场四包全做完（70/71/72/73 号报告），
 held-out 验收两半都过。J 的道教会样本拍照→确认→BM 文件＝标准 minit
 版式、量尺 0 缺陷、**零 AI 费**（结构化确定性组装；翻译才叫模型，
@@ -38,6 +39,31 @@ eROSES 下载官方 Penyata Kewangan 模板（60 号报告第 5 点）。**
 > **已上线**：https://minit-project.vercel.app —— 68 号场 J 已 push
 > （开工时 main == origin/main）；**69 号场的 commit 等 J push-cabang.bat**。
 > 线上 org：15「J」、58「avocado」、91「TESTING1」。
+
+### 这一场做了什么（69 号场 · 包 H2 ✅，75 号报告——eROSES flow 重构主菜）
+
+- **§1-1 入口三张卡**（J #12 原话）：/filings/eroses = 🗓️ 登记会议
+  （/mesyuarat）· 📋 年度呈报（/penyata）· ⏰ 截止日（/tarikh），?doc 跟卡走。
+- **年报 = folder of routes（Hard Rule 13）**：/penyata 起点（选会议＋财年
+  区间＋大字空状态）→ /penyata/langkah/1…9 一步一页；共用状态在 URL
+  （?doc/?dari/?hingga）；LangkahRail 名字逐字照 portal，走过的步打 ✓。
+  旧 868 行单页 eroses-guide.tsx 删除（内容与诚实计算说明原样搬进各步）。
+- **§1-2 缺值原地填**：第 2 步 Maklumat Am 小表单＋银行户口就地加（重用
+  settings 的 server action）；第 3 步缺 IC 名逐人一行补（新精简 action
+  fillCommitteeIcName）；第 4 步审计员就地加（重用 addAuditor）；
+  存完 router.refresh 重读，全程不离开 flow。
+- **§1-15b 每步示意图**（portal-sketch.tsx）：假浏览器列＋portal 勾选
+  rail＋栏位框，每框标「复制/自己填/上传/读了再勾/portal 自动带出」＋
+  ①②③三句；版面照 J 的 17 张截图、**数据全虚构**、图下写明是示意图。
+- **§1-11 真锁**（现场拍板）：/filings 免费版值区 select-none＋copy 拦截
+  （FenceLock 同族），不再是「按钮灰了字照样反白」的假锁。📌 flow 内
+  COPY 无围栏照旧（D3 就没有）——要不要圈进 D44 等 J 拍板，报告有 📌。
+- **测过**：tsc 0 · eslint 21 · vitest 1084 · build ✓（5 条新路由）·
+  三条 e2e 全绿 · `probe-h2-69.mjs` **51 项全 PASS**（打字 AGM→问句→
+  三张卡→九步全走、URL 不出 flow、三处原地填全进真表、金额对到分、
+  真锁双断言、ZZZ 全删）· probe-d3-56 档头标 SUPERSEDED（旧单页断言）。
+- ⚠ 没能验证的：引导文案/示意图 vs 真 portal 逐字对版（等 J 圈）；
+  真 org 全套资料走 flow 的观感（tester 清单在 75 号报告）。
 
 ### 这一场做了什么（69 号场 · 包 H1 ✅，74 号报告——名册补完）
 
@@ -622,6 +648,27 @@ RESPONSIVE：J 若再圈破版，贴 46 号单同段 PROMPT 继续。
 ---
 
 ## 6. 已知陷阱（踩过的，别再踩）
+
+### 2026-08-29 深夜新增（69 号 eROSES 重构场）
+
+- 🔴 **从 "use client" 档 import「非元件」的导出到 server component，拿到
+  的是 client reference 不是值**——LANGKAH 常数阵列放在 flow-ui.tsx
+  （client）被 server 步页 import，`LANGKAH[n-1].bm` 直接
+  TypeError（build 过、运行才炸）。**修法：client 与 server 共用的常数/
+  纯函数放「无指令」的 plain module（langkah-meta.ts）；判断方法：
+  server 页炸 undefined 而 import 来源档头有 "use client"，先想这条。**
+- 🔴 **探针「按名字捞 org id」＋失败跑残留的同名孤儿＝种子种错 org 的
+  分裂脑**——UI 的 active org 是新建的，REST 捞到的是旧孤儿；症状
+  非常诡异：UI 自写自读的步骤全 PASS（自洽），只有「REST 种的资料」
+  读不到、「UI 写的资料」REST 验证 0 行。**修法：捞 id 用
+  order=id.desc&limit=1；开场先按名字扫残留；finally 按名字整批删。
+  判断方法：见到「一半 PASS 一半 0 行」的分裂，先 select 一下同名 org
+  有几个。**
+- ⚠ **org 名输入框自动大写，再验证一次**（§6 旧条目）：探针的 ORG_NAME
+  带小写字母，按原字串查库永远查不到——固定资料写「变形后」的形状。
+- ⚠ **`type="email"` 的浏览器原生验证会抢在 server action 前面，而且只讲
+  浏览器的语言**——我们的三语拒绝句永远到不了屏幕。要三语错误就用
+  `type="text"`＋`inputMode="email"`，让 server 当唯一的验证者（H1 电邮格）。
 
 ### 2026-08-29 深夜新增（68 号 ⑦ 品质场）
 

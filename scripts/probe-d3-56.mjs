@@ -1,3 +1,10 @@
+// ⚠ SUPERSEDED (工作单 69 包H2, 2026-08-29): /filings/eroses is now a CARD
+// ENTRY page and the nine steps live one-per-page under
+// /filings/eroses/penyata/langkah/[n] — the guide-section assertions below
+// describe the OLD one-page layout and WILL fail. The successor covering the
+// same ground on the new flow is scripts/probe-h2-69.mjs. Kept as the
+// historical evidence behind report 60; do not re-run.
+//
 // D3 (工作单 56): the eROSES step-by-step guide, proven through the real UI
 // against local `next start` + the real DB. Zero AI cost (typing is the
 // no-quota path; money rows are seeded by service role).

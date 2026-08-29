@@ -260,6 +260,41 @@ export async function updateCommitteeMember(
 }
 
 /**
+ * Fill ONE missing IC name, from inside the eROSES flow (H2, work order 69
+ * §1-2: a gap is filled where it is discovered, not on another page). Only
+ * name_official moves; everything else on the row stays untouched.
+ */
+export async function fillCommitteeIcName(
+  _prev: MemberActionState,
+  formData: FormData,
+): Promise<MemberActionState> {
+  const user = await getSessionUser();
+  if (!user) return { error: ERR.login, ok: false };
+  const active = await getActiveOrg();
+  if (!active) return { error: ERR.noOrg, ok: false };
+  if (!can(active.role, "minutes_write")) {
+    return { error: permissionError("minutes_write"), ok: false };
+  }
+
+  const id = Number(formData.get("id"));
+  const nameOfficial = String(formData.get("nameOfficial") ?? "").trim();
+  if (!Number.isInteger(id) || nameOfficial === "") {
+    return { error: ERR.failed, ok: false };
+  }
+
+  const supabase = await getSupabaseServer();
+  const { error } = await supabase
+    .from("committee_roster")
+    .update({ name_official: nameOfficial.slice(0, 160) })
+    .eq("id", id)
+    .eq("org_id", active.id);
+  if (error) return { error: ERR.failed, ok: false };
+
+  revalidatePath("/members");
+  return { error: null, ok: true };
+}
+
+/**
  * "加常見職位" — one tap gives the roster its standard skeleton so the
  * society only fills in names (H1, work order 69 §1-5, J's decision).
  *
