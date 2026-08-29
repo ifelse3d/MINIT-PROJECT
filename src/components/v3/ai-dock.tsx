@@ -295,10 +295,13 @@ export function AIDock({
                 transition={{ type: "spring", stiffness: 320, damping: 32 }}
                 className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-md p-3"
               >
-                {/* 80vh, but never up into the top bar: on a short phone
-                    viewport the sheet stops 3.5rem (the bar) + a breath
-                    below the top (46 §0-2 — same rule on mobile). */}
-                <div className="h-[80vh] max-h-[calc(100dvh-4.5rem)]">
+                {/* K3 (work order 82): the sheet takes ALL the room under the
+                    top bar (3.5rem + a breath, 46 §0-2 — same rule as before,
+                    without the 80vh haircut that wasted ~150px of a phone
+                    screen while answers fought for space). dvh, not vh, so
+                    the sheet shrinks WITH the keyboard and the input stays
+                    on screen while typing. */}
+                <div className="h-[calc(100dvh-4.5rem)]">
                   <AIPanel
                     initialRemaining={initialRemaining}
                     initialUsedPct={initialUsedPct}

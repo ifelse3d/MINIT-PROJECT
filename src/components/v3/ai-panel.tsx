@@ -31,12 +31,20 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ArrowRight, ArrowUp, RotateCcw, Sparkles, X } from "lucide-react";
+import { ArrowRight, ArrowUp, CircleHelp, RotateCcw, Sparkles, X } from "lucide-react";
 import { Tri, useTriText } from "@/components/language-provider";
 import { GlassBadge } from "./surfaces";
 import { AnswerSources, type AnswerSource } from "./answer-sources";
+import { Modal } from "@/components/modal";
+import { ConfirmedAction } from "@/components/confirm-delete";
 import { tidyReply } from "@/lib/tidy-reply";
 import { ASSISTANT_NAME } from "@/lib/brand";
+import {
+  matchPreparedAnswer,
+  preparedButtonFor,
+  PREPARED_FREE_NOTE,
+  SUGGESTED_QUESTIONS,
+} from "@/lib/prepared-answers";
 import { usePersistentState } from "@/lib/use-persistent-state";
 import { useScopedKey } from "@/lib/storage-scope";
 
@@ -47,6 +55,10 @@ type Turn = {
   /** Clickable "this came from the 12 June meeting" links. */
   sources?: AnswerSource[] | null;
   lookups?: string[] | null;
+  /** K1 (work order 82): answered by the prepared layer — no AI, no quota.
+   *  Free turns are also excluded from the history sent to /api/chat, so a
+   *  free exchange never eats the per-conversation turn cap. */
+  free?: boolean;
 };
 
 /** Shape guard for a stored transcript (usePersistentState contract). */
@@ -80,21 +92,11 @@ type ChatOk = {
   maxTurns: number;
 };
 
-// Chips only PREFILL the input — the member presses Ask themselves, so the
-// quota spend stays a deliberate act.
-const SUGGESTIONS = [
-  {
-    bm: "Bila saya kena hantar Penyata Tahunan?",
-    zh: "年度呈报什么时候要交？",
-    en: "When do I file the Annual Return?",
-  },
-  {
-    bm: "Di mana saya buat resit?",
-    zh: "在哪里做收据？",
-    en: "Where do I make receipts?",
-  },
-  { bm: "Apa itu e-Invois?", zh: "e-Invois 是什么？", en: "What is e-Invois?" },
-];
+// Chips only PREFILL the input — the member presses Ask themselves. Since K1
+// (work order 82) every chip is a question the PREPARED layer answers for
+// free (prepared-answers.ts owns the list and its tests pin each one), so a
+// chip can never spend the quota at all.
+const SUGGESTIONS = SUGGESTED_QUESTIONS;
 
 export function AIPanel({
   initialRemaining,
@@ -129,6 +131,8 @@ export function AIPanel({
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // K2 (work order 82): the explanations live behind the ? icon now.
+  const [usageOpen, setUsageOpen] = useState(false);
   const [remaining, setRemaining] = useState<number | null>(initialRemaining);
   const [usedPct, setUsedPct] = useState<number | null>(initialUsedPct);
   const [turnsLeft, setTurnsLeft] = useState<number | null>(null);
@@ -164,10 +168,33 @@ export function AIPanel({
   async function ask(text?: string) {
     const q = (text ?? question).trim();
     if (!q || busy || isBlocked) return;
+    // K1 (work order 82): the free layer answers first. A hit costs nothing —
+    // no vendor, no quota, no server round-trip — and the deep-link button
+    // comes from the same whitelist the model's buttons do.
+    const hit = matchPreparedAnswer(q);
+    if (hit) {
+      setError(null);
+      setQuestion("");
+      setTurns((prev) => [
+        ...prev,
+        { role: "user", text: q, free: true },
+        {
+          role: "assistant",
+          text: hit.entry.answer[hit.lang],
+          button: preparedButtonFor(hit.entry),
+          free: true,
+        },
+      ]);
+      return;
+    }
     const seq = ++askSeq.current;
     setError(null);
     setQuestion("");
-    const history = turns.map((x) => ({ role: x.role, text: x.text }));
+    // Free exchanges are navigation, not context — they stay out of the
+    // history so they never eat the MAX_TURNS cap or a single prompt token.
+    const history = turns
+      .filter((x) => !x.free)
+      .map((x) => ({ role: x.role, text: x.text }));
     setTurns((prev) => [...prev, { role: "user", text: q }]);
     setBusy(true);
     try {
@@ -236,6 +263,41 @@ export function AIPanel({
             en={`Ask ${ASSISTANT_NAME}`}
           />
         </p>
+        {/* K2 + K0 (work order 82): the probe proved the transcript SURVIVES
+            closing and reopening the panel (scoped localStorage), so the
+            clear button stays — but as a small header icon, not the block
+            that used to cover the answers. It confirms first (§1-10: every
+            destructive control confirms, and it sits one finger-width from
+            the X). */}
+        {turns.length > 0 && !busy && (
+          <ConfirmedAction
+            onConfirm={() => {
+              askSeq.current++;
+              setTurns([]);
+              setTurnsLeft(null);
+              setError(null);
+            }}
+            body={
+              <Tri
+                bm="Padam perbualan ini dan mula semula? Kuota bulanan tidak terjejas."
+                zh="把这轮对话清掉、重新开始？本月用量不受影响。"
+                en="Clear this conversation and start fresh? The monthly allowance is unaffected."
+              />
+            }
+            confirmLabel={<Tri bm="Padam perbualan" zh="清除对话" en="Clear conversation" />}
+            trigger={(open) => (
+              <button
+                type="button"
+                aria-label={t("Padam perbualan", "清除对话", "Clear conversation")}
+                title={t("Padam perbualan", "清除对话", "Clear conversation")}
+                onClick={open}
+                className="flex size-10 shrink-0 items-center justify-center rounded-sm text-[color:var(--v2-text-soft)] hover:bg-white/60 dark:hover:bg-white/10"
+              >
+                <RotateCcw className="h-5 w-5" strokeWidth={2} />
+              </button>
+            )}
+          />
+        )}
         {onClose && (
           <button
             type="button"
@@ -256,8 +318,12 @@ export function AIPanel({
       {/* F-1 (2026-08-25, J's decision #4): the badge reads the percentage,
           with "used" carried on it so it cannot be misread as "X% left".
           The raw count only appears when the percentage is unknown. */}
+      {/* K2 (work order 82, J's own sketch): ONE compact meter row — the
+          badge, the turns-left counter (Hard Rule 10: both stay visible),
+          and a ? that opens the explanation. The three-line block that used
+          to cover the answers is inside that popup now. */}
       {remaining !== null && (
-        <div className="mt-2">
+        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
           <GlassBadge tone={remaining > 0 ? "info" : "missing"}>
             <Tri
               bm={usedPct === null ? `Baki ${remaining}` : `${usedPct}% guna bulan ini`}
@@ -265,6 +331,27 @@ export function AIPanel({
               en={usedPct === null ? `${remaining} left` : `${usedPct}% used this month`}
             />
           </GlassBadge>
+          {turnsLeft !== null && (
+            <span className="text-sm text-[color:var(--v2-text-soft)]">
+              <Tri
+                bm={`· boleh tanya ${turnsLeft} lagi`}
+                zh={`· 这轮还能问 ${turnsLeft} 题`}
+                en={`· ${turnsLeft} left this conversation`}
+              />
+            </span>
+          )}
+          <button
+            type="button"
+            aria-label={t(
+              "Apa maksud kuota ini?",
+              "这些用量是什么意思？",
+              "What do these numbers mean?",
+            )}
+            onClick={() => setUsageOpen(true)}
+            className="flex size-8 shrink-0 items-center justify-center rounded-full text-[color:var(--v2-text-soft)] hover:bg-white/60 dark:hover:bg-white/10"
+          >
+            <CircleHelp className="h-5 w-5" strokeWidth={2} />
+          </button>
         </div>
       )}
       <p className="mt-1.5 text-sm text-[color:var(--v2-text-soft)]">
@@ -277,6 +364,55 @@ export function AIPanel({
           en="Questions here use the monthly AI allowance"
         />
       </p>
+
+      {/* The K2 popup: everything the panel used to SAY all the time. */}
+      <Modal open={usageOpen} onClose={() => setUsageOpen(false)} labelledBy="ai-usage-help">
+        <div className="flex flex-col gap-3">
+          <h2 id="ai-usage-help" className="text-lg font-semibold">
+            <Tri bm="Kuota AI anda" zh="您的 AI 用量" en="Your AI allowance" />
+          </h2>
+          <p className="text-base">
+            <Tri
+              bm={`Setiap soalan yang dijawab oleh AI menggunakan kuota bulanan pertubuhan.${usedPct === null ? "" : ` Bulan ini sudah guna ${usedPct}%.`} Ia bermula semula pada 1 hari bulan.`}
+              zh={`每个由 AI 回答的问题都会用机构的本月用量。${usedPct === null ? "" : `本月已用 ${usedPct}%。`}每月 1 号重新开始。`}
+              en={`Every question the AI answers uses the organisation's monthly allowance.${usedPct === null ? "" : ` ${usedPct}% used this month.`} It starts fresh on the 1st.`}
+            />
+          </p>
+          <p className="text-base">
+            {/* No hardcoded max here: the server owns MAX_TURNS and reports
+                the live count with every answer — printing a mirror constant
+                is how the two would drift. */}
+            <Tri
+              bm={`Satu perbualan ada had soalan.${turnsLeft === null ? "" : ` Perbualan ini tinggal ${turnsLeft}.`} Perbualan baharu bermula semula — kuota bulanan tidak terjejas.`}
+              zh={`一轮对话的题数有上限。${turnsLeft === null ? "" : `这轮还剩 ${turnsLeft} 题。`}换新对话会重新计算，不影响本月用量。`}
+              en={`One conversation has a question limit.${turnsLeft === null ? "" : ` This one has ${turnsLeft} left.`} A new conversation resets that — the monthly allowance is unaffected.`}
+            />
+          </p>
+          <p className="text-base">
+            <Tri
+              bm="Perbualan yang panjang jadi perlahan dan lebih mahal — bila satu topik selesai, tekan ↺ di atas untuk mula semula."
+              zh="对话太长会变慢、也更耗 AI —— 一个话题告一段落，按上面的 ↺ 重新开始。"
+              en="A long conversation gets slow and costs more — when a topic is done, tap ↺ above to start fresh."
+            />
+          </p>
+          <p className="text-base">
+            <Tri
+              bm={PREPARED_FREE_NOTE.bm + " Soalan biasa (mis. “di mana buat resit?”) dijawab begitu."}
+              zh={PREPARED_FREE_NOTE.zh + "常见问题（例如「在哪里做收据？」）就是这样回答的。"}
+              en={PREPARED_FREE_NOTE.en + " Common questions (e.g. “where do I make receipts?”) are answered that way."}
+            />
+          </p>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setUsageOpen(false)}
+              className="v2-pill inline-flex min-h-11 items-center bg-[color:var(--v2-primary-fill)] px-5 text-base font-semibold text-white"
+            >
+              <Tri bm="Faham" zh="知道了" en="Got it" />
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Conversation */}
       <div className="v2-scroll mt-4 flex flex-1 flex-col gap-3 overflow-y-auto">
@@ -339,6 +475,17 @@ export function AIPanel({
                   <ArrowRight className="h-5 w-5" strokeWidth={2} />
                 </Link>
               )}
+              {/* K1 ④: a prepared answer says so — honest about being free. */}
+              {turn.free && (
+                <p className="mt-2 text-xs text-[color:var(--v2-text-soft)]">
+                  ⚡{" "}
+                  <Tri
+                    bm={PREPARED_FREE_NOTE.bm}
+                    zh={PREPARED_FREE_NOTE.zh}
+                    en={PREPARED_FREE_NOTE.en}
+                  />
+                </p>
+              )}
               <AnswerSources sources={turn.sources ?? []} lookups={turn.lookups ?? []} />
             </div>
           ),
@@ -387,46 +534,10 @@ export function AIPanel({
         <div ref={endRef} />
       </div>
 
-      {/* Never while an answer is on its way — see ask-box.tsx.
-          F-4: "Start again" became "Clear conversation" — the transcript is
-          saved now, so throwing it away deserves a name that says so, plus
-          the honest reason to do it (long transcripts slow every answer).
-          F-1: the turn counter says what resets and what does not. */}
-      {turns.length > 0 && !busy && (
-        <div className="mt-3 flex flex-col gap-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                askSeq.current++;
-                setTurns([]);
-                setTurnsLeft(null);
-                setError(null);
-              }}
-              className="inline-flex min-h-11 items-center gap-2 rounded-sm border-2 border-[color:var(--v2-outline-border)] bg-white/80 px-4 text-base font-medium dark:bg-white/10"
-            >
-              <RotateCcw className="h-5 w-5" strokeWidth={2} />
-              <Tri bm="Padam perbualan" zh="清除对话" en="Clear conversation" />
-            </button>
-            {turnsLeft !== null && (
-              <span className="text-base text-[color:var(--v2-text-soft)]">
-                <Tri
-                  bm={`Boleh tanya ${turnsLeft} soalan lagi dalam perbualan ini · perbualan baharu bermula semula, kuota bulanan tidak terjejas`}
-                  zh={`这轮对话还能问 ${turnsLeft} 题 · 换新对话会重置，不影响本月用量`}
-                  en={`${turnsLeft} questions left in this conversation · a new conversation resets this, the monthly allowance is unaffected`}
-                />
-              </span>
-            )}
-          </div>
-          <p className="text-sm text-[color:var(--v2-text-soft)]">
-            <Tri
-              bm="Perbualan yang terlalu panjang jadi perlahan — padamkannya bila satu topik selesai."
-              zh="对话太长会变慢，告一段落建议清除。"
-              en="A very long conversation gets slow — clear it when a topic is done."
-            />
-          </p>
-        </div>
-      )}
+      {/* K2 (work order 82): the Clear block that used to sit HERE — a full
+          button plus three lines of small print, covering the newest answer
+          on J's screenshot — is gone. Clearing is the ↺ icon in the header;
+          the counter lives on the meter row; the explanations are behind ?. */}
 
       {/* Input */}
       <div className="mt-3 flex items-end gap-2 rounded-md border border-[color:var(--v2-border)] bg-[color:var(--v2-card)] p-2 pl-4">
