@@ -5,49 +5,109 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-30（MYT）· Fable 5（81 号场：章程分段读根治＋A6 特例＋死按钮＋出席同名＋bench 真数据）**
-**🔴 本场（81 号场）状态一句话（83 号报告）：
-① 章程读取根治（I1）——「App 自己拆页分段读」上线：浏览器把长 PDF 拆成
-≤4 页一段（pdf-lib），每段各自一个请求（永远躲开 60s 墙），签名续读令牌
-让整份章程只扣会员 1 个 extract action、成本照实累计到同一 ai_usage 行；
-三个门（/constitution、create-org、首页 intake 长 PDF 先 classifyOnly）全接；
-段失败原地续读不重扣。真机验收：合成 21 页 PDF 走真 UI 43.8s 六段一次过、
-ai_usage 恰 1 行 cost 累计、42 条条文含第 21 页（probe-i1-81 全 PASS）。
-诊断先行：org197 两枚 app_errors 指纹暴力对上＝「Gemini timed out after
-~20s」＝契约打回后 rule-7 重读只剩 ~20s 预算而死，不只是真慢。
-② A6 特例（I2/D45）——章程一律扣 min(实际页数,5) 页、分段读整份只收一次
-（4→4、5→5、30→5 测试钉住；probe 实测 21 页 fence 只走 5）。
-③ 死按钮（I3）——探针证实接线是活的（手机 sheet＋桌面 rail 长答案紫按钮
-真的带到 /money/einvois，无遮挡）；唯一坐实的死案＝人已在目标页＝同 URL
-no-op，最小修：同路径点击滚回页顶（probe-i3-81 留作回归断言）。
-④ 出席同名分开勾（I4）——身份改 name+note（attendeeIdentityKey），
-「Ali (青年组)」「Ali (妇女组)」各自可勾各自变灰；attendee schema 加可选
-note，旧资料无 note 照旧解析（相容测试钉住）。
-⑤ bench 真数据（I5）——flash-lite 93.6%/$0.0033/3.4s/0 失败 vs 3.6-flash
-93.3%/$0.0039/30.5s/2 案逾时；章程速度实测 3.6-flash 92.3s(139tok/s) vs
-flash-lite 24.8s(489tok/s)——**LONG_DOC 换 3.6-flash 的答案是不要**（env
-没动）。probe-e3-64 按「36 已贴」新契约改后全 PASS——「忽略跨装置」结案。
-测过：tsc 0 · eslint 20（基准逐字同）· vitest **1109（+22）** · build ✓ ·
-三条 e2e 全绿 · probe-i1-81/probe-i3-81 全 PASS · check:migrations 38 支全
-APPLIED · 零 migration · 真额度合计 ≈US$0.24（授权 ≤0.30 内，明细 83 号）。
-**🔴 J 的事：双击 push-cabang.bat（本场 commit；78 场那 2 支开工实测
-已在线上）；其余见 83 号报告收尾清单。**
-上一场（78 号小单，80 号报告）：/filings 308 转址到 /filings/eroses 三张卡
-＋flow COPY 圈进围栏；再上一场（69 号，H1–H4 已全上线）。
-J 的旧账照旧：tester 清单（73/77 号）、54 号 GUIDE 设 Supabase 邮件、
-MyInvois 模板下载（81 号 §1-4 有路径）、竞赛 8/31 23:59 截止（J 自定，不催）。**
+**最后更新：2026-08-30（MYT）· Fable 5（82 号场：⑧ 助手场——免 AI 预备问答层＋聊天面板重整）**
+**🔴 本场（82 号场）状态一句话（84 号报告）：
+① K1 免 AI 预备问答层（主菜）——`src/lib/prepared-answers.ts` 纯逻辑：
+常见导航/固定知识题（在哪开收据、什么是 e-Invois、年度呈报在哪交、
+怎么上传文件…8 条入口）命中就系统直答＋白名单深连结按钮，**零 AI 呼叫
+零扣额度**，答案下标「系统直接回答，不扣 AI 用量」三语。「Try asking」
+chips 由预备层拥有（面板与首页同一份），保守匹配（词界防 cek/kecekapan
+误中、trouble 词/超长题一律照旧送模型）。probe-k1-82 实测：两面 × 三语
+chips 逐颗点过，**ai_usage 0 行**。
+② K0 先验证——对话其实**有留**（scoped localStorage）：关掉再开、点外面
+关、整页重载，桌面 rail 与手机 sheet 全 PASS（probe-k0-82）。J 看到
+「不见了」最可能是首页框与浮动面板本是两个对话（两把 key，设计使然）。
+→ K2 拍板：Clear 保留但缩成标题列小 ↺ 图标（按了先确认，§1-10 规矩）。
+③ K2 收纳——「本月已用 X%」徽章旁 ? 图标弹窗讲解（Modal/portal-target
+惯例）；「这轮还能问 N 题」缩成徽章行一行小字（Hard Rule 10 两个数照旧
+可见）；答案区上下再无说明块可盖。
+④ K3 手机面板——sheet 改 `h-[calc(100dvh-4.5rem)]`（吃满顶栏以下，dvh
+跟键盘缩）；probe-k3-82：375 无横向溢出、答案 ≥200px 可见无遮挡、
+深连结可点真导航、? 弹窗进出视口。真键盘行为 headless 验不了（照实记）。
+⑤ K4 语言跟提问走——chat prompt 换 ANSWER LANGUAGE 条（跟问题语言，判不
+出退回介面语言=minit-lang cookie，route 传入）；契约测试钉住；真 vendor
+验收：介面 BM 之下 BM→BM、**EN→EN（J 8/29 抱怨案）**、ZH→ZH，3 笔
+chat_turn 共 **US$0.0025**（授权 ≤0.10）。
+⑥ K5 首页问答改对话式——讯息流在上、输入框在下（与浮动面板同逻辑），
+送出后自动滚到最新答案＋输入框；How it works 原位不动。
+⑦ K6 档案意图指路不开门——预备层 upload_file 条目（按钮回首页那道门）＋
+chat prompt 两处（能力清单＋FILES 段：不许答「这里不能上传」就完）。
+⑧ 死按钮全名单——probe-deadbuttons-82.ts 从真 ask-routes.ts 导入全部
+15 颗 key（11 区＋4 action），逐颗渲染＋点击＋断言真到页，**15/15 全活**
+（/filings 落 /filings/eroses、/settings 落 /settings/display 皆按现门牌）。
+测过：tsc 0 · eslint 20（基准逐字同）· vitest **1128（+19）** · build ✓ ·
+三条 e2e 全绿 · probe-k0/k1/k3/k4/deadbuttons-82 全 PASS · probe-i3-81
+回归全 PASS · check:migrations 38 支全 APPLIED · 零 migration ·
+真额度 US$0.0025。
+**🔴 J 的事：双击 push-cabang.bat（81＋82 两场 commit 都还没上线）；
+看 84 号报告（一分钟版在开头）。**
+J 的旧账照旧：模型拍板（bench 表在 83 号）、tester 清单（73/77 号）、
+54 号 GUIDE 设 Supabase 邮件、MyInvois 模板下载（81 号 §1-4 有路径）、
+真 undang-undang 重传一次、竞赛 8/31 23:59 截止（J 自定，不催）。**
 
 ---
 
-## 🌙 现在在哪里（2026-08-30，81 号场收工）
+## 🌙 现在在哪里（2026-08-30，82 号 ⑧ 助手场收工）
 
 > **已上线**：https://minit-project.vercel.app —— **至 78 号场 J 已全部
-> push**（81 场开工实测 main == origin/main）；**81 号场的 commit 等 J
-> push-cabang.bat**。migration 1–38 全 APPLIED（本场收尾实测）。
+> push**（82 场开工实测 ahead 5＝81 场那 5 支还没上）；**81＋82 两场的
+> commit 都等 J push-cabang.bat**。migration 1–38 全 APPLIED（82 场收尾
+> 实测，本场零 migration）。
 > 线上 org：15「J」、58「avocado」、91「TESTING1」、197「TESTING2」
 > （91/197 quota 15＝仍在免费围栏内；J 要拿来测付费面见 83 号 §7 的 SQL）。
 
-### 这一场做了什么（81 号场 ✅，83 号报告——章程分段读＋A6＋三件修）
+### 这一场做了什么（82 号 ⑧ 助手场 ✅，84 号报告——免 AI 预备问答层＋面板重整）
+
+- **K0 先验证（动刀前）**：probe-k0-82 证实面板对话**有留**（scoped
+  localStorage `minit:<user>:<org>:chat.panel.v1`）——X 关、点外面关、
+  整页重载，桌面 rail 与手机 sheet 全部找得回。J 的「不见了」最可能＝
+  首页框与面板是两个对话（`chat.home.v1` vs `chat.panel.v1`，两把 key
+  设计使然，probe 也断言了不互通）。→ Clear 鈕保留、缩小（K2）。
+- **K1 免 AI 预备问答层（主菜）**：`src/lib/prepared-answers.ts`（纯逻辑
+  ＋14 支测试）——8 条入口（年度呈报/开收据/什么是 e-Invois/生成 e-Invois/
+  日历在哪/会议记录在哪/什么是 eROSES/我要上传文件），三语答案照现门牌
+  写（/filings=308 转 eroses 那套）；深连结按钮只从 ask-routes 白名单来
+  （死按钮教训）；保守匹配＝词界比对（cek/kecekapan 教训钉在测试里）＋
+  trouble 词（salah/错/why/delete…）与 >120 字一律照旧送模型；命中语言＝
+  回答语言。chips（SUGGESTED_QUESTIONS）由这支档拥有，面板与首页共用；
+  免费交换不进 /api/chat 的 history（不吃 MAX_TURNS 不花 token）。
+  UI 两面接上：命中→泡泡直出＋「⚡系统直接回答，不扣 AI 用量」三语标注。
+  ⚠ 英文 trouble 词一度收了 "fail"——马来语 fail＝档案，K6 整条被误杀，
+  测试当场抓到（改 failed/fails）。
+- **K2 Clear/用量收纳**：Clear→标题列 ↺ 小图标（ConfirmedAction 先问，
+  §1-10）；徽章行＝「本月已用 X%」＋「这轮还能问 N 题」小字＋ ? 图标
+  （Modal 弹窗讲解：月配额/轮数重置/太长变慢/预备层免费）；答案区不再
+  被任何说明块盖住。首页同款收纳（Clear 带确认、一行计数）。
+- **K3 手机面板**：sheet 高度 `h-[calc(100dvh-4.5rem)]`（原 80vh 浪费
+  ~150px；dvh 跟键盘缩）。probe-k3-82（375×812）：sheet 735px、无横向
+  溢出、答案 ≥200px 可见且 elementFromPoint 无遮挡、深连结真导航、
+  ? 弹窗进出视口、输入框在屏上。
+- **K4 语言跟提问走**：chat prompt 的 HOW TO WRITE 换成 ANSWER LANGUAGE
+  条（跟问题语言；判不出→介面语言，route 从 minit-lang cookie 读、
+  all→bm）；chat.test.ts 契约钉住。真 vendor 验收（介面 BM 一场三问）：
+  BM→BM、EN→EN、ZH→ZH，3 笔 chat_turn US$0.0025。J 若要改成「跟介面
+  走」＝改 chat.ts ANSWER LANGUAGE 那一行。
+- **K5 首页问答对话式**：讯息流在上、输入框在下（与浮动面板同一逻辑，
+  两处体验一致——这就是选它的理由）；送出后 scrollIntoView 滚到最新
+  答案＋输入框（ref 旗标，恢复旧对话不抢滚）；How it works、上传门、
+  示范入口原位。
+- **K6 档案意图指路**：预备层 upload_file 条目（三语、按钮回首页那道门）
+  ＋chat prompt 能力清单一行＋FILES 段（不许答「这里不能上传」就完，
+  suggested_page=home）。聊天面板照旧不开上传门（拍板 4）。
+- **收尾死按钮全名单**：probe-deadbuttons-82.ts（tsx，直接 import
+  ask-routes 不抄清单）——15 颗 key 逐颗渲染＋点击＋断言落页，15/15 活；
+  /filings→/filings/eroses、/settings→/settings/display 都按现门牌断言。
+- **测过**：tsc 0 · eslint 20（基准逐字同）· vitest **1128（+19：prepared
+  14＋chat prompt 5）** · build ✓ · 三条 e2e 全绿（最终 build 复跑；
+  minutes 首跑撞旧陷阱「cleanup 段偶发 fetch failed」重跑即过）·
+  probe-k0/k1/k3/k4/deadbuttons-82 全 PASS · probe-i3-81 回归全 PASS ·
+  check:migrations 38 全 APPLIED · 零 migration · 真额度 US$0.0025/0.10。
+- ⚠ 没能验证的：手机**真键盘**顶不顶输入框（dvh 是设计推理，headless
+  出不了键盘——tester 真机一摸便知）；「all 并排模式」的观感；预备答案
+  8 条入口的覆盖率（上线后看真问题再扩，宁可漏配不可答错）；J 原始
+  「对话不见了」场景仍未重现（若再报，先问是不是两个框搞混）。
+
+### 上一场做了什么（81 号场 ✅，83 号报告——章程分段读＋A6＋三件修）
 
 - **I1 章程分段读**（主菜）：`src/lib/constitution-pages.ts`（段长 4 页＋
   A6 数字，纯逻辑+测试）· `constitution-continuation.ts`（HMAC 续读令牌：
@@ -708,12 +768,13 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
   真 HEIC 大图在真手机浏览器上的行为（helper 的 HEIC 退路只有单元测试）；
   围栏真挡下（未决 #1 照旧）；真 vendor 合并写作（D37 旧项）。
 
-### 🔴 J 的事（2026-08-30，81 场收工版）
+### 🔴 J 的事（2026-08-30，82 场收工版）
 
-1. **双击 push-cabang.bat（最要紧）**——81 号场的 commit 还没上
-   （78 场那 2 支开工实测已在线上）。里面有：章程分段读根治（你 8/29
-   连撞七次的那个病）＋A6 五页特例＋出席同名分开勾＋死按钮最小修。
-2. **看 83 号报告**（一分钟版在开头）。
+1. **双击 push-cabang.bat（最要紧）**——81＋82 两场的 commit 都还没上。
+   81 场：章程分段读根治＋A6 五页特例＋出席同名＋死按钮最小修；
+   82 场：免 AI 预备问答层（tester 烧额度的解药）＋英文问英文答＋
+   聊天面板/手机版/首页问答全重整＋死按钮 15 颗全点检。
+2. **看 84 号报告**（一分钟版在开头；83 号如果还没看也看）。
 3. 想拿 TESTING1/TESTING2 当付费测试 org：Supabase SQL Editor 跑
    `update orgs set monthly_free_quota = 100 where id in (91, 197);`
    （围栏看 quota：15＝被围，100＝不围。不跑也行——J/avocado 本来就通。）
@@ -758,13 +819,13 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
 
 ### ⏭ 下一个 session 从哪开始
 
-**81 号场（章程分段读根治＋A6＋死按钮最小修＋出席同名＋bench 真数据）
-做完**（83 号报告；之前：78 号=80 号、69 号场 H1–H4=74–77 号）。
-migration 1–38 全 APPLIED、至 78 场已全上线；**81 号场 commit 等 J
-push-cabang.bat**。接下来：**⑧ 助手场（82 号施工单已写好，讨论场 8/30）**
-——聊天面板 upload/手机版/Clear conversation 重设计/语言跟人走/免 AI
-预备问答层/死按钮完整版（I3 只做了最小修＋回归探针）→ ⑨ 上线后第一批；
-62 号竞赛材料场待命。
+**82 号 ⑧ 助手场（免 AI 预备问答层＋K0–K6＋死按钮全名单）做完**
+（84 号报告；之前：81 号=83 号、78 号=80 号、69 号场 H1–H4=74–77 号）。
+migration 1–38 全 APPLIED、至 78 场已全上线；**81＋82 两场 commit 等 J
+push-cabang.bat**。接下来：**⑨ 上线后第一批（QR 查证/SMTP/RLS 深化）**；
+62 号竞赛材料场待命（8/31 23:59 锁定，J 说开才开，不催）。
+助手场留的长尾：预备答案覆盖率看真问题再扩；AI 代办 agent（付费限定，
+D18/31 号 #43）J 三次点名要专门开一单，别夹带。
 **等 J 反馈的**：模型拍板（bench 真数据在 83 号，建议＝LONG_DOC 不换）；
 真 undang-undang 重传一次（合上 8/29 病历）；tester 清单（73/77 号）；
 道教会样本重走（68 号 §6-5）；MyInvois 模板原档（未决 #12）。
@@ -774,6 +835,23 @@ RESPONSIVE：J 若再圈破版，贴 46 号单同段 PROMPT 继续。
 ---
 
 ## 6. 已知陷阱（踩过的，别再踩）
+
+### 2026-08-30 新增（82 号 ⑧ 助手场）
+
+- ⚠ **跨语言关键词表先查同形词：英文 "fail" ＝ 马来文「档案」。** 预备
+  问答层的 trouble 词表收了 "fail"，「macam mana nak upload fail」整条
+  被当故障题误杀——单元测试当场抓到（改收 failed/fails）。**判断方法：
+  任何「一份词表管三种语言」的过滤器，每个词先问它在另外两种语言里
+  是不是普通词（同 §6 旧条目「Minit 在 BM 里就是会议记录」一族）。**
+- ⚠ **手机版聊天面板的 DOM 里第一个 `<aside>` 是隐藏的侧栏，不是面板**
+  （桌面才有 motion.aside 包一层；手机 sheet 是 div）。探针用
+  `document.querySelector("aside")` 量到 0×0 还以为面板没开。**修法：
+  选面板用 `aside.v2-glass`；判断方法：getBoundingClientRect 全 0 ＝
+  抓到 display:none 的别人。**
+- 💡 **「面板关掉对话就不见」这类观察，先用探针重现再动刀（K0 的规矩
+  值得再用）**：实测对话在两面、三种关法下都留着——J 看到的最可能是
+  首页框与浮动面板本来就是两个对话（两把 key，设计使然）。观察是真的，
+  病因未必是观察到的那个。
 
 ### 2026-08-30 深夜新增（81 号章程分段读场）
 
