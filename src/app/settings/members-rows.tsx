@@ -13,9 +13,10 @@
 // again, because the UI is never the authority (B-4).
 // ---------------------------------------------------------------------------
 
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useState } from "react";
 import { Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmedAction } from "@/components/confirm-delete";
 import { Tri, useTriText } from "@/components/language-provider";
 import { ROLE_LABEL, labelFor } from "@/lib/status-labels";
 import { ROLES } from "@/lib/roles";
@@ -28,7 +29,7 @@ import {
   type MemberAdminState,
   type MemberRow,
 } from "./member-actions";
-import { SettingsRow } from "./ui";
+import { HelpNote, SettingsBlock } from "./ui";
 
 const INITIAL: MemberAdminState = { error: null, ok: false };
 
@@ -44,23 +45,25 @@ export function MembersRows({
   invites: InviteRow[];
 }) {
   const t = useTriText();
+  // §1-13 (work order 69, tester's broken-layout screenshot): this used to be
+  // ONE SettingsRow — the whole member list + invite form squeezed into the
+  // control column beside a 46% label column, and opening "What is this?"
+  // (in the label column) squeezed it further. A management UI is not a
+  // label-beside-control setting: it gets the full width, with the explainer
+  // folded on top (the page heading already names the section).
   return (
-    <SettingsRow
-      label={<Tri bm="Ahli & jemputan" zh="成员与邀请" en="Members & invites" />}
-      help={
+    <SettingsBlock>
+      <HelpNote>
         <Tri
           bm="Jana satu kod untuk setiap orang, pilih peranannya, dan hantar kod itu kepadanya (WhatsApp pun boleh). Dia masukkan kod semasa mendaftar atau di halaman Sertai — terus masuk dengan peranan yang betul."
           zh="每个人生成一个邀请码，选好角色，把码发给他（WhatsApp 就行）。他注册时或在「加入」页输入，就会以正确的角色直接进来。"
           en="Generate one code per person, pick their role, and send them the code (WhatsApp works). They enter it at sign-up or on the Join page and come in with the right role."
         />
-      }
-    >
-      <div className="flex flex-col gap-5">
-        <MemberList members={members} />
-        <CreateInviteForm />
-        {invites.length > 0 && <InviteList invites={invites} t={t} />}
-      </div>
-    </SettingsRow>
+      </HelpNote>
+      <MemberList members={members} />
+      <CreateInviteForm />
+      {invites.length > 0 && <InviteList invites={invites} t={t} />}
+    </SettingsBlock>
   );
 }
 
@@ -100,7 +103,7 @@ function MemberLine({ member }: { member: MemberRow }) {
             name="role"
             value={role}
             onChange={(e) => setRole(e.target.value)}
-            className="h-10 rounded-sm border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-2 text-base"
+            className="h-10 min-w-0 max-w-full rounded-sm border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-2 text-base"
             aria-label={t("Peranan", "角色", "Role")}
           >
             {ROLE_CHOICES.map((r) => (
@@ -119,28 +122,35 @@ function MemberLine({ member }: { member: MemberRow }) {
             </Button>
           )}
         </form>
-        <form
-          action={removeAction}
-          onSubmit={(e) => {
-            if (
-              !window.confirm(
-                t(
-                  `Buang "${member.name}" daripada pertubuhan ini? Dia tidak lagi dapat membuka rekod pertubuhan.`,
-                  `要把「${member.name}」移出机构吗？之后他就打不开机构的记录了。`,
-                  `Remove "${member.name}" from this organisation? They will no longer be able to open its records.`,
-                ),
-              )
-            ) {
-              e.preventDefault();
+        {/* §1-10: the app's own dialog, never window.confirm. */}
+        <span className="ml-auto">
+          <ConfirmedAction
+            body={
+              <Tri
+                bm={`Buang "${member.name}" daripada pertubuhan ini? Dia tidak lagi dapat membuka rekod pertubuhan.`}
+                zh={`要把「${member.name}」移出机构吗？之后他就打不开机构的记录了。`}
+                en={`Remove "${member.name}" from this organisation? They will no longer be able to open its records.`}
+              />
             }
-          }}
-          className="ml-auto"
-        >
-          <input type="hidden" name="id" value={member.id} />
-          <Button type="submit" size="sm" variant="outline" disabled={removePending}>
-            <Tri bm="Buang" zh="移除" en="Remove" />
-          </Button>
-        </form>
+            confirmLabel={<Tri bm="Buang" zh="移除" en="Remove" />}
+            onConfirm={() => {
+              const fd = new FormData();
+              fd.set("id", String(member.id));
+              startTransition(() => removeAction(fd));
+            }}
+            trigger={(open) => (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={removePending}
+                onClick={open}
+              >
+                <Tri bm="Buang" zh="移除" en="Remove" />
+              </Button>
+            )}
+          />
+        </span>
       </div>
       {error && (
         <p className="text-sm font-medium text-red-700" role="alert">
@@ -171,7 +181,7 @@ function CreateInviteForm() {
           <select
             name="role"
             defaultValue="committee"
-            className="h-11 rounded-sm border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-2 text-base"
+            className="h-11 min-w-0 max-w-full rounded-sm border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-2 text-base"
           >
             {ROLE_CHOICES.map((r) => (
               <option key={r} value={r}>
@@ -191,7 +201,7 @@ function CreateInviteForm() {
           <select
             name="expiresDays"
             defaultValue="30"
-            className="h-11 rounded-sm border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-2 text-base"
+            className="h-11 min-w-0 max-w-full rounded-sm border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-2 text-base"
           >
             <option value="7">{t("7 hari", "7 天", "7 days")}</option>
             <option value="30">{t("30 hari", "30 天", "30 days")}</option>

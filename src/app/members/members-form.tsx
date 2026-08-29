@@ -17,6 +17,7 @@ import {
   type MemberActionState,
 } from "./actions";
 import { CalendarDays, Trash2 } from "lucide-react";
+import { ConfirmingDeleteButton } from "@/components/confirm-delete";
 import { AttachIcon, ChooseFileLabel, UploadLimitNote } from "@/components/attach-icon";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
 import { uploadErrorMessage } from "@/lib/shrink-photo";
@@ -1001,20 +1002,30 @@ export function EditCommitteeRow({
 export function RemoveCommitteeButton({ id }: { id: number }) {
   const [state, formAction, pending] = useActionState(removeCommitteeMember, INITIAL);
   return (
-    <form action={formAction} className="inline">
-      <input type="hidden" name="id" value={id} />
-      {/* B-3: removal reads as removal — red, with a bin icon. */}
-      <Button
-        type="submit"
-        variant="ghost"
+    <span className="inline">
+      {/* §1-10 (work order 69): a government-filing row dies only after the
+          app's own confirm dialog. B-3: removal reads as removal — red, bin. */}
+      <ConfirmingDeleteButton
         size="sm"
-        disabled={pending}
+        busy={pending}
         className="text-red-700 hover:bg-red-50 hover:text-red-800 dark:text-red-300 dark:hover:bg-red-400/10"
+        body={
+          <Tri
+            bm="Padam orang ini daripada senarai AJK? Ia tidak boleh dikembalikan."
+            zh="确定把这个人从理事名单删掉？删了就找不回来了。"
+            en="Remove this person from the committee list? This cannot be undone."
+          />
+        }
+        onConfirm={() => {
+          const fd = new FormData();
+          fd.set("id", String(id));
+          startTransition(() => formAction(fd));
+        }}
       >
         <Trash2 aria-hidden className="size-4" strokeWidth={2.2} />
         <Tri bm="Padam" zh="删除" en="Remove" />
-      </Button>
+      </ConfirmingDeleteButton>
       {state.error && <span className="sr-only">{state.error}</span>}
-    </form>
+    </span>
   );
 }

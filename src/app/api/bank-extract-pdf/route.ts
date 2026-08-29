@@ -29,6 +29,10 @@ const bodySchema = z.object({
   /** D44: fenced orgs get a watermarked extract unless they spend a lifetime
    *  document + clean download on the clean one (a bank only takes clean). */
   clean: z.boolean().optional(),
+  /** §1-12 (work order 69): WHICH resolutions, as indexes into the server's
+   *  own confirmed list — the browser picks among the database's sentences,
+   *  it can never inject text. Absent = keyword default. */
+  resolutionIndexes: z.array(z.number().int().min(0).max(999)).max(200).optional(),
 });
 
 /** MinutesForExtract's type set is the classic three; the widened meeting
@@ -96,6 +100,7 @@ export async function POST(request: Request): Promise<Response> {
         confirmedBy: identity.confirmedBy,
         confirmedOnIso: confirmed.confirmedOnIso ?? undefined,
         resolutions,
+        selectedResolutionIndexes: parsed.data.resolutionIndexes,
         officeBearers,
       },
       { sample: false },

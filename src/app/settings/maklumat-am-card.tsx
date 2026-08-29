@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmedAction } from "@/components/confirm-delete";
 import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
 import {
   addBankAccount,
@@ -208,31 +209,35 @@ export function MaklumatAmCard({
                 <span className="font-medium">{b.bank_name}</span>
                 <span className="font-mono">{b.account_no}</span>
                 {canEdit && (
-                  <button
-                    type="button"
-                    disabled={pending}
-                    className="ml-auto inline-flex items-center gap-1 text-sm font-medium text-red-700 underline underline-offset-4 hover:text-red-800"
-                    onClick={() => {
-                      if (
-                        !window.confirm(
-                          t(
-                            `Buang akaun ${b.bank_name} ${b.account_no}?`,
-                            `要删掉 ${b.bank_name} ${b.account_no} 这个账户吗？`,
-                            `Remove the ${b.bank_name} ${b.account_no} account?`,
-                          ),
-                        )
-                      )
-                        return;
+                  /* §1-10: the app's own dialog, never window.confirm. */
+                  <ConfirmedAction
+                    body={
+                      <Tri
+                        bm={`Buang akaun ${b.bank_name} ${b.account_no}? Ia tidak boleh dikembalikan.`}
+                        zh={`要删掉 ${b.bank_name} ${b.account_no} 这个账户吗？删了就找不回来了。`}
+                        en={`Remove the ${b.bank_name} ${b.account_no} account? This cannot be undone.`}
+                      />
+                    }
+                    confirmLabel={<Tri bm="Buang" zh="删除" en="Remove" />}
+                    onConfirm={() => {
                       setRowError(null);
                       startTransition(async () => {
                         const res = await deleteBankAccount(b.id);
                         if (!res.ok) setRowError(res.error);
                       });
                     }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    <Tri bm="Buang" zh="删除" en="Remove" />
-                  </button>
+                    trigger={(open) => (
+                      <button
+                        type="button"
+                        disabled={pending}
+                        className="ml-auto inline-flex items-center gap-1 text-sm font-medium text-red-700 underline underline-offset-4 hover:text-red-800"
+                        onClick={open}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <Tri bm="Buang" zh="删除" en="Remove" />
+                      </button>
+                    )}
+                  />
                 )}
               </li>
             ))}

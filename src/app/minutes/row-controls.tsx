@@ -3,6 +3,7 @@
 import { Plus, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { ConfirmedAction } from "@/components/confirm-delete";
 import { Tri, useTriText } from "@/components/language-provider";
 import { useMinutes } from "./minutes-store";
 
@@ -48,31 +49,32 @@ export function DeletableRow({
   return (
     <div className="group/row relative">
       {children}
-      <button
-        type="button"
-        onClick={() => {
-          if (
-            hasContent &&
-            !window.confirm(
-              t(
-                `Buang "${what}"? Apa yang ditaip di dalamnya akan hilang.`,
-                `要删掉「${what}」吗？里面填的东西会跟着不见。`,
-                `Delete “${what}”? What was typed into it will be lost.`,
-              ),
-            )
-          ) {
-            return;
-          }
-          onDelete();
-        }}
-        // Always visible, never hover-only: on a phone there is no hover, and
-        // this is the control somebody is hunting for when they are annoyed.
-        className="absolute right-0 top-3 inline-flex min-h-9 min-w-9 items-center justify-center rounded-sm text-muted-foreground hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-400/10"
-        aria-label={t(`Buang ${what}`, `删掉${what}`, `Delete ${what}`)}
-        title={t(`Buang ${what}`, `删掉${what}`, `Delete ${what}`)}
-      >
-        <Trash2 aria-hidden className="size-5" strokeWidth={2} />
-      </button>
+      {/* §1-10: filled rows confirm through the app's own dialog; an EMPTY
+          row still deletes on one tap — there is nothing to lose. */}
+      <ConfirmedAction
+        body={
+          <Tri
+            bm={`Buang "${what}"? Apa yang ditaip di dalamnya akan hilang.`}
+            zh={`要删掉「${what}」吗？里面填的东西会跟着不见。`}
+            en={`Delete “${what}”? What was typed into it will be lost.`}
+          />
+        }
+        confirmLabel={<Tri bm="Buang" zh="删掉" en="Delete" />}
+        onConfirm={onDelete}
+        trigger={(open) => (
+          <button
+            type="button"
+            onClick={() => (hasContent ? open() : onDelete())}
+            // Always visible, never hover-only: on a phone there is no hover,
+            // and this is the control somebody hunts for when annoyed.
+            className="absolute right-0 top-3 inline-flex min-h-9 min-w-9 items-center justify-center rounded-sm text-muted-foreground hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-400/10"
+            aria-label={t(`Buang ${what}`, `删掉${what}`, `Delete ${what}`)}
+            title={t(`Buang ${what}`, `删掉${what}`, `Delete ${what}`)}
+          >
+            <Trash2 aria-hidden className="size-5" strokeWidth={2} />
+          </button>
+        )}
+      />
     </div>
   );
 }

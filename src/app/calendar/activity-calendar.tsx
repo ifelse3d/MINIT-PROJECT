@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmedAction } from "@/components/confirm-delete";
 import {
   HoverCard,
   HoverCardContent,
@@ -413,18 +414,20 @@ export function ActivityCalendar({
                       {/* F-9: derived (lunar offering) events are computed,
                           not stored — nothing to delete, so no button. */}
                       {!ev.derived && (
+                      /* §1-10: the app's own dialog, never window.confirm. */
+                      <ConfirmedAction
+                        body={
+                          <Tri
+                            bm={`Padam "${ev.title}"? Tidak boleh dibatalkan.`}
+                            zh={`要删除「${ev.title}」吗？删了无法复原。`}
+                            en={`Delete "${ev.title}"? This cannot be undone.`}
+                          />
+                        }
+                        onConfirm={() => onRemoveEvent(ev.id)}
+                        trigger={(open) => (
                       <button
                         type="button"
-                        onClick={() => {
-                          const ok = window.confirm(
-                            t(
-                              `Padam "${ev.title}"? Tidak boleh dibatalkan.`,
-                              `要删除「${ev.title}」吗？删了无法复原。`,
-                              `Delete "${ev.title}"? This cannot be undone.`,
-                            ),
-                          );
-                          if (ok) onRemoveEvent(ev.id);
-                        }}
+                        onClick={open}
                         aria-label={t(
                           `Padam ${ev.title}`,
                           `删除 ${ev.title}`,
@@ -434,6 +437,8 @@ export function ActivityCalendar({
                       >
                         ✕
                       </button>
+                        )}
+                      />
                       )}
                     </div>
                     {ev.note && (

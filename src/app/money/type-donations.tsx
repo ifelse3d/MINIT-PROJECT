@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
+import { ConfirmedAction } from "@/components/confirm-delete";
 import { VoiceButton } from "@/components/voice-input";
 import { Req } from "@/components/required-mark";
 import { parseRmToCents, type RegisterDonation } from "@/lib/receipts";
@@ -1021,28 +1022,26 @@ export function TypeDonations({
           <Tri bm="Tutup (draf disimpan)" zh="收起（草稿保留）" en="Close (draft kept)" />
         </Button>
         {rows.some((r) => problemWith(r) !== "empty") && (
-          <Button
-            type="button"
-            variant="ghost"
-            className="text-red-700"
-            onClick={() => {
-              if (
-                !window.confirm(
-                  t(
-                    "Buang draf yang ditaip ini? Tidak boleh dibatalkan.",
-                    "要把打了一半的草稿整份删掉吗？删了无法复原。",
-                    "Discard this typed draft? This cannot be undone.",
-                  ),
-                )
-              ) {
-                return;
-              }
+          /* §1-10: the app's own dialog, never window.confirm. */
+          <ConfirmedAction
+            body={
+              <Tri
+                bm="Buang draf yang ditaip ini? Tidak boleh dibatalkan."
+                zh="要把打了一半的草稿整份删掉吗？删了无法复原。"
+                en="Discard this typed draft? This cannot be undone."
+              />
+            }
+            confirmLabel={<Tri bm="Buang" zh="清空" en="Discard" />}
+            onConfirm={() => {
               setRows(freshRows());
               setError(null);
             }}
-          >
-            🗑 <Tri bm="Buang draf" zh="清空草稿" en="Discard draft" />
-          </Button>
+            trigger={(open) => (
+              <Button type="button" variant="ghost" className="text-red-700" onClick={open}>
+                🗑 <Tri bm="Buang draf" zh="清空草稿" en="Discard draft" />
+              </Button>
+            )}
+          />
         )}
       </div>
     </div>

@@ -88,6 +88,23 @@ export function AgmPackReview({
     [mode, confirmedResolutions],
   );
 
+  // §1-12 (work order 69, tester: a youth-class timetable printed into the
+  // document a bank acts on): the person TICKS what goes in. Bank-related
+  // resolutions start ticked (the old keyword default); everything else
+  // starts unticked. Indexes only travel to the server — the texts stay the
+  // database's own.
+  const [selected, setSelected] = useState<Set<number>>(() => {
+    const base = mode === "sample" ? sampleConfirmedMinutes.resolutions : confirmedResolutions ?? [];
+    return new Set(base.map((r, i) => (signatoryHits.has(r) ? i : -1)).filter((i) => i >= 0));
+  });
+  const toggleSelected = (i: number) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+
   async function downloadPack(clean = false) {
     setError(null);
     setBusy("pack");
@@ -122,7 +139,13 @@ export function AgmPackReview({
     try {
       await downloadFromApi(
         "/api/bank-extract-pdf",
-        mode === "sample" ? { sample: true } : clean ? { clean: true } : {},
+        mode === "sample"
+          ? { sample: true }
+          : {
+              // §1-12: the ticked indexes — the server re-reads the texts.
+              resolutionIndexes: [...selected].sort((a, b) => a - b),
+              ...(clean ? { clean: true } : {}),
+            },
         "petikan-bank.pdf",
       );
     } catch (e) {
@@ -467,23 +490,43 @@ export function AgmPackReview({
             </p>
           ) : (
             <>
+              {/* §1-12: tick what goes to the bank. Bank-related lines start
+                  ticked; a class timetable starts unticked and STAYS out
+                  unless a human deliberately includes it. */}
+              <p className="text-sm text-muted-foreground">
+                <Tri
+                  bm="Tandakan keputusan yang perlu masuk dalam petikan. Yang berkaitan bank sudah ditanda; yang lain masuk hanya kalau anda tandakannya."
+                  zh="勾选要进摘录的决议。跟银行有关的已经帮你勾好；其他的除非你自己勾，否则不会进文件。"
+                  en="Tick the resolutions that belong in the extract. Bank-related ones start ticked; anything else goes in only if you tick it."
+                />
+              </p>
               <div className="flex flex-col gap-2">
                 {confirmedResolutions.map((r, i) => (
-                  <div
+                  <label
                     key={i}
                     className={
-                      signatoryHits.has(r)
-                        ? "rounded-md border border-green-300 bg-green-50 p-4"
-                        : "rounded-md border p-4 text-muted-foreground"
+                      "flex cursor-pointer items-start gap-3 rounded-md border p-4 " +
+                      (selected.has(i)
+                        ? "border-green-300 bg-green-50 dark:bg-green-400/10"
+                        : "text-muted-foreground")
                     }
                   >
-                    {signatoryHits.has(r) && (
-                      <Badge variant="outline" className="mb-1 border-green-300 bg-green-100 text-green-800">
-                        <Tri bm="Akan disertakan" zh="会收录" en="Will be included" />
-                      </Badge>
-                    )}
-                    <div>{r}</div>
-                  </div>
+                    <input
+                      type="checkbox"
+                      className="mt-1 size-4 shrink-0 accent-[color:var(--v2-primary-fill)]"
+                      checked={selected.has(i)}
+                      onChange={() => toggleSelected(i)}
+                      data-probe={`bank-res-${i}`}
+                    />
+                    <span className="flex flex-col gap-1">
+                      {selected.has(i) && (
+                        <Badge variant="outline" className="self-start border-green-300 bg-green-100 text-green-800">
+                          <Tri bm="Akan disertakan" zh="会收录" en="Will be included" />
+                        </Badge>
+                      )}
+                      <span>{r}</span>
+                    </span>
+                  </label>
                 ))}
               </div>
               {errorBanner("bank")}

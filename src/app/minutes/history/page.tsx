@@ -164,10 +164,14 @@ export default async function MinutesHistoryPage({
 
   return (
     <div className="mx-auto w-full max-w-5xl pb-10">
-      <div className="mb-6">
+      <div className="mb-6 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-2xl font-semibold tracking-tight">
           <Tri bm="Sejarah Minit" zh="会议记录历史" en="Minutes History" />
         </h2>
+        {/* §1-15a: the full drafts list is a sibling of the records. */}
+        <Link href="/minutes/drafts" className="text-base underline underline-offset-4">
+          ☁️ <Tri bm="Draf belum siap" zh="未完成草稿" en="Unfinished drafts" /> →
+        </Link>
       </div>
 
       <MinutesFilters type={type} from={from} to={to} q={q} active={anyFilter} />

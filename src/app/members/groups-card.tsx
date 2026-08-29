@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Modal } from "@/components/modal";
+import { ConfirmDialog, Modal } from "@/components/modal";
 import { Tri, useTriText } from "@/components/language-provider";
 import {
   addManyToGroup,
@@ -54,6 +54,8 @@ export function GroupsCard({
   // #9 (launch feedback): pick MANY people from the roster in one popup.
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerGroup, setPickerGroup] = useState("");
+  // §1-10 (work order 69): the chip's × asks first — one dialog for the card.
+  const [removal, setRemoval] = useState<{ group: string; name: string } | null>(null);
   const [picked, setPicked] = useState<Set<string>>(new Set());
 
   // Everyone the popup can offer: the committee roster plus anyone already
@@ -296,11 +298,7 @@ export function GroupsCard({
                                   `Remove ${n} from ${g}`,
                                 )}
                                 className="text-muted-foreground hover:text-red-700"
-                                onClick={async () => {
-                                  const res = await removeFromGroup({ group: g, name: n });
-                                  setFailed(!res.ok);
-                                  if (res.ok) await refresh();
-                                }}
+                                onClick={() => setRemoval({ group: g, name: n })}
                               >
                                 <X aria-hidden className="size-4" strokeWidth={2.4} />
                               </button>
@@ -325,6 +323,33 @@ export function GroupsCard({
           )}
         </div>
       )}
+
+      {/* §1-10: the chip's × confirms through the app's own dialog. */}
+      <ConfirmDialog
+        open={removal !== null}
+        onClose={() => setRemoval(null)}
+        onConfirm={() => {
+          const r = removal;
+          setRemoval(null);
+          if (!r) return;
+          void (async () => {
+            const res = await removeFromGroup({ group: r.group, name: r.name });
+            setFailed(!res.ok);
+            if (res.ok) await refresh();
+          })();
+        }}
+        body={
+          removal && (
+            <Tri
+              bm={`Keluarkan ${removal.name} daripada kumpulan "${removal.group}"?`}
+              zh={`确定把 ${removal.name} 从「${removal.group}」移除？`}
+              en={`Remove ${removal.name} from the group "${removal.group}"?`}
+            />
+          )
+        }
+        confirmLabel={<Tri bm="Keluarkan" zh="移除" en="Remove" />}
+        destructive
+      />
 
       {/* #9: the multi-select popup. */}
       <Modal open={pickerOpen} onClose={() => setPickerOpen(false)} labelledBy="group-picker-title">

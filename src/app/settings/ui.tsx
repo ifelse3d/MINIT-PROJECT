@@ -63,14 +63,21 @@ export function SettingsRow({
   help?: React.ReactNode;
   children?: React.ReactNode;
 }) {
+  // §1-13 (work order 69, tester's broken-layout screenshot): CONTAINER
+  // variants, not viewport ones. `sm:` measured the WINDOW — with the AI
+  // panel (or a sidebar) eating width, a 300px content column still laid out
+  // label-beside-control and everything overflowed; opening "What is this?"
+  // squeezed it further. @xl: measures the content column itself (the §6
+  // RESPONSIVE rule: sm:→@xl), so a narrow column stacks vertically no
+  // matter how wide the window is.
   return (
-    <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
-      <div className="min-w-0 sm:max-w-[46%]">
+    <div className="flex flex-col gap-3 p-4 @xl:flex-row @xl:items-start @xl:justify-between @xl:gap-6">
+      <div className="min-w-0 @xl:max-w-[46%]">
         <p className="text-base font-semibold">{label}</p>
         {sub && <p className="mt-0.5 text-sm text-muted-foreground">{sub}</p>}
         {help && <HelpNote>{help}</HelpNote>}
       </div>
-      {children && <div className="min-w-0 sm:flex-1">{children}</div>}
+      {children && <div className="min-w-0 @xl:flex-1">{children}</div>}
     </div>
   );
 }

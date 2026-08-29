@@ -3,6 +3,7 @@
 import { Fragment, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmedAction } from "@/components/confirm-delete";
 import { Tri, useTriText } from "@/components/language-provider";
 import { formatRm } from "@/lib/minutes-draft";
 import type { RegisterDonation } from "@/lib/receipts";
@@ -98,27 +99,29 @@ export function RoundList() {
                         </Button>
                       )}
                       {d.receiptNo === null && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-red-700 hover:bg-red-50 hover:text-red-800 dark:hover:bg-red-400/10"
-                          onClick={() => {
-                            if (
-                              window.confirm(
-                                t(
-                                  `Buang baris ini? ${d.donorName} · ${formatRm(d.amountCents)}. Tidak boleh dibatalkan.`,
-                                  `要删掉这一笔吗？${d.donorName} · ${formatRm(d.amountCents)}。删了无法复原。`,
-                                  `Remove this row? ${d.donorName} · ${formatRm(d.amountCents)}. This cannot be undone.`,
-                                ),
-                              )
-                            ) {
-                              deleteDonation(d.id);
-                            }
-                          }}
-                          aria-label={t("Buang", "删掉", "Remove")}
-                        >
-                          🗑
-                        </Button>
+                        /* §1-10: the app's own dialog, never window.confirm. */
+                        <ConfirmedAction
+                          body={
+                            <Tri
+                              bm={`Buang baris ini? ${d.donorName} · ${formatRm(d.amountCents)}. Tidak boleh dibatalkan.`}
+                              zh={`要删掉这一笔吗？${d.donorName} · ${formatRm(d.amountCents)}。删了无法复原。`}
+                              en={`Remove this row? ${d.donorName} · ${formatRm(d.amountCents)}. This cannot be undone.`}
+                            />
+                          }
+                          confirmLabel={<Tri bm="Buang" zh="删掉" en="Remove" />}
+                          onConfirm={() => deleteDonation(d.id)}
+                          trigger={(open) => (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-700 hover:bg-red-50 hover:text-red-800 dark:hover:bg-red-400/10"
+                              onClick={open}
+                              aria-label={t("Buang", "删掉", "Remove")}
+                            >
+                              🗑
+                            </Button>
+                          )}
+                        />
                       )}
                       {d.receiptNo !== null && (
                         <span className="font-mono text-sm text-muted-foreground">

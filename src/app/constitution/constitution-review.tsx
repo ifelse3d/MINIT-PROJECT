@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
+import { ConfirmedAction } from "@/components/confirm-delete";
 import {
   Card,
   CardContent,
@@ -585,25 +586,27 @@ export function ConstitutionReview({
             {/* D0-3 (拍板 4): the remaining size limit, at the door. */}
             {!aiBusy && <UploadLimitNote />}
             {hasOwn && !aiBusy && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  const ok = window.confirm(
-                    t(
-                      "Buang perlembagaan yang sudah dibaca dan mula semula? Anda perlu ambil gambar semua halaman semula.",
-                      "要删掉已经读入的章程、重新开始吗？之后每一页都要重新拍一次。",
-                      "Discard the constitution MinitAI has read and start again? You would have to photograph every page again.",
-                    ),
-                  );
-                  if (ok) storeMeta.reset();
-                }}
-              >
-                <Tri
-                  bm="Buang & mula semula"
-                  zh="删掉，重新开始"
-                  en="Discard & start again"
-                />
-              </Button>
+              /* §1-10: the app's own dialog, never window.confirm. */
+              <ConfirmedAction
+                body={
+                  <Tri
+                    bm="Buang perlembagaan yang sudah dibaca dan mula semula? Anda perlu ambil gambar semua halaman semula."
+                    zh="要删掉已经读入的章程、重新开始吗？之后每一页都要重新拍一次。"
+                    en="Discard the constitution MinitAI has read and start again? You would have to photograph every page again."
+                  />
+                }
+                confirmLabel={<Tri bm="Buang" zh="删掉" en="Discard" />}
+                onConfirm={() => storeMeta.reset()}
+                trigger={(open) => (
+                  <Button variant="outline" onClick={open}>
+                    <Tri
+                      bm="Buang & mula semula"
+                      zh="删掉，重新开始"
+                      en="Discard & start again"
+                    />
+                  </Button>
+                )}
+              />
             )}
           </div>
 

@@ -5,13 +5,18 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-30 凌晨（MYT）· Fable 5（69 号 eROSES 重构+名册场：H1 ✅ H2 ✅ H3 ✅，H4 进行中）**
-**🔴 本场（69 号）状态一句话：H1 名册补完（74 号）＋H2 eROSES flow 重构
-（75 号）＋H3 onboarding 与机构上限（76 号）都收工——入口三张卡、年报
-九步一步一页、缺值原地填、每步示意图、/filings 真锁、/orgs/welcome 引导
-序列、旧 3-org 检查拆掉换「免费 1 个总机构」（migration 38）。probe-h1
-18＋probe-h2 51＋probe-h3 14 项全 PASS，四道关＋三条 e2e 全绿。
-**migration 37、38 只写档等 J 贴**。下面是上一场（68 号）的快照：**
+**最后更新：2026-08-30 凌晨（MYT）· Fable 5（69 号 eROSES 重构+名册场：H1–H4 四包全部收工）**
+**🔴 本场（69 号）状态一句话：四包全做完（74/75/76/77 号报告）——
+H1 名册补完（列内 Edit、email/州、一键起表＋章程对照、Excel 8 欄）；
+H2 eROSES flow 重构主菜（入口三张卡、年报九步一步一页、缺值原地填、
+每步示意图、/filings 真锁）；H3 onboarding（/orgs/welcome 引导序列）＋
+机构上限（旧 3-org 检查拆掉换「免费 1 个总机构」）；H4 收尾（全站删除
+确认弹窗 14 处、AGM pack 银行摘录查证非跨 org＋改可勾选、Members &
+invites 破版修、草稿收纳＋/minutes/drafts 专页）。四道关全绿（vitest
+1087、eslint 21、tsc 0、build ✓）＋三条 e2e＋四支探针（18+51+14+21 项）
+全 PASS。**🔴 J 的事：贴 migration 37、38（salin-migration.bat，探针实测
+仅这两支 NOT YET）→ push-cabang.bat（4 支 commit）→ 77 号报告的 tester
+清单＋75 号 📌 的 flow-COPY 围栏拍板。** 下面是上一场（68 号）的快照：**
 **⑦ 品质场四包全做完（70/71/72/73 号报告），
 held-out 验收两半都过。J 的道教会样本拍照→确认→BM 文件＝标准 minit
 版式、量尺 0 缺陷、**零 AI 费**（结构化确定性组装；翻译才叫模型，
@@ -40,6 +45,33 @@ eROSES 下载官方 Penyata Kewangan 模板（60 号报告第 5 点）。**
 > **已上线**：https://minit-project.vercel.app —— 68 号场 J 已 push
 > （开工时 main == origin/main）；**69 号场的 commit 等 J push-cabang.bat**。
 > 线上 org：15「J」、58「avocado」、91「TESTING1」。
+
+### 这一场做了什么（69 号场 · 包 H4 ✅，77 号报告——收尾小修）
+
+- **§1-10 全站删除确认**：新共用件 confirm-delete.tsx（ConfirmingDeleteButton
+  ＋ConfirmedAction render-prop 版，包既有 ConfirmDialog/portal-target）。
+  14 处接上：理事/词库/分组×/草稿/审计员/银行户口/成员移出/日历活动×2/
+  章程重来/工作区栏位垃圾桶（空列照旧免问）/钱区清空批/删一笔/删所选/
+  清空打字草稿。window.confirm 全站清零（裸框、讲浏览器语言、手机可关）。
+- **§1-12 银行摘录**：①查证**非跨 org**（org_id 定界＋RLS 双保险）——
+  tester 看到课表＝最新 confirmed minutes 选错内容＋CONTOH 示范，非 P0；
+  ②决议改可勾选（关键词命中预设勾，index 送服务器、文字只从 DB 来，
+  全不勾三语拒绝；"cek"在"kecekapan"里会误中→人勾的赢，+3 测试）。
+- **§1-13 Members & invites 破版**：两层根因——SettingsRow 用 sm: 视口
+  断点（§6 壳里说谎陷阱→改 @xl: 容器断点），且整个管理 UI 被塞进
+  46%/54% 的「设定列控制栏」→改 SettingsBlock 全宽堆叠、说明折叠顶上；
+  select 加 min-w-0。探针断言无横向溢出。
+- **§1-15a 草稿收纳**：工作区收合一行（数量＋最近一份名字时间），展开
+  最多 2 份＋「看全部→」；新页 /minutes/drafts（历史页旁入口、records
+  版 chrome、按更新时间排、确认删除）；自动起名实测「Mesyuarat Agung
+  Tahunan (AGM) — 2026-05-20」；专页 Resume=/minutes?draft=key（工作区
+  接手前先 stash，G3-2 照旧；接完抹参数）。
+- **测过**：tsc 0 · eslint 21 · vitest **1087（+3）** · build ✓ ·
+  三条 e2e 全绿 · `probe-h4-69.mjs` **21 项 PASS**（自动起名对版→收合/
+  展开→专页→删除弹窗取消留/确认删（DB 验证）→Resume 回工作区内容在
+  参数抹→理事删除同款双验证→invites 版面三断言→ZZZ 全删）。
+- ⚠ 没能验证的：银行摘录勾选的真 UI 全流（要带决议的 confirmed
+  minutes；单元测试钉住）；tester 破版截图的原始视窗条件。
 
 ### 这一场做了什么（69 号场 · 包 H3 ✅，76 号报告——onboarding＋机构上限）
 
@@ -659,11 +691,14 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
 
 ### ⏭ 下一个 session 从哪开始
 
-**69 号场（eROSES 申报重构＋名册补完）进行中**：包 H1 ✅（74 号报告）→
-接下来 **H2 eROSES flow 重构（主菜）** → H3 onboarding → H4 收尾小修。
-（⑦ 品质场 68 号已全收：70–73 号报告；⑥ 建议场 65–67；⑤ eROSES 57–60。）
-之后照 51 号 §5 顺序：**⑧ 助手＋AI 代办场**（61 号备忘）→ ⑨ 上线后第一批；
-62 号竞赛材料场待命。
+**69 号场（eROSES 申报重构＋名册补完）全部做完**（H1=74、H2=75、H3=76、
+H4=77 号报告；⑦ 品质场 68 号=70–73 更早已收）。
+接下来照 51 号 §5 顺序（J 已点头）：**⑧ 助手＋AI 代办场**（61 号备忘：
+聊天面板 upload/手机版/Clear conversation/语言跟人走；未决 2 助手模型等
+bench）→ ⑨ 上线后第一批；62 号竞赛材料场待命。
+**等 J 反馈的**：migration 37/38 贴上后重跑 probe-h1/h3 的两条 [SKIP]
+分支；flow-COPY 围栏拍板（75 号 📌）；77 号 tester 清单；引导文案 vs
+真 portal 对版照旧。竞赛 8/31 截止，材料 J 自己定，**不催**。
 **等 J 反馈的**：道教会样本亲手重走（68 号 §6-5）；migration 32–36 贴上后
 tester 清单（73 号＋67 号报告）；模型拍板（72 号对比表）；引导文案 vs
 真 portal 对版照旧。竞赛 8/31 截止，材料 J 自己定，**不催**。
@@ -693,6 +728,16 @@ RESPONSIVE：J 若再圈破版，贴 46 号单同段 PROMPT 继续。
 - ⚠ **`type="email"` 的浏览器原生验证会抢在 server action 前面，而且只讲
   浏览器的语言**——我们的三语拒绝句永远到不了屏幕。要三语错误就用
   `type="text"`＋`inputMode="email"`，让 server 当唯一的验证者（H1 电邮格）。
+- 🔴 **Provider 挂在 section layout 上时，「挂载时读一次 URL 参数」的
+  effect 在 SPA 导航后不会再跑**——一次性 ref 在同 layout 的别的子页
+  就被消耗掉（/minutes/drafts 和 /minutes 共享 MinutesProvider，Resume
+  的 ?draft 被无声吞掉）。**修法：带参数重新进入的入口用整页导航
+  （plain `<a>` 不用 `<Link>`），或让 effect 对 searchParams 起反应。
+  判断方法：「点了没反应、参数还挂在网址上」先想这条。**
+- 💡 **window.confirm 不算确认弹窗**（§1-10 拍板落地时记下）：浏览器
+  裸框、只讲浏览器语言、部分手机浏览器能整个关掉它。全站删除一律走
+  `src/components/confirm-delete.tsx`（包 ConfirmDialog/portal-target）；
+  新增删除控件别再写 window.confirm——grep 已清零，别再加回来。
 
 ### 2026-08-29 深夜新增（68 号 ⑦ 品质场）
 

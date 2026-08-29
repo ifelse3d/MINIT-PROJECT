@@ -41,7 +41,11 @@ export function MinutesChrome({ children }: { children: ReactNode }) {
   // saved" over a page that lists ten years of documents), no sample/storage
   // notes. Declared before the store hooks CANNOT be — hooks must run on every
   // render — so the early return sits after useMinutes() below.
-  const isHistory = pathname?.startsWith("/minutes/history") ?? false;
+  // §1-15a (work order 69): /minutes/drafts is records-like too — the full
+  // drafts list, not a workspace stop; same bare chrome as history.
+  const isHistory =
+    (pathname?.startsWith("/minutes/history") || pathname?.startsWith("/minutes/drafts")) ??
+    false;
   const {
     sourceLabel,
     typedByHand,

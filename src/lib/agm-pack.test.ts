@@ -142,4 +142,38 @@ describe("bank-resolution extract", () => {
       expect(res.text).toContain("confirmed by Lim Bee Hoon (Setiausaha) on 2026-06-20");
     }
   });
+
+  // §1-12 (work order 69): the human's ticks win over the keyword heuristic.
+  it("honours an explicit selection — chosen lines in, keyword hits out", () => {
+    const idx = sampleConfirmedMinutes.resolutions.findIndex((r) =>
+      r.includes("baik pulih bumbung"),
+    );
+    expect(idx).toBeGreaterThanOrEqual(0);
+    const res = buildBankResolutionExtractBm({
+      ...sampleConfirmedMinutes,
+      selectedResolutionIndexes: [idx],
+    });
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.text).toContain("baik pulih bumbung");
+      expect(res.text).not.toContain("penandatangan akaun bank");
+    }
+  });
+
+  it("refuses an EMPTY selection — unticking everything is not a document", () => {
+    const res = buildBankResolutionExtractBm({
+      ...sampleConfirmedMinutes,
+      selectedResolutionIndexes: [],
+    });
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.reason).toContain("Tiada resolusi dipilih");
+  });
+
+  it("ignores out-of-range indexes instead of crashing or inventing", () => {
+    const res = buildBankResolutionExtractBm({
+      ...sampleConfirmedMinutes,
+      selectedResolutionIndexes: [999, -1],
+    });
+    expect(res.ok).toBe(false);
+  });
 });

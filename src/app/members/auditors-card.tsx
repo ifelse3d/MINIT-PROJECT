@@ -4,6 +4,7 @@ import { useActionState, useEffect, useState, useTransition } from "react";
 import { Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmedAction } from "@/components/confirm-delete";
 import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
 import { Req } from "@/components/required-mark";
 import {
@@ -245,27 +246,29 @@ export function AuditorsCard({
                               <Tri bm="Tanda aktif" zh="标为现任" en="Mark active" />
                             )}
                           </button>
-                          <button
-                            type="button"
-                            disabled={pending}
-                            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm font-medium text-red-700 underline underline-offset-4 hover:text-red-800"
-                            onClick={() => {
-                              if (
-                                !window.confirm(
-                                  t(
-                                    `Buang ${r.person_name} daripada senarai juruaudit?`,
-                                    `要把 ${r.person_name} 从审计员名单删掉吗？`,
-                                    `Remove ${r.person_name} from the auditors list?`,
-                                  ),
-                                )
-                              )
-                                return;
-                              runRowAction(() => deleteAuditor(r.id));
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            <Tri bm="Buang" zh="删除" en="Remove" />
-                          </button>
+                          {/* §1-10: the app's own dialog, never window.confirm. */}
+                          <ConfirmedAction
+                            body={
+                              <Tri
+                                bm={`Buang ${r.person_name} daripada senarai juruaudit? Ia tidak boleh dikembalikan.`}
+                                zh={`要把 ${r.person_name} 从审计员名单删掉吗？删了就找不回来了。`}
+                                en={`Remove ${r.person_name} from the auditors list? This cannot be undone.`}
+                              />
+                            }
+                            confirmLabel={<Tri bm="Buang" zh="删除" en="Remove" />}
+                            onConfirm={() => runRowAction(() => deleteAuditor(r.id))}
+                            trigger={(open) => (
+                              <button
+                                type="button"
+                                disabled={pending}
+                                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm font-medium text-red-700 underline underline-offset-4 hover:text-red-800"
+                                onClick={open}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                <Tri bm="Buang" zh="删除" en="Remove" />
+                              </button>
+                            )}
+                          />
                         </div>
                       </td>
                     )}

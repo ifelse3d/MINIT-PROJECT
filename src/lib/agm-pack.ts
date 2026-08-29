@@ -237,6 +237,16 @@ export type MinutesForExtract = {
   confirmedOnIso?: string;
   /** Resolution texts exactly as confirmed by the human — printed verbatim. */
   resolutions: string[];
+  /**
+   * §1-12 (work order 69, tester: a youth-class timetable printed into the
+   * bank document): WHICH resolutions go in, chosen by the human — indexes
+   * into `resolutions`. The texts still come only from the database; the
+   * browser picks among the server's own sentences, it injects nothing.
+   * undefined = the keyword default (bank/signatory-related only);
+   * [] = the person unticked everything, which is a refusal, not an empty
+   * certified document.
+   */
+  selectedResolutionIndexes?: number[];
   officeBearers: CommitteeMember[];
 };
 
@@ -278,13 +288,26 @@ export function buildBankResolutionExtractBm(m: MinutesForExtract): BankExtractR
     };
   }
   assertIsoDate(m.meetingDateIso);
-  const matches = findSignatoryResolutions(m.resolutions);
+  // §1-12: an explicit human selection wins over the keyword heuristic —
+  // the keywords are a DEFAULT (they can both over-match, e.g. "cek" inside
+  // "kecekapan", and under-match a society's own wording), never the ruling.
+  const matches =
+    m.selectedResolutionIndexes !== undefined
+      ? m.selectedResolutionIndexes
+          .filter((i) => Number.isInteger(i) && i >= 0 && i < m.resolutions.length)
+          .map((i) => m.resolutions[i])
+          .filter((r) => r.trim() !== "")
+      : findSignatoryResolutions(m.resolutions);
   if (matches.length === 0) {
     return {
       ok: false,
       reason:
-        "Tiada resolusi berkaitan bank/penandatangan dalam minit yang disahkan. / " +
-        "No bank/signatory resolution found in the confirmed minutes — nothing is invented.",
+        m.selectedResolutionIndexes !== undefined
+          ? "Tiada resolusi dipilih — tandakan sekurang-kurangnya satu keputusan untuk dipetik. / " +
+            "没有勾选任何决议 —— 至少勾一条要摘录的决议。 / " +
+            "No resolution selected — tick at least one to extract."
+          : "Tiada resolusi berkaitan bank/penandatangan dalam minit yang disahkan. / " +
+            "No bank/signatory resolution found in the confirmed minutes — nothing is invented.",
     };
   }
   const header = [m.orgName];

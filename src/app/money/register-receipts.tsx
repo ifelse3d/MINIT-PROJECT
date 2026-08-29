@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmedAction } from "@/components/confirm-delete";
 import { Tri, useTriText } from "@/components/language-provider";
 import { NextStepLink, PageSection } from "@/components/page-section";
 import {
@@ -222,20 +223,23 @@ export function RegisterAndReceipts() {
               one button clears every unreceipted draft. Rows with issued
               receipt numbers are untouchable, as everywhere. */}
           {unreceiptedCount > 0 && (
+            /* §1-10: the app's own dialog, never window.confirm. */
+            <ConfirmedAction
+              body={
+                <Tri
+                  bm={`Kosongkan ${unreceiptedCount} baris draf yang belum ada resit? Baris yang sudah ada nombor resit TIDAK disentuh. Tidak boleh dibatalkan.`}
+                  zh={`要清空这 ${unreceiptedCount} 笔还没开收据的草稿吗？已开收据的记录不会动。清了无法复原。`}
+                  en={`Clear the ${unreceiptedCount} draft row(s) with no receipt yet? Rows with issued receipt numbers are NOT touched. This cannot be undone.`}
+                />
+              }
+              confirmLabel={<Tri bm="Kosongkan" zh="清空" en="Clear" />}
+              onConfirm={clearUnreceiptedDrafts}
+              trigger={(open) => (
             <Button
               variant="outline"
               size="sm"
               className="text-red-700 hover:bg-red-50 hover:text-red-800 dark:hover:bg-red-400/10"
-              onClick={() => {
-                const ok = window.confirm(
-                  t(
-                    `Kosongkan ${unreceiptedCount} baris draf yang belum ada resit? Baris yang sudah ada nombor resit TIDAK disentuh. Tidak boleh dibatalkan.`,
-                    `要清空这 ${unreceiptedCount} 笔还没开收据的草稿吗？已开收据的记录不会动。清了无法复原。`,
-                    `Clear the ${unreceiptedCount} draft row(s) with no receipt yet? Rows with issued receipt numbers are NOT touched. This cannot be undone.`,
-                  ),
-                );
-                if (ok) clearUnreceiptedDrafts();
-              }}
+              onClick={open}
             >
               🧹{" "}
               <Tri
@@ -244,6 +248,8 @@ export function RegisterAndReceipts() {
                 en="Clear the drafts"
               />
             </Button>
+              )}
+            />
           )}
         </div>
         {donations.length === 0 && (
@@ -424,38 +430,27 @@ export function RegisterAndReceipts() {
                       row is part of a gap-free series and deleting it would put
                       a hole in the audit trail. */}
                   {!d.receiptNo && (
-                    <Button
-                      variant="outline"
-                      className="text-red-700 hover:bg-red-50 hover:text-red-800 dark:hover:bg-red-400/10"
-                      onClick={() => {
-                        if (
-                          !window.confirm(
-                            t(
-                              `Buang derma ini daripada daftar?
-
-${maskName(d.donorName)} · ${formatRm(d.amountCents)}
-
-Resit belum dijana, jadi tiada nombor yang hilang. Tidak boleh dibatalkan.`,
-                              `要把这一笔从登记簿里删掉吗？
-
-${maskName(d.donorName)} · ${formatRm(d.amountCents)}
-
-还没开收据，所以不会有号码断掉。删了无法复原。`,
-                              `Remove this donation from the register?
-
-${maskName(d.donorName)} · ${formatRm(d.amountCents)}
-
-No receipt has been issued, so no number is lost. This cannot be undone.`,
-                            ),
-                          )
-                        ) {
-                          return;
-                        }
-                        deleteDonation(d.id);
-                      }}
-                    >
-                      🗑 <Tri bm="Buang baris ini" zh="删掉这一笔" en="Remove this row" />
-                    </Button>
+                    /* §1-10: the app's own dialog, never window.confirm. */
+                    <ConfirmedAction
+                      body={
+                        <Tri
+                          bm={`Buang derma ini daripada daftar? ${maskName(d.donorName)} · ${formatRm(d.amountCents)}. Resit belum dijana, jadi tiada nombor yang hilang. Tidak boleh dibatalkan.`}
+                          zh={`要把这一笔从登记簿里删掉吗？${maskName(d.donorName)} · ${formatRm(d.amountCents)}。还没开收据，所以不会有号码断掉。删了无法复原。`}
+                          en={`Remove this donation from the register? ${maskName(d.donorName)} · ${formatRm(d.amountCents)}. No receipt has been issued, so no number is lost. This cannot be undone.`}
+                        />
+                      }
+                      confirmLabel={<Tri bm="Buang" zh="删掉" en="Remove" />}
+                      onConfirm={() => deleteDonation(d.id)}
+                      trigger={(open) => (
+                        <Button
+                          variant="outline"
+                          className="text-red-700 hover:bg-red-50 hover:text-red-800 dark:hover:bg-red-400/10"
+                          onClick={open}
+                        >
+                          🗑 <Tri bm="Buang baris ini" zh="删掉这一笔" en="Remove this row" />
+                        </Button>
+                      )}
+                    />
                   )}
                   {d.receiptNo && (
                     <Button
@@ -595,20 +590,13 @@ function ListRegister({
     });
   }
 
+  // §1-10: the caller confirms through ConfirmedAction — this only deletes.
+  const doomedSelection = donations.filter(
+    (d) => selected.has(d.id) && d.receiptNo === null,
+  );
   function deleteSelected() {
-    const doomed = donations.filter(
-      (d) => selected.has(d.id) && d.receiptNo === null,
-    );
-    if (doomed.length === 0) return;
-    const ok = window.confirm(
-      t(
-        `Buang ${doomed.length} baris daripada daftar? Resit belum dijana untuk baris ini, jadi tiada nombor yang hilang. Tidak boleh dibatalkan.`,
-        `要把选中的 ${doomed.length} 行从登记簿里删掉吗？这些行还没开收据，不会有号码断掉。删了无法复原。`,
-        `Remove ${doomed.length} row(s) from the register? No receipts have been issued for them, so no numbers are lost. This cannot be undone.`,
-      ),
-    );
-    if (!ok) return;
-    for (const d of doomed) deleteDonation(d.id);
+    if (doomedSelection.length === 0) return;
+    for (const d of doomedSelection) deleteDonation(d.id);
     setSelected(new Set());
   }
 
@@ -629,18 +617,32 @@ function ListRegister({
           {filtered.length} / {donations.length}
         </span>
         {selected.size > 0 && (
-          <Button
-            variant="outline"
-            className="text-red-700 hover:bg-red-50 hover:text-red-800 dark:hover:bg-red-400/10"
-            onClick={deleteSelected}
-          >
-            🗑{" "}
-            <Tri
-              bm={`Buang ${selected.size} baris dipilih`}
-              zh={`删除所选 ${selected.size} 行`}
-              en={`Remove ${selected.size} selected`}
-            />
-          </Button>
+          /* §1-10: the app's own dialog, never window.confirm. */
+          <ConfirmedAction
+            body={
+              <Tri
+                bm={`Buang ${doomedSelection.length} baris daripada daftar? Resit belum dijana untuk baris ini, jadi tiada nombor yang hilang. Tidak boleh dibatalkan.`}
+                zh={`要把选中的 ${doomedSelection.length} 行从登记簿里删掉吗？这些行还没开收据，不会有号码断掉。删了无法复原。`}
+                en={`Remove ${doomedSelection.length} row(s) from the register? No receipts have been issued for them, so no numbers are lost. This cannot be undone.`}
+              />
+            }
+            confirmLabel={<Tri bm="Buang" zh="删除" en="Remove" />}
+            onConfirm={deleteSelected}
+            trigger={(open) => (
+              <Button
+                variant="outline"
+                className="text-red-700 hover:bg-red-50 hover:text-red-800 dark:hover:bg-red-400/10"
+                onClick={open}
+              >
+                🗑{" "}
+                <Tri
+                  bm={`Buang ${selected.size} baris dipilih`}
+                  zh={`删除所选 ${selected.size} 行`}
+                  en={`Remove ${selected.size} selected`}
+                />
+              </Button>
+            )}
+          />
         )}
       </div>
 

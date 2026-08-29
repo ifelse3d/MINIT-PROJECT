@@ -1023,6 +1023,30 @@ export function MinutesProvider({
     void dropDraft(clientKey).then(() => listDrafts().then(setCloudDrafts));
   }, []);
 
+  // §1-15a (work order 69): /minutes/drafts lists every draft on its own
+  // page; its Resume buttons land here as /minutes?draft=<key>. Honoured
+  // ONCE after restore (resumeDraft stashes whatever is on screen first —
+  // the G3-2 promise — so this can never eat the current workspace), then
+  // the param is stripped so a refresh does not re-resume.
+  const resumedFromUrlRef = useRef(false);
+  useEffect(() => {
+    if (!restored || resumedFromUrlRef.current) return;
+    resumedFromUrlRef.current = true;
+    let key: string | null = null;
+    try {
+      const url = new URL(window.location.href);
+      key = url.searchParams.get("draft");
+      if (key) {
+        url.searchParams.delete("draft");
+        window.history.replaceState(null, "", url.toString());
+      }
+    } catch {
+      // no URL access — nothing to resume
+    }
+    if (key) void resumeDraft(key);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restored]);
+
   /** The worked example, on request only — for a first look or a demo. */
   const openSample = useCallback(() => {
     setExtraction(sampleMeetingExtraction);

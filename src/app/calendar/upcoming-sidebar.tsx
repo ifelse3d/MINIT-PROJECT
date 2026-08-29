@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Check, Undo2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmedAction } from "@/components/confirm-delete";
 import { Tri, useTriText } from "@/components/language-provider";
 import { URGENCY_BADGE, URGENCY_CARD } from "@/lib/activity-labels";
 import {
@@ -249,30 +250,31 @@ export function UpcomingSidebar({
                 {/* F-9: derived (lunar offering) events are computed, not
                     stored — nothing to delete, so no button. */}
                 {!ev.derived && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    // Was an unconfirmed ~16px "✕" that deleted the event
-                    // instantly with no undo, while harmless actions in the app
-                    // DID confirm. (2026-07-28 audit.)
-                    const ok = window.confirm(
-                      t(
-                        `Padam acara "${ev.title}" (${ev.dateIso})? Tidak boleh dibatalkan.`,
-                        `要删除活动「${ev.title}」（${ev.dateIso}）吗？删了就无法复原。`,
-                        `Delete the event "${ev.title}" (${ev.dateIso})? This cannot be undone.`,
-                      ),
-                    );
-                    if (ok) onRemove(ev.id);
-                  }}
-                  aria-label={t(
-                    `Padam acara ${ev.title}`,
-                    `删除活动 ${ev.title}`,
-                    `Delete the event ${ev.title}`,
+                /* §1-10: the app's own dialog, never window.confirm. */
+                <ConfirmedAction
+                  body={
+                    <Tri
+                      bm={`Padam acara "${ev.title}" (${ev.dateIso})? Tidak boleh dibatalkan.`}
+                      zh={`要删除活动「${ev.title}」（${ev.dateIso}）吗？删了就无法复原。`}
+                      en={`Delete the event "${ev.title}" (${ev.dateIso})? This cannot be undone.`}
+                    />
+                  }
+                  onConfirm={() => onRemove(ev.id)}
+                  trigger={(open) => (
+                    <button
+                      type="button"
+                      onClick={open}
+                      aria-label={t(
+                        `Padam acara ${ev.title}`,
+                        `删除活动 ${ev.title}`,
+                        `Delete the event ${ev.title}`,
+                      )}
+                      className="flex size-11 shrink-0 items-center justify-center rounded-sm text-lg text-muted-foreground hover:bg-red-100 hover:text-red-700"
+                    >
+                      ✕
+                    </button>
                   )}
-                  className="flex size-11 shrink-0 items-center justify-center rounded-sm text-lg text-muted-foreground hover:bg-red-100 hover:text-red-700"
-                >
-                  ✕
-                </button>
+                />
                 )}
               </div>
               <div className="text-sm tabular-nums">
