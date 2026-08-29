@@ -94,6 +94,7 @@ export function createOpenAiProvider(model: string): VisionJsonProvider {
       temperature,
       onUsage,
       deadlineAt,
+      timeoutMs,
     }: VisionJsonRequest): Promise<unknown> {
       const key = process.env.OPENAI_API_KEY;
       if (!key) {
@@ -126,6 +127,7 @@ export function createOpenAiProvider(model: string): VisionJsonProvider {
           url: "https://api.openai.com/v1/responses",
           headers: { Authorization: `Bearer ${key}` },
           deadlineAt,
+          timeoutMs,
           body: {
             model,
             input: [{ role: "user", content }],

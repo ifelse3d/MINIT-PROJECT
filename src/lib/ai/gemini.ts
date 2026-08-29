@@ -89,6 +89,7 @@ export function createGeminiProvider(model: string): VisionJsonProvider {
       temperature,
       onUsage,
       deadlineAt,
+      timeoutMs,
     }: VisionJsonRequest): Promise<unknown> {
       const key = process.env.GEMINI_API_KEY;
       if (!key) {
@@ -112,6 +113,7 @@ export function createGeminiProvider(model: string): VisionJsonProvider {
         url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
         headers: { "x-goog-api-key": key },
         deadlineAt,
+        timeoutMs,
         body: {
           contents: [{ parts }],
           generationConfig: {

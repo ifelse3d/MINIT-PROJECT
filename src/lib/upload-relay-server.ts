@@ -25,9 +25,11 @@ import { getActiveOrg } from "@/lib/active-org";
 import { USER_ERRORS, type UserError } from "@/lib/user-errors";
 import {
   RELAY_MAX_BYTES,
+  RELAY_MIME,
+  bytesMatchRelayKind,
   isRelayPathForOrg,
-  looksLikePdf,
   relayFileName,
+  relayKindFor,
 } from "./upload-relay";
 
 export type RelayedFileResult =
@@ -70,18 +72,31 @@ export async function fileFromRelay(
     // ignore
   }
 
-  if (bytes.byteLength > RELAY_MAX_BYTES) {
-    return { ok: false, status: 400, error: USER_ERRORS.pdfTooBigForAi };
+  // D0-3: PDFs and .docx/.pptx ride the relay now (photos shrink instead).
+  // The kind comes from the file NAME the browser named the object with; the
+  // BYTES then have to prove it (PDF magic, or zip's PK magic) before any
+  // quota is charged for reading them.
+  const name = relayFileName(relayPathRaw);
+  const kind = relayKindFor(name, "");
+  if (kind === null) {
+    return { ok: false, status: 400, error: USER_ERRORS.unsupportedLedgerFile };
   }
-  if (!looksLikePdf(bytes)) {
-    // Only PDFs ride the relay (photos shrink; Office files are small text).
+  if (bytes.byteLength > RELAY_MAX_BYTES) {
+    return {
+      ok: false,
+      status: 400,
+      error:
+        kind === "pdf" ? USER_ERRORS.pdfTooBigForAi : USER_ERRORS.officeTooBigForAi,
+    };
+  }
+  if (!bytesMatchRelayKind(kind, bytes)) {
     return { ok: false, status: 400, error: USER_ERRORS.unsupportedLedgerFile };
   }
 
   return {
     ok: true,
-    file: new File([new Uint8Array(bytes)], relayFileName(relayPathRaw), {
-      type: "application/pdf",
-    }),
+    // The rebuilt MIME matches office-text.ts's checks, so a relayed .docx/
+    // .pptx lands in the routes' Office branch exactly like a direct upload.
+    file: new File([new Uint8Array(bytes)], name, { type: RELAY_MIME[kind] }),
   };
 }

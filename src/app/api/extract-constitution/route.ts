@@ -16,7 +16,12 @@ import { extractConstitutionPrompt } from "@/prompts/extract-constitution";
 import { recordUpload } from "@/lib/record-upload";
 import { chargeFence, refundFence } from "@/lib/fence";
 import { checkPageLimit, countPdfPages } from "@/lib/pdf-pages";
-import { ROUTE_AI_DEADLINE_MS, VendorTimeoutError } from "@/lib/ai/http";
+import {
+  EXTRACT_ATTEMPT_TIMEOUT_MS,
+  ROUTE_AI_DEADLINE_MS,
+  TIMEOUT_SPLIT_ADVICE_PAGES,
+  VendorTimeoutError,
+} from "@/lib/ai/http";
 import { vendorFailureResponse } from "@/lib/ai/vendor-failure";
 import { fileFromRelay } from "@/lib/upload-relay-server";
 
@@ -164,6 +169,9 @@ export async function POST(req: Request) {
         maxOutputTokens: EXTRACT_OUTPUT_CEILING.constitution,
         onUsage,
         deadlineAt,
+        // D0-2: the constitution is the longest read in the app — one 45s
+        // attempt, not three aborted 20s ones (J's "AI took too long", 8/29).
+        timeoutMs: EXTRACT_ATTEMPT_TIMEOUT_MS,
       });
     } catch (e) {
       // A refusal must never eat someone's quota (CLAUDE.md rule 10). A
@@ -172,7 +180,9 @@ export async function POST(req: Request) {
       // P-1: the failure is also recorded now (app_errors) — see id=5.
       await refundUsage(gate.org.id, gate.charges[0]);
       await refundFence(fenceCharge);
-      return vendorFailureResponse("/api/extract-constitution", e, gate.org.id);
+      return vendorFailureResponse("/api/extract-constitution", e, gate.org.id, {
+        bigDocument: pageCount > TIMEOUT_SPLIT_ADVICE_PAGES,
+      });
     }
 
     let parsed = parseConstitutionExtraction(raw);
@@ -194,6 +204,7 @@ ${issues}`;
           maxOutputTokens: EXTRACT_OUTPUT_CEILING.constitution,
           onUsage,
           deadlineAt,
+          timeoutMs: EXTRACT_ATTEMPT_TIMEOUT_MS,
         });
         parsed = parseConstitutionExtraction(raw);
       } catch (e) {
@@ -202,7 +213,9 @@ ${issues}`;
         if (e instanceof VendorTimeoutError || e instanceof VendorOutputTruncatedError) {
           await refundUsage(gate.org.id, gate.charges[0]);
           await refundFence(fenceCharge);
-          return vendorFailureResponse("/api/extract-constitution", e, gate.org.id);
+          return vendorFailureResponse("/api/extract-constitution", e, gate.org.id, {
+            bigDocument: pageCount > TIMEOUT_SPLIT_ADVICE_PAGES,
+          });
         }
         void captureAppError("/api/extract-constitution", e, { orgId: gate.org.id });
         // fall through to the failure response below

@@ -97,3 +97,49 @@ export function looksLikePdf(bytes: ArrayBuffer): boolean {
     head[4] === 0x2d // -
   );
 }
+
+// ---------------------------------------------------------------------------
+// D0-3 (work order 56, 拍板 4): the relay carries .pptx/.docx too. A briefing
+// deck exported from PowerPoint is routinely over the 4MB body cap, and the
+// old "PDF only" relay left it honestly refused with no road at all ("This
+// file is too big" — J hit it). Both formats are zip archives (PK magic), so
+// the same prove-the-bytes rule applies before any quota is charged.
+//
+// .xlsx is deliberately NOT here: every spreadsheet door parses the workbook
+// deterministically (no AI read), and a workbook over 4MB fails the
+// converter's own character cap anyway — a road that ends at a wall is not a
+// road. Add it only with a door that can actually eat one that size.
+// ---------------------------------------------------------------------------
+
+export type RelayKind = "pdf" | "docx" | "pptx";
+
+/** Content types the relay stores/rebuilds, by kind. The docx/pptx values
+ *  must match office-text.ts's MIME checks so a relayed file lands in the
+ *  routes' Office branch exactly like a directly-uploaded one. */
+export const RELAY_MIME: Record<RelayKind, string> = {
+  pdf: "application/pdf",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+};
+
+/** Which relay road (if any) this file may take. MIME first, extension as
+ *  fallback — phone browsers sometimes send an empty or generic type for
+ *  Office files (same rule as office-text.ts). */
+export function relayKindFor(name: string, mime: string): RelayKind | null {
+  if (mime === RELAY_MIME.pdf || /\.pdf$/i.test(name)) return "pdf";
+  if (mime === RELAY_MIME.docx || /\.docx$/i.test(name)) return "docx";
+  if (mime === RELAY_MIME.pptx || /\.pptx$/i.test(name)) return "pptx";
+  return null;
+}
+
+/** Zip magic bytes (PK\x03\x04) — what a real .docx/.pptx starts with. */
+export function looksLikeZip(bytes: ArrayBuffer): boolean {
+  if (bytes.byteLength < 4) return false;
+  const head = new Uint8Array(bytes.slice(0, 4));
+  return head[0] === 0x50 && head[1] === 0x4b && head[2] === 0x03 && head[3] === 0x04;
+}
+
+/** Do these bytes prove the kind the file name claims? */
+export function bytesMatchRelayKind(kind: RelayKind, bytes: ArrayBuffer): boolean {
+  return kind === "pdf" ? looksLikePdf(bytes) : looksLikeZip(bytes);
+}

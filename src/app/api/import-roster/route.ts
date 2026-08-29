@@ -11,7 +11,11 @@ import { createUsageRecorder, refundUsage, requireAiQuota } from "@/lib/ai/usage
 import { readRosterPrompt } from "@/prompts/read-roster";
 import { chargeFence, refundFence } from "@/lib/fence";
 import { checkPageLimit, countPdfPages } from "@/lib/pdf-pages";
-import { ROUTE_AI_DEADLINE_MS } from "@/lib/ai/http";
+import {
+  EXTRACT_ATTEMPT_TIMEOUT_MS,
+  ROUTE_AI_DEADLINE_MS,
+  TIMEOUT_SPLIT_ADVICE_PAGES,
+} from "@/lib/ai/http";
 import { vendorFailureResponse } from "@/lib/ai/vendor-failure";
 import { fileFromRelay } from "@/lib/upload-relay-server";
 
@@ -172,12 +176,16 @@ export async function POST(req: Request) {
         // P-1: bounded so the refund + app_errors + honest message run before
         // Vercel's 60s kill (single call — no shared budget needed here).
         deadlineAt: Date.now() + ROUTE_AI_DEADLINE_MS,
+        // D0-2: a long roster PDF is a document read — long attempt.
+        timeoutMs: EXTRACT_ATTEMPT_TIMEOUT_MS,
       });
     } catch (e) {
       // P-1: the failure is also recorded now (app_errors) — see id=5.
       await refundUsage(gate.org.id, gate.charges[0]);
       await refundFence(fenceCharge);
-      return vendorFailureResponse("/api/import-roster", e, gate.org.id);
+      return vendorFailureResponse("/api/import-roster", e, gate.org.id, {
+        bigDocument: pageCount > TIMEOUT_SPLIT_ADVICE_PAGES,
+      });
     }
 
     const parsed = rosterSchema.safeParse(raw);

@@ -27,10 +27,11 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowUp, RotateCcw, X } from "lucide-react";
-import { AttachIcon, ChooseFileLabel } from "@/components/attach-icon";
+import { AttachIcon, ChooseFileLabel, UploadLimitNote } from "@/components/attach-icon";
 import { Button } from "@/components/ui/button";
 import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
 import { prepareUploadForSend } from "@/lib/upload-relay-client";
+import { canStageTogether } from "@/lib/multi-page-staging";
 import {
   mergeConstitutionExtractions,
   mergeLedgerExtractions,
@@ -252,8 +253,9 @@ export function AskBox({
     const picked = Array.from(list);
     // Several files at once only makes sense for PHOTOS of pages. A PDF or
     // Office file is already a whole document — one of those at a time.
+    // (The rule is shared with the Constitution page — multi-page-staging.ts.)
     const wouldBe = [...staged.map((s) => s.file), ...picked];
-    if (wouldBe.length > 1 && wouldBe.some((f) => !f.type.startsWith("image/"))) {
+    if (!canStageTogether(wouldBe.map((f) => f.type))) {
       setError(
         t(
           "Hantar beberapa fail sekali gus hanya untuk GAMBAR. PDF / Word / Excel / PowerPoint: satu fail pada satu masa.",
@@ -481,6 +483,8 @@ export function AskBox({
               en="photo, PDF or Office file"
             />
           </Button>
+          {/* D0-3 (拍板 4): the remaining size limit, at the door, in writing. */}
+          <UploadLimitNote office />
         </div>
 
         <input

@@ -34,12 +34,15 @@ import { OrgIdentityPanel } from "./org-identity-panel";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
 import { uploadErrorMessage } from "@/lib/shrink-photo";
 import { prepareUploadForSend } from "@/lib/upload-relay-client";
+import { canStageTogether, isPhotoType } from "@/lib/multi-page-staging";
+import { compressPhoto } from "@/app/minutes/minutes-storage";
+import { X } from "lucide-react";
 import {
   sampleClauses,
   sampleConstitutionTitle,
   sampleQuestions,
 } from "@/lib/sample-constitution";
-import { AttachIcon, ChooseFileLabel } from "@/components/attach-icon";
+import { AttachIcon, ChooseFileLabel, UploadLimitNote } from "@/components/attach-icon";
 
 // ---------------------------------------------------------------------------
 // CONSTITUTION screen. The keyword filter, citations and the refusal rule are
@@ -164,6 +167,19 @@ export function ConstitutionReview({
   const [aiError, setAiError] = useState<string | null>(null);
   /** Set when a read succeeded locally but the durable copy did not land. */
   const [saveWarning, setSaveWarning] = useState(false);
+  /**
+   * D0-1 (work order 56, 拍板 3) — picked files are STAGED, not read. This
+   * page used to fire the AI (and the charge) the moment a file was chosen:
+   * no confirmation, no way to add page 2 first, no way to change your mind.
+   * Now it works exactly like the home page's AskBox (A-5): stage → see
+   * thumbnails → "add the next page" → press Send. Photos stage several at
+   * once (pages of ONE constitution); a PDF is already a whole document, so
+   * one of those at a time (our design, not a platform limit).
+   */
+  const [staged, setStaged] = useState<{ file: File; preview: string | null }[]>([]);
+  /** Which page is being read right now, e.g. "page2.jpg (2/3)". */
+  const [reading, setReading] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement | null>(null);
 
   /**
    * Hand the full merged set to the organisation's records.
@@ -309,54 +325,107 @@ export function ConstitutionReview({
     );
   }
 
-  /** THE INGESTION PATH: photo/scan of the constitution → clauses. */
-  async function onFilePicked(file: File | null) {
-    if (!file) return;
+  /** Picked files land in the staging strip; NOTHING is read or charged yet. */
+  async function stageFiles(list: FileList | null) {
+    if (!list || list.length === 0 || aiBusy) return;
+    setAiError(null);
+    const picked = Array.from(list);
+    const wouldBe = [...staged.map((s) => s.file), ...picked];
+    if (!canStageTogether(wouldBe.map((f) => f.type))) {
+      setAiError(
+        t(
+          "Hantar beberapa fail sekali gus hanya untuk GAMBAR. PDF: satu fail pada satu masa.",
+          "一次传多个，只限「照片」。PDF 请一次传一份。",
+          "Sending several at once is for PHOTOS only. PDF: one file at a time.",
+        ),
+      );
+      return;
+    }
+    const withPreviews = await Promise.all(
+      picked.map(async (file) => ({
+        file,
+        preview: isPhotoType(file.type) ? await compressPhoto(file) : null,
+      })),
+    );
+    setStaged((prev) => [...prev, ...withPreviews]);
+  }
+
+  /** Read ONE file through the route; merge its clauses in. */
+  async function readOneFile(file: File): Promise<{ ok: true } | { ok: false; message: string }> {
+    // 48 + A-4: shrink photos in the browser; relay a big PDF via Storage
+    // (a 20-40 page constitution scan is routinely over 4MB); refuse
+    // honestly what neither road can carry. One helper, every door.
+    const prepared = await prepareUploadForSend(file);
+    if (prepared.send === "refuse") return { ok: false, message: prepared.error };
+    const form = new FormData();
+    if (prepared.send === "file") form.append("photo", prepared.file);
+    else form.append("storagePath", prepared.storagePath);
+    let res: Response;
+    try {
+      res = await fetch("/api/extract-constitution", { method: "POST", body: form });
+    } catch {
+      // The request never left — nothing was charged, and saying so matters.
+      return { ok: false, message: joinUserError(USER_ERRORS.networkNoCharge) };
+    }
+    const body = await res.json().catch(() => null);
+    if (!res.ok) {
+      return { ok: false, message: uploadErrorMessage(res.status, body?.error) };
+    }
+    const extraction = body.extraction as ConstitutionExtraction;
+    const read = clausesFromExtraction(extraction);
+    if (read.length === 0) {
+      return { ok: false, message: joinUserError(USER_ERRORS.aiCouldNotRead) };
+    }
+    const nextTitle =
+      extraction.document_title.confidence !== "missing" &&
+      extraction.document_title.value !== ""
+        ? extraction.document_title.value
+        : t("Perlembagaan pertubuhan", "机构章程", "Society constitution");
+
+    // Pages are added, not replaced: a constitution is many photographs, and
+    // uploading page 2 must not throw away page 1. Later pages win on a
+    // repeated clause number, so re-photographing a bad page fixes it.
+    // (mergeClauses is the unit-tested version of that rule.)
+    setStored((prev) => ({
+      title: prev?.title ?? nextTitle,
+      clauses: mergeClauses(prev?.clauses ?? [], read),
+      sourceLabel: file.name,
+    }));
+    return { ok: true };
+  }
+
+  /**
+   * THE INGESTION PATH, now behind an explicit Send (D0-1): every staged
+   * photo is read as another page of the SAME constitution, in order. A page
+   * that fails stops the run and stays staged (with everything after it);
+   * pages already read are already merged — added, never replaced — so
+   * nothing done so far is lost.
+   */
+  async function sendStaged() {
+    if (aiBusy || staged.length === 0) return;
     setAiError(null);
     setAiBusy(true);
     try {
-      // 48 + A-4: shrink photos in the browser; relay a big PDF via Storage
-      // (a 20-40 page constitution scan is routinely over 4MB); refuse
-      // honestly what neither road can carry. One helper, every door.
-      const prepared = await prepareUploadForSend(file);
-      if (prepared.send === "refuse") throw new Error(prepared.error);
-      const form = new FormData();
-      if (prepared.send === "file") form.append("photo", prepared.file);
-      else form.append("storagePath", prepared.storagePath);
-      const res = await fetch("/api/extract-constitution", {
-        method: "POST",
-        body: form,
-      });
-      const body = await res.json().catch(() => null);
-      if (!res.ok) {
-        throw new Error(uploadErrorMessage(res.status, body?.error));
+      const files = staged.map((s) => s.file);
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setReading(
+          files.length === 1 ? file.name : `${file.name} (${i + 1}/${files.length})`,
+        );
+        const r = await readOneFile(file);
+        if (!r.ok) {
+          // Say WHICH page failed; keep it (and the rest) staged for one more
+          // send once the person fixes or removes it.
+          setAiError(files.length === 1 ? r.message : `📄 ${file.name}\n${r.message}`);
+          setStaged((prev) => prev.slice(i));
+          return;
+        }
       }
-      const extraction = body.extraction as ConstitutionExtraction;
-      const read = clausesFromExtraction(extraction);
-      if (read.length === 0) {
-        setAiError(joinUserError(USER_ERRORS.aiCouldNotRead));
-        return;
-      }
-      const nextTitle =
-        extraction.document_title.confidence !== "missing" &&
-        extraction.document_title.value !== ""
-          ? extraction.document_title.value
-          : t("Perlembagaan pertubuhan", "机构章程", "Society constitution");
-
-      // Pages are added, not replaced: a constitution is many photographs, and
-      // uploading page 2 must not throw away page 1. Later pages win on a
-      // repeated clause number, so re-photographing a bad page fixes it.
-      // (mergeClauses is the unit-tested version of that rule.)
-      setStored((prev) => ({
-        title: prev?.title ?? nextTitle,
-        clauses: mergeClauses(prev?.clauses ?? [], read),
-        sourceLabel: file.name,
-      }));
+      setStaged([]);
       setResult(null);
-    } catch (e) {
-      setAiError(e instanceof Error ? e.message : String(e));
     } finally {
       setAiBusy(false);
+      setReading(null);
     }
   }
 
@@ -473,49 +542,48 @@ export function ConstitutionReview({
             />
           </CardTitle>
           <CardDescription>
+            {/* D0-1: pages stage together now — the "wait before sending the
+                next" instruction described the old one-at-a-time behaviour. */}
             <Tri
-              bm="Satu fail PDF, atau satu gambar untuk setiap halaman. Tunggu MinitAI selesai membaca sebelum menghantar yang berikutnya — halaman baharu ditambah, tidak menggantikan yang lama. MinitAI menyalin setiap fasal perkataan demi perkataan; ia tidak meringkaskan dan tidak mengarang."
-              zh="可以整份 PDF，也可以一页拍一张。等 MinitAI 读完再传下一份 —— 新的页会加上去，不会盖掉之前的。MinitAI 会逐字抄下每一条条文，不会自己总结，也不会自己编。"
-              en="One PDF, or one photo per page. Wait for MinitAI to finish reading before sending the next — new pages are added, not replaced. MinitAI copies each clause word for word; it does not summarise and it does not invent."
+              bm="Satu fail PDF, atau ambil gambar beberapa halaman sekali gus — semak dahulu, kemudian tekan hantar. Halaman baharu ditambah, tidak menggantikan yang lama. MinitAI menyalin setiap fasal perkataan demi perkataan; ia tidak meringkaskan dan tidak mengarang."
+              zh="可以整份 PDF，也可以一次拍好几页 —— 先看一眼，再按送出。新的页会加上去，不会盖掉之前的。MinitAI 会逐字抄下每一条条文，不会自己总结，也不会自己编。"
+              en="One PDF, or photograph several pages at once — check them first, then press send. New pages are added, not replaced. MinitAI copies each clause word for word; it does not summarise and it does not invent."
             />
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center gap-3">
-            <label
-              className={`inline-flex cursor-pointer items-center gap-2 rounded-sm px-5 py-3 text-base font-semibold text-white ${
+            {/* D0-1: choosing a file STAGES it — nothing is read or charged
+                until Send. `capture` is gone for the same reason AskBox
+                dropped it (#8, 27-evening): without it a phone's picker
+                offers BOTH the camera and the gallery, which is what
+                multi-select needs. */}
+            <button
+              type="button"
+              disabled={aiBusy}
+              onClick={() => fileInput.current?.click()}
+              className={`inline-flex items-center gap-2 rounded-sm px-5 py-3 text-base font-semibold text-white ${
                 aiBusy
                   ? "cursor-wait bg-muted-foreground"
-                  : "v2-pill bg-[color:var(--v2-primary-fill)] shadow-[var(--v2-shadow-soft)]"
+                  : "v2-pill cursor-pointer bg-[color:var(--v2-primary-fill)] shadow-[var(--v2-shadow-soft)]"
               }`}
             >
-              {aiBusy ? (
-                <>
-                  ⏳{" "}
-                  <Tri
-                    bm="MinitAI sedang membaca halaman ini…"
-                    zh="MinitAI 正在读这一页…"
-                    en="MinitAI is reading this page…"
-                  />
-                </>
-              ) : (
-                <>
-                  <AttachIcon />{" "}
-                  <ChooseFileLabel />
-                </>
-              )}
-              <input
-                type="file"
-                accept="image/*,application/pdf"
-                capture="environment"
-                className="hidden"
-                disabled={aiBusy}
-                onChange={(e) => {
-                  onFilePicked(e.target.files?.[0] ?? null);
-                  e.target.value = "";
-                }}
-              />
-            </label>
+              <AttachIcon /> <ChooseFileLabel />
+            </button>
+            <input
+              ref={fileInput}
+              type="file"
+              multiple
+              accept="image/*,application/pdf"
+              className="hidden"
+              disabled={aiBusy}
+              onChange={(e) => {
+                void stageFiles(e.target.files);
+                e.target.value = "";
+              }}
+            />
+            {/* D0-3 (拍板 4): the remaining size limit, at the door. */}
+            {!aiBusy && <UploadLimitNote />}
             {hasOwn && !aiBusy && (
               <Button
                 variant="outline"
@@ -538,6 +606,105 @@ export function ConstitutionReview({
               </Button>
             )}
           </div>
+
+          {/* D0-1: the staged pages, visible and removable BEFORE anything is
+              sent or charged — same strip as the home page's AskBox (A-5). */}
+          {staged.length > 0 && (
+            <div className="flex flex-col gap-3 rounded-md border-2 border-[#a855f7]/40 bg-white/70 p-3 dark:bg-white/10">
+              <div className="flex flex-wrap gap-3">
+                {staged.map((s, i) => (
+                  <div
+                    key={`${s.file.name}-${i}`}
+                    className="relative flex w-28 flex-col items-center gap-1 rounded-sm border-2 border-[color:var(--v2-border)] bg-white/80 p-2 dark:bg-white/10"
+                  >
+                    {s.preview ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={s.preview}
+                        alt={s.file.name}
+                        className="h-20 w-full rounded-xs object-cover"
+                      />
+                    ) : (
+                      <span className="flex h-20 w-full items-center justify-center text-4xl">
+                        📄
+                      </span>
+                    )}
+                    <span className="w-full truncate text-center text-xs" title={s.file.name}>
+                      {s.file.name}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={aiBusy}
+                      onClick={() => setStaged((prev) => prev.filter((_, j) => j !== i))}
+                      className="absolute -top-2 -right-2 inline-flex h-7 w-7 items-center justify-center rounded-full border-2 border-[color:var(--v2-border)] bg-white text-muted-foreground hover:bg-red-50 hover:text-red-700 dark:bg-neutral-800 dark:hover:bg-red-400/10"
+                      aria-label={t(
+                        `Buang ${s.file.name}`,
+                        `移除 ${s.file.name}`,
+                        `Remove ${s.file.name}`,
+                      )}
+                    >
+                      <X className="h-4 w-4" strokeWidth={2.2} />
+                    </button>
+                  </div>
+                ))}
+                {/* Adding the next page must not mean hunting for the picker
+                    again (photos only: a PDF is already a whole document). */}
+                {staged.every((s) => isPhotoType(s.file.type)) && (
+                  <button
+                    type="button"
+                    disabled={aiBusy}
+                    onClick={() => fileInput.current?.click()}
+                    className="flex w-28 flex-col items-center justify-center gap-1 rounded-sm border-2 border-dashed border-[color:var(--v2-border)] p-2 text-muted-foreground hover:border-[#a855f7]/60 hover:text-foreground"
+                  >
+                    <span className="text-3xl leading-none">＋</span>
+                    <span className="text-center text-xs">
+                      <Tri bm="Tambah muka surat" zh="加下一页" en="Add next page" />
+                    </span>
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <Button size="lg" disabled={aiBusy} onClick={() => void sendStaged()}>
+                  {aiBusy ? (
+                    <Tri bm="Sebentar…" zh="请稍等…" en="One moment…" />
+                  ) : (
+                    <Tri
+                      bm={`Baca ${staged.length} halaman ini`}
+                      zh={`读这 ${staged.length} 页`}
+                      en={`Read ${staged.length === 1 ? "this page" : `these ${staged.length} pages`}`}
+                    />
+                  )}
+                </Button>
+                <span className="min-w-40 flex-1 text-sm text-muted-foreground">
+                  {staged.length > 1 ? (
+                    <Tri
+                      bm={`${staged.length} gambar akan dibaca sebagai SATU perlembagaan (muka surat demi muka surat). Belum dihantar — tekan butang bila siap.`}
+                      zh={`这 ${staged.length} 张会当成同一本章程、一页一页读。还没送出 —— 准备好按按钮。`}
+                      en={`These ${staged.length} photos will be read as ONE constitution, page by page. Not sent yet — press the button when ready.`}
+                    />
+                  ) : (
+                    <Tri
+                      bm="Belum dihantar — tambah muka surat lain dahulu jika ada, kemudian tekan butang."
+                      zh="还没送出 —— 有下一页可以先加上，再按按钮。"
+                      en="Not sent yet — add more pages first if you have them, then press the button."
+                    />
+                  )}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {aiBusy && reading && (
+            <p className="rounded-md border-2 border-[#a855f7]/40 bg-white/70 p-4 text-base font-medium dark:bg-white/10">
+              ⏳{" "}
+              <Tri
+                bm={`MinitAI sedang membaca "${reading}" — halaman baharu ditambah, tidak menggantikan yang lama. Tunggu sekejap.`}
+                zh={`MinitAI 正在读「${reading}」—— 新的页会加上去，不会盖掉之前的。请稍等。`}
+                en={`MinitAI is reading "${reading}" — new pages are added, not replaced. One moment.`}
+              />
+            </p>
+          )}
+
           {aiError && (
             <div className="rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium whitespace-pre-line text-red-900">
               {localizeError(aiError)}

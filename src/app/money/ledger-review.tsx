@@ -21,7 +21,7 @@ import { TypeDonations } from "./type-donations";
 import { ManualIncomeForm } from "./manual-income";
 import { RoundList } from "./round-list";
 import { useRegister } from "./register-store";
-import { AttachIcon, ChooseFileLabel } from "@/components/attach-icon";
+import { AttachIcon, ChooseFileLabel, UploadLimitNote } from "@/components/attach-icon";
 
 // ---------------------------------------------------------------------------
 // /money — STEP 1: read a page of the donation ledger, then check what the AI
@@ -192,6 +192,8 @@ export function LedgerReview() {
               }}
             />
           </label>
+          {/* D0-3 (拍板 4): the remaining size limit, at the door, in writing. */}
+          {!aiBusy && <UploadLimitNote />}
           {/* G-1 (2026-08-25): typing is a first-class way in, beside the
               camera — same three doors as /minutes.
               B-5① (J #13): it no longer JUMPS to another page — the typing

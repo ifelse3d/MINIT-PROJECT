@@ -7,8 +7,11 @@ vi.mock("server-only", () => ({}));
 
 import {
   DEFAULT_BACKOFF_MS,
+  EXTRACT_ATTEMPT_TIMEOUT_MS,
   MAX_ATTEMPTS,
+  REQUEST_TIMEOUT_MS,
   ROUTE_AI_DEADLINE_MS,
+  TIMEOUT_SPLIT_ADVICE_PAGES,
   VendorTimeoutError,
   isTransient,
   postVendorJson,
@@ -216,6 +219,58 @@ describe("postVendorJson", () => {
 describe("the route deadline (P-1)", () => {
   it("leaves refund/app_errors headroom inside the 60s maxDuration", () => {
     expect(ROUTE_AI_DEADLINE_MS).toBeLessThanOrEqual(55_000);
+  });
+
+  // D0-2 (work order 56) — the timeout that fits the biggest admitted job.
+  // J's constitution died on 2026-08-29 because the 20s per-attempt timeout
+  // could not fit a generation the 64k output ceiling explicitly allows: the
+  // route burned its 50s budget on three aborted attempts. These pin the
+  // relationships, not the numbers, so a future change must re-do the math.
+  describe("the long attempt for document reads (D0-2)", () => {
+    it("is longer than the default attempt — the whole point", () => {
+      expect(EXTRACT_ATTEMPT_TIMEOUT_MS).toBeGreaterThan(REQUEST_TIMEOUT_MS);
+    });
+
+    it("fits inside the route's vendor budget", () => {
+      expect(EXTRACT_ATTEMPT_TIMEOUT_MS).toBeLessThan(ROUTE_AI_DEADLINE_MS);
+    });
+
+    it("leaves the deadline check no room to start a doomed second attempt", () => {
+      // After one full long attempt, the remaining budget must be under the
+      // 2s MIN_ATTEMPT_BUDGET so the loop throws VendorTimeoutError instead
+      // of starting an attempt that cannot finish before Vercel's kill.
+      expect(ROUTE_AI_DEADLINE_MS - EXTRACT_ATTEMPT_TIMEOUT_MS).toBeLessThan(20_000);
+    });
+
+    it("split advice exists and is a sane page count", () => {
+      // ~410 output tok/s (measured, org 91's 8-27 rows) × 45s ≈ 18k tokens
+      // ≈ 10–18 dense pages: at 10+ pages a timeout is deterministic and the
+      // person must be told to split, never to retry.
+      expect(TIMEOUT_SPLIT_ADVICE_PAGES).toBeGreaterThanOrEqual(5);
+      expect(TIMEOUT_SPLIT_ADVICE_PAGES).toBeLessThanOrEqual(20);
+    });
+
+    it("the long attempt is honoured by the shared loop (timeoutMs plumbing)", async () => {
+      // A vendor that never answers: the abort must fire at the caller's
+      // timeout, not the 20s default — this is what the routes now rely on.
+      const fetchMock = vi.fn(
+        (_url: string, init: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            init.signal?.addEventListener("abort", () => {
+              const err = new Error("aborted");
+              err.name = "AbortError";
+              reject(err);
+            });
+          }),
+      );
+      vi.stubGlobal("fetch", fetchMock);
+      const started = Date.now();
+      await expect(
+        call({ timeoutMs: 30, deadlineAt: Date.now() + 10_000, backoffMs: [0, 0, 0] }),
+      ).rejects.toBeInstanceOf(VendorTimeoutError);
+      // Three attempts of ~30ms each — nowhere near the 20s default.
+      expect(Date.now() - started).toBeLessThan(5_000);
+    });
   });
 
   it("gives up with VendorTimeoutError without calling the vendor when the budget is spent", async () => {

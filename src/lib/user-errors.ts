@@ -106,6 +106,18 @@ export const USER_ERRORS = {
   },
 
   /**
+   * D0-3 (work order 56, 拍板 4): .docx/.pptx ride the Storage relay too now,
+   * with the same 12MB honest wall (RELAY_MAX_BYTES). At that size the file's
+   * weight is nearly always embedded pictures, so the advice names the fix a
+   * committee member can actually do in Word/PowerPoint.
+   */
+  officeTooBigForAi: {
+    bm: "Fail ini terlalu besar untuk dibaca oleh AI (lebih 12MB). Dalam Word/PowerPoint, padamkan gambar-gambar besar atau bahagikan kepada beberapa fail kecil, kemudian hantar satu demi satu.",
+    zh: "这个文件太大了，AI 读不了（超过 12MB）。请在 Word/PowerPoint 里删掉大图片，或拆成几个小文件，一份一份地传。",
+    en: "This file is too large for the AI to read (over 12MB). In Word/PowerPoint, remove the big pictures or split it into a few smaller files, then send them one at a time.",
+  },
+
+  /**
    * The fetch itself threw — the request never left, or the line dropped
    * before any answer. Nothing was charged, and saying so out loud matters:
    * "did that cost me an action?" is the first question a treasurer asks.

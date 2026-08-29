@@ -13,7 +13,11 @@ import { dayIsoMalaysia } from "@/lib/history";
 import { recordUpload } from "@/lib/record-upload";
 import { chargeFence, refundFence } from "@/lib/fence";
 import { checkPageLimit, countPdfPages } from "@/lib/pdf-pages";
-import { ROUTE_AI_DEADLINE_MS, VendorTimeoutError } from "@/lib/ai/http";
+import {
+  EXTRACT_ATTEMPT_TIMEOUT_MS,
+  ROUTE_AI_DEADLINE_MS,
+  VendorTimeoutError,
+} from "@/lib/ai/http";
 import { vendorFailureResponse } from "@/lib/ai/vendor-failure";
 import { fileFromRelay } from "@/lib/upload-relay-server";
 
@@ -127,7 +131,7 @@ export async function POST(req: Request) {
     // Attempt 1
     let raw: unknown;
     try {
-      raw = await provider.extractJson({ prompt, imageBase64, mimeType: photo.type, onUsage, deadlineAt });
+      raw = await provider.extractJson({ prompt, imageBase64, mimeType: photo.type, onUsage, deadlineAt, timeoutMs: EXTRACT_ATTEMPT_TIMEOUT_MS });
     } catch (e) {
       // The vendor was never usefully reached — the action is refunded.
       // P-1: the failure is also recorded now (app_errors) — see id=5.
@@ -148,7 +152,7 @@ export async function POST(req: Request) {
 YOUR PREVIOUS ATTEMPT FAILED VALIDATION with these errors — fix them and respond with ONLY the corrected JSON:
 ${issues}`;
       try {
-        raw = await provider.extractJson({ prompt: retryPrompt, imageBase64, mimeType: photo.type, onUsage, deadlineAt });
+        raw = await provider.extractJson({ prompt: retryPrompt, imageBase64, mimeType: photo.type, onUsage, deadlineAt, timeoutMs: EXTRACT_ATTEMPT_TIMEOUT_MS });
         parsed = parseExpenseExtraction(raw);
       } catch (e) {
         // P-1: a timeout is a timeout — not "retake the photo". Both refund.

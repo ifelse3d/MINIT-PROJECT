@@ -76,6 +76,14 @@ export type VisionJsonRequest = {
    * two with keys); optional so the rest keep compiling unchanged.
    */
   deadlineAt?: number;
+  /**
+   * D0-2 (2026-08-29): per-ATTEMPT timeout in ms. Document-reading routes pass
+   * EXTRACT_ATTEMPT_TIMEOUT_MS (45s — see src/lib/ai/http.ts for the
+   * arithmetic); everything else keeps the 20s default. A timeout that cannot
+   * fit the generation the output ceiling allows is a bug, not a guard.
+   * Honoured by the gemini and openai providers (the two with keys).
+   */
+  timeoutMs?: number;
 };
 
 /**

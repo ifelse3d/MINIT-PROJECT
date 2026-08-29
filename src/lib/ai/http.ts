@@ -29,6 +29,46 @@ import "server-only";
 export const REQUEST_TIMEOUT_MS = 20_000;
 
 /**
+ * D0-2 (2026-08-29, work order 56) — per-attempt timeout for DOCUMENT READS,
+ * the time-side twin of EXTRACT_OUTPUT_CEILING: "a limit must fit the largest
+ * item the other limits on the same path admit".
+ *
+ * THE INCIDENT. J uploaded a constitution on 2026-08-29 and got "The AI took
+ * too long" (app_errors: VendorTimeoutError, org 91, ai_usage refunded 49s
+ * after the charge). Work order 51 had raised EXTRACT_OUTPUT_CEILING.
+ * constitution to 64k so long reads stop dying at MAX_TOKENS — but the
+ * per-attempt timeout stayed at 20s. Measured on the same org's 8-27 rows,
+ * gemini-3.5-flash-lite generates ≥410 output tokens/second, so any read
+ * needing more than ~8k output tokens now outlives one 20s attempt. The
+ * route then burned its whole 50s budget on THREE aborted attempts (20s +
+ * 20s + capped remainder), each thrown away mid-generation — a single long
+ * attempt would have finished.
+ *
+ * THE ARITHMETIC (all three walls, so nobody re-breaks one of them):
+ *   * Vercel maxDuration = 60s — after a platform kill NOTHING runs, so the
+ *     vendor budget must end well before it.
+ *   * ROUTE_AI_DEADLINE_MS = 50s — leaves 10s for the refund write, the
+ *     app_errors insert and the response.
+ *   * 45s per attempt — one long attempt inside the 50s budget. If it times
+ *     out, the remaining <5s is under MIN_ATTEMPT_BUDGET_MS, so no doomed
+ *     retry starts; a TRANSIENT failure (429/503 answers in <1s) still
+ *     leaves ~44s for a real second attempt.
+ *
+ * What 45s buys at ≥410 tok/s is ~18k output tokens ≈ 10–18 dense pages.
+ * A document beyond that fails deterministically — the route must tell the
+ * person to SPLIT the file (documentTooLong), never "try again".
+ */
+export const EXTRACT_ATTEMPT_TIMEOUT_MS = 45_000;
+
+/**
+ * Above this many pages, a read that TIMED OUT was almost certainly a
+ * generation the 45s attempt cannot fit (see the arithmetic above), so the
+ * route answers with the "split the file" advice instead of "try again" —
+ * a retry of a too-long document fails identically and helps nobody.
+ */
+export const TIMEOUT_SPLIT_ADVICE_PAGES = 10;
+
+/**
  * P-1 (2026-08-27, work order 31): the overall time budget an AI route gives
  * its vendor calls, measured from the top of the route.
  *

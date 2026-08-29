@@ -10,7 +10,11 @@ import { chargeFence, refundFence } from "@/lib/fence";
 import { extractEventsPrompt } from "@/prompts/extract-events";
 import { SAMPLE_ORG_NAME } from "@/lib/sample-data";
 import { dayIsoMalaysia } from "@/lib/history";
-import { ROUTE_AI_DEADLINE_MS, VendorTimeoutError } from "@/lib/ai/http";
+import {
+  EXTRACT_ATTEMPT_TIMEOUT_MS,
+  ROUTE_AI_DEADLINE_MS,
+  VendorTimeoutError,
+} from "@/lib/ai/http";
 import { vendorFailureResponse } from "@/lib/ai/vendor-failure";
 
 // ---------------------------------------------------------------------------
@@ -131,7 +135,7 @@ export async function POST(req: Request) {
 
     let raw: unknown;
     try {
-      raw = await provider.extractJson({ prompt, imageBase64, mimeType, onUsage, deadlineAt });
+      raw = await provider.extractJson({ prompt, imageBase64, mimeType, onUsage, deadlineAt, timeoutMs: EXTRACT_ATTEMPT_TIMEOUT_MS });
     } catch (e) {
       // A refusal must never eat someone's quota (CLAUDE.md rule 10).
       // P-1: the failure is also recorded now (app_errors) — see id=5.
@@ -151,7 +155,7 @@ export async function POST(req: Request) {
 YOUR PREVIOUS ATTEMPT FAILED VALIDATION with these errors — fix them and respond with ONLY the corrected JSON:
 ${issues}`;
       try {
-        raw = await provider.extractJson({ prompt: retryPrompt, imageBase64, mimeType, onUsage, deadlineAt });
+        raw = await provider.extractJson({ prompt: retryPrompt, imageBase64, mimeType, onUsage, deadlineAt, timeoutMs: EXTRACT_ATTEMPT_TIMEOUT_MS });
         parsed = parseEventsExtraction(raw);
       } catch (e) {
         // P-1: a timeout is a timeout — not "rewrite the plan". Both refund.

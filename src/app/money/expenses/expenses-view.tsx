@@ -40,7 +40,12 @@ import {
   type ExpenseOutcome,
   type ExpenseRow,
 } from "./actions";
-import { AttachIcon, ChooseFileLabel, UsesOneAiAction } from "@/components/attach-icon";
+import {
+  AttachIcon,
+  ChooseFileLabel,
+  UploadLimitNote,
+  UsesOneAiAction,
+} from "@/components/attach-icon";
 
 const EXPENSE_CATEGORIES: { value: string; bm: string; zh: string; en: string }[] = [
   { value: "Perbelanjaan acara", bm: "Perbelanjaan acara", zh: "活动开支", en: "Event spending" },
@@ -489,6 +494,8 @@ export function ExpensesView({ role }: { role: string }) {
                 />
               </label>
               <UsesOneAiAction />
+              {/* D0-3 (拍板 4): the remaining size limit, at the door. */}
+              {!reading && <UploadLimitNote />}
               <span className="text-sm text-muted-foreground">
                 {mode === "claim" ? (
                   /* B-8: a claim WANTS its receipt attached — say so here,

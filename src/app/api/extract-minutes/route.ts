@@ -6,7 +6,11 @@ import {
   getVisionProvider,
   VendorOutputTruncatedError,
 } from "@/lib/ai/provider";
-import { ROUTE_AI_DEADLINE_MS, VendorTimeoutError } from "@/lib/ai/http";
+import {
+  EXTRACT_ATTEMPT_TIMEOUT_MS,
+  ROUTE_AI_DEADLINE_MS,
+  VendorTimeoutError,
+} from "@/lib/ai/http";
 import { vendorFailureResponse } from "@/lib/ai/vendor-failure";
 import { createUsageRecorder, refundUsage, requireAiQuota } from "@/lib/ai/usage";
 import { parseMeetingNotesExtraction } from "@/lib/extraction";
@@ -230,6 +234,9 @@ export async function POST(req: Request) {
         maxOutputTokens: EXTRACT_OUTPUT_CEILING.minutes,
         onUsage,
         deadlineAt,
+        // D0-2: a dense 5-page read can generate past what a 20s attempt fits
+        // — document reads get the long attempt (see EXTRACT_ATTEMPT_TIMEOUT_MS).
+        timeoutMs: EXTRACT_ATTEMPT_TIMEOUT_MS,
       });
     } catch (e) {
       // A refusal must never eat someone's quota (CLAUDE.md rule 10). Reading a
@@ -260,6 +267,7 @@ ${issues}`;
           maxOutputTokens: EXTRACT_OUTPUT_CEILING.minutes,
           onUsage,
           deadlineAt,
+          timeoutMs: EXTRACT_ATTEMPT_TIMEOUT_MS,
         });
         parsed = parseMeetingNotesExtraction(raw);
       } catch (e) {

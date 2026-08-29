@@ -5,21 +5,55 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-29 清晨（MYT）· Fable 5（51 号过夜施工场收工：包 A ✅ 包 B ✅ 小修包 ✅）**
-**🔴 本场状态一句话：51 号总单三包全部做完（52/53/55 号报告＋54 号 GUIDE）。
-两支新 migration 只写档等 J 贴：32（roster note/honorific）与 33（云端草稿），
-fail-open 都实测过。四道关全绿（eslint 还从 22 降到 21）、三条 e2e 全过
-（roles 修好后首次）、围栏三面墙实测全挡。J 早上：贴 32 → 贴 33 →
-push-cabang.bat → 叫 tester（清单在 55 号报告末尾）。C-14① 两表合并
-留给下一场（凌晨不动钱区最敏感的表，如实记）。**
+**最后更新：2026-08-29 午（MYT）· Fable 5（56 号 eROSES 大改版场进行中：包 D0 ✅）**
+**🔴 本场状态一句话：56 号总单（⑤ eROSES 大改版）开工，包 D0 做完（57 号报告）：
+「AI took too long」真因＝20s 单次时限装不下 64k 输出上限（时间版配对 bug），
+改 45s 长尝试后 CONTOH 8 页章程 42s 实测读通；章程页改 A-5 先选后送（多张＋
+double confirm）；>4MB 的 .pptx/.docx 走 Storage 直传实测走通、门口全写 12MB；
+qa-drill.md 加限制清单 Q16b。包 D0 无新 migration。四道关全绿（eslint 21 基准、
+vitest 949）＋三条 e2e 全绿。接下来：包 D1（钱区两表合并＋科目对照）→ D2 → D3。
+51 号场留给 J 的事未变：贴 migration 32/33 → push-cabang.bat → 叫 tester。**
 
 ---
 
-## 🌙 现在在哪里（2026-08-29 凌晨，过夜场进行中）
+## 🌙 现在在哪里（2026-08-29 午，56 号 eROSES 场进行中）
 
 > **已上线**：https://minit-project.vercel.app —— 截至 0ca62e7 已 push；
-> 过夜的 commit 等 J 早上 push-cabang.bat。
+> 51 号＋56 号的 commit 等 J push-cabang.bat。
 > 线上 org：15「J」、58「avocado」、91「TESTING1」。
+
+### 这一场做了什么（56 号 eROSES 场 · 包 D0 ✅，57 号报告）
+
+- **D0-2「The AI took too long」真因＋修**（拍板 5）：线上取证
+  （probe-timeout-56.mjs，唯读）——J 8/29 那笔＝org 91 extract_constitution
+  扣费 49s 后退款＋app_errors VendorTimeoutError，cost NULL（三次尝试全被
+  20s abort 掐断）；8/27 旧 MAX_TOKENS 案反推生成速度 ≥410 tok/s ⇒ 51 场把
+  ceiling 提到 64k 后 20s 单次时限必死（**截断案的修法把死因搬进了逾时**）。
+  修：`EXTRACT_ATTEMPT_TIMEOUT_MS=45s`（三方配对算术在 http.ts 档头），
+  `VisionJsonRequest.timeoutMs` 通到 gemini/openai，七支文件路由全传；
+  `TIMEOUT_SPLIT_ADVICE_PAGES=10`——大 PDF 超时是决定性失败，
+  vendorFailureResponse 加 bigDocument → 教拆档不教重试。
+  **实测：CONTOH 8 页 42.0s 一次读通（$0.052）**；42s 贴近 45s 墙＝8 页已近
+  上限，更大的会被教拆档（设计使然，60s serverless 硬顶下无解）。
+- **D0-1 章程页 A-5 化**（拍板 3）：onFilePicked（选了就读就扣）拆成
+  stageFiles＋sendStaged——多张照片＋缩图＋可删＋「＋加下一页」＋
+  「读这 N 页」按了才送；PDF 一次一份；失败页停在原地不丢已读的页。
+  「多张只限照片」抽成 `src/lib/multi-page-staging.ts` 纯函数，AskBox 共用。
+  input 拿掉 capture（同 AskBox #8：才有相簿多选）。
+- **D0-3 Office 大档直传**（拍板 4）：relay 收 .pptx/.docx（PK 魔术字＋
+  副档名白名单；.xlsx 刻意不收——表格门 40k 字符顶吃不下，通到墙的路不是路）；
+  maybeRelayLargeDocument 经 prepareUploadForSend 八门全接；server 按 kind
+  验魔术字重建正确 MIME → office 分流自然接手；新 USER_ERRORS.officeTooBigForAi。
+  **门口白纸黑字**：新 UploadLimitNote（数字从 RELAY_MAX_BYTES 算），挂六个门。
+- **D0-4**：qa-drill.md 新增 Q16b 限制清单（平台的 vs 我们的，数字↔常数对应）。
+- **测过**：tsc 0 · eslint 21（同基准）· vitest **949 全过（+19）** · build ✓ ·
+  **e2e:minutes ✓ money ✓ roles ✓** · 新探针 probe-d0-56.mjs **22 项全 PASS**
+  （double confirm 送出前 0 请求；4.77MB pptx 走 relay 读通、读完即删；
+  12.21MB 诚实拒绝零扣费；总花费 $0.0594，ZZZ 全删）。
+- 顺带如实记：ai_usage 有三笔 draft_minutes 退款（8/28）＝厂商有回话的
+  另一类失败（疑 8192 预设 ceiling 或 zod 两败）——**品质场（⑦）的线索**，本包没动。
+- ⚠ 没能验证的：Vercel 线上 45s 与 maxDuration 的真互动（本机 next start
+  没有 60s 杀）；真手机相簿多选。
 
 ### 这一场做了什么（51 号过夜场 · 包 A ✅，52 号报告）
 
@@ -312,14 +346,15 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
 
 ### ⏭ 下一个 session 从哪开始
 
-**51 号过夜单已全部做完**（包 A=52 号、包 B=53 号、小修包=55 号报告）。
-接下来照 51 号 §5 的场次顺序（J 已点头）：
-**⑤ eROSES 大改版**（A2 整包＋「存好问要不要呈报→图文引导＋每值 COPY」；
-教材＝`C:\Users\User\Desktop\Penyata Kewangan screenshot` 那 17 张截图，
-九步清单抄在 51 号 §5；系统现缺四个洞：钱区科目↔1.1–2.4 对照、Juruaudit
-概念、银行户口＋会员数/投票权数栏、活动报告生成）→
-⑥ AI 智能建议场 → ⑦ 品质场 → ⑧ 助手＋AI 代办 → ⑨ 上线后第一批。
-**顺路补**：C-14① 两表合并（未决 14）适合塞进 ⑤ 前后的钱区场。
+**⑤ eROSES 大改版进行中（56 号总单，J 已拍板不用再问）**：
+包 D0 ✅（57 号报告）→ **接下来是包 D1**（§3：C-14① 两表合并＋
+钱区科目↔eROSES 1.1–2.4 对照，纯 TS 先于 UI，动钱区必跑 e2e:money）→
+包 D2（§4：Juruaudit／银行户口＋会员数栏／活动报告，migration 34 号起只写档）→
+包 D3（§5 主菜：存好后问「要呈报 eROSES 吗？」→ 九步引导＋每值 COPY；
+**做之前先看完** `C:\Users\User\Desktop\Penyata Kewangan screenshot` 17 张截图）。
+每包收尾照 §7：四道关＋e2e＋覆写 STATE＋报告（58 号起）＋全 commit。
+之后场次照旧：⑥ AI 智能建议 → ⑦ 品质场（draft_minutes 退款线索在 57 号报告）→
+⑧ 助手＋AI 代办 → ⑨ 上线后第一批。
 竞赛材料 J 自己定 30/31 交，**不催**。
 RESPONSIVE：J 若再圈破版，贴 46 号单同段 PROMPT 继续。
 
@@ -327,7 +362,22 @@ RESPONSIVE：J 若再圈破版，贴 46 号单同段 PROMPT 继续。
 
 ## 6. 已知陷阱（踩过的，别再踩）
 
-### 2026-08-29 凌晨新增（51 号过夜场）
+### 2026-08-29 午新增（56 号场 · 包 D0）
+
+- 🔴 **放大一个上限，先查同路径上每个「时间」上限装不装得下新的最大件。**
+  51 场把章程输出 ceiling 提到 64k 修好了截断案，但单次 vendor 时限还停在
+  20s——生成 64k 要的时间远超 20s，修截断把死因搬进了逾时（J 的「AI took
+  too long」）。既有教训「上限要装得下同路径其他上限允许的最大件」**包括
+  时间维度**。判断方法：任何 maxOutputTokens 的调整，拿实测生成速度
+  （app_errors/ai_usage 反推得出 ≥410 tok/s）除一下，跟 timeoutMs 比。
+- 💡 **被 abort 的 vendor 呼叫连 usageMetadata 都不会有**——ai_usage 一行
+  cost NULL＋refunded、app_errors 记 VendorTimeoutError，就是「我们自己
+  掐断了它」的指纹（厂商真的挂了通常至少有部分回应或 5xx 记录）。
+- ⚠ **对「读多页」的 UI 断言，成功的中间态会提前满足 wait 条件**：
+  「条条文已读入」在第 1 页合并后就出现、第 2 页还在读，探针提前断言＋
+  下一步 uploadFile 被 aiBusy 静默吞掉。等「整个 run 结束」（busy 字样消失）
+  再断言；另外收合的 `<details>` 内文不在 innerText 里，断言要对可见的
+  summary/heading。
 
 - 🔴 **React 19 会在 form action 返回后自动 reset 非受控栏位——成功、报错、
   「再问一句」全都会**。后果两种：①受控栏位不清（B-4 的「日期卡着上一笔」）；

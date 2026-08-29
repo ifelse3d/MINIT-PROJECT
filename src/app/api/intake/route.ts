@@ -36,7 +36,12 @@ import { dayIsoMalaysia } from "@/lib/history";
 import { recordUpload } from "@/lib/record-upload";
 import { chargeFence, refundFence } from "@/lib/fence";
 import { checkPageLimit, countPdfPages } from "@/lib/pdf-pages";
-import { ROUTE_AI_DEADLINE_MS, VendorTimeoutError } from "@/lib/ai/http";
+import {
+  EXTRACT_ATTEMPT_TIMEOUT_MS,
+  ROUTE_AI_DEADLINE_MS,
+  TIMEOUT_SPLIT_ADVICE_PAGES,
+  VendorTimeoutError,
+} from "@/lib/ai/http";
 import { vendorFailureResponse } from "@/lib/ai/vendor-failure";
 import {
   isLegacyOfficeFile,
@@ -453,6 +458,9 @@ export async function POST(req: Request) {
         maxOutputTokens,
         onUsage: onExtractUsage,
         deadlineAt,
+        // D0-2: document reads get the long attempt — a constitution through
+        // this door is the same longest job (see EXTRACT_ATTEMPT_TIMEOUT_MS).
+        timeoutMs: EXTRACT_ATTEMPT_TIMEOUT_MS,
       });
     } catch (e) {
       // F-2 parity with /api/extract-minutes: the vendor was never reached (or
@@ -462,7 +470,9 @@ export async function POST(req: Request) {
       // at 0 rows through the id=5 incident.
       await refundUsage(gate.org.id, extractCharge);
       await refundFence(fenceCharge);
-      return vendorFailureResponse("/api/intake", e, gate.org.id);
+      return vendorFailureResponse("/api/intake", e, gate.org.id, {
+        bigDocument: pageCount > TIMEOUT_SPLIT_ADVICE_PAGES,
+      });
     }
 
     let parsed = validate(raw);
@@ -482,6 +492,7 @@ ${issues}`,
           maxOutputTokens,
           onUsage: onExtractUsage,
           deadlineAt,
+          timeoutMs: EXTRACT_ATTEMPT_TIMEOUT_MS,
         });
         parsed = validate(raw);
       } catch (e) {
@@ -492,7 +503,9 @@ ${issues}`,
         if (e instanceof VendorTimeoutError || e instanceof VendorOutputTruncatedError) {
           await refundUsage(gate.org.id, extractCharge);
           await refundFence(fenceCharge);
-          return vendorFailureResponse("/api/intake", e, gate.org.id);
+          return vendorFailureResponse("/api/intake", e, gate.org.id, {
+            bigDocument: pageCount > TIMEOUT_SPLIT_ADVICE_PAGES,
+          });
         }
         void captureAppError("/api/intake", e, { orgId: gate.org.id });
         // fall through

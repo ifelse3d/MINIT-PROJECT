@@ -11,7 +11,7 @@ import {
   type MemberActionState,
 } from "./actions";
 import { Trash2 } from "lucide-react";
-import { AttachIcon, ChooseFileLabel } from "@/components/attach-icon";
+import { AttachIcon, ChooseFileLabel, UploadLimitNote } from "@/components/attach-icon";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
 import { uploadErrorMessage } from "@/lib/shrink-photo";
 import { prepareUploadForSend } from "@/lib/upload-relay-client";
@@ -598,6 +598,8 @@ Setiausaha, 林小美
                   onChange={(e) => readWithAi(e.target.files?.[0])}
                 />
               </label>
+              {/* D0-3 (拍板 4): the remaining size limit, at the door. */}
+              {!aiBusy && <UploadLimitNote />}
               {aiBusy && (
                 <p className="text-base">
                   <Tri

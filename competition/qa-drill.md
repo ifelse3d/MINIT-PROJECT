@@ -205,6 +205,30 @@ variables that switch it on」，**不要讲成已经在跑，也不要讲成还
 > Failure is visible, never silent: no batch crashes; every item lands in done or
 > failed, with a reason.
 
+### Q16b「文件大小／用量有什么限制？为什么？」（D0-4，2026-08-29 拍板 6）
+
+> Photos any size — the browser shrinks them before upload. Documents up to 12MB.
+> Free plan: lifetime 5 documents, 20 AI-read pages, 20 receipts, 3 clean
+> downloads, watermarked PDFs; paid removes all of that. Every limit is printed at
+> the button it applies to — nobody finds out after tapping.
+
+**哪些上限是「平台的」、哪些是「我们的」（被追问才展开）：**
+
+| 上限 | 数字 | 谁定的 | 为什么 |
+|---|---|---|---|
+| 照片上传 | 自动缩到 ≤4MB | 我们（因平台） | Vercel serverless 请求体 ~4.5MB 硬顶（text/plain 413，不进代码）；浏览器端先缩图，长边 ≤2000px |
+| PDF | ≤12MB（>4MB 走 Storage 直传，不过 Vercel） | 我们（因厂商） | AI 厂商单请求 ~20MB 顶；PDF 以 base64（×4/3）内嵌，12MB ≈ 16MB 在线上，留 prompt 余量 |
+| Word / PowerPoint（.docx/.pptx） | 同 12MB，同一条直传路 | 我们 | 2026-08-29 打通（此前 >4MB 被诚实拒绝）；旧版 .doc/.ppt 不收，提示另存新格式 |
+| Excel（.xlsx） | ≤4MB | 我们 | 表格在服务器上确定性转文字（不花 AI），转换器自身有 40k 字符顶；更大的表格拆开传 |
+| 单份页数 | 会议记录 5 页 · 账本 20 页 · 章程 50 页 | 我们 | 页数在扣费**之前**数好；上限配对输出 token 顶（64k），装不下的直接讲「拆档」，不骗人重试 |
+| AI 等待 | 单次读取最多 ~45 秒 | 我们（因平台） | Vercel 函数 60 秒硬顶，杀掉后退款代码都不会跑；45 秒内读不完＝退款＋讲拆档 |
+| 免费版终身围栏 | 5 份文件 / 20 页 AI 读取 / 20 张收据 / 3 次干净下载＋水印 | 我们（商业） | 引流引擎：钱区手动记账**不占**页数；示范模式完全在围栏外 |
+| AI 动作月配额 | 新 org 每月 15 次 | 我们（商业） | 每次动作的余量始终可见；厂商没到达＝自动退回 |
+
+📌 一句收尾：**每一道上限都写在它挡人的那颗按钮门口** —— 用户永远不会「按了才知道」。
+数字与代码常数对应：`shrink-photo.ts`（4MB）· `upload-relay.ts`（12MB）·
+`pdf-pages.ts`（页数）· `ai/http.ts`（45s/50s/60s）· `plans.ts`（围栏 5/20/20/3）。
+
 ---
 
 ## ❗ 这一题只有你答得了

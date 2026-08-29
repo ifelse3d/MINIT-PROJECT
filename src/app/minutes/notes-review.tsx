@@ -18,7 +18,7 @@ import { FieldRow } from "./field-row";
 import { AddRowButton, DeletableRow } from "./row-controls";
 import { useMinutes, type TextLikeField } from "./minutes-store";
 import type { ResolutionKind } from "@/lib/extraction";
-import { AttachIcon, ChooseFileLabel } from "@/components/attach-icon";
+import { AttachIcon, ChooseFileLabel, UploadLimitNote } from "@/components/attach-icon";
 
 // D-7 / J review 27-evening #30 (2026-08-28): the review GROUPS what was
 // decided instead of printing one flat transcription wall. The model labels
@@ -317,6 +317,8 @@ export function NotesReview() {
               }}
             />
           </label>
+          {/* D0-3 (拍板 4): the remaining size limit, at the door, in writing. */}
+          {!aiBusy && <UploadLimitNote office />}
           {/* J's UX list N1: MinitAI only took photos. Typing costs no credit, no
               upload and no model — and it is the answer when the photo will not
               read, when the notes are already on a laptop, or when four people

@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   RELAY_MAX_BYTES,
+  RELAY_MIME,
   RELAY_STALE_MS,
+  bytesMatchRelayKind,
   isRelayPathForOrg,
   looksLikePdf,
+  looksLikeZip,
   relayFileName,
+  relayKindFor,
   relayPathFor,
   relaySafeName,
   relayTimestamp,
@@ -64,6 +68,47 @@ describe("looksLikePdf", () => {
     expect(looksLikePdf(pdf)).toBe(true);
     expect(looksLikePdf(jpg)).toBe(false);
     expect(looksLikePdf(new ArrayBuffer(2))).toBe(false);
+  });
+});
+
+// D0-3 (work order 56, 拍板 4): .docx/.pptx ride the relay too.
+describe("relayKindFor", () => {
+  it("routes by MIME first", () => {
+    expect(relayKindFor("x.bin", "application/pdf")).toBe("pdf");
+    expect(relayKindFor("x.bin", RELAY_MIME.docx)).toBe("docx");
+    expect(relayKindFor("x.bin", RELAY_MIME.pptx)).toBe("pptx");
+  });
+
+  it("falls back to the extension (phone browsers send blank types)", () => {
+    expect(relayKindFor("Laporan.PDF", "")).toBe("pdf");
+    expect(relayKindFor("minit 2025.docx", "")).toBe("docx");
+    expect(relayKindFor("taklimat.pptx", "application/octet-stream")).toBe("pptx");
+  });
+
+  it("gives no road to photos, xlsx or legacy Office files", () => {
+    expect(relayKindFor("a.jpg", "image/jpeg")).toBe(null);
+    expect(relayKindFor("senarai.xlsx", "")).toBe(null);
+    expect(relayKindFor("old.doc", "application/msword")).toBe(null);
+    expect(relayKindFor("old.ppt", "")).toBe(null);
+  });
+});
+
+describe("zip magic", () => {
+  const zip = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0x14]).buffer as ArrayBuffer;
+  const pdf = new TextEncoder().encode("%PDF-1.7").buffer as ArrayBuffer;
+
+  it("accepts PK\\x03\\x04 and refuses everything else", () => {
+    expect(looksLikeZip(zip)).toBe(true);
+    expect(looksLikeZip(pdf)).toBe(false);
+    expect(looksLikeZip(new ArrayBuffer(2))).toBe(false);
+  });
+
+  it("bytesMatchRelayKind pairs each kind with its own magic", () => {
+    expect(bytesMatchRelayKind("pdf", pdf)).toBe(true);
+    expect(bytesMatchRelayKind("pdf", zip)).toBe(false);
+    expect(bytesMatchRelayKind("docx", zip)).toBe(true);
+    expect(bytesMatchRelayKind("pptx", zip)).toBe(true);
+    expect(bytesMatchRelayKind("pptx", pdf)).toBe(false);
   });
 });
 

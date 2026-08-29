@@ -34,18 +34,30 @@ import { VendorOutputTruncatedError } from "./provider";
  *     bills the member again (that lie ran twice on J's new-user test,
  *     2026-08-28, at RM0.10 a tap).
  *   - anything else              → 502, "the AI could not be reached".
+ *
+ * D0-2 (2026-08-29, work order 56): pass `bigDocument: true` when the failed
+ * call was reading a MANY-page document (the caller knows the page count).
+ * For such a document a timeout is DETERMINISTIC — generation time exceeds
+ * the route's whole vendor budget (see EXTRACT_ATTEMPT_TIMEOUT_MS) — so
+ * "wait a minute and try again" is the same lie the truncation path already
+ * refuses to tell. The honest advice is the same as truncation's: split it.
  */
 export function vendorFailureResponse(
   route: string,
   err: unknown,
   orgId: number | null,
+  opts?: { bigDocument?: boolean },
 ): NextResponse {
   // Fire-and-forget on purpose: the person is waiting for their error message,
   // and captureAppError is best-effort by design.
   void captureAppError(route, err, { orgId });
   if (err instanceof VendorTimeoutError) {
     return NextResponse.json(
-      { error: joinUserError(USER_ERRORS.aiTimeout) },
+      {
+        error: joinUserError(
+          opts?.bigDocument ? USER_ERRORS.documentTooLong : USER_ERRORS.aiTimeout,
+        ),
+      },
       { status: 504 },
     );
   }
