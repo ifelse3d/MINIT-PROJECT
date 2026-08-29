@@ -302,10 +302,24 @@ async function main() {
   );
   check("event card proposes the gotong-royong (15/11)", cards.includes("Gotong-royong"));
   check("every card carries its source line (拍板 5)", cards.includes("因为会议记录写了"));
-  check(
-    "fail-open: the migration 36 note shows on this behind DB",
-    cards.includes("migration 36"),
-  );
+  // Work order 81 I5: migration 36 is APPLIED now, so the contract flipped —
+  // the plain-language fail-open note must NOT show, and ignoring must land
+  // in suggestion_marks (cross-device). The old behind-DB branch is kept so
+  // the probe still tells the truth on a database that is behind.
+  const marksTableRes = await rest(`/suggestion_marks?select=id&limit=1`);
+  const marksApplied = marksTableRes.ok;
+  console.log(`suggestion_marks table on this DB: ${marksApplied ? "APPLIED" : "NOT YET"}`);
+  if (marksApplied) {
+    check(
+      "36 applied: no 'migration 36' fail-open note on the cards",
+      !cards.includes("migration 36"),
+    );
+  } else {
+    check(
+      "fail-open: the migration 36 note shows on this behind DB",
+      cards.includes("migration 36"),
+    );
+  }
 
   // --- ignore the gotong-royong card ---------------------------------------
   const ignored = await clickCardButton(page, "Gotong-royong", "忽略");
@@ -314,6 +328,18 @@ async function main() {
   cards = await cardsText();
   check("ignored card is gone", !cards.includes("Gotong-royong"));
   check("the ignored count line shows (留痕可见)", cards.includes("已忽略 1 条"));
+  if (marksApplied) {
+    // 81 I5: the dismissal is a ROW now, not a localStorage entry — that is
+    // what makes "ignored" survive a change of device.
+    const marks = await (
+      await rest(`/suggestion_marks?org_id=eq.${orgId}&select=action&limit=5`)
+    ).json();
+    check(
+      "36 applied: the ignore landed in suggestion_marks (跨装置)",
+      Array.isArray(marks) && marks.length >= 1,
+      JSON.stringify(marks),
+    );
+  }
 
   // --- confirm the member card ---------------------------------------------
   const memberOk = await clickCardButton(page, "ZZZ Melati Probe", "确认加入");
@@ -374,7 +400,9 @@ async function main() {
     !cards.includes("加进日历"),
   );
   check(
-    "after reload the ignored card stays hidden (localStorage fail-open)",
+    // 36 applied → hidden by the suggestion_marks row; behind DB → by this
+    // device's localStorage. Either way the person's decision sticks.
+    "after reload the ignored card stays hidden",
     !cards.includes("Gotong-royong"),
   );
 
