@@ -5,26 +5,48 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-29 下午（MYT）· Fable 5（56 号 eROSES 大改版场：D0 ✅ D1 ✅ D2 ✅ D3 ✅ 全单收工）**
-**🔴 本场状态一句话：56 号总单四包全部做完（57/58/59/60 号报告）。
-D0：45s 长尝试修「AI took too long」（CONTOH 42s 实测）＋章程页 A-5＋Office
-直传＋Q16b。D1：钱录入两表合一＋eROSES Penyata Kewangan 对照表。D2：审计员
-名单／Maklumat Am＋银行户口／活动报告生成（migration 34/35 只写档）。
-D3（主菜）：存好会议记录→问「要呈报 eROSES 吗？」→ /filings/eroses 九步引导
-（每值 COPY；步 5 真 UI 实测「1.1 Derma=16,252.00」；成品页旧 paste 区块搬走）。
-四道关全绿（eslint 21 基准、vitest 976）＋三条 e2e 全绿＋四支新探针全 PASS
-（真 vendor 两次：CONTOH $0.052、laporan $0.0007；其余零 AI 费）。
-🔴 J 的事：贴 migration 32/33/34/35（salin-migration.bat）→ push-cabang.bat →
-叫 tester（清单在 60 号报告＋55 号报告末尾）→ 登入 eROSES 顺手下载官方
-Penyata Kewangan 模板（60 号报告第 5 点）。**
+**最后更新：2026-08-29 傍晚（MYT）· Fable 5（64 号 AI 智能建议场：E1 ✅，E2/E3 进行中）**
+**🔴 本场状态一句话：⑥ AI 智能建议场（64 号单）开工。包 E1 ✅（65 号报告）：
+`src/lib/minutes-suggestions.ts` 纯推导——已确认会议记录 → 加人/换届卡
+（只认 office_bearers 结构化栏位，名册已有不出、换届只提示不代删）＋
+加活动/下次会议卡（只认明确日期、只出会议日之后、过去引用绝不跳年）；
+每条建议带 source_ref；32 支测试钉「不该出的不出」。零 AI 呼叫零额度。
+四道关全绿（tsc 0 · eslint 21 基准 · vitest 1008 · build ✓）。
+「改地点/改资料」型不上（orgs 无地址栏无处可写，报告写明）。
+接下来：包 E2（AI 补位判断）→ 包 E3（migration 36 留痕表＋成品页卡片 UI＋
+一键确认走既有 action＋e2e/探针）。
+🔴 J 的事（沿上一场，未变）：贴 migration 32/33/34/35（salin-migration.bat）→
+push-cabang.bat → 叫 tester（清单在 60 号＋55 号报告末尾）→ 登入 eROSES
+顺手下载官方 Penyata Kewangan 模板（60 号报告第 5 点）。**
 
 ---
 
-## 🌙 现在在哪里（2026-08-29 午，56 号 eROSES 场进行中）
+## 🌙 现在在哪里（2026-08-29 傍晚，64 号 AI 智能建议场进行中）
 
 > **已上线**：https://minit-project.vercel.app —— 截至 0ca62e7 已 push；
 > 51 号＋56 号的 commit 等 J push-cabang.bat。
 > 线上 org：15「J」、58「avocado」、91「TESTING1」。
+
+### 这一场做了什么（64 号 AI 智能建议场 · 包 E1 ✅，65 号报告）
+
+- **`src/lib/minutes-suggestions.ts`（＋32 支测试）**：纯推导，零 AI 呼叫
+  零写入。输入＝已存档 extraction＋现有名册＋现有日历；输出＝建议候选
+  {类型, 内容, source_ref}（拍板 5：无来源不出卡）。
+- **加人/换届**：只从 office_bearers 结构化栏位（prompt 本就把委任/选举导
+  进这栏）；名册已有（任何职位、大小写空格不敏感）＝不出；同职位现任
+  别人＝replaces 提示（只显示不代删——政府申报名单的移除是人的决定）；
+  term_start 自动带会议日期。
+- **加活动**：resolutions 文字里规则解析明确日期（ISO/12/9/12 Ogos/1hb
+  Ogos 2026/9月12日/2026年9月12日）＋时间照抄原字；只出会议日**之后**；
+  无年份且日期在会议日前＝当过去引用整条放弃**绝不跳年**；日历同日同名
+  已有＝不出。
+- **误杀防线（测试钉住）**：小写 may/jun 不当月份、month-first 不解析、
+  「第3点」不当三点钟、「每月12日」不当日期、31/2 拒绝、会议无日期时只认
+  带年份完整日期、名册读不到＝不出加人卡；上限 15 人卡/6 活动卡。
+- **不上（照实）**：改地点/改资料（orgs 无地址栏无处可写）、散文里的
+  新成员人名（规则猜＝误杀）、中文数字日期。
+- **测过**：tsc 0 · eslint 21（基准）· vitest **1008 全过（+32）** · build ✓。
+  e2e 未跑——纯 lib 没动页面（E3 卡片上线后三条一起跑）。
 
 ### 这一场做了什么（56 号 eROSES 场 · 包 D3 ✅，60 号报告——主菜）
 
