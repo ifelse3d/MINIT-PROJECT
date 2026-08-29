@@ -46,16 +46,12 @@ import {
   UploadLimitNote,
   UsesOneAiAction,
 } from "@/components/attach-icon";
+import { EXPENSE_CATEGORIES } from "@/lib/money-categories";
 
-const EXPENSE_CATEGORIES: { value: string; bm: string; zh: string; en: string }[] = [
-  { value: "Perbelanjaan acara", bm: "Perbelanjaan acara", zh: "活动开支", en: "Event spending" },
-  { value: "Utiliti", bm: "Utiliti (air/elektrik)", zh: "水电杂费", en: "Utilities" },
-  { value: "Penyelenggaraan", bm: "Penyelenggaraan", zh: "维修保养", en: "Maintenance" },
-  { value: "Alat tulis", bm: "Alat tulis & pejabat", zh: "文具与办公", en: "Stationery & office" },
-  { value: "Sewa", bm: "Sewa", zh: "租金", en: "Rent" },
-  { value: "Pengangkutan", bm: "Pengangkutan", zh: "交通", en: "Transport" },
-  { value: "Lain-lain", bm: "Lain-lain", zh: "其他", en: "Other" },
-];
+// D1-2 (work order 56): EXPENSE_CATEGORIES moved to src/lib/money-categories
+// .ts (imported above), where each category carries the eROSES Penyata
+// Kewangan cell it lands in — and gained "Kebajikan & khairat", the welfare/
+// bereavement spending eROSES files under 2.1 that had no home here.
 
 const STATUS_BADGE: Record<ExpenseStatus, { cls: string; bm: string; zh: string; en: string }> = {
   recorded: { cls: "border-slate-300 bg-slate-100 text-slate-800", bm: "Direkod", zh: "已记录", en: "Recorded" },

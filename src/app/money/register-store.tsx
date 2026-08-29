@@ -193,7 +193,6 @@ export type RegisterStore = {
    * number series is gap-free and the row behind a number never disappears.
    */
   clearUnreceiptedDrafts: () => void;
-  addManualDonation: (d: RegisterDonation) => void;
   addManualDonations: (rows: RegisterDonation[]) => void;
   /** `ids` narrows the issue to those rows (#3: "this round only", or a
    *  hand-picked selection on the receipts page). Absent = every
@@ -420,7 +419,7 @@ export function RegisterProvider({
     // themselves live in the register and are untouched). "auto" keeps the
     // G-2 page-by-page merge for a review still in progress.
     mode: "auto" | "fresh" = "auto",
-    // D-2: a slip photographed from the manual-income form carries the income
+    // D-2: a slip photographed from the typed-income grid's photo door carries the income
     // type the person CHOSE (会员费/租金/…). Rows the model read no purpose
     // for get that type at confidence "check" — the person picked it, the
     // person still eyeballs it per row. The extract prompt is untouched.
@@ -666,16 +665,6 @@ export function RegisterProvider({
       prev.filter((d) => !(d.receiptNo === null && d.custodyStatus === "collected")),
     );
   }, [donations, setDonations]);
-
-  // Manual income entry (the eROSES-test exception) appends a confirmed row.
-  const addManualDonation = useCallback(
-    (d: RegisterDonation) => {
-      setRoundIds((prev) => [...prev, d.id]);
-      setDonations((prev) => [...prev, d]);
-      syncRowsToDb([d]);
-    },
-    [setDonations, setRoundIds, syncRowsToDb],
-  );
 
   /** A whole typed collection at once (see ./type-donations.tsx). One state
    *  update, not one per row: forty setState calls in a loop would re-render
@@ -1092,7 +1081,6 @@ export function RegisterProvider({
         saveDonation,
         deleteDonation,
         clearUnreceiptedDrafts,
-        addManualDonation,
         addManualDonations,
         issueReceipts,
         issueBusy,

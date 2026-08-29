@@ -9,8 +9,16 @@ import { parseRmToCents, type RegisterDonation } from "@/lib/receipts";
 import { dayIsoMalaysia } from "@/lib/history";
 import { usePersistentState } from "@/lib/use-persistent-state";
 import { useScopedKey } from "@/lib/storage-scope";
+import { INCOME_CATEGORIES, incomeCategoryFromPurpose } from "@/lib/money-categories";
+import {
+  isTooLargeToUpload,
+  shrinkPhotoForUpload,
+  tooLargeToUploadMessage,
+} from "@/lib/shrink-photo";
+import { AttachIcon, ChooseFileLabel, UsesOneAiAction } from "@/components/attach-icon";
 import { PaymentMethodToggle } from "./payment-method-toggle";
 import { TemplateChips, useTemplates } from "./templates";
+import { uploadTransferProof } from "./transfer-proof-actions";
 
 // ---------------------------------------------------------------------------
 // TYPE A WHOLE COLLECTION IN ONE GO (2026-08-22)
@@ -40,8 +48,22 @@ import { TemplateChips, useTemplates } from "./templates";
 // Money is parsed by parseRmToCents and the total is summed in TypeScript
 // (Hard Rule 2). Nothing here is sent to a model.
 //
-// Every row is tagged source: "manual", same as the single-entry form, so an
-// auditor can always see which rows had no original page.
+// Every row is tagged source: "manual", so an auditor can always see which
+// rows had no original page.
+//
+// D1-1 (work order 56, 拍板 8): THIS GRID IS NOW THE ONLY TYPED-INCOME DOOR.
+// The old single-row "Add income manually" card (manual-income.tsx) asked
+// seven fields to record one gift and closed again; forty gifts were forty
+// open-close cycles, and the two doors drifted (only the card had income
+// types and transfer proofs). The card's unique pieces moved HERE:
+//   * an income TYPE per row (the categories now live in
+//     src/lib/money-categories.ts, mapped to eROSES Penyata Kewangan cells);
+//   * a transfer-proof attachment per transfer row (Storage only, no AI —
+//     proofs are NOT part of the auto-saved draft: a File cannot live in
+//     localStorage, so an attached screenshot lasts until the page closes
+//     and the row says so);
+//   * the slip-photo entrance (pick the type, photograph the fee slip, the
+//     ledger reader pre-fills that type as the purpose).
 // ---------------------------------------------------------------------------
 
 type Draft = {
@@ -60,11 +82,17 @@ type Draft = {
   /** D19 (拍板 34): cash in a hand, or straight into the bank. Older saved
    *  drafts have no value — treated as cash. */
   method?: "cash" | "transfer";
+  /** D1-1: income type (a value from INCOME_CATEGORIES). Older saved drafts
+   *  have no value — treated as Derma, which is what they always were. */
+  category?: string;
 };
 
 /** Shape guard for a draft read back out of localStorage (B-5②): a wrong-
- *  shaped blob must fall back to a fresh grid, never crash the typing. */
-function isDraftArray(parsed: unknown): boolean {
+ *  shaped blob must fall back to a fresh grid, never crash the typing.
+ *  Exported for the D1-1 migration test: a draft saved BEFORE the merge
+ *  (rows without `category`) must still pass — forty typed rows must never
+ *  be thrown away by an upgrade. */
+export function isDraftArray(parsed: unknown): boolean {
   if (!Array.isArray(parsed)) return false;
   return parsed.every((r) => {
     if (typeof r !== "object" || r === null) return false;
@@ -82,7 +110,7 @@ function isDraftArray(parsed: unknown): boolean {
 
 /** What a row is missing, or null when it is ready. Never blocks typing — a
  *  half-typed row is normal; it only decides what "add them all" takes. */
-function problemWith(row: Draft): "empty" | "name" | "amount" | "item" | "estValue" | null {
+function problemWith(row: Draft): "empty" | "name" | "amount" | "item" | "estValue" | "note" | null {
   const blank =
     !row.name.trim() &&
     !row.amount.trim() &&
@@ -90,6 +118,9 @@ function problemWith(row: Draft): "empty" | "name" | "amount" | "item" | "estVal
     !(row.inKind && row.item.trim());
   if (blank) return "empty";
   if (!row.name.trim()) return "name";
+  // F-7 (kept from the single-row form): an "Other" income with no note is a
+  // register row that says nothing — the auditor cannot tell what it was.
+  if (!row.inKind && row.category === "Lain-lain" && !row.purpose.trim()) return "note";
   if (row.inKind) {
     // Goods: the item is what the receipt prints, so it is the required half;
     // the estimate is optional but must parse when present (Hard Rule 2 —
@@ -116,7 +147,7 @@ function problemWith(row: Draft): "empty" | "name" | "amount" | "item" | "estVal
  */
 let keySeq = 0;
 
-function blankRow(purpose: string, date: string): Draft {
+function blankRow(purpose: string, date: string, category = "Derma"): Draft {
   return {
     key: ++keySeq,
     name: "",
@@ -128,7 +159,20 @@ function blankRow(purpose: string, date: string): Draft {
     item: "",
     estValue: "",
     method: "cash",
+    category,
   };
+}
+
+/**
+ * What gets STORED as the row's purpose (and later classified back into an
+ * eROSES cell — see src/lib/eroses-penyata.ts): the old single-row form's
+ * convention, kept exactly. Derma rows keep their free wording ("Derma am");
+ * any other type prints as "Type" or "Type — note".
+ */
+export function storedPurposeFor(category: string, note: string, fallback: string): string {
+  const n = note.trim();
+  if (category === "Derma" || category === "") return n || fallback;
+  return n === "" ? category : `${category} — ${n}`;
 }
 
 const inputClass =
@@ -212,6 +256,8 @@ export function TypeDonations({
   defaultCollector,
   defaultPurpose = "Derma am",
   defaultOpen = false,
+  onSlipPhoto,
+  slipBusy,
 }: {
   /** Called once with every completed row — one batch, one confirmation. */
   onAddMany: (donations: RegisterDonation[]) => void;
@@ -221,6 +267,15 @@ export function TypeDonations({
    *  door on step 1 — the grid opens ready instead of hiding behind its own
    *  button on the page they were just sent to. */
   defaultOpen?: boolean;
+  /**
+   * D-2, moved here with the merge (D1-1): photograph the fee slip / rental
+   * receipt instead of typing — runs the ledger-reading pipeline with the
+   * CHOSEN income type pre-filling any purpose the model reads nothing for.
+   * Absent = no photo entrance.
+   */
+  onSlipPhoto?: (file: File, category: string) => Promise<boolean>;
+  /** True while the AI is reading (shared with the ledger reader). */
+  slipBusy?: boolean;
 }) {
   const t = useTriText();
   const localizeError = useLocalizedError();
@@ -236,6 +291,15 @@ export function TypeDonations({
   const [collector, setCollector] = useState(defaultCollector);
   const [error, setError] = useState<string | null>(null);
   const [added, setAdded] = useState<number | null>(null);
+  /** D1-1: transfer proofs by row key. NOT in the persisted draft — a File
+   *  cannot live in localStorage, so these last only as long as the page. */
+  const [proofs, setProofs] = useState<Map<number, File>>(new Map());
+  /** True while addAll uploads proofs — the buttons say so. */
+  const [saving, setSaving] = useState(false);
+  /** D-2: the income type the slip-photo door will pre-fill. */
+  const [slipCategory, setSlipCategory] = useState(INCOME_CATEGORIES[0].value);
+  /** The slip photo was read and now waits in the step-1 review. */
+  const [slipDone, setSlipDone] = useState(false);
 
   const freshRows = (): Draft[] => [
     blankRow(defaultPurpose, today),
@@ -268,26 +332,48 @@ export function TypeDonations({
   function update(key: number, patch: Partial<Draft>) {
     setAdded(null);
     setRows((current) => {
-      const next = current.map((r) => (r.key === key ? { ...r, ...patch } : r));
+      const next = current.map((r) => {
+        if (r.key !== key) return r;
+        const merged = { ...r, ...patch };
+        // Changing the TYPE clears a purpose that names a DIFFERENT type —
+        // otherwise "Yuran ahli" + leftover "Derma am" would store the
+        // contradiction "Yuran ahli — Derma am". A purpose the person wrote
+        // for this type (or plain words) stays.
+        if (
+          patch.category !== undefined &&
+          patch.category !== r.category &&
+          merged.purpose.trim() !== ""
+        ) {
+          const named = incomeCategoryFromPurpose(merged.purpose)?.value;
+          if (named !== undefined && named !== patch.category) merged.purpose = "";
+        }
+        return merged;
+      });
       // Always one empty row waiting at the bottom, so typing never stops to
-      // press a button. The date and purpose of the row above carry over —
-      // a collection is one afternoon, one purpose, forty names.
+      // press a button. The date, purpose and type of the row above carry
+      // over — a collection is one afternoon, one purpose, forty names.
       const last = next[next.length - 1]!;
       if (problemWith(last) !== "empty") {
-        next.push(blankRow(last.purpose, last.date));
+        next.push(blankRow(last.purpose, last.date, last.category ?? "Derma"));
       }
       return next;
     });
   }
 
   function removeRow(key: number) {
+    setProofs((prev) => {
+      if (!prev.has(key)) return prev;
+      const next = new Map(prev);
+      next.delete(key);
+      return next;
+    });
     setRows((current) => {
       const next = current.filter((r) => r.key !== key);
       return next.length ? next : [blankRow(defaultPurpose, today)];
     });
   }
 
-  function addAll() {
+  async function addAll() {
     setError(null);
     const broken = rows.find((r) => {
       const p = problemWith(r);
@@ -314,17 +400,60 @@ export function TypeDonations({
                   "估值无效。正确的写法：100、100.50 —— 也可以留空。",
                   "The estimated value is not valid. Correct examples: 100, 100.50 — or leave it empty.",
                 )
-              : t(
-                  "Ada jumlah yang tidak sah. Contoh yang betul: 10, 10.50, RM 10.50",
-                  "有一行的金额无效。正确的写法：10、10.50、RM 10.50",
-                  "A row has an amount that is not valid. Correct examples: 10, 10.50, RM 10.50",
-                ),
+              : p === "note"
+                ? t(
+                    "Untuk jenis “Lain-lain”, tulis satu ayat dalam ruang tujuan tentang pendapatan apa ini — juruaudit perlu tahu.",
+                    "选了「其他」的那一行，请在用途格写一句这是什么收入 —— 审计要看得懂。",
+                    "A row typed “Other” needs one sentence in its purpose box saying what the income is — the auditor needs to know.",
+                  )
+                : t(
+                    "Ada jumlah yang tidak sah. Contoh yang betul: 10, 10.50, RM 10.50",
+                    "有一行的金额无效。正确的写法：10、10.50、RM 10.50",
+                    "A row has an amount that is not valid. Correct examples: 10, 10.50, RM 10.50",
+                  ),
       );
       return;
     }
     if (ready.length === 0) {
       setError(t("Belum ada baris untuk ditambah.", "还没有可以加入的行。", "No rows to add yet."));
       return;
+    }
+
+    // D1-1: transfer screenshots go to Storage FIRST, so the register rows
+    // can carry their paths. A failed upload stops the WHOLE batch and says
+    // which row — the person can retry, or remove that file and add without
+    // it. Nothing is added until every attached proof has landed.
+    const proofPaths = new Map<number, string>();
+    setSaving(true);
+    try {
+      for (const r of ready) {
+        const file = r.method === "transfer" && !r.inKind ? proofs.get(r.key) : undefined;
+        if (!file) continue;
+        // 48: shrink in the browser; server actions ride the request body.
+        const proof = await shrinkPhotoForUpload(file);
+        if (isTooLargeToUpload(proof.size)) {
+          setError(`📄 ${r.name.trim()}: ${tooLargeToUploadMessage()}`);
+          return;
+        }
+        const form = new FormData();
+        form.append("proof", proof);
+        const result = await uploadTransferProof(form).catch(
+          () => ({ ok: false }) as const,
+        );
+        if (!result.ok) {
+          setError(
+            t(
+              `Gambar bukti pindahan untuk "${r.name.trim()}" tidak dapat dimuat naik. Cuba lagi — atau buang fail itu untuk merekod tanpa bukti.`,
+              `「${r.name.trim()}」那一行的转账截图没能上传。请再试一次 —— 或者把文件移除，先记录（不带截图）。`,
+              `The transfer screenshot for "${r.name.trim()}" could not be uploaded. Try again — or remove the file to record without it.`,
+            ),
+          );
+          return;
+        }
+        proofPaths.set(r.key, result.path);
+      }
+    } finally {
+      setSaving(false);
     }
 
     // One timestamp for the batch, plus the row's own index: `Date.now()` alone
@@ -339,7 +468,13 @@ export function TypeDonations({
         // D-1: goods rows carry 0 money BY CONVENTION — the estimate lives in
         // estValueCents and enters the ledger only, never any money path.
         amountCents: r.inKind ? 0 : parseRmToCents(r.amount)!,
-        purpose: r.purpose.trim() || defaultPurpose,
+        // D1-1: the income TYPE rides in the purpose, the way the old
+        // single-row form always stored it — eroses-penyata.ts reads it back.
+        purpose: storedPurposeFor(
+          r.inKind ? "Derma" : (r.category ?? "Derma"),
+          r.purpose,
+          defaultPurpose,
+        ),
         donatedAtIso: r.date || today,
         collector: collector.trim() || defaultCollector,
         receiptNo: null,
@@ -350,6 +485,7 @@ export function TypeDonations({
           !r.inKind && r.method === "transfer"
             ? ("transfer" as const)
             : ("cash" as const),
+        transferProofPath: proofPaths.get(r.key) ?? null,
         kind: r.inKind ? ("in_kind" as const) : ("cash" as const),
         itemDesc: r.inKind ? r.item.trim() : null,
         estValueCents:
@@ -361,6 +497,7 @@ export function TypeDonations({
       })),
     );
     setAdded(ready.length);
+    setProofs(new Map());
     setRows(freshRows());
   }
 
@@ -374,10 +511,11 @@ export function TypeDonations({
           className="h-auto min-h-11 max-w-full whitespace-normal text-left"
           onClick={() => setOpenChoice(true)}
         >
+          {/* D1-1: the one typed door — one gift or a whole list, same grid. */}
           <Tri
-            bm="Ramai penderma, tiada kertas — taip senarai"
-            zh="很多人捐款、没有账页 —— 打字输入整份名单"
-            en="Many donors, no ledger page — type the list"
+            bm="Tiada kertas — taip pendapatan (satu baris atau satu senarai)"
+            zh="没有账页 —— 打字记收入（一笔或整份名单）"
+            en="No ledger page — type the income (one row or a whole list)"
           />
         </Button>
         {added !== null && (
@@ -399,19 +537,85 @@ export function TypeDonations({
       <div>
         <p className="text-base font-semibold">
           <Tri
-            bm="Taip senarai derma"
-            zh="打字输入捐款名单"
-            en="Type the donation list"
+            bm="Taip pendapatan — satu baris atau satu senarai"
+            zh="打字记收入 —— 一笔或整份名单"
+            en="Type the income — one row or a whole list"
           />
         </p>
         <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+          {/* D1-1: this grid took over the single-row form's job too. */}
           <Tri
-            bm="Untuk kutipan yang tiada halaman lejar — meja derma pada hari perayaan, contohnya. Taip satu baris seorang; baris baharu muncul sendiri. Tarikh dan tujuan baris sebelumnya diikut, jadi biasanya anda hanya menaip nama dan jumlah. Resit dikeluarkan sekali gus selepas ini."
-            zh="给没有账页的收款用 —— 例如庙会当天的捐款桌。一个人一行，打完会自己多出一行。日期和用途会跟着上一行，所以通常只需要打名字和金额。加进名册之后，收据在下面一次过开。"
-            en="For a collection with no ledger page — a festival donation table, for example. One line per person; a new line appears by itself. The date and purpose carry over from the line above, so usually you only type a name and an amount. Receipts are issued in one batch afterwards."
+            bm="Untuk wang masuk yang tiada pada mana-mana kertas — meja derma pada hari perayaan, atau satu yuran tunggal. Taip satu baris satu; baris baharu muncul sendiri (tarikh, jenis dan tujuan diikut dari baris sebelumnya). Baris di sini ditanda “manual” untuk juruaudit. Resit dikeluarkan sekali gus selepas ini."
+            zh="给没有记在任何纸上的收入用 —— 例如庙会当天的捐款桌，或单独一笔会员费。一笔一行，打完会自己多出一行（日期、类型、用途都跟着上一行）。这里的记录会标「手动」，审计看得到。加进名册之后，收据在下面一次过开。"
+            en="For money in that is on no paper at all — a festival donation table, or a single membership fee. One line each; a new line appears by itself (date, type and purpose carry over). Rows here are tagged “manual” for the auditor. Receipts are issued in one batch afterwards."
           />
         </p>
       </div>
+
+      {/* D-2 (moved here by the merge): the photo path FIRST — the eROSES law
+          says the camera beats the form whenever there IS paper. The chosen
+          income type rides along and pre-fills what the model reads no
+          purpose for; the rows land in the step-1 review like any ledger. */}
+      {onSlipPhoto && (
+        <div className="flex flex-col gap-2 rounded-md border-2 border-[color:var(--v2-outline-border)] bg-muted/20 p-3">
+          <p className="text-sm text-muted-foreground">
+            <Tri
+              bm="Ada resit / slip di tangan? Pilih jenis, kemudian ambil gambar — MinitAI membacanya dan barisnya menunggu di langkah 1 untuk disemak."
+              zh="手上有单据？先选好收入类型，再拍下来 —— MinitAI 读出来的行会等在第 1 步给您核对。"
+              en="Holding a slip or receipt? Pick the income type, then photograph it — MinitAI reads it and the rows wait in step 1 for your check."
+            />
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <select
+              className={`${inputClass} w-auto`}
+              value={slipCategory}
+              onChange={(e) => setSlipCategory(e.target.value)}
+              aria-label={t("Jenis pendapatan", "收入类型", "Income type")}
+            >
+              {INCOME_CATEGORIES.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {t(c.bm, c.zh, c.en)}
+                </option>
+              ))}
+            </select>
+            <label
+              className={`inline-flex w-fit cursor-pointer items-center gap-2 rounded-md bg-primary px-4 py-2 text-base font-medium text-primary-foreground shadow hover:bg-primary/90 ${
+                slipBusy ? "pointer-events-none opacity-70" : ""
+              }`}
+            >
+              {slipBusy ? (
+                <>⏳ <Tri bm="AI sedang membaca…" zh="AI 读取中…" en="AI is reading…" /></>
+              ) : (
+                <><AttachIcon /> <ChooseFileLabel /></>
+              )}
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                className="hidden"
+                disabled={slipBusy}
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null;
+                  e.target.value = "";
+                  if (!file) return;
+                  setSlipDone(false);
+                  void onSlipPhoto(file, slipCategory).then(setSlipDone);
+                }}
+              />
+            </label>
+            <UsesOneAiAction />
+          </div>
+          {slipDone && (
+            <p className="rounded-md bg-green-50 px-3 py-2 text-sm font-medium text-green-900 dark:bg-green-400/10 dark:text-green-100">
+              ✓{" "}
+              <Tri
+                bm="Dibaca. Semak barisnya di langkah 1 (Baca lejar), kemudian tambah ke daftar."
+                zh="读好了。请到第 1 步（读账页）核对那些行，确认后加进登记簿。"
+                en="Read. Check the rows in step 1 (Read the ledger), then add them to the register."
+              />
+            </p>
+          )}
+        </div>
+      )}
 
       <label className="flex max-w-xs flex-col gap-1">
         <span className="text-sm font-semibold">
@@ -459,7 +663,7 @@ export function TypeDonations({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[40rem] border-collapse text-sm">
+        <table className="w-full min-w-[48rem] border-collapse text-sm">
           <thead>
             <tr className="text-left">
               {/* 拍板 0-3 (D22): required = red star, optional = unmarked. */}
@@ -473,6 +677,11 @@ export function TypeDonations({
               <th className="p-2 font-semibold">
                 <Tri bm="Jumlah (RM)" zh="金额 (RM)" en="Amount (RM)" />
                 <Req />
+              </th>
+              {/* D1-1: the income TYPE — the categories the old single-row
+                  form had, now on every row (money-categories.ts). */}
+              <th className="p-2 font-semibold">
+                <Tri bm="Jenis" zh="类型" en="Type" />
               </th>
               <th className="p-2 font-semibold">
                 <Tri bm="Tujuan" zh="用途" en="Purpose" />
@@ -600,6 +809,60 @@ export function TypeDonations({
                         />
                       </div>
                     )}
+                    {/* D1-1: the transfer screenshot, per row — Storage only,
+                        no AI. Not part of the auto-saved draft (a File cannot
+                        live in localStorage), and the label says so. */}
+                    {!row.inKind && row.method === "transfer" && (
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
+                        <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border-2 border-[color:var(--v2-outline-border)] px-2 py-1 font-medium hover:bg-accent">
+                          <AttachIcon className="h-3.5 w-3.5" />{" "}
+                          {proofs.has(row.key) ? (
+                            <Tri bm="Tukar bukti" zh="换截图" en="Change proof" />
+                          ) : (
+                            <Tri bm="Bukti pindahan" zh="转账截图" en="Transfer proof" />
+                          )}
+                          <input
+                            type="file"
+                            accept="image/*,application/pdf"
+                            className="hidden"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0] ?? null;
+                              e.target.value = "";
+                              if (!f) return;
+                              setProofs((prev) => new Map(prev).set(row.key, f));
+                            }}
+                          />
+                        </label>
+                        {proofs.has(row.key) ? (
+                          <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                            <span className="max-w-28 truncate">
+                              {proofs.get(row.key)!.name}
+                            </span>
+                            <button
+                              type="button"
+                              className="underline underline-offset-2"
+                              onClick={() =>
+                                setProofs((prev) => {
+                                  const next = new Map(prev);
+                                  next.delete(row.key);
+                                  return next;
+                                })
+                              }
+                            >
+                              <Tri bm="Buang" zh="移除" en="Remove" />
+                            </button>
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">
+                            <Tri
+                              bm="pilihan · simpan sahaja, tiada AI"
+                              zh="可选 · 只存档，不经过 AI"
+                              en="optional · stored only, no AI"
+                            />
+                          </span>
+                        )}
+                      </div>
+                    )}
                     <label className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
                       <input
                         type="checkbox"
@@ -609,6 +872,32 @@ export function TypeDonations({
                       />
                       <Tri bm="Derma barangan" zh="实物捐赠" en="In-kind (goods)" />
                     </label>
+                  </td>
+                  <td className="p-1">
+                    {/* D1-1: the income type. Goods rows are Derma Barangan
+                        by definition — no select to mis-set. */}
+                    {row.inKind ? (
+                      <span className="px-1 text-sm text-muted-foreground">
+                        <Tri bm="Derma barangan" zh="实物捐赠" en="In-kind" />
+                      </span>
+                    ) : (
+                      <select
+                        className={`${inputClass} min-w-0`}
+                        value={row.category ?? "Derma"}
+                        onChange={(e) => update(row.key, { category: e.target.value })}
+                        aria-label={t(
+                          `Jenis pendapatan, baris ${index + 1}`,
+                          `收入类型，第 ${index + 1} 行`,
+                          `Income type, row ${index + 1}`,
+                        )}
+                      >
+                        {INCOME_CATEGORIES.map((c) => (
+                          <option key={c.value} value={c.value}>
+                            {t(c.bm, c.zh, c.en)}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </td>
                   <td className="p-1">
                     {/* C-14 (拍板 9②): a dropdown per ROW — rows can carry
@@ -704,12 +993,20 @@ export function TypeDonations({
       )}
 
       <div className="flex flex-wrap gap-2">
-        <Button type="button" onClick={addAll} disabled={ready.length === 0}>
-          <Tri
-            bm={`Tambah ${ready.length} baris ke daftar`}
-            zh={`把这 ${ready.length} 笔加进名册`}
-            en={`Add ${ready.length} row(s) to the register`}
-          />
+        <Button
+          type="button"
+          onClick={() => void addAll()}
+          disabled={ready.length === 0 || saving}
+        >
+          {saving ? (
+            <Tri bm="Menyimpan…" zh="保存中…" en="Saving…" />
+          ) : (
+            <Tri
+              bm={`Tambah ${ready.length} baris ke daftar`}
+              zh={`把这 ${ready.length} 笔加进名册`}
+              en={`Add ${ready.length} row(s) to the register`}
+            />
+          )}
         </Button>
         {/* B-5②: closing KEEPS the draft (it is auto-saved); discarding it is
             its own, clearly-worded button. The old Close wiped 40 rows. */}

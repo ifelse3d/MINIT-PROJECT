@@ -18,7 +18,6 @@ import { formatRm } from "@/lib/minutes-draft";
 import { handExpensePhoto } from "@/lib/expense-handoff";
 import { PaymentMethodToggle } from "./payment-method-toggle";
 import { TypeDonations } from "./type-donations";
-import { ManualIncomeForm } from "./manual-income";
 import { RoundList } from "./round-list";
 import { useRegister } from "./register-store";
 import { AttachIcon, ChooseFileLabel, UploadLimitNote } from "@/components/attach-icon";
@@ -50,7 +49,6 @@ export function LedgerReview() {
     mutateLedger,
     addConfirmedRowsToRegister,
     rowsReadyToAdd,
-    addManualDonation,
     addManualDonations,
     registerCollector,
     roundDonations,
@@ -148,9 +146,9 @@ export function LedgerReview() {
           <>📄 {ledgerSourceLabel}</>
         ) : (
           <Tri
-            bm="Wang sudah di tangan → rekod di sini (gambar lejar, taip senarai, atau satu baris manual) → semak → jana resit. Satu pusingan, satu aliran."
-            zh="钱到手了 → 在这里记下来（拍账页、打字名单、或手动加一笔）→ 核对 → 开收据。一轮一个流程，不跳来跳去。"
-            en="Money in hand → record it here (ledger photo, typed list, or one manual row) → check → issue receipts. One round, one flow."
+            bm="Wang sudah di tangan → rekod di sini (gambar lejar, atau taip — satu baris atau satu senarai) → semak → jana resit. Satu pusingan, satu aliran."
+            zh="钱到手了 → 在这里记下来（拍账页，或打字 —— 一笔或整份名单）→ 核对 → 开收据。一轮一个流程，不跳来跳去。"
+            en="Money in hand → record it here (ledger photo, or type it — one row or a whole list) → check → issue receipts. One round, one flow."
           />
         )
       }
@@ -235,12 +233,18 @@ export function LedgerReview() {
         </div>
 
         {/* B-5① (J #13): the typing grid, IN PLACE. Rows land in the register
-            through the same store the receipts page reads. */}
+            through the same store the receipts page reads. D1-1: this grid is
+            now the ONLY typed door — the single-row form merged into it, and
+            the slip-photo entrance rides along. */}
         {typingOpen && !aiBusy && (
           <TypeDonations
             onAddMany={addManualDonations}
             defaultCollector={registerCollector}
             defaultOpen
+            onSlipPhoto={(file, category) =>
+              onLedgerPicked(file, "auto", { fillPurpose: category })
+            }
+            slipBusy={aiBusy}
           />
         )}
 
@@ -587,17 +591,6 @@ export function LedgerReview() {
             </Button>
           </div>
         )}
-
-        {/* The single-gift form lives HERE with the other entry doors (#3) —
-            recording income is step 1's job, all of it. */}
-        <ManualIncomeForm
-          onAdd={addManualDonation}
-          defaultCollector={registerCollector}
-          onSlipPhoto={(file, category) =>
-            onLedgerPicked(file, "auto", { fillPurpose: category })
-          }
-          slipBusy={aiBusy}
-        />
 
         {/* #3: THE ROUND — everything recorded this sitting, visible right
             here for the double-check, before the flow moves on. */}

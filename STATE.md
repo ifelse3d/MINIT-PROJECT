@@ -5,13 +5,15 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-29 午（MYT）· Fable 5（56 号 eROSES 大改版场进行中：包 D0 ✅）**
-**🔴 本场状态一句话：56 号总单（⑤ eROSES 大改版）开工，包 D0 做完（57 号报告）：
-「AI took too long」真因＝20s 单次时限装不下 64k 输出上限（时间版配对 bug），
-改 45s 长尝试后 CONTOH 8 页章程 42s 实测读通；章程页改 A-5 先选后送（多张＋
-double confirm）；>4MB 的 .pptx/.docx 走 Storage 直传实测走通、门口全写 12MB；
-qa-drill.md 加限制清单 Q16b。包 D0 无新 migration。四道关全绿（eslint 21 基准、
-vitest 949）＋三条 e2e 全绿。接下来：包 D1（钱区两表合并＋科目对照）→ D2 → D3。
+**最后更新：2026-08-29 午后（MYT）· Fable 5（56 号 eROSES 大改版场进行中：包 D0 ✅ 包 D1 ✅）**
+**🔴 本场状态一句话：56 号总单进行中。包 D0（57 号报告）：45s 长尝试修好
+「AI took too long」（CONTOH 8 页 42s 实测读通）、章程页 A-5 化、Office 大档
+直传、限制清单 Q16b。包 D1（58 号报告）：两套钱录入合成一套（类型/转账截图/
+拍单据门全进打字表格，manual-income 删除，旧草稿不丢）＋ eROSES Penyata
+Kewangan 全欄位对照表（src/lib/eroses-penyata.ts，逐字照 17 张截图；
+「1.1 Derma 这格填 16,252.00」已可计算）。两包都无新 migration。四道关全绿
+（eslint 21 基准、vitest 969）＋三条 e2e 全绿。接下来：包 D2（migration 34 起，
+只写档）→ 包 D3（呈报引导主菜）。
 51 号场留给 J 的事未变：贴 migration 32/33 → push-cabang.bat → 叫 tester。**
 
 ---
@@ -21,6 +23,30 @@ vitest 949）＋三条 e2e 全绿。接下来：包 D1（钱区两表合并＋�
 > **已上线**：https://minit-project.vercel.app —— 截至 0ca62e7 已 push；
 > 51 号＋56 号的 commit 等 J push-cabang.bat。
 > 线上 org：15「J」、58「avocado」、91「TESTING1」。
+
+### 这一场做了什么（56 号 eROSES 场 · 包 D1 ✅，58 号报告）
+
+- **D1-2 eROSES 科目对照（先做——它决定资料模型）**：
+  `src/lib/eroses-penyata.ts` = Penyata Kewangan 全欄位 taxonomy（BM 标签
+  逐字照 J 的 17 张截图，含 portal 自己的「Kahirat kematian」「officeSupplies」
+  怪写法）＋ `buildPenyataKewangan()`（每格 {金额, 行数}＋诚实侧栏：in-kind
+  列出不加总、对不上类别的行按 Derma 计入另计 assumed、支出只算
+  recorded+paid、pending 另报、年度过滤 inclusive＋undated 计数）＋
+  `penyataAmount()`（"16,252.00" portal 格式）。
+  `src/lib/money-categories.ts` = 收入/支出类别单一来源（原藏两个组件里），
+  每项带 eroses 欄位 id；🔴 value 是存 DB 的字永不改名。支出类别新增
+  「Kebajikan & khairat」（eROSES 2.1 有格、旧清单没地方放）。15+5 支测试。
+- **D1-1 两表合并**（51 号拍板 9① 欠的那半，未决 14 结案）：
+  manual-income.tsx 删除；type-donations.tsx 吸收其三样独有件——每行
+  「类型」select（换类型清掉属于别类型的旧用途字样）、每行转账截图
+  （File 不进 localStorage 草稿、addAll 前逐张上传、失败停整批点名哪行）、
+  拍单据门（onSlipPhoto+类型 select）。存档格式 `storedPurposeFor()` 与
+  两张旧表 byte 相容——**donations 表零 schema 变动**；旧草稿（无 category）
+  过 guard 不丢（测试钉住）。register-store 删 addManualDonation（无呼叫者）。
+- **测过**：tsc 0 · eslint 21（同基准）· vitest **969 全过（+20）** · build ✓ ·
+  **e2e:money ✓（9 笔打字流原样过新表格）· minutes ✓ · roles ✓**。
+- ⚠ 没能验证的：从新表格出发的转账截图真流（旧表单时代也没有 e2e）；
+  对照表 vs J 真报表数字（等 D3 上线 J 对一次账）。
 
 ### 这一场做了什么（56 号 eROSES 场 · 包 D0 ✅，57 号报告）
 
@@ -337,9 +363,8 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
     里）——要不要补，等真用户反应
 12. （旧，小）MyInvois 官方模板逐栏对齐（B-7 后半）等 J 给原档
 13. ~~check-ai.bat cd 旧资料夹~~ 已修（8/29 小修包 C-6）
-14. **C-14① 两套钱录入合并**（打字名单 vs 手动添加收入）——小修包只做了 ②
-    （每行 Purpose 下拉）；合并要处理手动表独有的转账凭证/收入类型，
-    留给下一场专门做（51 号拍板 9① 还欠这半）
+14. ~~C-14① 两套钱录入合并~~ **已做完**（8/29 包 D1，58 号报告：manual-income
+    删除，类型/转账截图/拍单据门全进打字表格，旧资料一笔不丢）
 15. 云端草稿的跨装置照片预览：draft 只存 storage 路径，换装置续写时缩图是
     占位符（原图还在 uploads bucket，要看得走签名 URL——之后要不要补，
     看真用户反应）
@@ -361,6 +386,14 @@ RESPONSIVE：J 若再圈破版，贴 46 号单同段 PROMPT 继续。
 ---
 
 ## 6. 已知陷阱（踩过的，别再踩）
+
+### 2026-08-29 午后新增（56 号场 · 包 D1）
+
+- ⚠ **重跑 e2e 前先杀旧 `next start` 再看 build**。旧进程占着 3000、新 build
+  改写了 .next 的 chunk 名 → 全场 ChunkLoadError、13 项连锁 FAIL，看起来像
+  产品坏了。Git Bash 的 `pkill`/`kill %1` 在 Windows 上杀不掉背景 node——
+  用 PowerShell `Get-NetTCPConnection -LocalPort 3000` 找 OwningProcess 杀。
+  判断方法：e2e 大面积红＋page errors 全是 ChunkLoadError＝先怀疑这个。
 
 ### 2026-08-29 午新增（56 号场 · 包 D0）
 
