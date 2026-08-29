@@ -43,6 +43,9 @@ type Labels = {
   title: string;
   meetingType: string;
   date: string;
+  /** MASA — the meeting's time as written ("8.30 PM – 10.30 PM"). Part of the
+   *  standard minit header block (work order 68 §1-3: it went missing). */
+  masa: string;
   venue: string;
   purpose: string;
   attendance: string;
@@ -86,6 +89,7 @@ export const LABELS: Record<MinutesLang, Labels> = {
     title: "MINIT MESYUARAT",
     meetingType: "Jenis mesyuarat",
     date: "Tarikh",
+    masa: "Masa",
     venue: "Tempat",
     purpose: "TUJUAN MESYUARAT",
     attendance: "KEHADIRAN",
@@ -112,6 +116,7 @@ export const LABELS: Record<MinutesLang, Labels> = {
     title: "会议记录",
     meetingType: "会议类型",
     date: "日期",
+    masa: "时间",
     venue: "地点",
     purpose: "这次会议要谈什么",
     attendance: "出席",
@@ -139,6 +144,7 @@ export const LABELS: Record<MinutesLang, Labels> = {
     title: "MINUTES OF MEETING",
     meetingType: "Type of meeting",
     date: "Date",
+    masa: "Time",
     venue: "Venue",
     purpose: "WHAT THIS MEETING WAS ABOUT",
     attendance: "ATTENDANCE",

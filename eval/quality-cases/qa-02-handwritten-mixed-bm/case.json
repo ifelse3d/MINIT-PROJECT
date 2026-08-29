@@ -1,0 +1,47 @@
+{
+  "type": "minutes_quality",
+  "description": "FICTIONAL handwritten committee note, mixed Chinese/Malay/English fragments (the classic messy page). Unstructured — no agenda table in the source, so none is demanded; names must survive into the BM document.",
+  "orgName": "PERSATUAN CONTOH SEJAHTERA NEGERI PERLIS",
+  "language": "bm",
+  "extraction": {
+    "meeting_type": { "value": "committee", "confidence": "confirmed", "source_ref": { "location": "photo 1, top", "snippet": "理事会议" } },
+    "meeting_date": { "value": "2026-09-08", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 1", "snippet": "8/9/26" } },
+    "meeting_venue": { "value": "", "confidence": "missing", "source_ref": null },
+    "attendees": [
+      { "name": { "value": "郑家明", "confidence": "confirmed", "source_ref": { "location": "photo 1, 出席", "snippet": "出席：郑家明" } } },
+      { "name": { "value": "林美丽", "confidence": "confirmed", "source_ref": { "location": "photo 1, 出席", "snippet": "林美丽" } } },
+      { "name": { "value": "Ah Huat", "confidence": "confirmed", "source_ref": { "location": "photo 1, 出席", "snippet": "Ah Huat" } } }
+    ],
+    "resolutions": [
+      {
+        "text": { "value": "① 青班开会 12/9/26 发信通知家长", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 1", "snippet": "①青班开会 12/9/26 发信" } },
+        "kind": "task"
+      },
+      {
+        "text": { "value": "开 mesyuarat agung di dewan P.J. 7.30pm - 18/9/26", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 2", "snippet": "开 mes. agung P.J. 7.30pm - 18/9/26" } },
+        "kind": "decision"
+      },
+      {
+        "text": { "value": "Agenda 2.1 diganti 林美丽 (Tan Bee Lee)", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 3", "snippet": "Agenda 2.1 diganti 林美丽 (Tan Bee Lee)" } },
+        "kind": "decision"
+      },
+      {
+        "text": { "value": "lantik AJK baru: 郑家明, 19, Jalan Contoh 2, Taman Contoh", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 4", "snippet": "lantik AJK baru 郑家明" } },
+        "kind": "decision"
+      },
+      {
+        "text": { "value": "usul pindaan alamat", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 5", "snippet": "usul pindaan alamat" } },
+        "kind": "info"
+      }
+    ],
+    "figures": [],
+    "office_bearers": []
+  },
+  "expect": {
+    "masa": false,
+    "agendaTable": false,
+    "attendanceCount": true,
+    "mustContain": ["郑家明", "林美丽", "Ah Huat"],
+    "mustNotContain": []
+  }
+}

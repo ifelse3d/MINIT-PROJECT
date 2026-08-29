@@ -4,21 +4,14 @@ import { inputProblemError, joinUserError, USER_ERRORS } from "@/lib/user-errors
 import { getVisionProvider } from "@/lib/ai/provider";
 import { createUsageRecorder, refundUsage, requireAiQuota } from "@/lib/ai/usage";
 import { parseMeetingNotesExtraction } from "@/lib/extraction";
-import { draftMinutesPrompt } from "@/prompts/draft-minutes";
-import {
-  checkCoverage,
-  checkMergedFacts,
-  checkNames,
-  composeMinutesMd,
-  minutesPlanSchema,
-  type MinutesPlan,
-} from "@/lib/minutes-compose";
+import { runDraftMinutesPlan } from "@/lib/ai/draft-minutes-run";
+import { composeMinutesMd, type MinutesPlan } from "@/lib/minutes-compose";
 import { getDocumentIdentity } from "@/lib/doc-identity";
 import { countUnreviewed } from "@/lib/extraction-rows";
 import { dayIsoMalaysia } from "@/lib/history";
 import { glossaryAllowedRuns, glossaryPromptBlockForWriting } from "@/lib/glossary";
 import { loadGlossary } from "@/lib/glossary-server";
-import { isMinutesLang, writesInChinese, type MinutesLang } from "@/lib/minutes-lang";
+import { isMinutesLang, type MinutesLang } from "@/lib/minutes-lang";
 import { ROUTE_AI_DEADLINE_MS } from "@/lib/ai/http";
 import { vendorFailureResponse } from "@/lib/ai/vendor-failure";
 
@@ -118,46 +111,24 @@ export async function POST(req: Request) {
 
     // Ask, check the arrangement covers every item, and on a miss send the
     // exact indices back once (CLAUDE.md rule 7). The retry is not charged.
+    // ONE copy of the loop, shared with the quality eval — see
+    // src/lib/ai/draft-minutes-run.ts (work order 68, G0).
     let plan: MinutesPlan | null = null;
-    let repair: Parameters<typeof draftMinutesPrompt>[0]["repair"];
-    for (let attempt = 0; attempt < 2 && plan === null; attempt++) {
-      let raw: unknown;
-      try {
-        raw = await provider.extractJson({
-          prompt: draftMinutesPrompt({ resolutionTexts, lang, glossaryBlock, repair }),
-          onUsage,
-          deadlineAt,
-        });
-      } catch (e) {
-        // P-1: the failure is also recorded now (app_errors) — see id=5.
-        await refundUsage(gate.org.id, gate.charges[0]);
-        return vendorFailureResponse("/api/draft-minutes", e, gate.org.id);
-      }
-
-      const parsedPlan = minutesPlanSchema.safeParse(raw);
-      if (!parsedPlan.success) continue;
-
-      const coverage = checkCoverage(parsedPlan.data, resolutionTexts.length);
-      // The name check only means something when the document is NOT in
-      // Chinese — see checkNames for why. Coverage is checked in every
-      // language; this one is honestly skipped rather than faked.
-      const names = writesInChinese(lang)
-        ? { ok: true, altered: [] as number[] }
-        : checkNames(parsedPlan.data, resolutionTexts, allowedRuns);
-      // Merging like items is allowed (J 28/8 evening) — at the price that a
-      // merged line still carries every name and figure. EVERY language.
-      const merged = checkMergedFacts(parsedPlan.data, resolutionTexts);
-      if (coverage.ok && names.ok && merged.ok) {
-        plan = parsedPlan.data;
-      } else {
-        repair = {
-          missing: coverage.missing,
-          duplicated: coverage.duplicated,
-          unknown: coverage.unknown,
-          altered: names.altered,
-          dropped: merged.dropped,
-        };
-      }
+    try {
+      const run = await runDraftMinutesPlan({
+        provider,
+        resolutionTexts,
+        lang,
+        glossaryBlock,
+        allowedRuns,
+        onUsage,
+        deadlineAt,
+      });
+      if (run.ok) plan = run.plan;
+    } catch (e) {
+      // P-1: the failure is also recorded now (app_errors) — see id=5.
+      await refundUsage(gate.org.id, gate.charges[0]);
+      return vendorFailureResponse("/api/draft-minutes", e, gate.org.id);
     }
 
     if (!plan) {

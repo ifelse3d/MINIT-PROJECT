@@ -5,28 +5,50 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-29 傍晚（MYT）· Fable 5（64 号 AI 智能建议场：E1 ✅ E2 ✅ E3 ✅ 全单收工）**
-**🔴 本场状态一句话：⑥ AI 智能建议场（64 号单）三包全部做完
-（65/66/67 号报告）。存好会议记录 → 成品页出建议卡：委任新理事 →
-「👥 加进理事名单」、决议里带日期的活动/下次会议 → 「📅 加进日历」；
-每张卡带「因为会议记录写了…」来源（拍板 5），确认走既有
-addCommitteeMember/saveEvent（同名询问全继承、零新后门），忽略留痕
-（migration 36 只写档，未套用 fail-open 实测：忽略暂记本机＋卡上人话）。
-推导纯规则零 AI 费（E2 判断：不动 prompt 不另开呼叫，66 号报告留痕）。
-四道关全绿（tsc 0 · eslint 21 · vitest 1008（+32）· build ✓）＋三条 e2e
-全绿＋probe-e3-64 36 项全 PASS（真 UI 真 DB 零 AI 费，ZZZ 全删）。
-🔴 J 的事：贴 migration 32/33/34/35/**36**（salin-migration.bat）→
-push-cabang.bat → 叫 tester（建议卡清单在 67 号报告第 4 点；旧清单在
-60 号＋55 号报告末尾）→ 登入 eROSES 顺手下载官方 Penyata Kewangan
-模板（60 号报告第 5 点）。**
+**最后更新：2026-08-29 晚（MYT）· Fable 5（68 号 ⑦ 品质场进行中：G0 ✅）**
+**🔴 本场状态一句话：⑦ 品质场（68 号单）开工，包 G0 版式规格＋量尺
+做完（70 号报告）。「一份 minit 该长什么样」现在是程式规格
+（src/lib/minit-format.ts，照 J 样本 A 的标准社团格式）＋一把会数缺陷
+的尺（npm run eval:quality，三个虚构 golden case）。改前基准量出：
+打印正式型 6 findings（MASA/Agenda 总表/出席人数不见＋散文丢失×3）
+＝J 8/29 实测的病，修到 0 才算过；擷取准确率重跑 92.9% 与 8/24 一致。
+draft-minutes 迴圈抽成一份（route 与 eval 共用）。样本夹已分半：
+迭代组（样本 A＋手写页＋样本 B＋青班6 docx）／held-out 组（其余 5 份，
+迭代期间不碰）。接下来 G1 擷取端结构保留 → G2 成文端主菜 → G3 UX 件。
+🔴 J 的事（上一场欠的照旧）：贴 migration 32–36（salin-migration.bat）→
+push-cabang.bat → 叫 tester（67 号报告第 4 点；旧清单 60＋55 号）→
+eROSES 下载官方 Penyata Kewangan 模板（60 号报告第 5 点）。**
 
 ---
 
-## 🌙 现在在哪里（2026-08-29 傍晚，64 号 AI 智能建议场进行中）
+## 🌙 现在在哪里（2026-08-29 晚，68 号 ⑦ 品质场进行中）
 
 > **已上线**：https://minit-project.vercel.app —— 截至 0ca62e7 已 push；
-> 51 号＋56 号的 commit 等 J push-cabang.bat。
+> 51 号之后的 commit 等 J push-cabang.bat。
 > 线上 org：15「J」、58「avocado」、91「TESTING1」。
+
+### 这一场做了什么（68 号 ⑦ 品质场 · 包 G0 ✅，70 号报告）
+
+- **版式规格 `src/lib/minit-format.ts`（＋22 测试）**：标准马来西亚社团
+  minit 版式（照 J 样本 A）——信头＋会议标题行、TARIKH/**MASA**/TEMPAT、
+  出席人数照抄原字、Agenda 总表（原编号）、逐节正文（原编号＋散文段落）、
+  penangguhan 照抄、签名栏带职称。双重编号在渲染层根治（自带编号的行
+  永不再包一层；日期/时间不被误剥，测试钉住）。信头 `# MINIT MESYUARAT —`
+  机器契约刻意不动（re-stamp/PDF/历史页都靠它）。
+- **量尺 `lintMinitMd()`＋品质 eval `npm run eval:quality`**：§1 病历变成
+  可数缺陷代号；三个**虚构** golden case（打印正式/手写混语/白板清单，
+  A3：真样本不进 repo）跑真管线。**改前基准：打印正式型 6 findings**
+  （masa/agenda_table/attendance_count missing＋content_lost×3），
+  手写/白板型 0（丢东西的围栏本来就立着，病全在版式与散文保留）。
+- **draft-minutes 迴圈抽一份** `src/lib/ai/draft-minutes-run.ts`：route 与
+  品质 eval 共用（两份手抄会漂）。route 行为零变化。
+- **基准重跑**：擷取 eval 92.9%（117/126）invented=1，与 8/24 一致；
+  品质三案花费 ≈US$0.005，全场额度用了 ≈US$0.015 / 1.00。
+- **样本夹分半（J 明令防过拟合）**：迭代组＝样本 A 打印版＋同场手写页＋
+  样本 B 白板＋青班6 docx；**held-out**＝另两张照片＋三份 docx，迭代期间
+  不看，最终验收才开。
+- **测过**：tsc 0 · eslint 21 · vitest **1030（+22）** · build ✓ ·
+  e2e:minutes ✓（page errors 0）。
 
 ### 这一场做了什么（64 号 AI 智能建议场 · 包 E3 ✅，67 号报告——主菜）
 

@@ -1,0 +1,37 @@
+{
+  "type": "minutes_quality",
+  "description": "FICTIONAL whiteboard target list — twelve numbered rows of group + headcount plus duty assignments (the sample-B shape). Every group and every number must survive; no double numbering; no silent skips.",
+  "orgName": "PERSATUAN CONTOH SEJAHTERA NEGERI PERLIS",
+  "language": "bm",
+  "extraction": {
+    "meeting_type": { "value": "planning", "confidence": "confirmed", "source_ref": { "location": "photo 1, top", "snippet": "目标 62位" } },
+    "meeting_date": { "value": "2026-08-16", "confidence": "confirmed", "source_ref": { "location": "photo 1, top", "snippet": "16/8/2026" } },
+    "meeting_venue": { "value": "", "confidence": "missing", "source_ref": null },
+    "attendees": [],
+    "resolutions": [
+      { "text": { "value": "1. 宏光 10位", "confidence": "confirmed", "source_ref": { "location": "photo 1, row 1", "snippet": "1. 宏光 10位" } }, "kind": "decision" },
+      { "text": { "value": "2. 同新 10位", "confidence": "confirmed", "source_ref": { "location": "photo 1, row 2", "snippet": "2. 同新 10位" } }, "kind": "decision" },
+      { "text": { "value": "3. 同乐 10位", "confidence": "confirmed", "source_ref": { "location": "photo 1, row 3", "snippet": "3. 同乐 10位" } }, "kind": "decision" },
+      { "text": { "value": "4. 同进 5位", "confidence": "confirmed", "source_ref": { "location": "photo 1, row 4", "snippet": "4. 同进 5位" } }, "kind": "decision" },
+      { "text": { "value": "5. 同学 5位", "confidence": "confirmed", "source_ref": { "location": "photo 1, row 5", "snippet": "5. 同学 5位" } }, "kind": "decision" },
+      { "text": { "value": "6. 同真 10位", "confidence": "confirmed", "source_ref": { "location": "photo 1, row 6", "snippet": "6. 同真 10位" } }, "kind": "decision" },
+      { "text": { "value": "7. 同信 2位", "confidence": "confirmed", "source_ref": { "location": "photo 1, row 7", "snippet": "7. 同信 2位" } }, "kind": "decision" },
+      { "text": { "value": "8. 同合 2位", "confidence": "confirmed", "source_ref": { "location": "photo 1, row 8", "snippet": "8. 同合 2位" } }, "kind": "decision" },
+      { "text": { "value": "9. 同喜 2位", "confidence": "confirmed", "source_ref": { "location": "photo 1, row 9", "snippet": "9. 同喜 2位" } }, "kind": "decision" },
+      { "text": { "value": "10. 同伴 2位", "confidence": "confirmed", "source_ref": { "location": "photo 1, row 10", "snippet": "10. 同伴 2位" } }, "kind": "decision" },
+      { "text": { "value": "11. 同途 2位", "confidence": "confirmed", "source_ref": { "location": "photo 1, row 11", "snippet": "11. 同途 2位" } }, "kind": "decision" },
+      { "text": { "value": "12. 同安然 2位", "confidence": "confirmed", "source_ref": { "location": "photo 1, row 12", "snippet": "12. 同安然 2位" } }, "kind": "decision" },
+      { "text": { "value": "宏光组负责人：练福来", "confidence": "confirmed", "source_ref": { "location": "photo 1, right column", "snippet": "宏光：练福来" } }, "kind": "duty" },
+      { "text": { "value": "同新组负责人：郑金来", "confidence": "confirmed", "source_ref": { "location": "photo 1, right column", "snippet": "同新：郑金来" } }, "kind": "duty" }
+    ],
+    "figures": [],
+    "office_bearers": []
+  },
+  "expect": {
+    "masa": false,
+    "agendaTable": false,
+    "attendanceCount": false,
+    "mustContain": ["宏光", "同新", "同乐", "同进", "同学", "同真", "同信", "同合", "同喜", "同伴", "同途", "同安然", "练福来", "郑金来", "10", "5", "2"],
+    "mustNotContain": []
+  }
+}

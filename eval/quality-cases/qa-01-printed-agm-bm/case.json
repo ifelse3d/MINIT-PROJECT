@@ -1,0 +1,76 @@
+{
+  "type": "minutes_quality",
+  "description": "FICTIONAL printed formal AGM minit in the standard Malaysian society format (letterhead, TARIKH/MASA/TEMPAT, headcount, agenda table, per-agenda prose sections, penangguhan, signature block). Same SHAPE as work order 68 sample A; entirely fictional content (A3 privacy rule).",
+  "orgName": "PERSATUAN CONTOH SEJAHTERA NEGERI PERLIS",
+  "language": "bm",
+  "extraction": {
+    "meeting_type": { "value": "agm", "confidence": "confirmed", "source_ref": { "location": "page 1, title", "snippet": "MESYUARAT AGUNG TAHUN 2026" } },
+    "meeting_date": { "value": "2026-05-20", "confidence": "confirmed", "source_ref": { "location": "page 1, header", "snippet": "TARIKH : 20. Mei 2026" } },
+    "meeting_time": { "value": "8.30 PM – 10.30 PM", "confidence": "confirmed", "source_ref": { "location": "page 1, header", "snippet": "MASA : 8.30 PM – 10.30 PM" } },
+    "meeting_venue": { "value": "LOT 88, JALAN CONTOH, 01000 KANGAR, PERLIS", "confidence": "confirmed", "source_ref": { "location": "page 1, header", "snippet": "TEMPAT : LOT 88, JALAN CONTOH" } },
+    "attendance_count": { "value": "AJK yang hadir : 21 orang", "confidence": "confirmed", "source_ref": { "location": "page 1, header", "snippet": "AJK yang hadir : 21 orang" } },
+    "adjournment": { "value": "Mesyuarat ditangguhkan pada 10.30 PM", "confidence": "confirmed", "source_ref": { "location": "page 1, closing", "snippet": "Mesyuarat ditangguhkan pada 10.30 PM" } },
+    "prepared_by": {
+      "position": { "value": "Setiausaha", "confidence": "confirmed", "source_ref": { "location": "page 1, signature left", "snippet": "SETIAUSAHA" } },
+      "person_name": { "value": "ROHANA BINTI MUSA", "confidence": "confirmed", "source_ref": { "location": "page 1, signature left", "snippet": "( ROHANA BINTI MUSA )" } }
+    },
+    "endorsed_by": {
+      "position": { "value": "Pengerusi", "confidence": "confirmed", "source_ref": { "location": "page 1, signature right", "snippet": "PENGERUSI" } },
+      "person_name": { "value": "TAN AH KOW", "confidence": "confirmed", "source_ref": { "location": "page 1, signature right", "snippet": "( TAN AH KOW )" } }
+    },
+    "attendees": [],
+    "resolutions": [
+      {
+        "text": { "value": "Pengerusi mengalu-alukan semua ahli yang hadir mesyuarat pada hari ini. Beliau mengucapkan ribuan terima kasih kepada semua atas kerjasama dan komitmen yang telah diberikan untuk menjayakan segala aktiviti yang dirancang.", "confidence": "confirmed", "source_ref": { "location": "page 1, Agenda 1", "snippet": "Pengerusi mengalu-alukan semua ahli..." } },
+        "kind": "info",
+        "section_no": "1",
+        "section_title": "Ucapan Pengerusi"
+      },
+      {
+        "text": { "value": "Setiausaha Puan Rohana binti Musa membentangkan minit mesyuarat Agung yang lalu bertarikh 12 Februari 2026 serta masih mengekalkan Pengerusi serta AJK yang sedia ada. Cadangan disokong oleh Encik Lim Ah Chai dan dipersetujui sebulat suara.", "confidence": "confirmed", "source_ref": { "location": "page 1, Agenda 2", "snippet": "Setiausaha ... membentangkan minit mesyuarat Agung yang lalu" } },
+        "kind": "decision",
+        "section_no": "2",
+        "section_title": "Membentang dan mengesahkan minit mesyuarat Agung yang lalu"
+      },
+      {
+        "text": { "value": "Puan Aminah binti Salleh menggantikan Puan Rosnah binti Omar sebagai Ahli Jawatankuasa.", "confidence": "confirmed", "source_ref": { "location": "page 1, margin note at Agenda 2", "snippet": "Agenda 2.1: Aminah ganti - Rosnah" } },
+        "kind": "decision",
+        "section_no": "2",
+        "section_title": "Membentang dan mengesahkan minit mesyuarat Agung yang lalu",
+        "own_no": "2.1"
+      },
+      {
+        "text": { "value": "Persatuan telah mengadakan kelas dan aktiviti seperti biasa termasuk aktiviti di luar kelas dan di dalam kelas.", "confidence": "confirmed", "source_ref": { "location": "page 1, Agenda 3", "snippet": "Persatuan telah mengadakan kelas dan aktiviti seperti biasa" } },
+        "kind": "info",
+        "section_no": "3",
+        "section_title": "Mengadakan kelas dan aktiviti seperti biasa"
+      },
+      {
+        "text": { "value": "Mesyuarat agung pada kali ini membentangkan perkembangan terkini mengenai perpindahan ke tempat persatuan yang baru di Lot 99, Seksyen 5, Bandar Contoh, 01000 Kangar, Perlis. Proses perpindahan ini masih dalam peringkat persediaan dan belum selesai sepenuhnya. Tarikh sebenar perpindahan akan diumumkan kemudian.", "confidence": "confirmed", "source_ref": { "location": "page 1, Agenda 4", "snippet": "membentangkan perkembangan terkini mengenai perpindahan" } },
+        "kind": "info",
+        "section_no": "4",
+        "section_title": "Perbincangan untuk berpindah ke tempat persatuan yang baru"
+      },
+      {
+        "text": { "value": "Pengerusi mengucapkan terima kasih kepada semua ahli jawatankuasa. Beliau berharap semua pihak dapat memberi kerjasama dan saling membantu dalam melakukan apa jua tindakan.", "confidence": "confirmed", "source_ref": { "location": "page 1, Agenda 5", "snippet": "Pengerusi mengucapkan terima kasih kepada semua ahli jawatankuasa" } },
+        "kind": "info",
+        "section_no": "5",
+        "section_title": "Ucapan penangguhan"
+      }
+    ],
+    "figures": [],
+    "office_bearers": []
+  },
+  "expect": {
+    "masa": true,
+    "agendaTable": true,
+    "attendanceCount": true,
+    "mustContain": [
+      "Cadangan disokong oleh Encik Lim Ah Chai",
+      "Tarikh sebenar perpindahan akan diumumkan kemudian",
+      "menggantikan Puan Rosnah binti Omar",
+      "Ucapan Pengerusi"
+    ],
+    "mustNotContain": []
+  }
+}
