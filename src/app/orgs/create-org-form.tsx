@@ -16,15 +16,17 @@ const INITIAL: OrgActionState = { error: null, ok: false };
 
 /** Where a newly created organisation goes next.
  *
- *  A-4 (2026-08-25, J's #4): the plain path lands HOME, where a "what next"
- *  card lists the constitution upload as one SKIPPABLE item — no more being
- *  dumped onto the constitution page as a toll gate.
+ *  §1-6 (work order 69, J): a GUIDED SEQUENCE — /orgs/welcome walks
+ *  constitution → roster → Maklumat Am in order, each step skippable only by
+ *  pressing "Fill in later" (not suggestions scattered across pages). This
+ *  replaces the old ?welcome=1 home card.
  *
  *  When the person DID attach a constitution here, they still land on
  *  /constitution — their upload has just been read and is waiting there to be
  *  reviewed; sending them home away from their own upload would be worse.
- *  (?setup=1 only adds the banner in constitution/new-org-banner.tsx.) */
-const AFTER_CREATE_HOME = "/?welcome=1";
+ *  (?setup=1 only adds the banner in constitution/new-org-banner.tsx; the
+ *  banner links onward to /orgs/welcome.) */
+const AFTER_CREATE_HOME = "/orgs/welcome";
 const AFTER_CREATE_WITH_FILE = "/constitution?setup=1";
 
 /** Matches ALLOWED_MIME in /api/extract-constitution. A constitution is
@@ -181,9 +183,10 @@ export function CreateOrgForm({
     // C-2: an EXISTING society's landing card starts with the records it
     // already has (constitution → committee roster → first notes).
     if (!file) {
-      router.replace(
-        societyAge === "existing" ? `${AFTER_CREATE_HOME}&lama=1` : AFTER_CREATE_HOME,
-      );
+      // §1-6: new or existing, the guided sequence is the same three
+      // foundations — the wizard derives done-ness from the database, so an
+      // existing society that brings records in simply sees ✓ appear.
+      router.replace(AFTER_CREATE_HOME);
       return;
     }
 

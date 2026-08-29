@@ -116,7 +116,17 @@ export default async function OrgsPage() {
             bm="Di sini semua pertubuhan yang anda ada akses. Satu induk boleh ada cawangan di bawahnya. MinitAI hanya bekerja pada SATU pertubuhan pada satu masa — yang bertanda “Sedang guna”. Tekan “Tukar ke sini” untuk bertukar."
             zh="这里是您有权限的所有机构。一个总部底下可以有分会。MinitAI 一次只在「一个」机构里工作 —— 就是标着「正在用」的那一个。要换，按「切换到这里」。"
             en="Everything you have access to. A head office can have branches under it. MinitAI works in ONE organisation at a time — the one marked “In use”. Press “Switch to this” to change it."
-          />
+          />{" "}
+          {/* §1-6: the guided sequence stays reachable — a door that exists
+              only once, right after creation, is a door most people miss. */}
+          <Link href="/orgs/welcome" className="underline underline-offset-4">
+            <Tri
+              bm="Persediaan pertubuhan (perlembagaan · AJK · Maklumat Am)"
+              zh="开机构引导（章程 · 名册 · 基本资料）"
+              en="Organisation setup guide (constitution · roster · Maklumat Am)"
+            />{" "}
+            →
+          </Link>
         </p>
       )}
 

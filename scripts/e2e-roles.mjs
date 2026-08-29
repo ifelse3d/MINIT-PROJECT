@@ -140,7 +140,8 @@ async function run() {
     await a.type('input[name="name"]', ORG_NAME);
     await clickByText(a, "button", "创建组织");
     await sleep(6000);
-    check("admin created the org", a.url().includes("welcome=1"));
+    // §1-6 (work order 69): creation lands on /orgs/welcome now.
+    check("admin created the org", a.url().includes("/orgs/welcome"));
 
     // /settings/members, not /settings: the settings section was split into
     // sub-routes (CLAUDE.md rule 13, "one step, one page") and the invite form

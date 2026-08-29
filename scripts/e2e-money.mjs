@@ -130,9 +130,9 @@ async function run() {
   await page.type('input[name="name"]', ORG_NAME);
   await clickByText(page, "button", "创建组织");
   await new Promise((r) => setTimeout(r, 6000));
-  // A-4 (2026-08-25): creating an org (no constitution attached) lands HOME
-  // with the "what next" card, no longer on the constitution page.
-  check("org creation lands home with the welcome card", page.url().includes("welcome=1"));
+  // §1-6 (work order 69): creating an org lands on the GUIDED SEQUENCE
+  // (/orgs/welcome), no longer on home with a card.
+  check("org creation lands on the guided sequence", page.url().includes("/orgs/welcome"));
 
   // --- type 9 donations in (TypeDonations grid, on STEP 1 since the round
   //     rework — launch feedback #3: /money records, /money/issue issues) ---

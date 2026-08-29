@@ -86,6 +86,7 @@ const probes = [
   ["20260914000000 suggestion marks (64 E3)", "suggestion_marks", "action"],
   ["20260915000000 roster email (69 H1)", "committee_roster", "email"],
   ["20260915000000 roster state/Negeri (69 H1)", "committee_roster", "state"],
+  ["20260916000000 orgs.created_by (69 H3)", "orgs", "created_by"],
 ];
 
 const headers = { apikey: key, Authorization: `Bearer ${key}` };

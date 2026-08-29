@@ -19,26 +19,27 @@ export type OrgActionState = { error: string | null; ok: boolean };
 // P0-3 — HOW MANY ORGANISATIONS ONE ACCOUNT MAY CREATE.
 //
 // Every org carries its own `monthly_free_quota` (15 AI actions since
-// migration 20260901000000 — J 2026-08-25). Before this
-// cap existed, one signed-in person could create organisations in a loop and
-// mint free AI for as long as they kept typing — and the go-live checklist asks
-// for `Confirm email = OFF` so a judge can get in within five seconds, which
-// means "one signed-in person" is anybody with an email box.
+// migration 20260901000000 — J 2026-08-25): creating orgs in a loop would
+// mint free AI, so creation is capped.
 //
-// Branches are NOT a way around it: `accessible_orgs_admin()` returns every org
-// in every tree the caller administers at any depth, and that total is capped
-// too. A branch you can create is a branch you administer.
+// §1-14 (work order 69, J 2026-08-29 深夜拍板): the old "at most 3 root orgs,
+// counted through members_roles" check was BLOCKING people it should not have
+// (J's three orgs sit under three different accounts and it refused anyway).
+// Per J: rip it out without diagnosing it, and replace it with the simplest
+// possible rule — a FREE account creates ONE top-level organisation, counted
+// by orgs.created_by (one query, no clever logic). A second root needs a paid
+// plan, activated by a human (the same road as plan activation). Being
+// INVITED into somebody else's organisation never affects it, because an
+// invite never writes created_by. Branches are untouched (HQ+cawangan is the
+// pilot's core).
 //
-// These are PRODUCT numbers, not security constants — raise them here, in one
-// place, when a real federation needs more. Three roots covers "my society, the
-// other society I also run, and one for testing"; twenty covers a state body
-// with district branches.
+// The overall administered-orgs cap (20, branches included) stays: it is the
+// anti-abuse guard on the free-AI loop, not the rule that misfired.
 // ---------------------------------------------------------------------------
 // NOT exported: a "use server" module may only export async functions, and
 // `next build` is the only one of the four gates that catches it (tsc and
 // vitest both pass). If another file ever needs these numbers, they move to a
 // plain module — they do not get an `export` here.
-const MAX_ROOT_ORGS_PER_USER = 3;
 const MAX_ORGS_PER_USER = 20;
 
 const ERR = {
@@ -50,10 +51,11 @@ const ERR = {
     "Hanya pentadbir pertubuhan induk boleh menambah cawangan / 只有总机构的管理员才能添加分会 / Only an administrator of the parent organisation can add a branch",
   failed:
     "Tidak berjaya — cuba lagi / 没有成功 —— 请再试一次 / Something went wrong — please try again",
-  tooManyRoots:
-    `Satu akaun boleh membuka ${MAX_ROOT_ORGS_PER_USER} pertubuhan induk sahaja. Kalau anda perlukan lebih, hubungi kami. / ` +
-    `一个帐号最多只能开 ${MAX_ROOT_ORGS_PER_USER} 个总机构。需要更多请联络我们。 / ` +
-    `One account can create at most ${MAX_ROOT_ORGS_PER_USER} top-level organisations. Contact us if you need more.`,
+  // §1-14: the free plan opens ONE root org; more is a paid-plan conversation.
+  needPaidForMoreRoots:
+    "Akaun percuma boleh membuka SATU pertubuhan induk sahaja. Untuk pertubuhan kedua, perlukan pelan berbayar — hubungi MinitAI. / " +
+    "免费帐号只能开 1 个总机构。要开第二个需要付费方案 —— 请联络 MinitAI。 / " +
+    "A free account can create ONE top-level organisation. A second needs a paid plan — contact MinitAI.",
   receiptPrefix:
     "Guna 2 hingga 8 huruf besar atau nombor, bermula dengan huruf (contoh: PSHKL) / " +
     "请用 2 至 8 个大写英文字母或数字，第一个要是字母（例如：PSHKL） / " +
@@ -307,45 +309,45 @@ export async function createOrg(
   }
 
   if (parentOrgId === null) {
-    // A ROOT org. Count the ones this account already owns.
-    const { data: ownRows } = await admin
-      .from("members_roles")
-      .select("org_id")
-      .eq("user_id", user.id)
-      .eq("role", "hq_admin");
-    const ownIds = (ownRows ?? []).map((r) => r.org_id as number);
-    if (ownIds.length > 0) {
-      // S-3 (2026-08-25): the PLAN decides how many root orgs an account may
-      // run (trial = 1, J's decision #6). Enforced HERE, on the server,
-      // fail-closed. Until migration 20260830000000 adds orgs.plan the select
-      // fails and the pre-plan anti-abuse cap (3) applies unchanged.
-      let planLimit = MAX_ROOT_ORGS_PER_USER;
-      let rootCount = 0;
-      const withPlan = await admin
+    // A ROOT org — §1-14, THE ONE QUERY: how many root orgs did this account
+    // CREATE? (created_by, migration 38 — invitations never write it, so
+    // being invited anywhere can never affect this count.) The plan of the
+    // roots already created decides the allowance (all plans currently 1;
+    // a paid second org is activated by a human raising the plan).
+    let created: { data: unknown[] | null; error: { message?: string } | null } =
+      await admin
         .from("orgs")
         .select("id, plan")
-        .in("id", ownIds)
+        .eq("created_by", user.id)
         .is("parent_org_id", null);
-      if (!withPlan.error && withPlan.data) {
-        rootCount = withPlan.data.length;
-        planLimit = Math.max(
-          1,
-          ...withPlan.data.map((o) => planById(o.plan as string).maxRootOrgs),
-        );
-      } else {
-        const legacy = await admin
-          .from("orgs")
-          .select("id", { count: "exact", head: true })
-          .in("id", ownIds)
-          .is("parent_org_id", null);
-        if (legacy.error) return { error: ERR.failed, ok: false };
-        rootCount = legacy.count ?? 0;
-      }
-      const allowed = Math.min(planLimit, MAX_ROOT_ORGS_PER_USER);
-      if (rootCount >= allowed) {
-        return { error: ERR.tooManyRoots, ok: false };
-      }
+    if (created.error && /\bplan\b/i.test(created.error.message ?? "")) {
+      // Ladder: a database without orgs.plan still counts (plans read trial).
+      created = await admin
+        .from("orgs")
+        .select("id")
+        .eq("created_by", user.id)
+        .is("parent_org_id", null);
     }
+    if (!created.error && created.data) {
+      const roots = created.data as { id: number; plan?: string | null }[];
+      const allowed = Math.max(
+        1,
+        ...roots.map((o) => planById((o.plan as string) ?? "trial").maxRootOrgs),
+      );
+      if (roots.length >= allowed) {
+        return { error: ERR.needPaidForMoreRoots, ok: false };
+      }
+    } else if (
+      created.error &&
+      !/created_by|schema cache|column/i.test(created.error.message ?? "")
+    ) {
+      // A real database failure (not "the column is not there yet") — refuse
+      // rather than wave past a cap we could not evaluate.
+      return { error: ERR.failed, ok: false };
+    }
+    // created_by missing (migration 38 not applied) = fail-open (D8): the
+    // old mis-firing check is GONE either way — J: 拆掉就没得乱. The report
+    // tells J loudly that the 1-root rule starts counting once 38 is applied.
   } else {
     // A BRANCH. The caller must administer the parent.
     if (adminIds === null || !adminIds.has(parentOrgId)) {
@@ -365,6 +367,9 @@ export async function createOrg(
   if (orgType !== "registered") extendedRow.org_type = orgType;
   if (ppmNo !== "") extendedRow.ppm_no = ppmNo;
   if (plan !== "trial") extendedRow.plan = plan;
+  // §1-14 (migration 38): who opened it — what the one-root-per-free-account
+  // rule counts. Dropped by the retry below while the DB is behind.
+  extendedRow.created_by = user.id;
   let { data: org, error: orgError } = await admin
     .from("orgs")
     .insert(extendedRow)
@@ -372,8 +377,7 @@ export async function createOrg(
     .single();
   if (
     orgError &&
-    ("org_type" in extendedRow || "ppm_no" in extendedRow || "plan" in extendedRow) &&
-    /org_type|ppm_no|plan|schema cache/i.test(orgError.message ?? "")
+    /org_type|ppm_no|plan|created_by|schema cache/i.test(orgError.message ?? "")
   ) {
     const retry = await admin
       .from("orgs")

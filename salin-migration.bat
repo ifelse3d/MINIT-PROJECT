@@ -103,6 +103,8 @@ echo    36.  20260914000000  jejak cadangan AI / AI suggestion marks (64 E3)
 echo         kad cadangan: sahkan/abaikan direkod, tak ganggu dua kali
 echo    37.  20260915000000  roster e-mel + negeri / roster email + state (69 H1)
 echo         eROSES langkah AJK minta e-mel dan negeri setiap pemegang jawatan
+echo    38.  20260916000000  orgs.created_by / siapa buka pertubuhan (69 H3)
+echo         peraturan baru: akaun percuma buka SATU pertubuhan induk sahaja
 echo.
 echo     0.  Keluar / Quit
 echo.
@@ -146,6 +148,7 @@ if "%pick%"=="34" set f=20260912000000_auditors.sql& goto copy
 if "%pick%"=="35" set f=20260913000000_org_maklumat_am.sql& goto copy
 if "%pick%"=="36" set f=20260914000000_suggestion_marks.sql& goto copy
 if "%pick%"=="37" set f=20260915000000_roster_email_state.sql& goto copy
+if "%pick%"=="38" set f=20260916000000_orgs_created_by.sql& goto copy
 
 echo.
 echo    Nombor tak sah / not a valid number.

@@ -5,12 +5,13 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-30 凌晨（MYT）· Fable 5（69 号 eROSES 重构+名册场：H1 ✅ H2 ✅，H3 进行中）**
-**🔴 本场（69 号）状态一句话：H1 名册补完（74 号报告）＋ H2 eROSES flow
-重构主菜（75 号报告）都收工——入口三张卡、年报九步一步一页（Hard Rule
-13）、缺值原地填、每步介面型示意图、/filings 假锁改真锁；probe-h1 18 项
-＋probe-h2 51 项全 PASS，四道关＋三条 e2e 全绿。migration 37 只写档等 J
-贴。下面是上一场（68 号）的快照：**
+**最后更新：2026-08-30 凌晨（MYT）· Fable 5（69 号 eROSES 重构+名册场：H1 ✅ H2 ✅ H3 ✅，H4 进行中）**
+**🔴 本场（69 号）状态一句话：H1 名册补完（74 号）＋H2 eROSES flow 重构
+（75 号）＋H3 onboarding 与机构上限（76 号）都收工——入口三张卡、年报
+九步一步一页、缺值原地填、每步示意图、/filings 真锁、/orgs/welcome 引导
+序列、旧 3-org 检查拆掉换「免费 1 个总机构」（migration 38）。probe-h1
+18＋probe-h2 51＋probe-h3 14 项全 PASS，四道关＋三条 e2e 全绿。
+**migration 37、38 只写档等 J 贴**。下面是上一场（68 号）的快照：**
 **⑦ 品质场四包全做完（70/71/72/73 号报告），
 held-out 验收两半都过。J 的道教会样本拍照→确认→BM 文件＝标准 minit
 版式、量尺 0 缺陷、**零 AI 费**（结构化确定性组装；翻译才叫模型，
@@ -39,6 +40,29 @@ eROSES 下载官方 Penyata Kewangan 模板（60 号报告第 5 点）。**
 > **已上线**：https://minit-project.vercel.app —— 68 号场 J 已 push
 > （开工时 main == origin/main）；**69 号场的 commit 等 J push-cabang.bat**。
 > 线上 org：15「J」、58「avocado」、91「TESTING1」。
+
+### 这一场做了什么（69 号场 · 包 H3 ✅，76 号报告——onboarding＋机构上限）
+
+- **§1-6 /orgs/welcome 引导序列**（create-org 直接落这里）：章程→名册→
+  Maklumat Am 三张顺序卡；**完成状态问数据库**（别页做完回来自动 ✓）、
+  跳过是「稍后填」按钮（localStorage 每装置）、Maklumat 步直接嵌 H2 的
+  就地填表单；三步齐→收尾卡。旧主页 ?welcome=1 卡删除（welcome-card.tsx
+  拆掉不留孤儿）；/orgs 页加常驻入口；constitution setup banner 加
+  「继续开机构引导」。新/老机构两套清单合一（DB 驱动的 ✓ 取代 lama=1）。
+- **§1-14 机构上限**（J 深夜拍板照做）：旧 MAX_ROOT_ORGS_PER_USER=3 及
+  其 members_roles 计数**整个删除**（不深挖）；migration 38 只写档
+  （orgs.created_by＋回填最早 hq_admin；createOrg 写入带剥离重试；
+  salin 38 项＋探针）；新规则一条查询 created_by=me AND root，≥方案
+  上限（trial=1）→「多机构需付费方案——联络 MinitAI」三语。被邀请
+  构造上数不到；分会没动；20 个防滥用总上限保留。38 未贴＝fail-open
+  （旧检查已拆，新上限贴上才生效——报告白纸黑字告诉 J）。
+- **测过**：tsc 0 · eslint 21 · vitest 1084 · build ✓ · **三条 e2e 全绿**
+  （三支脚本「落 welcome=1 主页」旧断言按新契约改成「落 /orgs/welcome」）·
+  `probe-h3-69.mjs` **14 项 PASS**（建 org→引导页→稍后填×2 顺序推进→
+  就地填电话自动 ✓→收尾卡→REST 种名册重开自动 ✓→旧卡消失→
+  **连开 4 个总机构全放行＝旧 3 上限证死**→ZZZ 全删）。
+- [SKIP]（诚实）：1-root 拒绝句本身（38 未贴数不了）——探针分支写好，
+  J 贴完 38 重跑即走拒绝路。
 
 ### 这一场做了什么（69 号场 · 包 H2 ✅，75 号报告——eROSES flow 重构主菜）
 

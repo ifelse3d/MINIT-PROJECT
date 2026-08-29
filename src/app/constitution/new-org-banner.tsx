@@ -57,6 +57,19 @@ export function NewOrgBanner() {
         />
       </p>
       <div className="flex flex-wrap gap-3">
+        {/* §1-6 (work order 69): the constitution is step 1 of the guided
+            sequence — whichever way this page ends, the sequence continues
+            at /orgs/welcome (roster, then Maklumat Am). */}
+        <Button asChild size="lg" variant="outline">
+          <Link href="/orgs/welcome">
+            🧭{" "}
+            <Tri
+              bm="Teruskan persediaan (AJK & Maklumat Am)"
+              zh="继续开机构引导（名册与基本资料）"
+              en="Continue the setup (roster & Maklumat Am)"
+            />
+          </Link>
+        </Button>
         <Button asChild size="lg" variant="outline">
           <Link href="/minutes">
             📝{" "}
@@ -64,16 +77,6 @@ export function NewOrgBanner() {
               bm="Hantar minit mesyuarat"
               zh="上交会议记录"
               en="Submit meeting minutes"
-            />
-          </Link>
-        </Button>
-        <Button asChild size="lg" variant="outline">
-          <Link href="/money">
-            🧾{" "}
-            <Tri
-              bm="Rekod derma & jana resit"
-              zh="记录捐款、开收据"
-              en="Record donations & issue receipts"
             />
           </Link>
         </Button>

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Tri } from "@/components/language-provider";
 import { getActiveOrg } from "@/lib/active-org";
@@ -15,7 +14,7 @@ import { readOrgTypeFlags } from "@/lib/org-flags";
 import { getLatestConfirmedAgm } from "@/db/agm";
 import { HomeUpcoming } from "./home-upcoming";
 import { HowItWorksButton } from "./how-it-works";
-import { WelcomeCard } from "./welcome-card";
+
 import { AskBox } from "./ask-box";
 import { TaskCards } from "./task-cards";
 import { BRAND_NAME } from "@/lib/brand";
@@ -116,11 +115,8 @@ export default async function Home() {
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 pb-10">
       <Header />
 
-      {/* A-4: the just-created-an-organisation landing note. Reads ?welcome=1,
-          so it needs a Suspense boundary (useSearchParams in a server tree). */}
-      <Suspense fallback={null}>
-        <WelcomeCard />
-      </Suspense>
+      {/* §1-6 (work order 69): the old ?welcome=1 landing card is gone — a
+          new organisation now lands on /orgs/welcome, the guided sequence. */}
 
       {/* 1 — the four task cards: what MinitAI makes, one tap each (A-1). */}
       <TaskCards stats={stats} unfinishedDrafts={unfinishedDrafts} />
