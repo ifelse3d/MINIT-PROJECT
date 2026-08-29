@@ -10,6 +10,7 @@ import { FieldRow } from "./field-row";
 import { DeletableRow } from "./row-controls";
 import { RosterPicker } from "./roster-picker";
 import { useMinutes } from "./minutes-store";
+import { attendeeIdentityKey } from "@/lib/attendee-identity";
 
 // ---------------------------------------------------------------------------
 // /minutes/attendance — who was at the meeting.
@@ -74,12 +75,14 @@ export function AttendanceReview() {
     const v = newName.trim();
     if (v === "") return;
     updateField((e) => {
+      // I4: same identity rule as the picker — a typed bare "Ali" only
+      // collides with another bare "Ali", never with a noted one.
       const have = new Set(
-        e.attendees.map((a) => a.name.value.trim().toLowerCase()),
+        e.attendees.map((a) => attendeeIdentityKey(a.name.value, a.note)),
       );
       // Typing somebody twice is a slip, not an instruction to record twice —
       // same rule as the roster picker.
-      if (!have.has(v.toLowerCase())) {
+      if (!have.has(attendeeIdentityKey(v))) {
         e.attendees.push({
           name: {
             value: v,
@@ -172,6 +175,13 @@ export function AttendanceReview() {
       what={t(`Hadir ${i + 1}`, `出席者 ${i + 1}`, `Attendee ${i + 1}`)}
     >
       <FieldRow {...fieldRowProps(i)} />
+      {/* B-6/I4: the tell-apart note rides with the name wherever the name
+          is shown — it is what says WHICH Ali this row is. */}
+      {(extraction.attendees[i].note ?? "") !== "" && (
+        <p className="pb-1 text-sm text-muted-foreground">
+          {extraction.attendees[i].note}
+        </p>
+      )}
     </DeletableRow>
   );
 
@@ -340,6 +350,12 @@ export function AttendanceReview() {
                               />
                             </span>
                           )}
+                          {/* B-6/I4: which Ali this is. */}
+                          {(a.note ?? "") !== "" && (
+                            <span className="ml-1.5 text-sm text-muted-foreground">
+                              {a.note}
+                            </span>
+                          )}
                         </span>
                         <ConfidenceBadge level={a.name.confidence} />
                       </button>
@@ -382,9 +398,13 @@ export function AttendanceReview() {
               applies — and it renders nothing at all when the society has no
               roster recorded, rather than offering an empty list. */}
           <RosterPicker
+            // I4 (work order 81): identity is name+note (B-6) — 「Ali (青年組)」
+            // and 「Ali (婦女組)」 tick, and grey out, each on their own.
             alreadyThere={
               new Set(
-                extraction.attendees.map((a) => a.name.value.trim().toLowerCase()),
+                extraction.attendees.map((a) =>
+                  attendeeIdentityKey(a.name.value, a.note),
+                ),
               )
             }
             onAdd={addNamedAttendees}

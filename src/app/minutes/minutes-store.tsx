@@ -41,6 +41,7 @@ import {
   mergedSourceLabel,
 } from "@/lib/extraction-merge";
 import { addRow, removeRow, rowHasContent, type RowList } from "@/lib/extraction-rows";
+import { attendeeIdentityKey } from "@/lib/attendee-identity";
 import { saveConfirmedMinutes } from "./actions";
 import {
   dropDraft,
@@ -190,9 +191,12 @@ export type MinutesStore = {
    * AI having read anything, and the record must not suggest it was.
    *
    * Names already present are skipped: ticking somebody twice is a slip, not
-   * an instruction to record them twice.
+   * an instruction to record them twice. I4 (work order 81): "present" means
+   * the same name AND the same tell-apart note — 「Ali (青年組)」 and
+   * 「Ali (婦女組)」 are two people (B-6), and each row carries its note so
+   * the list can show which one was ticked.
    */
-  addNamedAttendees: (names: string[]) => void;
+  addNamedAttendees: (people: { name: string; note?: string | null }[]) => void;
   removeExtractionRow: (list: RowList, index: number) => void;
   /** True when deleting that row would lose something typed. */
   rowHasContent: (list: RowList, index: number) => boolean;
@@ -1146,17 +1150,28 @@ export function MinutesProvider({
     [updateField],
   );
   const addNamedAttendees = useCallback(
-    (names: string[]) => {
-      const clean = names.map((n) => n.trim()).filter((n) => n !== "");
+    (people: { name: string; note?: string | null }[]) => {
+      const clean = people
+        .map((p) => ({
+          name: p.name.trim(),
+          note: (p.note ?? "").trim(),
+        }))
+        .filter((p) => p.name !== "");
       if (clean.length === 0) return;
       updateField((e) => {
-        const have = new Set(e.attendees.map((a) => a.name.value.trim().toLowerCase()));
-        for (const name of clean) {
-          if (have.has(name.toLowerCase())) continue;
-          have.add(name.toLowerCase());
+        // I4: identity is name+note (attendeeIdentityKey) — a bare "Ali"
+        // already on the list does NOT block 「Ali (青年組)」, and the two
+        // noted Alis never block each other.
+        const have = new Set(
+          e.attendees.map((a) => attendeeIdentityKey(a.name.value, a.note)),
+        );
+        for (const p of clean) {
+          const key = attendeeIdentityKey(p.name, p.note);
+          if (have.has(key)) continue;
+          have.add(key);
           e.attendees.push({
             name: {
-              value: name,
+              value: p.name,
               confidence: "confirmed",
               source_ref: {
                 location: t("ditanda oleh anda", "由您勾选", "ticked by you"),
@@ -1167,6 +1182,9 @@ export function MinutesProvider({
                 ),
               },
             },
+            // Only carried when there IS one — old data has no key here and
+            // new note-less rows should look exactly the same.
+            ...(p.note !== "" ? { note: p.note } : {}),
           });
         }
         return e;

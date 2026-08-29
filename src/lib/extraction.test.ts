@@ -50,6 +50,24 @@ describe("extraction data contract (Hard Rule 1)", () => {
     clone.figures[0].amount_cents.value = 1248.5 as unknown as number;
     expect(meetingNotesExtractionSchema.safeParse(clone).success).toBe(false);
   });
+
+  // I4 (work order 81) — the compatibility iron line: old saved data has NO
+  // note key on attendees, new roster-ticked rows may carry one, and a
+  // round-trip through the schema must lose neither shape.
+  it("attendees parse with and without the tell-apart note, and keep it", () => {
+    const clone = structuredClone(sampleMeetingExtraction);
+    // Old shape: no note key at all (every existing draft and saved doc).
+    expect(meetingNotesExtractionSchema.safeParse(clone).success).toBe(true);
+    // New shape: the note rides along and SURVIVES the parse (zod strips
+    // unknown keys — this pins that `note` is a known one).
+    clone.attendees[0] = { ...clone.attendees[0], note: "青年组" };
+    const parsed = meetingNotesExtractionSchema.safeParse(clone);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.attendees[0].note).toBe("青年组");
+      expect(parsed.data.attendees[1].note).toBeUndefined();
+    }
+  });
 });
 
 describe("deterministic minutes draft (no LLM)", () => {

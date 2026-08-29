@@ -144,6 +144,14 @@ export type Classification = z.infer<typeof classificationSchema>;
 
 export const attendeeSchema = z.object({
   name: textFieldSchema,
+  /**
+   * I4 (work order 81): the society's tell-apart note（大）（小）— carried
+   * ONLY when the person was ticked off the roster, where name+note is the
+   * identity (B-6). The AI is never asked for it and old saved data simply
+   * has no key here; both parse fine. In the schema so a saved document's
+   * round-trip keeps it (zod strips unknown keys).
+   */
+  note: z.string().max(120).optional(),
 });
 
 /**

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
 import { loadRosterNames, type RosterName } from "./roster-actions";
 import { loadMemberGroups, type GroupMember } from "@/app/members/group-actions";
+import { attendeeIdentityKey } from "@/lib/attendee-identity";
 
 // ---------------------------------------------------------------------------
 // TICK THE PEOPLE WHO CAME.
@@ -27,17 +28,20 @@ import { loadMemberGroups, type GroupMember } from "@/app/members/group-actions"
 // ---------------------------------------------------------------------------
 
 export function RosterPicker({
-  /** Names already on the attendance list, lowercased for comparison. */
+  /** attendeeIdentityKey()s already on the attendance list. I4 (work order
+   *  81): keys, not bare names — 「Ali (青年組)」 and 「Ali (婦女組)」 are two
+   *  rows and each must tick (and grey out) on its own. */
   alreadyThere,
   onAdd,
 }: {
   alreadyThere: Set<string>;
-  onAdd: (names: string[]) => void;
+  onAdd: (people: { name: string; note: string | null }[]) => void;
 }) {
   const t = useTriText();
   const [roster, setRoster] = useState<RosterName[] | null>(null);
   const [groups, setGroups] = useState<GroupMember[]>([]);
   const [open, setOpen] = useState(false);
+  /** attendeeIdentityKey()s ticked in this open picker. */
   const [picked, setPicked] = useState<Set<string>>(new Set());
   /** Which of the society's groups are being shown. Empty = everybody. */
   const [filter, setFilter] = useState<Set<string>>(new Set());
@@ -81,7 +85,9 @@ export function RosterPicker({
   );
   const shown =
     filter.size === 0 ? people : people.filter((p) => inFilter.has(p.name.toLowerCase()));
-  const available = people.filter((r) => !alreadyThere.has(r.name.toLowerCase()));
+  const available = people.filter(
+    (r) => !alreadyThere.has(attendeeIdentityKey(r.name, r.note)),
+  );
 
   if (!open) {
     return (
@@ -138,7 +144,7 @@ export function RosterPicker({
       )}
 
       {/* One tap for a whole group — the reason the filter exists at all. */}
-      {shown.some((r) => !alreadyThere.has(r.name.toLowerCase())) && (
+      {shown.some((r) => !alreadyThere.has(attendeeIdentityKey(r.name, r.note))) && (
         <Button
           variant="outline"
           size="lg"
@@ -147,7 +153,8 @@ export function RosterPicker({
             setPicked((prev) => {
               const next = new Set(prev);
               for (const r of shown) {
-                if (!alreadyThere.has(r.name.toLowerCase())) next.add(r.name);
+                const key = attendeeIdentityKey(r.name, r.note);
+                if (!alreadyThere.has(key)) next.add(key);
               }
               return next;
             })
@@ -160,8 +167,11 @@ export function RosterPicker({
 
       <ul className="flex flex-col divide-y">
         {shown.map((r) => {
-          const here = alreadyThere.has(r.name.toLowerCase());
-          const checked = here || picked.has(r.name);
+          // I4: the row's identity is name+note (B-6) — ticking 「Ali (青年組)」
+          // must not tick, or grey out, 「Ali (婦女組)」.
+          const key = attendeeIdentityKey(r.name, r.note);
+          const here = alreadyThere.has(key);
+          const checked = here || picked.has(key);
           return (
             <li key={`${r.name}-${r.position}-${r.note ?? ""}`}>
               <label
@@ -177,8 +187,8 @@ export function RosterPicker({
                   onChange={(e) =>
                     setPicked((prev) => {
                       const next = new Set(prev);
-                      if (e.target.checked) next.add(r.name);
-                      else next.delete(r.name);
+                      if (e.target.checked) next.add(key);
+                      else next.delete(key);
                       return next;
                     })
                   }
@@ -212,7 +222,13 @@ export function RosterPicker({
           size="lg"
           disabled={picked.size === 0}
           onClick={() => {
-            onAdd([...picked]);
+            // Keys back to people: the person object carries the note along,
+            // so the attendance row records WHICH Ali was ticked.
+            onAdd(
+              people
+                .filter((r) => picked.has(attendeeIdentityKey(r.name, r.note)))
+                .map((r) => ({ name: r.name, note: r.note ?? null })),
+            );
             setPicked(new Set());
             setOpen(false);
           }}
