@@ -18,9 +18,11 @@ held-out 验收两半都过。J 的道教会样本拍照→确认→BM 文件＝
 出席 Next 闸、create-org 失败红卡+原地重试、ganti 换届卡）。
 擷取 eval 同 prompt 两轮 95.2%/93.6%、invented=0（对外引区间）；品质
 eval 3/3 PASS。累计真额度 ≈US$0.30/1.00。migration **32–36 探针实测已
-全部套用**（J 开工前贴好了，一支都不用贴）。🔴 J 的事：
-**push-cabang.bat**（线上还是 8/27 旧版，你实测的 timeout 一半原因就是
-没上线）→ 道教会样本亲手重走 → 叫 tester（73 号报告清单）。
+全部套用**、**origin/main 已在 20c6d52**（J 开工前 push 过 56/64 场——
+所以 8/29 晚的 timeout 是在 45s 修已上线的情况下撞的，真因就是
+标 missing 塞值那条，本场修掉）。🔴 J 的事：**push-cabang.bat**
+（本场 4 支 commit 带着真因修）→ 道教会样本亲手重走 → 叫 tester
+（73 号报告清单）。
 🔴 J 的事（上一场欠的照旧）：贴 migration 32–36（salin-migration.bat）→
 push-cabang.bat → 叫 tester（67 号报告第 4 点；旧清单 60＋55 号）→
 eROSES 下载官方 Penyata Kewangan 模板（60 号报告第 5 点）。**
@@ -29,18 +31,19 @@ eROSES 下载官方 Penyata Kewangan 模板（60 号报告第 5 点）。**
 
 ## 🌙 现在在哪里（2026-08-29 晚，68 号 ⑦ 品质场进行中）
 
-> **已上线**：https://minit-project.vercel.app —— 截至 0ca62e7 已 push；
-> 51 号之后的 commit 等 J push-cabang.bat。
-> 线上 org：15「J」、58「avocado」、91「TESTING1」。
+> **已上线**：https://minit-project.vercel.app —— 截至 **20c6d52**（64 号
+> 场全部）已 push；**68 号品质场的 4 支 commit（ahead 4）等 J
+> push-cabang.bat**。线上 org：15「J」、58「avocado」、91「TESTING1」。
 
 ### 这一场做了什么（68 号 ⑦ 品质场 · 包 G3 ✅，73 号报告——12 条 UX 件＋timeout 真因）
 
-- **「AI took too long」真因根治**（§1-8，三层）：①45s 修没上线（等 push）
-  ②**真病＝flash-lite「标 missing 却塞值」**→Hard Rule 1 打回整份→rule-7
-  重读爆 50s 预算→包装成 timeout。修＝`coerceMissingFieldsEmpty`（parse 前
+- **「AI took too long」真因根治**（§1-8）：git 探针证实 45s 修（D0）
+  **当时已上线**（origin/main=20c6d52），J 照样撞——所以真因只有一条：
+  **flash-lite「标 missing 却塞值」**→Hard Rule 1 打回整份→rule-7 重读爆
+  50s 预算→包装成 timeout。修＝`coerceMissingFieldsEmpty`（parse 前
   信标签、抹值不提升，extraction.ts 五条管线全装）。实测 CONTOH 8 页
   25s 读通 41 条；**真机 create-org 33.1s 一次过落地**（probe-createorg-68，
-  ZZZ 全删）③失败 UI 诚实化：红卡自己一张＋原地「再试一次」，绿框只讲
+  ZZZ 全删）。失败 UI 诚实化：红卡自己一张＋原地「再试一次」，绿框只讲
   成功。⚠ 修后曾有一轮探针以旧指纹失败、紧接重跑全过（疑杀旧 server
   race）——线上如再见，先查 app_errors 指纹。
 - **UX 九件**：浮窗左下 resize；草稿照片签名 URL 载回＋按真类型标
@@ -522,10 +525,11 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
 
 ### 🔴 J 的事
 
-1. **双击 push-cabang.bat（最要紧）**——线上还在跑 8/27 旧版（git 探针：
-   ahead 4，48 号之后全部未 push）；你 8/29 晚实测撞到的「AI took too
-   long」有一半原因就是修了没上线，另一半（模型标 missing 却塞值）
-   这场也修掉了，push 完一起生效。
+1. **双击 push-cabang.bat（最要紧）**——git 探针：origin/main 停在
+   20c6d52（你已把 56/64 场 push 上线了），本场 4 支 commit（ahead 4）
+   还没上。里面有「AI took too long」的**真因修**：你 8/29 晚是在 45s 修
+   已上线的情况下照样撞，真因是模型「标 missing 却塞值」害整份读取被
+   打回重读——本场修掉并真机验证（create-org 传 CONTOH 33 秒落地）。
 2. 看 **70 / 71 / 72 / 73** 号报告（各一分钟版在开头；旧场 65–67 照旧）。
    ~~贴 migration 32–36~~——**探针实测五支全部已套用**（你在 68 号单开工前
    就贴好了，本场收尾 check:migrations 证实），一支都不用贴。
