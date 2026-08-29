@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { captureAppError } from "@/lib/app-errors";
+import { DEFAULT_LANG_MODE, isLangMode, LANG_COOKIE, type LangKey } from "@/lib/lang";
 import { z } from "zod";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
 import { getVisionProvider } from "@/lib/ai/provider";
@@ -302,9 +304,17 @@ export async function POST(req: Request) {
     // rather than filling the gap.
     const hits = await cariMinit({ orgId: org.id, query: question });
 
+    // K4 (work order 82): the reply follows the QUESTION's language; the
+    // interface language (minit-lang cookie) is only the cannot-tell fallback.
+    // The advanced side-by-side mode reads all three — official BM then.
+    const langCookieValue = (await cookies()).get(LANG_COOKIE)?.value;
+    const langMode = isLangMode(langCookieValue) ? langCookieValue : DEFAULT_LANG_MODE;
+    const uiLang: LangKey = langMode === "all" ? "bm" : langMode;
+
     const prompt = chatPrompt({
       orgName: org.name,
       todayIso,
+      uiLang,
       // Only the recent tail: older turns rarely change the answer and every
       // token is money.
       history: history.slice(-CONTEXT_TURNS * 2) as ChatTurn[],
