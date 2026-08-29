@@ -113,7 +113,8 @@ export function StepNav({ n }: { n: number }) {
         </Button>
       ) : (
         <Button asChild variant="outline">
-          <Link href="/filings">
+          {/* Straight to the card entry — /filings is only a redirect now. */}
+          <Link href="/filings/eroses">
             ✓ <Tri bm="Selesai — kembali ke Pemfailan" zh="完成 —— 回申报页" en="Done — back to Filings" />
           </Link>
         </Button>
@@ -155,7 +156,14 @@ export function FlowMeetingPicker({
   );
 }
 
-/** One value row: label → value → COPY (or the fix-it content). */
+/** One value row: label → value → COPY (or the fix-it content).
+ *
+ *  `locked` (D44, work order 78 — J 8/30 拍板): a free-plan org sees the
+ *  value but cannot take it — the copy button is the paid door and the text
+ *  itself is select-none with copy/cut/context-menu intercepted, the same
+ *  REAL lock §1-11 gave the old /filings page (a disabled button next to
+ *  freely-selectable text was a fake lock). Demo/CONTOH orgs never get
+ *  locked=true (fence state is null for them upstream). */
 export function ValueRow({
   id,
   labelBm,
@@ -163,6 +171,7 @@ export function ValueRow({
   value,
   fix,
   mono = false,
+  locked = false,
 }: {
   id: string;
   labelBm: string;
@@ -171,6 +180,7 @@ export function ValueRow({
   value: string | null;
   fix?: React.ReactNode;
   mono?: boolean;
+  locked?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
   const missing = value === null || value.trim() === "" || value === "—";
@@ -181,33 +191,47 @@ export function ValueRow({
           <div className="font-medium">{labelBm}</div>
           {labelSub && <div className="text-sm text-muted-foreground">{labelSub}</div>}
         </div>
-        {!missing && (
-          <Button
-            size="sm"
-            variant="outline"
-            data-copy-id={id}
-            onClick={() => {
-              // clipboard blocked (insecure origin / permission) — the value
-              // is still on screen and selectable, so degrade, never break.
-              void navigator.clipboard
-                ?.writeText(value)
-                .then(() => {
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 2000);
-                })
-                .catch(() => {});
-            }}
-          >
-            {copied ? (
-              <>✓ <Tri bm="Disalin" zh="已复制" en="Copied" /></>
-            ) : (
-              <Tri bm="Salin" zh="复制" en="Copy" />
-            )}
-          </Button>
-        )}
+        {!missing &&
+          (locked ? (
+            <Button size="sm" variant="outline" disabled>
+              🔒 <Tri bm="Salin (pelan berbayar)" zh="复制（付费版）" en="Copy (paid plan)" />
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              data-copy-id={id}
+              onClick={() => {
+                // clipboard blocked (insecure origin / permission) — the value
+                // is still on screen and selectable, so degrade, never break.
+                void navigator.clipboard
+                  ?.writeText(value)
+                  .then(() => {
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  })
+                  .catch(() => {});
+              }}
+            >
+              {copied ? (
+                <>✓ <Tri bm="Disalin" zh="已复制" en="Copied" /></>
+              ) : (
+                <Tri bm="Salin" zh="复制" en="Copy" />
+              )}
+            </Button>
+          ))}
       </div>
       {missing ? (
         <div className="text-base text-amber-900 dark:text-amber-100">{fix ?? "—"}</div>
+      ) : locked ? (
+        <span
+          className={`whitespace-pre-wrap select-none ${mono ? "font-mono" : ""}`}
+          onCopy={(e) => e.preventDefault()}
+          onCut={(e) => e.preventDefault()}
+          onContextMenu={(e) => e.preventDefault()}
+        >
+          {value}
+        </span>
       ) : (
         <div className={`whitespace-pre-wrap ${mono ? "font-mono" : ""}`}>{value}</div>
       )}

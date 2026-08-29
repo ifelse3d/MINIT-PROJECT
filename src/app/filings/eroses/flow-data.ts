@@ -7,6 +7,7 @@
 
 import { getSupabaseServer } from "@/db/supabase-server";
 import { getActiveOrg } from "@/lib/active-org";
+import { getFenceState } from "@/lib/fence";
 import { dayIsoMalaysia } from "@/lib/history";
 import {
   getConfirmedMinutesDoc,
@@ -26,6 +27,11 @@ export type FlowBase = {
   selectedId: number | null;
   selected: ConfirmedMinutesDoc | null;
   todayIso: string;
+  /** D44 (work order 78): non-null = free (fenced) org — every COPY in the
+   *  flow is locked and the clean PDF leaves through the counted download.
+   *  null = paid org OR demo (CONTOH 禁令: the demo never blocks anybody —
+   *  getFenceState's own isDemo guard) OR fence read failed (fail open). */
+  fence: { downloadsRemaining: number } | null;
 };
 
 export function meetingLabelOf(m: {
@@ -45,11 +51,20 @@ export async function loadFlowBase(docParam: string | string[] | undefined): Pro
   const active = await getActiveOrg().catch(() => null);
   const todayIso = dayIsoMalaysia(new Date().toISOString())!;
   if (!active) {
-    return { active: null, orgType: null, meetings: [], selectedId: null, selected: null, todayIso };
+    return {
+      active: null,
+      orgType: null,
+      meetings: [],
+      selectedId: null,
+      selected: null,
+      todayIso,
+      fence: null,
+    };
   }
-  const [{ orgType }, meetings] = await Promise.all([
+  const [{ orgType }, meetings, fenceState] = await Promise.all([
     readOrgTypeFlags(active.id),
     listConfirmedMinutes(),
+    getFenceState(active),
   ]);
   const docRaw = Array.isArray(docParam) ? docParam[0] : docParam;
   const docId = Number(docRaw ?? "");
@@ -71,6 +86,9 @@ export async function loadFlowBase(docParam: string | string[] | undefined): Pro
     selectedId: selected?.id ?? null,
     selected,
     todayIso,
+    fence: fenceState
+      ? { downloadsRemaining: fenceState.remaining.downloads }
+      : null,
   };
 }
 

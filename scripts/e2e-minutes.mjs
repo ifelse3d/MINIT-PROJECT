@@ -284,13 +284,26 @@ async function run() {
   check("D-1 history page shows no step rail and no done banner",
     text.includes("会议记录历史") && !text.includes("拍或打字") && !text.includes("存进您机构的历史"));
 
-  // --- /filings reads the CONFIRMED document from the server (S0-5) --------
-  await page.goto(`${BASE}/filings`, { waitUntil: "networkidle2" });
+  // --- /filings front door (work order 78): the old long page is retired —
+  // the address 308s to the card entry, ?doc riding along -------------------
+  const docId = docs[0]?.id;
+  await page.goto(`${BASE}/filings?doc=${docId}`, { waitUntil: "networkidle2" });
   await new Promise((r) => setTimeout(r, 1000));
   text = await page.evaluate(() => document.body.innerText);
-  const hasPack = text.includes("eROSES") &&
-    (text.includes("2026-08-20") || text.includes("要粘贴的值"));
-  check("S0-5 /filings shows the paste-pack from the confirmed doc", hasPack);
+  check("78① /filings redirects to the card entry, doc preserved",
+    page.url().includes(`/filings/eroses?doc=${docId}`),
+    `url=${page.url()}`);
+  check("78① card entry shows the three cards",
+    text.includes("登记会议") && text.includes("年度呈报") && text.includes("看截止日"));
+
+  // --- the flow reads the CONFIRMED document from the server (S0-5) --------
+  // (a committee meeting registers via the mesyuarat guide; the date arrives
+  // in the portal's own DD-MM-YYYY shape)
+  await page.goto(`${BASE}/filings/eroses/mesyuarat?doc=${docId}`, { waitUntil: "networkidle2" });
+  await new Promise((r) => setTimeout(r, 1000));
+  text = await page.evaluate(() => document.body.innerText);
+  check("S0-5 mesyuarat guide shows the confirmed doc's values",
+    text.includes("Mesyuarat AJK") && text.includes("20-08-2026"));
 
   // and it must come from the SERVER: wipe local storage, reload, still there
   await page.evaluate(() => {
@@ -299,11 +312,34 @@ async function run() {
       if (k && k.startsWith("minit:")) localStorage.removeItem(k);
     }
   });
-  await page.goto(`${BASE}/filings`, { waitUntil: "networkidle2" });
+  await page.goto(`${BASE}/filings/eroses/mesyuarat?doc=${docId}`, { waitUntil: "networkidle2" });
   await new Promise((r) => setTimeout(r, 1000));
   text = await page.evaluate(() => document.body.innerText);
-  check("S0-5 paste-pack survives a local wipe (server data, not the draft)",
-    text.includes("要粘贴的值") || text.includes("2026-08-20"));
+  check("S0-5 values survive a local wipe (server data, not the draft)",
+    text.includes("20-08-2026"));
+
+  // --- 78②: this fresh org is TRIAL — the flow's COPY is really fenced -----
+  const fence = await page.evaluate(() => {
+    const body = document.body.innerText || "";
+    return {
+      lockedButton: body.includes("复制（付费版）"),
+      // the REAL lock: the value text itself is select-none
+      selectNone: [...document.querySelectorAll("span.select-none")].some(
+        (s) => (s.textContent ?? "").trim() !== "",
+      ),
+      // the clean file leaves through the counted download (402 shows here)
+      cleanDownload: body.includes("干净下载"),
+      // no live copy button leaks past the fence (locked label contains
+      // 复制（付费版）; a live one is the bare word)
+      liveCopy: [...document.querySelectorAll("button")].some(
+        (b) => (b.textContent ?? "").trim() === "复制" && !b.disabled,
+      ),
+    };
+  });
+  check("78② flow copy button is the locked paid door", fence.lockedButton);
+  check("78② flow value text is select-none (real lock)", fence.selectNone);
+  check("78② flow offers the counted clean download", fence.cleanDownload);
+  check("78② no live copy button leaks past the fence", !fence.liveCopy);
 
   // --- cleanup -------------------------------------------------------------
   if (orgId) {

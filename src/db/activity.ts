@@ -236,7 +236,7 @@ export async function fetchMonthActivity(
   for (const p of einvois.data ?? []) {
     const day = dayIsoMalaysia(p.generated_at);
     if (!day) continue;
-    records.push({ category: "filings", kind: "einvois", dayIso: day, href: "/filings", atIso: p.generated_at });
+    records.push({ category: "filings", kind: "einvois", dayIso: day, href: "/filings/eroses", atIso: p.generated_at });
   }
 
   type PastePackRow = {
@@ -249,7 +249,7 @@ export async function fetchMonthActivity(
       : (p.minutes_doc?.meeting_date ?? null);
     // TS-side month filter (this query could not be windowed on a join column)
     if (!day || day < firstIso || day > lastIso) continue;
-    records.push({ category: "filings", kind: "paste_pack", dayIso: day, href: "/filings" });
+    records.push({ category: "filings", kind: "paste_pack", dayIso: day, href: "/filings/eroses" });
   }
 
   for (const u of uploads.data ?? []) {

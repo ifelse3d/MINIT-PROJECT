@@ -158,6 +158,20 @@ export default async function ErosesEntryPage({
           </Link>
         ))}
       </div>
+
+      {/* Kept from the retired /filings page: the Laporan Aktiviti generator
+          keeps a direct entry here (the flow also reaches it at step 6). */}
+      <p className="text-sm text-muted-foreground">
+        📋{" "}
+        <Tri
+          bm="Penyata Tahunan juga minta Laporan Aktiviti (langkah 6) —"
+          zh="年度呈报还要传一份活动报告（第 6 步）——"
+          en="The Annual Return also asks for an activity report (step 6) —"
+        />{" "}
+        <Link href="/filings/laporan" className="underline underline-offset-4">
+          <Tri bm="jana Laporan Aktiviti" zh="生成活动报告" en="generate the Laporan Aktiviti" /> →
+        </Link>
+      </p>
     </div>
   );
 }

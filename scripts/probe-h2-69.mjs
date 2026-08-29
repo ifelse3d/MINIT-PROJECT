@@ -493,8 +493,11 @@ async function main() {
   const t2 = await page.evaluate(() => document.body.innerText);
   check("tarikh page: annual-return deadline from the confirmed AGM", t2.includes("Penyata Tahunan ROS") || t2.includes("年度呈报"));
 
-  // --- §1-11: the /filings lock is REAL for this trial org -------------------
-  await page.goto(`${BASE}/filings?doc=${docId}`, { waitUntil: "networkidle2" });
+  // --- §1-11: the free-plan lock is REAL for this trial org ------------------
+  // (work order 78: the old /filings long page is retired — /filings now
+  // redirects to the card entry, and the lock lives on the flow's ValueRows.
+  // Same assertions, new address.)
+  await page.goto(`${BASE}/filings/eroses/penyata/langkah/1?doc=${docId}`, { waitUntil: "networkidle2" });
   const lock = await page.evaluate(() => {
     const body = document.body.innerText || "";
     const lockedButton = body.includes("复制（付费版）");

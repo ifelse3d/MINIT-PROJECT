@@ -122,6 +122,9 @@ export default async function LangkahPage({
   }
   const canManage = can(base.active.role, "manage_org");
   const canWrite = can(base.active.role, "minutes_write");
+  // D44 (work order 78): a fenced org sees every value but copies none —
+  // ValueRow's real lock, the same treatment the old /filings page had.
+  const locked = base.fence !== null;
   const q = flowQuery({ ...sp, doc: String(base.selectedId ?? "") });
 
   // ---- Step 1 · Mesyuarat --------------------------------------------------
@@ -171,6 +174,7 @@ export default async function LangkahPage({
                 ) : undefined
               }
               value={row?.value ?? null}
+              locked={locked}
               fix={goFix(
                 "/minutes",
                 "Nilai ini datang daripada minit yang disahkan.",
@@ -189,9 +193,9 @@ export default async function LangkahPage({
             base.selectedId !== null ? (
               <span>
                 <Tri
-                  bm="Muat turun PDF minit BM dari halaman dokumen siap, kemudian muat naik di sini."
-                  zh="到成品页下载马来文版 PDF，再传到 eROSES 这一格。"
-                  en="Download the BM minutes PDF from the finished-document page, then upload it here."
+                  bm="Muat turun PDF minit BM dari halaman dokumen siap (PDF, bawah 25MB; pelan percuma: guna butang muat turun BERSIH di sana), kemudian muat naik di sini."
+                  zh="到成品页下载马来文版 PDF（PDF、25MB 以内；免费版请用那边的「干净下载」按钮），再传到 eROSES 这一格。"
+                  en="Download the BM minutes PDF from the finished-document page (PDF, under 25MB; free plan: use the CLEAN download button there), then upload it here."
                 />{" "}
                 <Link
                   href={`/minutes/history/${base.selectedId}`}
@@ -241,16 +245,23 @@ export default async function LangkahPage({
           dbBehindLine(35)
         ) : (
           <>
-            <ValueRow id="s2-phone" labelBm="No. telefon Pertubuhan" value={maklumat.phone} />
+            <ValueRow
+              id="s2-phone"
+              labelBm="No. telefon Pertubuhan"
+              value={maklumat.phone}
+              locked={locked}
+            />
             <ValueRow
               id="s2-fy"
               labelBm="Tahun kewangan bermula"
               value={maklumat.financialYearStart}
+              locked={locked}
             />
             <ValueRow
               id="s2-reg"
               labelBm="Bilangan ahli yang berdaftar"
               value={maklumat.membersRegistered === null ? null : String(maklumat.membersRegistered)}
+              locked={locked}
             />
             <ValueRow
               id="s2-bearers"
@@ -263,6 +274,7 @@ export default async function LangkahPage({
                 />
               }
               value={committeeCount > 0 ? String(committeeCount) : null}
+              locked={locked}
               fix={goFix(
                 "/members",
                 "Senarai AJK masih kosong.",
@@ -274,12 +286,14 @@ export default async function LangkahPage({
               id="s2-vote"
               labelBm="Bilangan ahli yang layak mengundi"
               value={maklumat.membersVoting === null ? null : String(maklumat.membersVoting)}
+              locked={locked}
             />
             <ValueRow
               id="s2-branches"
               labelBm="Bilangan cawangan Pertubuhan"
               labelSub={<Tri bm="dikira daripada pokok pertubuhan" zh="照机构树自动数的" en="counted from the org tree" />}
               value={String(branchCount)}
+              locked={locked}
             />
             <div className="flex flex-col gap-2 rounded-sm border border-[color:var(--v2-border)] p-3">
               <div className="font-medium">Maklumat akaun bank pertubuhan</div>
@@ -366,6 +380,7 @@ export default async function LangkahPage({
             ) : undefined
           }
           value={row?.value ?? null}
+          locked={locked}
           fix={goFix(
             "/members",
             "Senarai AJK belum ada dalam sistem.",
@@ -459,6 +474,7 @@ export default async function LangkahPage({
                   </>
                 }
                 value={(a.name_official ?? "").trim() || a.person_name}
+                locked={locked}
               />
             ))}
             {canWrite && <AuditorInlineForm />}
@@ -546,6 +562,7 @@ export default async function LangkahPage({
                         />
                       }
                       value={penyataAmount(c.amountCents)}
+                      locked={locked}
                       mono
                     />
                   ))}
@@ -569,6 +586,7 @@ export default async function LangkahPage({
                   <Tri bm="portal kira sendiri — banding sahaja" zh="portal 会自己算 —— 拿这个对一下" en="the portal computes this — just compare" />
                 }
                 value={penyataAmount(penyata.jumlahPendapatanCents)}
+                locked={locked}
                 mono
               />
               <ValueRow
@@ -578,9 +596,59 @@ export default async function LangkahPage({
                   <Tri bm="portal kira sendiri — banding sahaja" zh="portal 会自己算 —— 拿这个对一下" en="the portal computes this — just compare" />
                 }
                 value={penyataAmount(penyata.jumlahPerbelanjaanCents)}
+                locked={locked}
+                mono
+              />
+              {/* Kept from the retired /filings page's F-3 card: the net —
+                  computed by TypeScript from the same two totals. */}
+              <ValueRow
+                id="s5-net"
+                labelBm="Lebihan / Kurangan (bersih)"
+                labelSub={
+                  <Tri
+                    bm="pendapatan tolak perbelanjaan — untuk semakan sendiri"
+                    zh="收入减支出的结余 —— 自己对账用"
+                    en="income minus spending — for your own check"
+                  />
+                }
+                value={
+                  (penyata.jumlahPendapatanCents - penyata.jumlahPerbelanjaanCents < 0 ? "-" : "") +
+                  penyataAmount(Math.abs(penyata.jumlahPendapatanCents - penyata.jumlahPerbelanjaanCents))
+                }
+                locked={locked}
                 mono
               />
             </div>
+            {/* Kept from the retired /filings page's paste-pack: the money
+                figures the MINUTES themselves recorded — a cross-check
+                against the computed boxes above (the portal's reminder:
+                figures must match what the AGM confirmed). */}
+            {(() => {
+              const minitRow = base.selected?.extraction
+                ? buildPastePack(base.selected.extraction, []).find(
+                    (r) => r.erosesField === "Maklumat Kewangan (ringkasan)",
+                  )
+                : null;
+              if (!minitRow || minitRow.value === "—") return null;
+              return (
+                <ValueRow
+                  id="s5-minit-figures"
+                  labelBm="Angka kewangan dalam minit (semakan silang)"
+                  labelSub={
+                    <span className="flex items-center gap-2">
+                      <Tri
+                        bm="apa yang minit mesyuarat sendiri catatkan — banding dengan kotak di atas"
+                        zh="会议记录里自己写的钱数 —— 拿来和上面的格子对一对"
+                        en="what the minutes themselves recorded — compare with the boxes above"
+                      />{" "}
+                      <ConfidenceBadge level={minitRow.confidence} />
+                    </span>
+                  }
+                  value={minitRow.value}
+                  locked={locked}
+                />
+              );
+            })()}
             {(penyata.assumedDermaCount > 0 ||
               penyata.inKindCount > 0 ||
               penyata.pendingExpenseCount > 0 ||
