@@ -5,22 +5,20 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-29 傍晚（MYT）· Fable 5（64 号 AI 智能建议场：E1 ✅，E2/E3 进行中）**
-**🔴 本场状态一句话：⑥ AI 智能建议场（64 号单）开工。包 E1 ✅（65 号报告）：
-`src/lib/minutes-suggestions.ts` 纯推导——已确认会议记录 → 加人/换届卡
-（只认 office_bearers 结构化栏位，名册已有不出、换届只提示不代删）＋
-加活动/下次会议卡（只认明确日期、只出会议日之后、过去引用绝不跳年）；
-每条建议带 source_ref；32 支测试钉「不该出的不出」。零 AI 呼叫零额度。
-四道关全绿（tsc 0 · eslint 21 基准 · vitest 1008 · build ✓）。
-「改地点/改资料」型不上（orgs 无地址栏无处可写，报告写明）。
-包 E2 ✅（66 号报告，程式零行）：AI 补位**不另开呼叫不动 prompt**——
-规则已吃模型结构化好的 office_bearers/kind（同一次读取同一笔费用）；
-动 prompt＝量测作废、独立呼叫＝建议卡变相收费，三条路都写明为什么不走。
-接下来：包 E3（migration 36 留痕表＋成品页卡片 UI＋一键确认走既有
-action＋e2e/探针）。
-🔴 J 的事（沿上一场，未变）：贴 migration 32/33/34/35（salin-migration.bat）→
-push-cabang.bat → 叫 tester（清单在 60 号＋55 号报告末尾）→ 登入 eROSES
-顺手下载官方 Penyata Kewangan 模板（60 号报告第 5 点）。**
+**最后更新：2026-08-29 傍晚（MYT）· Fable 5（64 号 AI 智能建议场：E1 ✅ E2 ✅ E3 ✅ 全单收工）**
+**🔴 本场状态一句话：⑥ AI 智能建议场（64 号单）三包全部做完
+（65/66/67 号报告）。存好会议记录 → 成品页出建议卡：委任新理事 →
+「👥 加进理事名单」、决议里带日期的活动/下次会议 → 「📅 加进日历」；
+每张卡带「因为会议记录写了…」来源（拍板 5），确认走既有
+addCommitteeMember/saveEvent（同名询问全继承、零新后门），忽略留痕
+（migration 36 只写档，未套用 fail-open 实测：忽略暂记本机＋卡上人话）。
+推导纯规则零 AI 费（E2 判断：不动 prompt 不另开呼叫，66 号报告留痕）。
+四道关全绿（tsc 0 · eslint 21 · vitest 1008（+32）· build ✓）＋三条 e2e
+全绿＋probe-e3-64 36 项全 PASS（真 UI 真 DB 零 AI 费，ZZZ 全删）。
+🔴 J 的事：贴 migration 32/33/34/35/**36**（salin-migration.bat）→
+push-cabang.bat → 叫 tester（建议卡清单在 67 号报告第 4 点；旧清单在
+60 号＋55 号报告末尾）→ 登入 eROSES 顺手下载官方 Penyata Kewangan
+模板（60 号报告第 5 点）。**
 
 ---
 
@@ -29,6 +27,30 @@ push-cabang.bat → 叫 tester（清单在 60 号＋55 号报告末尾）→ 登
 > **已上线**：https://minit-project.vercel.app —— 截至 0ca62e7 已 push；
 > 51 号＋56 号的 commit 等 J push-cabang.bat。
 > 线上 org：15「J」、58「avocado」、91「TESTING1」。
+
+### 这一场做了什么（64 号 AI 智能建议场 · 包 E3 ✅，67 号报告——主菜）
+
+- **Migration 36 只写档等 J 贴**（`20260914000000_suggestion_marks.sql`＋
+  salin-migration.bat 36 项＋check:migrations 2 条探针）：suggestion_marks
+  表——每份记录每条建议一行 {suggestion_key, applied/ignored, decided_by,
+  decided_at}，upsert on (org, doc, key)；RLS 同 auditors 形状。
+- **成品页卡片区**（suggestion-cards.tsx＋suggestions-data.ts＋
+  suggestion-actions.ts）：/minutes/history/[id] 在 eROSES 问句下出
+  「💡 从这份会议记录读到的建议」；加人卡（任命日期自动带会议日期、
+  换届提示现任、同名询问黄框全继承 members 的 action）、活动卡
+  （日期三语写出、时间照抄）；确认 → ✓＋去名册/去日历指路；忽略 →
+  留痕＋「已忽略 N 条」。按角色滤卡（加人卡只给 minutes_write；
+  活动卡给 calendar_write；做不了的卡不渲染）。
+- **fail-open 实测**（本机真 DB 未贴 36）：卡照出、确认照写、忽略记
+  本机 localStorage＋卡上人话「migration 36」；SELECT_FULL 加 extraction
+  栏（migration 11 已套用，BASE 阶梯不带）。
+- **测过**：tsc 0 · eslint 21 · vitest 1008 · build ✓ · **三条 e2e 全绿** ·
+  `probe-e3-64.mjs` **36 项全 PASS**（打字存档→三张卡带来源→忽略消失
+  留痕→确认加人＝roster 真多一行（职位/任命日期全对）→确认活动＝
+  events_meetings 真多一行（马来西亚当天＋"pukul 8" 照抄）→重开页
+  三张卡全不再纠缠→ai_usage 0 行→ZZZ 全删）。
+- ⚠ 没能验证的：36 贴上后「忽略跨装置」真路；真 vendor 照片→卡一条龙
+  （同 zod schema，66 号报告写了为什么不烧）；卡上同名黄框的真点击路。
 
 ### 这一场做了什么（64 号 AI 智能建议场 · 包 E1 ✅，65 号报告）
 
@@ -401,14 +423,16 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
 
 ### 🔴 J 的事
 
-1. 看 52 / 53 / 55 号报告（各一分钟版在开头）。
-2. **贴两支 migration**：salin-migration.bat 选 **32** → Supabase SQL Editor
-   贴上 → Run；再选 **33** → 贴上 → Run（没贴之前系统照常，fail-open 已实测）。
+1. 看 **65 / 66 / 67** 号报告（各一分钟版在开头；旧场的 57–60 号照旧）。
+2. **贴五支 migration**：salin-migration.bat 依次选 **32 → 33 → 34 → 35 →
+   36**，每支 Supabase SQL Editor 贴上 → Run 等 Success 再下一支
+   （没贴之前系统照常，fail-open 全实测过）。
 3. 双击 **push-cabang.bat**。
-4. **叫 tester 重试**（总清单在 55 号报告末尾）：PPT/Word/大 PDF 直传、多张
-   照片；加理事试同名、分组、词库；模板弹窗、云端草稿、日历假期。
-5. 有空照 **54 号 GUIDE** 设 Supabase 邮件（五分钟）；用 iPhone 看副历的
-   伊斯兰历＋新假期栏。
+4. **叫 tester**：建议卡（67 号报告第 4 点：存一份有委任＋带日期决议的
+   会议记录→看卡→确认→对名册/日历→忽略一张→重开页不再来）；旧清单
+   （60 号＋55 号报告末尾）照旧。
+5. 有空照 **54 号 GUIDE** 设 Supabase 邮件（五分钟）；登入 eROSES 顺手
+   下载官方 Penyata Kewangan 模板（60 号报告第 5 点）。
 6. bench 那个视窗：你有空就跑（双击 bench-models.bat）。
 
 ### ❓ 未决问题
@@ -440,18 +464,36 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
 
 ### ⏭ 下一个 session 从哪开始
 
-**⑤ eROSES 大改版（56 号总单）全部做完**（D0=57、D1=58、D2=59、D3=60 号报告）。
+**⑥ AI 智能建议场（64 号总单）全部做完**（E1=65、E2=66、E3=67 号报告；
+⑤ eROSES 56 号总单上一场已收，D0=57、D1=58、D2=59、D3=60）。
 接下来照 51 号 §5 的场次顺序（J 已点头）：
-**⑥ AI 智能建议场** → ⑦ 品质场（线索：draft_minutes 三笔退款，57 号报告；
-敬语/职衔 AI 对人，B-7 地基已铺）→ ⑧ 助手＋AI 代办 → ⑨ 上线后第一批。
+**⑦ 品质场**（线索：draft_minutes 三笔退款，57 号报告；敬语/职衔 AI 对人，
+B-7 地基已铺；活动卡标题偶留尾巴，67 号报告第 7 点）→ ⑧ 助手＋AI 代办 →
+⑨ 上线后第一批。62 号竞赛材料场的单子没作废，J 说开才开。
 **等 J 反馈的**：引导文案 vs 真 portal 对版（J 圈哪步不对改哪步）；
-migration 32–35 贴上后 tester 重试清单（60 号＋55 号报告）。
+migration 32–36 贴上后 tester 重试清单（67 号＋60 号＋55 号报告）。
 竞赛材料 J 自己定 30/31 交，**不催**。
 RESPONSIVE：J 若再圈破版，贴 46 号单同段 PROMPT 继续。
 
 ---
 
 ## 6. 已知陷阱（踩过的，别再踩）
+
+### 2026-08-29 傍晚新增（64 号 AI 智能建议场）
+
+- ⚠ **一支 server action 里的 `revalidatePath()`，会让「从别的页面呼叫它」的
+  那一页也整页重渲染**——建议卡确认加人走 members 的 addCommitteeMember
+  （里面 revalidatePath("/members")），成品页跟着重渲染、名册 dedupe 把
+  刚确认的卡从 props 里拿掉，✓ 和指路链接一起消失。**修法：确认瞬间在
+  client 端记一份快照（confirmedHere），卡被 dedupe 掉后 ✓ 照渲染。
+  判断方法：「按了确认，卡无声消失」先想这条。**
+- ⚠ **探针在「多张卡共享一个外层容器」里按卡找按钮，只能比对「最近的
+  rounded 祖先」**——爬到外层 Card 才比对文字，每张卡的 textContent 都
+  包含全部卡的字，第一颗按钮永远中签（第一版探针把「忽略」按到了别张卡，
+  还写进了别张卡的表）。跟既有陷阱「wait 的字串会出现在上一步画面」同族：
+  **断言/点击都要圈定「这一张卡独有」的 DOM 范围。**
+- 💡 **成品页的 `<pre>` 全文会逐字重复决议内容**——对卡片区的文字断言
+  一律读 `[data-probe="suggestion-cards"]` 范围，不读 body.innerText。
 
 ### 2026-08-29 下午新增（56 号场 · 包 D2/D3）
 
@@ -952,7 +994,7 @@ J 手贴 migration 的步骤：记事本开档 → `Ctrl+A` `Ctrl+C` → Supabas
 | 模型对比 | `npm run bench`（--dry-run / --mock）· `bench-models.bat` · 报告在 `eval/reports/model-bench-<日期>.md` |
 | 「到底做了没有」 | `npm run status` / `status.bat` |
 | 示范章程（CONTOH） | `public/contoh/undang-undang-tubuh-contoh.pdf`（8 页 BM 完整章程，虚构社团）· 文字版 `docs/contoh-undang-undang-tubuh.md` · 重生 `npm run contoh:constitution`。十条条文与 `src/lib/sample-constitution.ts` **逐字相同**、印出来的页码对得上 `page_ref`，所以拿它测 `/constitution` 上传时**答案是已知的** |
-| migration | `supabase/migrations/`（**35 支；1–31 已套用（2026-08-29 探针实测）；32（roster note/honorific）、33（云端草稿）、34（审计员）、35（Maklumat Am＋银行户口）只写档，等 J 贴**）· `salin-migration.bat`（35 项）· `npm run check:migrations`（含 32–35 探针） |
+| migration | `supabase/migrations/`（**36 支；1–31 已套用（2026-08-29 探针实测）；32（roster note/honorific）、33（云端草稿）、34（审计员）、35（Maklumat Am＋银行户口）、36（建议卡留痕）只写档，等 J 贴**）· `salin-migration.bat`（36 项）· `npm run check:migrations`（含 32–36 探针） |
 | 给 J 双击的 `.bat` | `status.bat` · `salin-migration.bat` · `salin-env-vercel.bat` · `push-cabang.bat` · `bench-models.bat`。🔴 `push-to-github.bat` 不能用；⚠ `check-ai.bat` 还指旧资料夹 |
 | `competition/` | 顶层＝当前版（**[YOU] 两处还空着**）；`screenshots/` 60 张旧配色（拍板 0-9：只重拍首页主图，未拍——未决 7） |
 | `eval/reports/` | 整夹 gitignore；只有 `SUMMARY.md` 例外 |

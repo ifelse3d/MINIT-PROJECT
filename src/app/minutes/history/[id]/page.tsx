@@ -18,6 +18,8 @@ import { formatMytDateTime } from "@/lib/history";
 import { MINUTES_STATUS_LABEL, labelFor } from "@/lib/status-labels";
 import { MinutesHistoryActions } from "../history-actions";
 import { HistoryPhotoStrip } from "../photo-strip";
+import { SuggestionCards } from "../suggestion-cards";
+import { loadSuggestionsForDoc } from "../suggestions-data";
 
 // ---------------------------------------------------------------------------
 // /minutes/history/<id> — ONE finished minutes document, on its own page.
@@ -47,10 +49,13 @@ type Row = {
   edited_at?: string | null;
   edited_by?: string | null;
   photo_paths?: unknown;
+  /** The reviewed extraction stored with the confirmation (S0-5) — what the
+   *  suggestion cards derive from. Absent on the SELECT_BASE fallback. */
+  extraction?: unknown;
 };
 
 const SELECT_FULL =
-  "id, meeting_type, meeting_type_label, meeting_date, status, confirmed_by, confirmed_at, final_md, title, edited_at, edited_by, photo_paths";
+  "id, meeting_type, meeting_type_label, meeting_date, status, confirmed_by, confirmed_at, final_md, title, edited_at, edited_by, photo_paths, extraction";
 const SELECT_BASE =
   "id, meeting_type, meeting_date, status, confirmed_by, confirmed_at, final_md";
 
@@ -149,6 +154,19 @@ export default async function MinutesDocPage({
     if (data?.signedUrl) photos.push({ path, url: data.signedUrl });
   }
 
+  // Work order 64: the AI suggestion cards — derived from the confirmed
+  // extraction by rules, zero vendor calls, written only on a human's
+  // confirm. null = nothing to suggest (or this viewer cannot act on any).
+  const suggestionData =
+    d.status === "confirmed" && d.extraction != null
+      ? await loadSuggestionsForDoc({
+          orgId: active.id,
+          role: active.role,
+          docId: d.id,
+          extractionRaw: d.extraction,
+        })
+      : null;
+
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 pb-10">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -189,6 +207,17 @@ export default async function MinutesDocPage({
             →
           </Link>
         </p>
+      )}
+
+      {/* 64 §4: suggestion cards live on the finished-document side (D36 —
+          the workspace is never touched). */}
+      {suggestionData && (
+        <SuggestionCards
+          docId={d.id}
+          suggestions={suggestionData.suggestions}
+          ignoredCount={suggestionData.ignoredCount}
+          marksStored={suggestionData.marksStored}
+        />
       )}
 
       <Card>

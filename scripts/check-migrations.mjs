@@ -82,6 +82,8 @@ const probes = [
   ["20260913000000 Maklumat Am: financial year", "orgs", "financial_year_start"],
   ["20260913000000 Maklumat Am: member counts", "orgs", "members_registered"],
   ["20260913000000 Maklumat Am: bank accounts", "org_bank_accounts", "account_no"],
+  ["20260914000000 suggestion marks (64 E3)", "suggestion_marks", "suggestion_key"],
+  ["20260914000000 suggestion marks (64 E3)", "suggestion_marks", "action"],
 ];
 
 const headers = { apikey: key, Authorization: `Bearer ${key}` };
