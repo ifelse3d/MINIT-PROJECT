@@ -6,9 +6,12 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
-import { uploadErrorMessage } from "@/lib/shrink-photo";
 import { RELAY_MAX_BYTES } from "@/lib/upload-relay";
-import { prepareUploadForSend } from "@/lib/upload-relay-client";
+import {
+  fingerprintFiles,
+  readConstitutionFiles,
+  type ConstitutionReadResume,
+} from "@/lib/constitution-read-client";
 import { writeIntake } from "@/lib/intake-handoff";
 import { createOrg, type OrgActionState } from "./actions";
 
@@ -86,7 +89,15 @@ export function CreateOrgForm({
   // societies, and most of those existed long before tonight.
   const [societyAge, setSocietyAge] = useState<"existing" | "new">("existing");
   const [reading, setReading] = useState(false);
+  /** "第 2／6 段" while a long PDF is read in segments (I1); null otherwise. */
+  const [readingPart, setReadingPart] = useState<string | null>(null);
   const [readFailed, setReadFailed] = useState<string | null>(null);
+  /**
+   * I1 (work order 81): a failed segment leaves everything read so far here,
+   * so "Try again" CONTINUES from the failed segment on the same paid action
+   * instead of paying for the whole document again.
+   */
+  const resumeRef = useRef<ConstitutionReadResume | null>(null);
   /** The post-create work must run once, not on every re-render it causes. */
   const handledRef = useRef(false);
 
@@ -113,49 +124,51 @@ export function CreateOrgForm({
     async (f: File) => {
       setReadFailed(null);
       setReading(true);
+      setReadingPart(null);
       try {
-        // 48 + A-4: shrink photos in the browser; relay a big PDF via
-        // Storage; refuse honestly what neither road can carry.
-        const prepared = await prepareUploadForSend(f);
-        if (prepared.send === "refuse") {
-          setReadFailed(prepared.error);
-          return;
-        }
-        const body = new FormData();
-        if (prepared.send === "file") body.append("photo", prepared.file);
-        else body.append("storagePath", prepared.storagePath);
-        const res = await fetch("/api/extract-constitution", {
-          method: "POST",
-          body,
+        // I1 (work order 81): the shared segmented reader. A long PDF is
+        // split in the browser and read segment by segment — no single
+        // request ever meets the 60s wall the old one-shot read died on —
+        // and the whole document costs ONE extract action. Shrinking photos
+        // and relaying a big segment via Storage happen inside the helper.
+        const fingerprint = fingerprintFiles([f]);
+        const resume =
+          resumeRef.current?.fingerprint === fingerprint ? resumeRef.current : null;
+        const r = await readConstitutionFiles([f], {
+          resume,
+          onProgress: (p) =>
+            setReadingPart(
+              p.totalSegments === 1
+                ? null
+                : t(
+                    `bahagian ${p.segment}/${p.totalSegments}`,
+                    `第 ${p.segment}／${p.totalSegments} 段`,
+                    `part ${p.segment} of ${p.totalSegments}`,
+                  ),
+            ),
         });
-        // .json() without a catch used to send a platform 413 (text/plain)
-        // into the "internet dropped" branch below — a wrong diagnosis.
-        const json = (await res.json().catch(() => null)) as {
-          extraction?: unknown;
-          error?: string;
-        } | null;
-        if (!res.ok || !json?.extraction) {
-          if (json === null) {
-            setReadFailed(uploadErrorMessage(res.status, null));
-            return;
-          }
+        if (!r.ok) {
+          resumeRef.current = r.resume;
           // The organisation IS created — only the reading failed. Say so and
           // let the person decide, instead of navigating away from the reason.
-          // The quota is refunded by the route when the vendor never answered.
-          setReadFailed(
-            json.error ??
-              t(
-                "MinitAI tidak dapat membaca fail itu.",
-                "MinitAI 读不了这个档案。",
-                "MinitAI could not read that file.",
-              ),
-          );
+          // A fresh request's charges are refunded by the route; a partly-read
+          // document waits in resumeRef, so "Try again" continues from the
+          // failed segment without paying again.
+          const continueLine = r.resume
+            ? t(
+                `Bahagian ${r.failedSegment}/${r.totalSegments} gagal — "Cuba sekali lagi" menyambung dari situ, tidak dicaj sekali lagi.`,
+                `第 ${r.failedSegment}／${r.totalSegments} 段没读成功 ——「再试一次」会从那一段接着读，不会再扣一次。`,
+                `Part ${r.failedSegment} of ${r.totalSegments} failed — "Try again" continues from there, not charged again.`,
+              )
+            : null;
+          setReadFailed(continueLine ? `${r.message}\n\n${continueLine}` : r.message);
           return;
         }
+        resumeRef.current = null;
         writeIntake({
           kind: "constitution",
           fileName: f.name,
-          extraction: json.extraction,
+          extraction: r.extraction,
         });
         router.replace(AFTER_CREATE_WITH_FILE);
       } catch {
@@ -168,6 +181,7 @@ export function CreateOrgForm({
         );
       } finally {
         setReading(false);
+        setReadingPart(null);
       }
     },
     [router, t],
@@ -635,6 +649,9 @@ export function CreateOrgForm({
                 zh="MinitAI 正在读您的章程……文件长的话可能要等一分钟。"
                 en="MinitAI is reading your constitution… a long document can take a minute."
               />
+              {/* I1: a long PDF reads in parts — say which one, so the wait
+                  visibly moves. */}
+              {readingPart && <span className="font-medium"> · {readingPart}</span>}
             </p>
           )}
           {!reading && readFailed && (

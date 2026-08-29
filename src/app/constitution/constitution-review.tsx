@@ -33,8 +33,11 @@ import { saveConstitutionClauses } from "./actions";
 import { NewOrgBanner } from "./new-org-banner";
 import { OrgIdentityPanel } from "./org-identity-panel";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
-import { uploadErrorMessage } from "@/lib/shrink-photo";
-import { prepareUploadForSend } from "@/lib/upload-relay-client";
+import {
+  fingerprintFiles,
+  readConstitutionFiles,
+  type ConstitutionReadResume,
+} from "@/lib/constitution-read-client";
 import { canStageTogether, isPhotoType } from "@/lib/multi-page-staging";
 import { compressPhoto } from "@/app/minutes/minutes-storage";
 import { X } from "lucide-react";
@@ -178,8 +181,16 @@ export function ConstitutionReview({
    * one of those at a time (our design, not a platform limit).
    */
   const [staged, setStaged] = useState<{ file: File; preview: string | null }[]>([]);
-  /** Which page is being read right now, e.g. "page2.jpg (2/3)". */
+  /** Which page is being read right now, e.g. "page2.jpg · 第 2／3 段". */
   const [reading, setReading] = useState<string | null>(null);
+  /**
+   * I1 (work order 81): where a partly-read document can pick up again. A
+   * failed segment leaves everything read so far (and the no-extra-charge
+   * continuation pass) here; pressing send on the SAME staged files carries
+   * on from the failed segment instead of paying for a fresh read. Removing
+   * or adding a staged file changes the fingerprint and starts clean.
+   */
+  const resumeRef = useRef<ConstitutionReadResume | null>(null);
   const fileInput = useRef<HTMLInputElement | null>(null);
 
   /**
@@ -351,56 +362,18 @@ export function ConstitutionReview({
     setStaged((prev) => [...prev, ...withPreviews]);
   }
 
-  /** Read ONE file through the route; merge its clauses in. */
-  async function readOneFile(file: File): Promise<{ ok: true } | { ok: false; message: string }> {
-    // 48 + A-4: shrink photos in the browser; relay a big PDF via Storage
-    // (a 20-40 page constitution scan is routinely over 4MB); refuse
-    // honestly what neither road can carry. One helper, every door.
-    const prepared = await prepareUploadForSend(file);
-    if (prepared.send === "refuse") return { ok: false, message: prepared.error };
-    const form = new FormData();
-    if (prepared.send === "file") form.append("photo", prepared.file);
-    else form.append("storagePath", prepared.storagePath);
-    let res: Response;
-    try {
-      res = await fetch("/api/extract-constitution", { method: "POST", body: form });
-    } catch {
-      // The request never left — nothing was charged, and saying so matters.
-      return { ok: false, message: joinUserError(USER_ERRORS.networkNoCharge) };
-    }
-    const body = await res.json().catch(() => null);
-    if (!res.ok) {
-      return { ok: false, message: uploadErrorMessage(res.status, body?.error) };
-    }
-    const extraction = body.extraction as ConstitutionExtraction;
-    const read = clausesFromExtraction(extraction);
-    if (read.length === 0) {
-      return { ok: false, message: joinUserError(USER_ERRORS.aiCouldNotRead) };
-    }
-    const nextTitle =
-      extraction.document_title.confidence !== "missing" &&
-      extraction.document_title.value !== ""
-        ? extraction.document_title.value
-        : t("Perlembagaan pertubuhan", "机构章程", "Society constitution");
-
-    // Pages are added, not replaced: a constitution is many photographs, and
-    // uploading page 2 must not throw away page 1. Later pages win on a
-    // repeated clause number, so re-photographing a bad page fixes it.
-    // (mergeClauses is the unit-tested version of that rule.)
-    setStored((prev) => ({
-      title: prev?.title ?? nextTitle,
-      clauses: mergeClauses(prev?.clauses ?? [], read),
-      sourceLabel: file.name,
-    }));
-    return { ok: true };
-  }
-
   /**
-   * THE INGESTION PATH, now behind an explicit Send (D0-1): every staged
-   * photo is read as another page of the SAME constitution, in order. A page
-   * that fails stops the run and stays staged (with everything after it);
-   * pages already read are already merged — added, never replaced — so
-   * nothing done so far is lost.
+   * THE INGESTION PATH, now behind an explicit Send (D0-1) and read through
+   * the shared segmented reader (I1, work order 81): everything staged is ONE
+   * constitution. A long PDF is split in the browser and read segment by
+   * segment — each segment its own request, so no read ever meets the
+   * platform's 60s wall — and the whole document costs ONE extract action
+   * (plus the A6 min(pages, 5) fence charge) however many segments it takes.
+   *
+   * A segment that fails stays continuable: everything read so far (and the
+   * no-extra-charge continuation pass) waits in `resumeRef`, and pressing
+   * send again on the same staged files carries on from the failed segment.
+   * Nothing done so far is lost, and nothing is charged twice.
    */
   async function sendStaged() {
     if (aiBusy || staged.length === 0) return;
@@ -408,20 +381,58 @@ export function ConstitutionReview({
     setAiBusy(true);
     try {
       const files = staged.map((s) => s.file);
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        setReading(
-          files.length === 1 ? file.name : `${file.name} (${i + 1}/${files.length})`,
-        );
-        const r = await readOneFile(file);
-        if (!r.ok) {
-          // Say WHICH page failed; keep it (and the rest) staged for one more
-          // send once the person fixes or removes it.
-          setAiError(files.length === 1 ? r.message : `📄 ${file.name}\n${r.message}`);
-          setStaged((prev) => prev.slice(i));
-          return;
-        }
+      const fingerprint = fingerprintFiles(files);
+      const resume =
+        resumeRef.current?.fingerprint === fingerprint ? resumeRef.current : null;
+      const r = await readConstitutionFiles(files, {
+        resume,
+        onProgress: (p) =>
+          setReading(
+            p.totalSegments === 1
+              ? p.fileName
+              : `${p.fileName} · ${t(
+                  `bahagian ${p.segment}/${p.totalSegments}`,
+                  `第 ${p.segment}／${p.totalSegments} 段`,
+                  `part ${p.segment} of ${p.totalSegments}`,
+                )}`,
+          ),
+      });
+      if (!r.ok) {
+        resumeRef.current = r.resume;
+        // Say WHICH part failed and that pressing send again continues from
+        // it; the files stay staged for exactly that.
+        const continueLine = r.resume
+          ? t(
+              `Bahagian ${r.failedSegment}/${r.totalSegments} gagal. Yang sudah dibaca disimpan — tekan hantar sekali lagi untuk sambung dari bahagian itu (tidak dicaj sekali lagi).`,
+              `第 ${r.failedSegment}／${r.totalSegments} 段没读成功。已读的部分都留着 —— 再按一次送出，会从那一段接着读，不会再扣一次。`,
+              `Part ${r.failedSegment} of ${r.totalSegments} failed. What was read is kept — press send again to continue from that part (not charged again).`,
+            )
+          : null;
+        setAiError(continueLine ? `${r.message}\n\n${continueLine}` : r.message);
+        return;
       }
+      resumeRef.current = null;
+      const read = clausesFromExtraction(r.extraction);
+      if (read.length === 0) {
+        setAiError(joinUserError(USER_ERRORS.aiCouldNotRead));
+        return;
+      }
+      const nextTitle =
+        r.extraction.document_title.confidence !== "missing" &&
+        r.extraction.document_title.value !== ""
+          ? r.extraction.document_title.value
+          : t("Perlembagaan pertubuhan", "机构章程", "Society constitution");
+
+      // Pages are added, not replaced: a constitution is many photographs, and
+      // uploading page 2 must not throw away page 1. Later pages win on a
+      // repeated clause number, so re-photographing a bad page fixes it.
+      // (mergeClauses is the unit-tested version of that rule.)
+      setStored((prev) => ({
+        title: prev?.title ?? nextTitle,
+        clauses: mergeClauses(prev?.clauses ?? [], read),
+        sourceLabel:
+          files.length === 1 ? files[0].name : `${files.length} × 📄`,
+      }));
       setStaged([]);
       setResult(null);
     } finally {

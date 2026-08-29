@@ -333,12 +333,20 @@ export async function recordTokens(
 export function createUsageRecorder(
   orgId: number,
   charge: UsageCharge | undefined,
+  /**
+   * I1 (work order 81): a segmented constitution read is several REQUESTS
+   * accumulating onto ONE charged row. Each write below carries a running
+   * total that would otherwise start from zero and overwrite the earlier
+   * segments' cost — so a continuation request seeds the accumulator with
+   * what the row already holds.
+   */
+  seed?: { inputTokens: number; outputTokens: number; costMicros: number | null },
 ): (usage: TokenUsage) => void {
   if (!charge) return () => {};
 
-  let inputTokens = 0;
-  let outputTokens = 0;
-  let costMicros: number | null = null;
+  let inputTokens = seed?.inputTokens ?? 0;
+  let outputTokens = seed?.outputTokens ?? 0;
+  let costMicros: number | null = seed?.costMicros ?? null;
   let tail: Promise<void> = Promise.resolve();
 
   return (usage: TokenUsage) => {

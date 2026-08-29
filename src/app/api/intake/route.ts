@@ -35,6 +35,7 @@ import { extractConstitutionPrompt } from "@/prompts/extract-constitution";
 import { dayIsoMalaysia } from "@/lib/history";
 import { recordUpload } from "@/lib/record-upload";
 import { chargeFence, refundFence } from "@/lib/fence";
+import { constitutionFencePages } from "@/lib/constitution-pages";
 import { checkPageLimit, countPdfPages } from "@/lib/pdf-pages";
 import {
   EXTRACT_ATTEMPT_TIMEOUT_MS,
@@ -213,6 +214,15 @@ export async function POST(req: Request) {
     const forcedRaw = String(form.get("kind") ?? "");
     const forcedKind: Handled | null = isHandled(forcedRaw) ? forcedRaw : null;
 
+    // I1 (work order 81): "what IS this?" on its own. The home door asks this
+    // for a long PDF BEFORE deciding how to read it — a constitution goes to
+    // the segmented reader (/api/extract-constitution), everything else comes
+    // back here whole. Charges the classify action only; the extract (and its
+    // fence pages) are paid by whichever road actually reads the document.
+    // Meaningless alongside a forced kind — the person already answered.
+    const classifyOnly =
+      String(form.get("classifyOnly") ?? "") === "1" && !forcedKind;
+
     // A-2: what the person typed alongside the file — spellings, which column
     // is which, dates. User text, so it reaches every prompt as LABELLED DATA
     // (untrustedBlock), never as instructions. PDPA: never logged.
@@ -244,17 +254,29 @@ export async function POST(req: Request) {
     // Office file = 1 — its text is bounded by the converter's own cap).
     // Refunded on every path where the person ends up with nothing, including
     // "unknown kind": the forced re-send will charge the same file again.
+    //
+    // I2 (A6, work order 81): at this door the KIND is not known yet, and a
+    // constitution costs at most min(pages, 5) — so charge the least any kind
+    // could owe now, and once the classifier answers, a NON-constitution
+    // document tops up to its real page count (below, before the extract).
+    // Charging the full count here used to refuse a long constitution that
+    // A6 says must fit. A classify-only request charges no pages at all —
+    // the road that actually reads the document pays them.
     const pageCount = officeFile
       ? 1
       : file.type === "application/pdf"
         ? ((await countPdfPages(bytes)) ?? 1)
         : 1;
-    const fenceGate = await chargeFence(gate.org, { pages: pageCount });
+    const fencedNow =
+      officeFile ? 1 : constitutionFencePages(pageCount);
+    const fenceGate = classifyOnly
+      ? ({ ok: true, charge: null } as const)
+      : await chargeFence(gate.org, { pages: fencedNow });
     if (!fenceGate.ok) {
       await refundUsage(gate.org.id, gate.charges[0]);
       return NextResponse.json(fenceGate.body, { status: fenceGate.status });
     }
-    const fenceCharge = fenceGate.charge;
+    let fenceCharge = fenceGate.charge;
 
     const orgName = gate.org.name;
     const todayIso = dayIsoMalaysia(new Date().toISOString())!;
@@ -333,6 +355,18 @@ export async function POST(req: Request) {
 
     const kind: Handled = forcedKind ?? (classification!.kind as Handled);
 
+    // I1: the classify-only caller wanted exactly this answer — hand it back
+    // before any extract is charged. The classify action stays charged (the
+    // model ran); no fence pages were taken on this path.
+    if (classifyOnly) {
+      return NextResponse.json({
+        kind,
+        classifyOnly: true,
+        language: classification?.language_detected ?? "unknown",
+        fileName: file.name,
+      });
+    }
+
     // --- the page cap, again, now that we know WHAT this is ----------------
     //
     // The check at the top of this route had to use the most generous limit,
@@ -368,6 +402,31 @@ export async function POST(req: Request) {
         },
         { status: 400 },
       );
+    }
+
+    // I2: the early fence charge assumed a constitution's capped price
+    // (min(pages, 5)). This document turned out NOT to be one, so collect the
+    // rest of its real page count before the expensive extract. If the top-up
+    // is refused, everything charged for pages goes back and the extract
+    // never runs — the classify action stays (the model ran).
+    if (kind !== "constitution" && !officeFile && pageCount > fencedNow) {
+      const topUp = await chargeFence(gate.org, { pages: pageCount - fencedNow });
+      if (!topUp.ok) {
+        await refundFence(fenceCharge);
+        if (forcedKind) await refundUsage(gate.org.id, gate.charges[0]);
+        return NextResponse.json(topUp.body, { status: topUp.status });
+      }
+      if (topUp.charge) {
+        fenceCharge = fenceCharge
+          ? {
+              orgId: fenceCharge.orgId,
+              delta: {
+                pages:
+                  (fenceCharge.delta.pages ?? 0) + (topUp.charge.delta.pages ?? 0),
+              },
+            }
+          : topUp.charge;
+      }
     }
 
     // --- step 2: charge and run the matching extractor ---------------------

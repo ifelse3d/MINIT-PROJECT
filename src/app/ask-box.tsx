@@ -31,6 +31,12 @@ import { AttachIcon, ChooseFileLabel, UploadLimitNote } from "@/components/attac
 import { Button } from "@/components/ui/button";
 import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
 import { prepareUploadForSend } from "@/lib/upload-relay-client";
+import {
+  fingerprintFiles,
+  planUploadSegments,
+  readConstitutionFiles,
+  type ConstitutionReadResume,
+} from "@/lib/constitution-read-client";
 import { canStageTogether } from "@/lib/multi-page-staging";
 import {
   mergeConstitutionExtractions,
@@ -154,6 +160,13 @@ export function AskBox({
   // Set when Minit could not place the page: it ASKS instead of giving up.
   // Holds the text that accompanied the failed attempt so the retry carries it.
   const [askKind, setAskKind] = useState<{ context: string } | null>(null);
+  /**
+   * I1 (work order 81): where a partly-read LONG constitution PDF can pick up
+   * again — a failed segment keeps everything read so far here, and pressing
+   * Send on the same staged file continues from that segment on the same
+   * paid action instead of charging a fresh read.
+   */
+  const constitutionResumeRef = useRef<ConstitutionReadResume | null>(null);
 
   const outOfQuota = remaining !== null && remaining <= 0;
 
@@ -327,6 +340,61 @@ export function AskBox({
     return { outcome: "ok", body };
   }
 
+  /**
+   * I1: "what IS this?" for a LONG PDF — only the FIRST SEGMENT travels (the
+   * title page answers the question), and only the classify action is
+   * charged; whichever road then reads the document pays the extract.
+   */
+  async function classifyLongPdf(
+    firstSegment: File,
+    context: string,
+  ): Promise<
+    | { outcome: "kind"; kind: IntakeKind }
+    | { outcome: "unknown" }
+    | { outcome: "error"; message: string }
+  > {
+    const prepared = await prepareUploadForSend(firstSegment);
+    if (prepared.send === "refuse")
+      return { outcome: "error", message: prepared.error };
+    const form = new FormData();
+    if (prepared.send === "file") form.append("file", prepared.file);
+    else form.append("storagePath", prepared.storagePath);
+    if (context.trim() !== "") form.append("context", context.trim());
+    form.append("classifyOnly", "1");
+    let res: Response;
+    try {
+      res = await fetch("/api/intake", { method: "POST", body: form });
+    } catch {
+      return {
+        outcome: "error",
+        message: t(
+          "Sambungan internet terputus. Tiada apa-apa dicaj. Cuba sekali lagi.",
+          "网络断了，一分都没扣。请再试一次。",
+          "The connection dropped — nothing was charged. Please try again.",
+        ),
+      };
+    }
+    const body = (await res.json().catch(() => null)) as IntakeOk | null;
+    if (body?.kind === "unknown") return { outcome: "unknown" };
+    const kind = body?.kind;
+    if (
+      !res.ok ||
+      (kind !== "meeting_notes" && kind !== "ledger_page" && kind !== "constitution")
+    ) {
+      return {
+        outcome: "error",
+        message:
+          body?.error ??
+          t(
+            "MinitAI tidak dapat membaca fail itu. Cuba sekali lagi.",
+            "MinitAI 读不了这个文件。请再试一次。",
+            "MinitAI could not read that file. Please try again.",
+          ),
+      };
+    }
+    return { outcome: "kind", kind };
+  }
+
   /** The kind-specific page merge — the same rules each review page uses. */
   function mergeByKind(kind: IntakeKind, a: unknown, b: unknown): unknown {
     if (kind === "meeting_notes")
@@ -359,6 +427,76 @@ export function AskBox({
     setBusy("file");
     try {
       let kind: IntakeKind | null = forcedKind ?? null;
+
+      // I1 (work order 81): a LONG PDF cannot be read in one request — that
+      // is the read "The AI took too long" kept killing. Ask what it is
+      // first (first segment only, classify action only), then: a
+      // constitution goes to the segmented reader — one extract action for
+      // the whole document, each segment its own request — and anything else
+      // is read whole below with the answer as its forced kind.
+      if (files.length === 1 && files[0].type === "application/pdf") {
+        const plan = await planUploadSegments(files);
+        if (plan.segments.length > 1) {
+          if (!kind) {
+            setReading(files[0].name);
+            const k = await classifyLongPdf(plan.segments[0].file, context);
+            if (k.outcome === "unknown") {
+              // Minit could not place the page — ASK, don't give up (A-2).
+              setAskKind({ context });
+              return;
+            }
+            if (k.outcome === "error") {
+              setError(k.message);
+              return;
+            }
+            kind = k.kind;
+          }
+          if (kind === "constitution") {
+            const fingerprint = fingerprintFiles(files);
+            const resume =
+              constitutionResumeRef.current?.fingerprint === fingerprint
+                ? constitutionResumeRef.current
+                : null;
+            const r = await readConstitutionFiles(files, {
+              resume,
+              onProgress: (p) =>
+                setReading(
+                  `${p.fileName} · ${t(
+                    `bahagian ${p.segment}/${p.totalSegments}`,
+                    `第 ${p.segment}／${p.totalSegments} 段`,
+                    `part ${p.segment} of ${p.totalSegments}`,
+                  )}`,
+                ),
+            });
+            if (!r.ok) {
+              constitutionResumeRef.current = r.resume;
+              const continueLine = r.resume
+                ? t(
+                    `Bahagian ${r.failedSegment}/${r.totalSegments} gagal. Yang sudah dibaca disimpan — tekan Hantar sekali lagi untuk sambung dari situ (tidak dicaj sekali lagi).`,
+                    `第 ${r.failedSegment}／${r.totalSegments} 段没读成功。已读的部分都留着 —— 再按一次送出，会从那一段接着读，不会再扣一次。`,
+                    `Part ${r.failedSegment} of ${r.totalSegments} failed. What was read is kept — press Send again to continue from there (not charged again).`,
+                  )
+                : null;
+              setError(continueLine ? `${r.message}\n\n${continueLine}` : r.message);
+              return;
+            }
+            constitutionResumeRef.current = null;
+            writeIntake({
+              kind: "constitution",
+              fileName: files[0].name,
+              extraction: r.extraction,
+            });
+            setStaged([]);
+            setQuestion("");
+            router.push("/constitution");
+            return;
+          }
+          // Not a constitution: the classify is paid; the loop below reads
+          // the WHOLE file with the answer as its forced kind, so nothing is
+          // classified (or charged for classifying) twice.
+        }
+      }
+
       let merged: unknown = null;
       let page: string | null = null;
       let label: string | null = null;

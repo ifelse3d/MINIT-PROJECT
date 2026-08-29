@@ -819,9 +819,26 @@ J 的原話拆出來的四條圍欄，全部**終身制**（用完不重置；�
   什麼（fence_usage 表＋fence_charge()，migration 20260909000000，內含把
   J 的 15/58/91 三個 org 標成 standard/quota 100）。
 - 價格仍未定（D12 照舊）——付費按鈕依然是「聯絡我們」。
-- ⚠️ 已知後果，說在前面：章程常常 20–40 頁，免費 20 頁上限＝免費版基本
-  傳不完一本完整章程。這是圍欄在做事，不是 bug；要開口子等 J 說。
+- 章程撞牆的後果已由 **D45（A6 特例）** 開口子：一份章程最多扣 5 頁，
+  見下一條。
+
+### D45 — A6 特例：章程上傳一律扣 min(實際頁數, 5) 頁（2026-08-28 拍板，2026-08-30 再確認，81 場落地）
+
+D44 的終身 20 頁上限撞上一個事實：章程常常 20–40 頁，免費版基本傳不完
+一本完整章程。J 在 50 號檔第 31 行拍板「弄好來」（2026-08-28），
+2026-08-30 追問時再確認——**開這個口子**：
+
+- 章程（三個門：/constitution 頁、開機構上傳、首頁 intake 分類到章程）
+  一律只扣 `min(實際頁數, 5)` 頁；4 頁收 4、5 頁收 5、30 頁收 5
+  （`src/lib/constitution-pages.ts` 的 `constitutionFencePages`，測試釘住）。
+- **分段讀（81 場 I1）之下一份章程只收一次** min(實際,5)——不是每段各收
+  一次；同理整份章程只收會員 1 個 extract action（MAX_TOOL_ROUNDS 先例：
+  多輪呼叫是我們的成本，不轉嫁）。
+- 為什麼是 5：等於免費版「一份文件」量級的頁數；章程是一次性的立檔動作，
+  不是持續消耗，把它擋在門外只會讓免費版永遠體驗不到「問章程」。
+- 其他文件（minutes/ledger/roster）**照舊按實頁數扣**——引流引擎在錢區，
+  口子只開給章程。
 
 ---
 
-*Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C) · D16 appended 2026-08-25 (Stage D) · D17 appended 2026-08-27 (work order 27, the overnight sprint) · D18–D21 appended 2026-08-27 (work order 31 §0, J's post-launch rulings) · D22–D23 appended 2026-08-27 (work order 32 §0, launch-day feedback rulings) · D24–D25 appended 2026-08-27 (the afternoon rulings: violet redesign + BM guard) · D26–D28 appended 2026-08-27 (the launch-evening 20-point list) · D29–D32 appended 2026-08-28 (the two-review session: prompt unfreeze, attendance gate, funds page, record-to-DB) · D33–D35 appended 2026-08-28 (J's §6 answers + the new seven: PdpaNote deleted, per-part AI discussion, minutes named/printable/editable/photo-linked) · D36–D37 appended 2026-08-28 evening (the eight-item round: save lands on the finished document, saved workspaces clear themselves, AI may merge like items under checkMergedFacts) · D38–D40 appended 2026-08-28 (the design pass: one five-step radius scale shifted a notch, the canvas gradient that was being painted and covered, the four rebuilt home cards and the sign-in brand panel) · D41–D42 appended 2026-08-28 (J's review of it: no piggy bank and a standing check on imagery for every community, and one brand mark that both the page and the icon files are generated from) · D43–D44 appended 2026-08-28 night (no black buttons — the primary token is brand purple; and the free fence: lifetime 5 documents · 20 receipts · 20 pages · 3 clean downloads, watermarked previews, clean files only through counted doors)*
+*Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C) · D16 appended 2026-08-25 (Stage D) · D17 appended 2026-08-27 (work order 27, the overnight sprint) · D18–D21 appended 2026-08-27 (work order 31 §0, J's post-launch rulings) · D22–D23 appended 2026-08-27 (work order 32 §0, launch-day feedback rulings) · D24–D25 appended 2026-08-27 (the afternoon rulings: violet redesign + BM guard) · D26–D28 appended 2026-08-27 (the launch-evening 20-point list) · D29–D32 appended 2026-08-28 (the two-review session: prompt unfreeze, attendance gate, funds page, record-to-DB) · D33–D35 appended 2026-08-28 (J's §6 answers + the new seven: PdpaNote deleted, per-part AI discussion, minutes named/printable/editable/photo-linked) · D36–D37 appended 2026-08-28 evening (the eight-item round: save lands on the finished document, saved workspaces clear themselves, AI may merge like items under checkMergedFacts) · D38–D40 appended 2026-08-28 (the design pass: one five-step radius scale shifted a notch, the canvas gradient that was being painted and covered, the four rebuilt home cards and the sign-in brand panel) · D41–D42 appended 2026-08-28 (J's review of it: no piggy bank and a standing check on imagery for every community, and one brand mark that both the page and the icon files are generated from) · D43–D44 appended 2026-08-28 night (no black buttons — the primary token is brand purple; and the free fence: lifetime 5 documents · 20 receipts · 20 pages · 3 clean downloads, watermarked previews, clean files only through counted doors) · D45 appended 2026-08-30 (work order 81: the A6 exception — a constitution upload costs the fence min(actual pages, 5), charged once per document even when read in segments)*
