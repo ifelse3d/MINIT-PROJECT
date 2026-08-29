@@ -5,48 +5,70 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-30 凌晨（MYT）· Fable 5（69 号 eROSES 重构+名册场：H1–H4 四包全部收工）**
-**🔴 本场（69 号）状态一句话：四包全做完（74/75/76/77 号报告）——
-H1 名册补完（列内 Edit、email/州、一键起表＋章程对照、Excel 8 欄）；
-H2 eROSES flow 重构主菜（入口三张卡、年报九步一步一页、缺值原地填、
-每步示意图、/filings 真锁）；H3 onboarding（/orgs/welcome 引导序列）＋
-机构上限（旧 3-org 检查拆掉换「免费 1 个总机构」）；H4 收尾（全站删除
-确认弹窗 14 处、AGM pack 银行摘录查证非跨 org＋改可勾选、Members &
-invites 破版修、草稿收纳＋/minutes/drafts 专页）。四道关全绿（vitest
-1087、eslint 21、tsc 0、build ✓）＋三条 e2e＋四支探针（18+51+14+21 项）
-全 PASS。**🔴 J 的事：贴 migration 37、38（salin-migration.bat，探针实测
-仅这两支 NOT YET）→ push-cabang.bat（4 支 commit）→ 77 号报告的 tester
-清单＋75 号 📌 的 flow-COPY 围栏拍板。** 下面是上一场（68 号）的快照：**
-**⑦ 品质场四包全做完（70/71/72/73 号报告），
-held-out 验收两半都过。J 的道教会样本拍照→确认→BM 文件＝标准 minit
-版式、量尺 0 缺陷、**零 AI 费**（结构化确定性组装；翻译才叫模型，
-就地措辞逐 index 数＋checkLatinNames 挡发明汉字）。「AI took too long」
-真因根治：flash-lite 会「标 missing 却塞值」→契约打回整份→重读爆
-50s 预算；现在 parse 前信标签抹值（coerceMissingFieldsEmpty，五条管线
-全装），**真机 create-org 传 CONTOH 8 页 33 秒一次过落地**。UX 九件全上
-（原图浮窗左下 resize、草稿照片签名 URL 载回=未决 15 结案、Resume
-白纸黑字、首页/侧栏未完成草稿提醒、步骤门人话、eROSES 空状态大声、
-出席 Next 闸、create-org 失败红卡+原地重试、ganti 换届卡）。
-擷取 eval 同 prompt 两轮 95.2%/93.6%、invented=0（对外引区间）；品质
-eval 3/3 PASS。累计真额度 ≈US$0.30/1.00。migration **32–36 探针实测已
-全部套用**、**origin/main 已在 20c6d52**（J 开工前 push 过 56/64 场——
-所以 8/29 晚的 timeout 是在 45s 修已上线的情况下撞的，真因就是
-标 missing 塞值那条，本场修掉）。🔴 J 的事：**push-cabang.bat**
-（本场 4 支 commit 带着真因修）→ 道教会样本亲手重走 → 叫 tester
-（73 号报告清单）。
-🔴 J 的事（上一场欠的照旧）：贴 migration 32–36（salin-migration.bat）→
-push-cabang.bat → 叫 tester（67 号报告第 4 点；旧清单 60＋55 号）→
-eROSES 下载官方 Penyata Kewangan 模板（60 号报告第 5 点）。**
+**最后更新：2026-08-30（MYT）· Fable 5（78 号小单：eROSES 前门修正＋flow COPY 圈进围栏）**
+**🔴 本场（78 号小单）状态一句话（80 号报告）：
+① 前门修好——/filings 永久转址（308）到 /filings/eroses 卡片入口，?doc
+跟着走；侧栏照旧指 /filings（前缀比对整族点亮，nav 零改动）；846 行旧长页
+filings-view.tsx 删除，残余功能逐项搬进 flow（盘点表在 80 号报告：
+不可登记会议的「结论先行＋摺叠」、PDF 两颗按钮＋干净下载＋25MB 句搬进
+mesyuarat 页；净额与「minit 内财务摘要交叉核对」补进年报第 5 步；laporan
+直达连结补在卡片入口下方——一项没丢）。
+② flow COPY 圈进免费围栏（J 8/30 拍板）：loadFlowBase 带 fence 状态，
+ValueRow 新 locked prop——免费版九步＋登记页每格值 select-none＋copy/cut/
+右键全拦、按钮变 🔒「复制（付费版）」；demo/CONTOH 照 isDemo 禁令不锁；
+干净 PDF 走 mesyuarat 页自己的 FenceCleanDownload（402 句原地显示）。
+测过：tsc 0 · **eslint 20（旧长页删除带走一条基准旧错，新基准 20=19 错
++1 警告）** · vitest 1087 · build ✓ · **三条 e2e 全绿**（minutes 新增 6 条：
+转址门牌＋trial 真被锁＋无活复制按钮漏网）· probe-h2-69 51 项重跑全 PASS
+（§1-11 两条改打 flow 第 1 步）· probe-d2-56 重跑全 PASS · 零 migration ·
+零 AI 费。**🔴 J 的事：双击 push-cabang.bat（本场 2 支 commit）→ 上线后
+30 秒验收（侧栏点 eROSES 申报＝三张卡；TESTING1 进年报任一步＝🔒）。**
+上一场（69 号，全上线）：H1–H4 四包（74–77 号报告）——名册补完、eROSES
+flow 重构（入口三张卡＋九步一步一页＋缺值原地填＋示意图）、onboarding
+＋机构上限（免费 1 个总机构）、收尾小修 14 处删除确认等；migration 1–38
+探针实测全 APPLIED、main==origin/main（讨论场 8/30 查证，79 号 HANDOFF）。
+再上一场（68 号 ⑦ 品质场，70–73 号报告）：minit 版式量尺＋结构化成文
+零 AI 费＋checkLatinNames＋「AI took too long」真因根治
+（coerceMissingFieldsEmpty）；擷取 eval 95.2% invented=0。
+J 的旧账照旧：tester 清单（73/77 号）、bench 模型拍板（72 号对比表）、
+54 号 GUIDE 设 Supabase 邮件、eROSES 官方 Penyata Kewangan 模板（60 号
+第 5 点）、竞赛 8/31 23:59 截止（J 自定，不催）。**
 
 ---
 
-## 🌙 现在在哪里（2026-08-29 晚，69 号 eROSES 重构+名册场进行中）
+## 🌙 现在在哪里（2026-08-30，78 号小单收工）
 
-> **已上线**：https://minit-project.vercel.app —— 68 号场 J 已 push
-> （开工时 main == origin/main）；**69 号场的 commit 等 J push-cabang.bat**。
-> 线上 org：15「J」、58「avocado」、91「TESTING1」。
+> **已上线**：https://minit-project.vercel.app —— 68/69 号场 J 已全部 push
+> （78 号开工时 main == origin/main，migration 1–38 全 APPLIED）；
+> **78 号场的 2 支 commit 等 J push-cabang.bat**。
+> 线上 org：15「J」、58「avocado」、91「TESTING1」（三个不同 email 的
+> 帐号各持一个——不是同一人三个机构，79 号 HANDOFF 备忘）。
 
-### 这一场做了什么（69 号场 · 包 H4 ✅，77 号报告——收尾小修）
+### 这一场做了什么（78 号小单 ✅，80 号报告——eROSES 前门＋COPY 围栏）
+
+- **① /filings 门牌**：page.tsx 改成 permanentRedirect(308)→/filings/eroses
+  （?doc 保留）；filings-view.tsx（846 行旧长页）删除；nav 零改动（前缀
+  比对，/filings/laporan 也照亮）。残余功能逐项搬（80 号报告盘点表）：
+  「这类会议不用登记」结论先行＋摺叠、PDF 水印钮＋FenceCleanDownload＋
+  25MB 句 → mesyuarat 页；净额行＋minit 财务摘要交叉核对行 → 年报第 5 步；
+  laporan 直达行 → 卡片入口页脚；flow 第 9 步「完成」与 activity 两连结
+  改直指 /filings/eroses。
+- **② flow COPY 围栏**（D44 延伸，J 8/30 拍板）：flow-data.loadFlowBase
+  多带 `fence`（getFenceState，demo isDemo 自动豁免、读失败开着败）；
+  flow-ui.ValueRow 新 `locked` prop（值 select-none＋copy/cut/contextmenu
+  拦截＋🔒 disabled 按钮，与旧 /filings §1-11 真锁同款字句）；九步＋
+  mesyuarat 全部 ValueRow 接上。
+- **测过**：tsc 0 · eslint **20**（基准 21−1：删旧长页带走一条基准内旧错；
+  改动档单独 lint 0 条）· vitest 1087 · build ✓ · 三条 e2e 全绿
+  （minutes 新增：308 门牌＋doc 保留、三张卡、S0-5 改在 mesyuarat 页验、
+  trial org 🔒＋select-none＋干净下载在场＋无活「复制」按钮漏网）·
+  probe-h2-69 51 项重跑全 PASS · probe-d2-56 重跑全 PASS ·
+  check:migrations 38 支全 APPLIED（本场零 migration）· 零 AI 费。
+- ⚠ 没能验证的：demo org 走 flow 不被锁（靠 getFenceLimits 首行 isDemo
+  放行，与成品页同路，未专开 demo 实测）；308 是浏览器会记住的永久转址
+  （若未来 /filings 要改回真页面，得先想快取）。
+
+### 上一场做了什么（69 号场 · 包 H4 ✅，77 号报告——收尾小修）
 
 - **§1-10 全站删除确认**：新共用件 confirm-delete.tsx（ConfirmingDeleteButton
   ＋ConfirmedAction render-prop 版，包既有 ConfirmDialog/portal-target）。
@@ -691,17 +713,15 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
 
 ### ⏭ 下一个 session 从哪开始
 
-**69 号场（eROSES 申报重构＋名册补完）全部做完**（H1=74、H2=75、H3=76、
-H4=77 号报告；⑦ 品质场 68 号=70–73 更早已收）。
+**78 号小单（eROSES 前门＋flow COPY 围栏）做完**（80 号报告；之前：
+69 号场 H1–H4=74–77 号、⑦ 品质场 68 号=70–73 号）。migration 1–38 全
+APPLIED、69 号场已全上线；**78 号的 2 支 commit 等 J push-cabang.bat**。
 接下来照 51 号 §5 顺序（J 已点头）：**⑧ 助手＋AI 代办场**（61 号备忘：
-聊天面板 upload/手机版/Clear conversation/语言跟人走；未决 2 助手模型等
-bench）→ ⑨ 上线后第一批；62 号竞赛材料场待命。
-**等 J 反馈的**：migration 37/38 贴上后重跑 probe-h1/h3 的两条 [SKIP]
-分支；flow-COPY 围栏拍板（75 号 📌）；77 号 tester 清单；引导文案 vs
-真 portal 对版照旧。竞赛 8/31 截止，材料 J 自己定，**不催**。
-**等 J 反馈的**：道教会样本亲手重走（68 号 §6-5）；migration 32–36 贴上后
-tester 清单（73 号＋67 号报告）；模型拍板（72 号对比表）；引导文案 vs
-真 portal 对版照旧。竞赛 8/31 截止，材料 J 自己定，**不催**。
+聊天面板 upload/手机版/Clear conversation/语言跟人走/免 AI 预备问答层；
+未决 2 助手模型等 bench）→ ⑨ 上线后第一批；62 号竞赛材料场待命。
+**等 J 反馈的**：78 号上线后 30 秒验收（80 号报告第 5 点）；tester 清单
+（73/77 号）；道教会样本亲手重走（68 号 §6-5）；模型拍板（72 号对比表）；
+引导文案 vs 真 portal 对版照旧。竞赛 8/31 截止，材料 J 自己定，**不催**。
 RESPONSIVE：J 若再圈破版，贴 46 号单同段 PROMPT 继续。
 
 ---
@@ -1177,7 +1197,7 @@ RESPONSIVE：J 若再圈破版，贴 46 号单同段 PROMPT 继续。
 - 🔴 **价目表会腐坏。**（`PRICES_CHECKED_ON` 从 unit-economics 导出。）
 - 🔴 **一把 key 在画面上找不到，不等于它不存在。**
 - 🔴 **「某天跑不通」不等于「坏了」，交接文字会把它冻成永久事实。**
-- ⚠️ **要说「eslint 零问题」之前，先跑一次基准。**（现行基准：21 = 20 errors + 1 warning。）
+- ⚠️ **要说「eslint 零问题」之前，先跑一次基准。**（现行基准：20 = 19 errors + 1 warning，2026-08-30 起——78 号删旧长页带走一条旧错。）
 - 🔴 **一支写好却没有任何呼叫者的 prompt/组件，等于不存在——而旁边的注解会让人
   以为它存在。** grep 呼叫者，不要读注解。（32 号单照此把退役的
   ai-usage-rows.tsx 直接删掉，不留孤儿。）
@@ -1286,7 +1306,7 @@ J 手贴 migration 的步骤：记事本开档 → `Ctrl+A` `Ctrl+C` → Supabas
 | 模型对比 | `npm run bench`（--dry-run / --mock）· `bench-models.bat` · 报告在 `eval/reports/model-bench-<日期>.md` |
 | 「到底做了没有」 | `npm run status` / `status.bat` |
 | 示范章程（CONTOH） | `public/contoh/undang-undang-tubuh-contoh.pdf`（8 页 BM 完整章程，虚构社团）· 文字版 `docs/contoh-undang-undang-tubuh.md` · 重生 `npm run contoh:constitution`。十条条文与 `src/lib/sample-constitution.ts` **逐字相同**、印出来的页码对得上 `page_ref`，所以拿它测 `/constitution` 上传时**答案是已知的** |
-| migration | `supabase/migrations/`（**37 支：1–36 已套用，37 只写档等 J 贴——2026-08-29 晚 check:migrations 实测 37 是唯一 NOT YET**）· `salin-migration.bat`（37 项）· `npm run check:migrations` |
+| migration | `supabase/migrations/`（**38 支全部已套用——2026-08-30 check:migrations 实测**）· `salin-migration.bat`（38 项）· `npm run check:migrations` |
 | 给 J 双击的 `.bat` | `status.bat` · `salin-migration.bat` · `salin-env-vercel.bat` · `push-cabang.bat` · `bench-models.bat`。🔴 `push-to-github.bat` 不能用；⚠ `check-ai.bat` 还指旧资料夹 |
 | `competition/` | 顶层＝当前版（**[YOU] 两处还空着**）；`screenshots/` 60 张旧配色（拍板 0-9：只重拍首页主图，未拍——未决 7） |
 | `eval/reports/` | 整夹 gitignore；只有 `SUMMARY.md` 例外 |
