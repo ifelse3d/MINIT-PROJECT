@@ -95,6 +95,10 @@ echo    32.  20260910000000  nota + gelaran AJK / roster note + honorific (51 B-
 echo         bezakan dua orang sama nama + rekod gelaran (讲师, Dato', Ustaz...)
 echo    33.  20260911000000  draf minit di awan / cloud minutes drafts (51 C-13)
 echo         beberapa draf serentak, ikut ke peranti lain / 多份草稿并存、跨装置
+echo    34.  20260912000000  senarai Juruaudit / the auditors roster (56 D2-1)
+echo         eROSES langkah 4 - nama, e-mel, tarikh lantik, status
+echo    35.  20260913000000  Maklumat Am + akaun bank / eROSES step-2 fields (56 D2-2)
+echo         telefon, tahun kewangan, bilangan ahli, akaun bank pertubuhan
 echo.
 echo     0.  Keluar / Quit
 echo.
@@ -134,6 +138,8 @@ if "%pick%"=="30" set f=20260908000000_minutes_title_edits_photos.sql& goto copy
 if "%pick%"=="31" set f=20260909000000_free_fence.sql& goto copy
 if "%pick%"=="32" set f=20260910000000_roster_note_honorific.sql& goto copy
 if "%pick%"=="33" set f=20260911000000_minutes_drafts.sql& goto copy
+if "%pick%"=="34" set f=20260912000000_auditors.sql& goto copy
+if "%pick%"=="35" set f=20260913000000_org_maklumat_am.sql& goto copy
 
 echo.
 echo    Nombor tak sah / not a valid number.

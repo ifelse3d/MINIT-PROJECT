@@ -5,16 +5,15 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-29 午后（MYT）· Fable 5（56 号 eROSES 大改版场进行中：包 D0 ✅ 包 D1 ✅）**
-**🔴 本场状态一句话：56 号总单进行中。包 D0（57 号报告）：45s 长尝试修好
-「AI took too long」（CONTOH 8 页 42s 实测读通）、章程页 A-5 化、Office 大档
-直传、限制清单 Q16b。包 D1（58 号报告）：两套钱录入合成一套（类型/转账截图/
-拍单据门全进打字表格，manual-income 删除，旧草稿不丢）＋ eROSES Penyata
-Kewangan 全欄位对照表（src/lib/eroses-penyata.ts，逐字照 17 张截图；
-「1.1 Derma 这格填 16,252.00」已可计算）。两包都无新 migration。四道关全绿
-（eslint 21 基准、vitest 969）＋三条 e2e 全绿。接下来：包 D2（migration 34 起，
-只写档）→ 包 D3（呈报引导主菜）。
-51 号场留给 J 的事未变：贴 migration 32/33 → push-cabang.bat → 叫 tester。**
+**最后更新：2026-08-29 下午（MYT）· Fable 5（56 号 eROSES 大改版场进行中：D0 ✅ D1 ✅ D2 ✅）**
+**🔴 本场状态一句话：56 号总单进行中，三包已完。D0（57 号）：45s 长尝试修
+「AI took too long」＋章程页 A-5＋Office 直传＋Q16b。D1（58 号）：钱录入
+两表合一＋eROSES Penyata Kewangan 对照表。D2（59 号）：审计员名单（/members）、
+Maklumat Am＋银行户口（设置→机构）、活动报告生成（/filings/laporan，真 vendor
+实测 $0.0007 起草成稿）——**新 migration 34/35 只写档等 J 贴**（未贴 fail-open
+全实测）。四道关全绿（eslint 21 基准、vitest 976）＋三条 e2e 全绿。
+接下来：包 D3（§5 主菜：存好后问「要呈报 eROSES 吗？」→ 九步引导＋每值 COPY）。
+J 的事：贴 migration 32/33/34/35 → push-cabang.bat → 叫 tester。**
 
 ---
 
@@ -23,6 +22,28 @@ Kewangan 全欄位对照表（src/lib/eroses-penyata.ts，逐字照 17 张截图
 > **已上线**：https://minit-project.vercel.app —— 截至 0ca62e7 已 push；
 > 51 号＋56 号的 commit 等 J push-cabang.bat。
 > 线上 org：15「J」、58「avocado」、91「TESTING1」。
+
+### 这一场做了什么（56 号 eROSES 场 · 包 D2 ✅，59 号报告）
+
+- **Migration 34/35 只写档等 J 贴**（salin-migration.bat 34/35 项＋
+  check:migrations 5 条探针）：34=auditors 表（无 IC 号码欄，PDPA）；
+  35=orgs.phone/financial_year_start/members_registered/members_voting＋
+  org_bank_accounts 表。职位数/分会数**刻意不存**（推导：roster count/org 树）。
+- **D2-1 审计员**：/members 新「审计员名单」卡（auditor-actions +
+  auditors-card；minutes_write；现任人数 vs 章程提示；IC 名字照抄规矩同
+  理事名单）。fail-open：表缺席＝卡上人话「migration 34」，页不白屏（实测）。
+- **D2-2 Maklumat Am**：设置→机构新段（maklumat-actions + maklumat-am-card；
+  manage_org）；银行户口表可增删；org-tools 永不 select org_bank_accounts。
+- **D2-3 活动报告**：/filings/laporan（/filings 第 3 卡有入口）——
+  `draft_activity_report`（新 AiAction）从 events_meetings＋confirmed
+  minutes_docs 起草（空＝诚实 400 零扣费，实测 ai_usage 0 行）；
+  laporan-aktiviti.ts 纯逻辑＋prompt 禁发明（untrustedBlock）；
+  /api/laporan-aktiviti-pdf 走 financial-report 同款围栏文件线；
+  buildTextDocPdf 从 agm-pdf 导出共用。
+- **测过**：tsc 0 · eslint 21 · vitest **976（+7）** · build ✓ · 三条 e2e ✓ ·
+  probe-d2-56 **11 项 PASS**（fail-open 实测）· probe-laporan-56 **7 项 PASS**
+  （真 vendor 起草 $0.0007，两活动名都在可编辑稿）。
+- ⚠ 没能验证的：34/35 贴上后的真存档路（本机 DB 未贴）；干净下载扣费路。
 
 ### 这一场做了什么（56 号 eROSES 场 · 包 D1 ✅，58 号报告）
 
@@ -386,6 +407,12 @@ RESPONSIVE：J 若再圈破版，贴 46 号单同段 PROMPT 继续。
 ---
 
 ## 6. 已知陷阱（踩过的，别再踩）
+
+### 2026-08-29 下午新增（56 号场 · 包 D2）
+
+- ⚠ **PostgREST 批量 insert 的每个物件「键」必须完全一致**（PGRST102
+  "All object keys must match"）——第二笔少带一个 venue_text，整批 400。
+  可选栏位在批量里写 null，不要省略。
 
 ### 2026-08-29 午后新增（56 号场 · 包 D1）
 
@@ -873,7 +900,7 @@ J 手贴 migration 的步骤：记事本开档 → `Ctrl+A` `Ctrl+C` → Supabas
 | 模型对比 | `npm run bench`（--dry-run / --mock）· `bench-models.bat` · 报告在 `eval/reports/model-bench-<日期>.md` |
 | 「到底做了没有」 | `npm run status` / `status.bat` |
 | 示范章程（CONTOH） | `public/contoh/undang-undang-tubuh-contoh.pdf`（8 页 BM 完整章程，虚构社团）· 文字版 `docs/contoh-undang-undang-tubuh.md` · 重生 `npm run contoh:constitution`。十条条文与 `src/lib/sample-constitution.ts` **逐字相同**、印出来的页码对得上 `page_ref`，所以拿它测 `/constitution` 上传时**答案是已知的** |
-| migration | `supabase/migrations/`（**33 支；1–31 已套用（2026-08-29 探针实测）；32（roster note/honorific）与 33（云端草稿）只写档，等 J 贴**）· `salin-migration.bat`（33 项）· `npm run check:migrations`（含 32/33 列探针） |
+| migration | `supabase/migrations/`（**35 支；1–31 已套用（2026-08-29 探针实测）；32（roster note/honorific）、33（云端草稿）、34（审计员）、35（Maklumat Am＋银行户口）只写档，等 J 贴**）· `salin-migration.bat`（35 项）· `npm run check:migrations`（含 32–35 探针） |
 | 给 J 双击的 `.bat` | `status.bat` · `salin-migration.bat` · `salin-env-vercel.bat` · `push-cabang.bat` · `bench-models.bat`。🔴 `push-to-github.bat` 不能用；⚠ `check-ai.bat` 还指旧资料夹 |
 | `competition/` | 顶层＝当前版（**[YOU] 两处还空着**）；`screenshots/` 60 张旧配色（拍板 0-9：只重拍首页主图，未拍——未决 7） |
 | `eval/reports/` | 整夹 gitignore；只有 `SUMMARY.md` 例外 |

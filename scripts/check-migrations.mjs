@@ -77,6 +77,11 @@ const probes = [
   ["20260910000000 roster note (51 B-6)", "committee_roster", "note"],
   ["20260910000000 roster honorific (51 B-7)", "committee_roster", "honorific"],
   ["20260911000000 cloud minutes drafts (51 C-13)", "minutes_drafts", "client_key"],
+  ["20260912000000 auditors roster (56 D2-1)", "auditors", "appointed_on"],
+  ["20260913000000 Maklumat Am: org phone (56 D2-2)", "orgs", "phone"],
+  ["20260913000000 Maklumat Am: financial year", "orgs", "financial_year_start"],
+  ["20260913000000 Maklumat Am: member counts", "orgs", "members_registered"],
+  ["20260913000000 Maklumat Am: bank accounts", "org_bank_accounts", "account_no"],
 ];
 
 const headers = { apikey: key, Authorization: `Bearer ${key}` };

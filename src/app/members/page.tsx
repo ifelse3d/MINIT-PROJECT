@@ -8,6 +8,7 @@ import { getActiveOrg } from "@/lib/active-org";
 import { can } from "@/lib/roles";
 import { AddCommitteeRow, ImportCommittee } from "./members-form";
 import { CommitteeTable, type CommitteeRow } from "./committee-table";
+import { AuditorsCard, type AuditorRow } from "./auditors-card";
 
 // /members — who is in this society, and in what capacity.
 //
@@ -32,6 +33,11 @@ export default async function MembersPage() {
   const [user, active] = await Promise.all([getSessionUser(), getActiveOrg()]);
 
   let committee: CommitteeRow[] = [];
+  // D2-1: the Juruaudit roster (migration 34). A database that is behind
+  // answers with an unknown-table error — the card then shows an honest
+  // "not stored yet" line instead of white-screening (fail-open, D8).
+  let auditors: AuditorRow[] = [];
+  let auditorsDbBehind = false;
   if (user && active) {
     const supabase = await getSupabaseServer();
     // Migration 32 columns first; a database that is behind (D8) answers with
@@ -53,6 +59,17 @@ export default async function MembersPage() {
         .eq("org_id", active.id)
         .order("id", { ascending: true });
       committee = (legacy.data ?? []) as CommitteeRow[];
+    }
+
+    const auditorsRead = await supabase
+      .from("auditors")
+      .select("id, person_name, name_official, email, appointed_on, status")
+      .eq("org_id", active.id)
+      .order("id", { ascending: true });
+    if (!auditorsRead.error && auditorsRead.data) {
+      auditors = auditorsRead.data as AuditorRow[];
+    } else if (auditorsRead.error) {
+      auditorsDbBehind = true;
     }
   }
 
@@ -162,7 +179,41 @@ export default async function MembersPage() {
             </CardContent>
           </Card>
 
-          {/* 2 — the society's OWN groupings. Not a filing; see groups-card.tsx. */}
+          {/* 2 — the Juruaudit roster (D2-1, work order 56): what eROSES
+              Penyata Tahunan step 4 files, with its "active count must match
+              the constitution" rule said out loud. */}
+          <Card>
+            <CardHeader className="gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <CardTitle>
+                  <Tri bm="Senarai Juruaudit" zh="审计员名单" en="Auditors" />
+                </CardTitle>
+                <Badge variant="secondary">
+                  <Tri
+                    bm={`Aktif: ${auditors.filter((a) => a.status === "active").length} orang`}
+                    zh={`现任 ${auditors.filter((a) => a.status === "active").length} 人`}
+                    en={`Active: ${auditors.filter((a) => a.status === "active").length}`}
+                  />
+                </Badge>
+              </div>
+              <p className="rounded-sm border border-amber-300/70 bg-amber-50/70 px-3 py-2 text-sm text-amber-900 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
+                <Tri
+                  bm="Senarai ini masuk ke eROSES (Penyata Tahunan langkah 4). Bilangan juruaudit AKTIF mesti ikut perlembagaan pertubuhan anda — eROSES menyemaknya."
+                  zh="这份名单会进 eROSES（年度呈报第 4 步）。现任审计员的人数要照你们的章程 —— eROSES 会核对。"
+                  en="This list goes into eROSES (Annual Return step 4). The number of ACTIVE auditors must follow your constitution — eROSES checks it."
+                />
+              </p>
+            </CardHeader>
+            <CardContent>
+              <AuditorsCard
+                rows={auditors}
+                canEdit={canEdit}
+                dbBehind={auditorsDbBehind}
+              />
+            </CardContent>
+          </Card>
+
+          {/* 3 — the society's OWN groupings. Not a filing; see groups-card.tsx. */}
           <Card>
             <CardHeader className="gap-2">
               <CardTitle>

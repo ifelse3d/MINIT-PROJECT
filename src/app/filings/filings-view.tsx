@@ -653,6 +653,24 @@ export function FilingsView({
               />
             </p>
           )}
+          {/* D2-3 (work order 56): step 6 of the same eROSES flow wants an
+              activity report uploaded — the generator has its own page. */}
+          <p className="border-t border-[color:var(--v2-border)] pt-3 text-base">
+            📋{" "}
+            <Tri
+              bm="Penyata Tahunan juga minta Laporan Aktiviti (langkah 6) —"
+              zh="年度呈报还要传一份活动报告（第 6 步）——"
+              en="The Annual Return also asks for an activity report (step 6) —"
+            />{" "}
+            <Link href="/filings/laporan" className="underline underline-offset-4">
+              <Tri
+                bm="jana Laporan Aktiviti"
+                zh="生成活动报告"
+                en="generate the Laporan Aktiviti"
+              />{" "}
+              →
+            </Link>
+          </p>
         </CardContent>
       </Card>
 

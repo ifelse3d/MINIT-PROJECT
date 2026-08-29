@@ -46,6 +46,10 @@ export const AI_ACTIONS = [
   // one exchange of "discuss this section with the AI" on the minutes review.
   // The model proposes wording; the person applies each proposal by hand.
   "discuss_minutes",
+  // D2-3 (work order 56): drafting the eROSES Laporan Aktiviti wording from
+  // the org's own event/minutes records. One draft, one action; the facts
+  // come from the database, the model only words them.
+  "draft_activity_report",
 ] as const;
 
 export type AiAction = (typeof AI_ACTIONS)[number];

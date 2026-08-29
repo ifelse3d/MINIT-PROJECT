@@ -307,6 +307,38 @@ export async function buildAgmPackPdf(
   return doc.save();
 }
 
+/**
+ * One plain-text document as an A4 PDF — the renderer the AGM notice and the
+ * bank extract already use, exported for other text documents (first use:
+ * the Laporan Aktiviti, D2-3 work order 56). Layout heuristics as above:
+ * first block = centred letterhead, ALL-CAPS lines = bold section titles.
+ * `draftWatermark` stamps the DRAF diagonal (Hard Rule 8 — an unconfirmed
+ * generated document must say so on its face).
+ */
+export async function buildTextDocPdf(
+  text: string,
+  { title, draftWatermark = false }: { title: string; draftWatermark?: boolean },
+): Promise<Uint8Array> {
+  const doc = await PDFDocument.create();
+  doc.setTitle(title);
+  doc.setProducer(PDF_PRODUCER);
+  let noto: PDFFont | null = null;
+  if (winAnsiSafe(text) !== text) {
+    const sub = await subsetNotoFor(text);
+    if (sub) {
+      doc.registerFontkit(fontkit);
+      noto = await doc.embedFont(sub, { subset: false });
+    }
+  }
+  const fonts: Fonts = {
+    helv: await doc.embedFont(StandardFonts.Helvetica),
+    bold: await doc.embedFont(StandardFonts.HelveticaBold),
+    noto,
+  };
+  renderTextDoc(doc, fonts, text, draftWatermark);
+  return doc.save();
+}
+
 /** Bank-resolution extract as a single-page PDF. Throws when refused. */
 export async function buildBankExtractPdf(
   m: MinutesForExtract,
