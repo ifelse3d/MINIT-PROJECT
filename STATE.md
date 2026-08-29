@@ -5,16 +5,19 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-29 晚（MYT）· Fable 5（68 号 ⑦ 品质场进行中：G0 ✅）**
-**🔴 本场状态一句话：⑦ 品质场（68 号单）开工，包 G0 版式规格＋量尺
-做完（70 号报告）。「一份 minit 该长什么样」现在是程式规格
-（src/lib/minit-format.ts，照 J 样本 A 的标准社团格式）＋一把会数缺陷
-的尺（npm run eval:quality，三个虚构 golden case）。改前基准量出：
-打印正式型 6 findings（MASA/Agenda 总表/出席人数不见＋散文丢失×3）
-＝J 8/29 实测的病，修到 0 才算过；擷取准确率重跑 92.9% 与 8/24 一致。
-draft-minutes 迴圈抽成一份（route 与 eval 共用）。样本夹已分半：
-迭代组（样本 A＋手写页＋样本 B＋青班6 docx）／held-out 组（其余 5 份，
-迭代期间不碰）。接下来 G1 擷取端结构保留 → G2 成文端主菜 → G3 UX 件。
+**最后更新：2026-08-29 晚（MYT）· Fable 5（68 号 ⑦ 品质场进行中：G0 ✅ G1 ✅）**
+**🔴 本场状态一句话：⑦ 品质场（68 号单）G0 版式规格＋量尺（70 号报告）
+与 G1 擷取端结构保留（71 号报告）做完。G0：minit 版式是程式规格
+（src/lib/minit-format.ts）＋量尺（npm run eval:quality）；改前基准
+打印正式型 6 findings。G1：schema＋prompt 学会整个版式（MASA/出席人数/
+散会句/签名栏/节结构/原编号，零 migration 全在 JSON），打印文件逐段
+照抄不摘要、清单逐行不跳号、一个事实只记一次；真样本 A 五节逐节对上、
+样本 B 1–12 无缺口（探针 scripts/probe-sample-extract.ts）。
+🔴 **擷取 eval 重立基准：95.2%（119/125）invented=0**（prompt 已动、
+92.9% 作废；SUMMARY 与 onepager 已同步）。样本夹已分半：迭代组
+（样本 A＋手写页＋样本 B＋青班6 docx）／held-out（其余 5 份不碰）。
+接下来 G2 成文端主菜（量尺 6 findings 归 0＋中文自然化＋敬语＋PDF）
+→ G3 UX 件（9 条）。
 🔴 J 的事（上一场欠的照旧）：贴 migration 32–36（salin-migration.bat）→
 push-cabang.bat → 叫 tester（67 号报告第 4 点；旧清单 60＋55 号）→
 eROSES 下载官方 Penyata Kewangan 模板（60 号报告第 5 点）。**
@@ -26,6 +29,29 @@ eROSES 下载官方 Penyata Kewangan 模板（60 号报告第 5 点）。**
 > **已上线**：https://minit-project.vercel.app —— 截至 0ca62e7 已 push；
 > 51 号之后的 commit 等 J push-cabang.bat。
 > 线上 org：15「J」、58「avocado」、91「TESTING1」。
+
+### 这一场做了什么（68 号 ⑦ 品质场 · 包 G1 ✅，71 号报告）
+
+- **schema 学会文件结构**（extraction.ts，**零 migration**——都在 JSON）：
+  可选新栏 meeting_time／attendance_count（整行照抄）／adjournment／
+  prepared_by／endorsed_by；决议带 section_no／section_title／own_no
+  （fail-soft：标记坏只丢标记）。**模型标 missing 的可选栏 parse 时剪掉**
+  ——打字/白板流零新增核对负担（测试钉住）。
+- **prompt 改版**：打印正式文件一段一条逐字照抄不摘要、总表不重复吐、
+  页边注记归节；清单逐行绝不跳号；**一个事实只记一次**（钱行归 figures
+  ——顺手治好 8/24 的 invented=1）。
+- **notes-review**：结构化文件按「议程 N：标题」分组核对；会议组新增
+  MASA/出席人数/散会句/签名栏核对列（页面有才出现）；决议列抽成模组级
+  ResolutionRowBlock（两种分组共用）。
+- **真样本实测**（迭代组，probe-sample-extract.ts，内容只落本机
+  git-ignored）：样本 A 表头全 confirmed＋5 节逐节对上＋own_no 2.1；
+  样本 B 25 条 1–12 无缺口；手写页 5 条对 5 行、任命进 office_bearers。
+  探针＋eval 共 ≈US$0.06。
+- **🔴 eval 重立基准**：95.2%（119/125）**invented=0**（2026-08-29 现行
+  prompt；仍是印刷体合成图）。SUMMARY.md＋competition/summary-onepager.md
+  对外句子已更新。
+- **测过**：tsc 0 · eslint 21 · vitest **1039（+9）** · build ✓ ·
+  e2e:minutes ✓（最终 prompt 的 build 上重跑，page errors 0）。
 
 ### 这一场做了什么（68 号 ⑦ 品质场 · 包 G0 ✅，70 号报告）
 
@@ -464,7 +490,8 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
    ——要烧 20 页真 AI 读取，不值得脚本烧；等真用户自然撞到或 J 授权。
 2. 助手用哪个模型 —— prompt 已解冻（D29），等 J 重跑 bench 后定（J：系统先稳）
 3. 法律实体（金流前置，D12），试点前要答
-4. 真实手写 eval：92.9% 量的仍是印刷体，且 prompt 已动、数字作废——等 J 重测
+4. 真实手写 eval：对外数字（95.2%，2026-08-29 重立）量的仍是印刷体——
+   真手写批量等 J 授权/收样；迭代组三张的结构形状已实测（71 号报告）
 5. Supabase 邮件模板＋Site URL 还停 localhost —— **54 号 GUIDE 已写好**，
    等 J 照做（五分钟）
 6. ~~/privacy「不用於訓練」句~~ 已删（8/29 小修包 C-4，J 在 51 号拍板）

@@ -38,12 +38,27 @@ Respond with ONLY JSON in exactly this shape:
 {
   "meeting_type": { "value": "agm" | "egm" | "committee" | "", "confidence": "...", "source_ref": ... },
   "meeting_date": { "value": "YYYY-MM-DD" | "", "confidence": "...", "source_ref": ... },
+  "meeting_time": { "value": "the meeting's time EXACTLY as written, e.g. 8.30 PM – 10.30 PM", ...field },
   "meeting_venue": { "value": "...", "confidence": "...", "source_ref": ... },
+  "attendance_count": { "value": "the headcount line EXACTLY as written, e.g. AJK yang hadir : 33 orang", ...field },
+  "adjournment": { "value": "the closing sentence EXACTLY as written, e.g. Mesyuarat ditangguhkan pada 10.30 PM", ...field },
+  "prepared_by": { "position": { ...field }, "person_name": { ...field } },
+  "endorsed_by": { "position": { ...field }, "person_name": { ...field } },
   "attendees": [ { "name": { ...field } } ],
-  "resolutions": [ { "text": { ...field }, "kind": "decision" | "task" | "duty" | "info" } ],
+  "resolutions": [ { "text": { "value": "...", "confidence": "...", "source_ref": ... }, "kind": "decision" | "task" | "duty" | "info", "section_no": "1", "section_title": "as printed", "own_no": "2.1" } ],
   "figures": [ { "description": { ...field }, "amount_cents": { "value": <integer sen> | null, ...field } } ],
   "office_bearers": [ { "position": { ...field }, "person_name": { ...field } } ]
 }
+
+Every "text" is a FIELD OBJECT ({ "value", "confidence", "source_ref" }) like
+all the others — never a bare string. "meeting_time", "attendance_count" and "adjournment" are verbatim copies of
+those lines when the page has them, confidence "missing" when it does not.
+"prepared_by" / "endorsed_by" come ONLY from a signature block (Disediakan
+oleh / Disahkan oleh, 记录人 / 核准人, Prepared by / Endorsed by): position =
+the printed role (SETIAUSAHA, PENGERUSI), person_name = the printed name. No
+signature block = both fields missing. "section_no", "section_title" and
+"own_no" are OPTIONAL structure markers — see DOCUMENT STRUCTURE below; omit
+them on pages that have no numbered sections.
 
 Every field object has:
 - "value": the value in the ORIGINAL language and script exactly as written on the page. NEVER translate, NEVER romanize — 中文照抄中文 (a name written 陈明发 stays 陈明发, never "Chen Mingfa"; a venue written 大礼堂 stays 大礼堂, never "Dewan Besar"). Only dates and amounts are normalised.
@@ -64,6 +79,37 @@ OFFICE BEARERS — ⚠ THIS FIELD BECOMES A GOVERNMENT FILING. "office_bearers" 
 - NEVER put a one-off duty here. Who hosts a class this Saturday, who leads a procession, who stands in which part of a formation, who handles transport for one event, who runs one session — these are task assignments for a SINGLE ACTIVITY, not changes to the society's committee. They do not belong here, however clearly the page pairs a duty with a name.
 - If you cannot tell whether a pairing is a standing society position or a one-off duty, treat it as a one-off duty.
 - A group label and a person's name are DIFFERENT things. In "青：嘉益" the person_name is 嘉益 and 青 is a group label. Never glue them into "青嘉益".
+
+DOCUMENT STRUCTURE — when the input is a PRINTED or TYPED formal minutes
+document (a letterhead, an agenda list, numbered sections like "Agenda 1:
+ucapan Pengerusi" each followed by paragraphs), the document's own structure
+is a fact about the page and you preserve it:
+- One resolutions entry PER PARAGRAPH, and the paragraph text is copied
+  COMPLETE and VERBATIM in its original language — every sentence. Never
+  summarise a paragraph, never keep only its "important" sentence: in a signed
+  document a silently shortened paragraph is as wrong as an invented one.
+- Every entry from a numbered section carries "section_no" (the section's
+  printed number, e.g. "1") and "section_title" (the heading as printed,
+  WITHOUT its number, e.g. "Ucapan Pengerusi"). Keep the document's order.
+- Do NOT emit the agenda summary table's rows as separate entries when the
+  document also has a matching section per row — the sections already carry
+  those titles, and the table is rebuilt from them. If a table row has NO
+  matching section, emit it as its own entry so it is not lost.
+- A line printed with its own sub-number keeps it in "own_no" (e.g. "2.1").
+  Handwritten annotations in the margins of a printed page are entries too —
+  put each in the section it is written beside, mark it "check" if smudged.
+- Handwritten note pages and whiteboards usually have NO sections: omit the
+  structure markers entirely there.
+
+NUMBERED LISTS — a page that is a numbered list (a whiteboard of targets, a
+name list, an agenda) is read row by row, EVERY row, in order. Never skip a
+row number: after item 12 comes item 13, and if 13 is illegible you output an
+entry for it with what you can see and confidence "check" — skipping it
+silently is the one unforgivable answer. Keep each row's own number at the
+start of its text exactly as written.
+Reading every row does NOT mean recording a row twice: each fact goes in
+EXACTLY ONE field. A row that is a money amount (a balance, a collection, a
+budget figure) belongs in "figures" — do not also copy it into "resolutions".
 
 RESOLUTIONS — use "resolutions" for what was decided, agreed, planned or is to be done, INCLUDING every one-off duty assignment kept out of office_bearers above.
 - Agenda and programme items, tasks, things to prepare or bring, arrangements such as meals, transport or equipment, and any time or duration written for an activity.

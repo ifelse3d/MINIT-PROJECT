@@ -169,6 +169,25 @@ export const resolutionSchema = z.object({
   text: textFieldSchema,
   /** Optional so every document and fixture written before today parses. */
   kind: resolutionKindSchema.optional().catch(undefined),
+  /**
+   * G1 (work order 68, 2026-08-29): DOCUMENT STRUCTURE, so a printed formal
+   * minit survives the pipeline with its shape intact instead of being
+   * crushed into one flat list (§1-2 of the work order — J's real sample).
+   *
+   * These are structural MARKERS, not extracted facts in their own right —
+   * the fact (the paragraph) lives in `text` with its own source_ref; these
+   * say where on the page it sat. Same failure posture as `kind`
+   * (catch → undefined): a malformed marker only costs the grouping, never
+   * the line.
+   *
+   *   section_no     the agenda section's printed number ("1", "2")
+   *   section_title  the section heading as printed ("Ucapan Pengerusi")
+   *   own_no         the line's OWN printed enumerator ("2.1") — downstream
+   *                  renderers print it as-is and never add a second layer
+   */
+  section_no: z.string().max(20).optional().catch(undefined),
+  section_title: z.string().max(200).optional().catch(undefined),
+  own_no: z.string().max(20).optional().catch(undefined),
 });
 
 export const figureSchema = z.object({
@@ -197,6 +216,22 @@ export const meetingNotesExtractionSchema = z.object({
   meeting_type_label: z.string().max(120).optional(),
   meeting_date: dateFieldSchema,
   meeting_venue: textFieldSchema,
+  /**
+   * G1 (work order 68): the rest of the standard minit header and closing —
+   * MASA, the verbatim headcount line ("AJK yang hadir : 33 orang"), the
+   * verbatim adjournment sentence, and the signature block's two names.
+   *
+   * All OPTIONAL, and parseMeetingNotesExtraction PRUNES any of them the
+   * model marked `missing`: a whiteboard photo or a typed meeting must not
+   * grow three extra "not in the notes" taps for fields the page never had.
+   * When present they carry the full Hard Rule 1 contract and count as
+   * reviewable leaves like every other field.
+   */
+  meeting_time: textFieldSchema.optional(),
+  attendance_count: textFieldSchema.optional(),
+  adjournment: textFieldSchema.optional(),
+  prepared_by: officeBearerSchema.optional(),
+  endorsed_by: officeBearerSchema.optional(),
   attendees: z.array(attendeeSchema),
   resolutions: z.array(resolutionSchema),
   figures: z.array(figureSchema),
@@ -233,9 +268,31 @@ export const emptyMeetingNotesExtraction: MeetingNotesExtraction = {
  * Validates raw LLM output against the contract.
  * The retry-once-with-error flow from CLAUDE.md rule 7 wires in here when
  * the live API call is connected.
+ *
+ * G1: the optional header/closing fields are PRUNED when `missing` — a field
+ * the page never had must not appear on the review screen demanding a "not in
+ * the notes" tap. A present-but-empty CONFIRMED field (a human pressed "not
+ * written down") is kept: that is a review verdict, not an absence.
  */
 export function parseMeetingNotesExtraction(raw: unknown) {
-  return meetingNotesExtractionSchema.safeParse(raw);
+  const parsed = meetingNotesExtractionSchema.safeParse(raw);
+  if (!parsed.success) return parsed;
+  const e = parsed.data;
+  for (const key of ["meeting_time", "attendance_count", "adjournment"] as const) {
+    const f = e[key];
+    if (f && f.confidence === "missing" && f.source_ref === null) delete e[key];
+  }
+  for (const key of ["prepared_by", "endorsed_by"] as const) {
+    const b = e[key];
+    if (
+      b &&
+      b.position.confidence === "missing" &&
+      b.person_name.confidence === "missing"
+    ) {
+      delete e[key];
+    }
+  }
+  return parsed;
 }
 
 // ---------------------------------------------------------------------------

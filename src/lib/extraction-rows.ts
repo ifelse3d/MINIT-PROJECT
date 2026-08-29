@@ -121,6 +121,20 @@ export function countUnreviewed(e: {
   meeting_type: { confidence: string };
   meeting_date: { confidence: string };
   meeting_venue: { confidence: string };
+  /** G1 optional header/closing fields — reviewable ONLY when present
+   *  (parseMeetingNotesExtraction prunes the model's `missing` ones, so a
+   *  page that never had them never demands a tap for them). */
+  meeting_time?: { confidence: string };
+  attendance_count?: { confidence: string };
+  adjournment?: { confidence: string };
+  prepared_by?: {
+    position: { confidence: string };
+    person_name: { confidence: string };
+  };
+  endorsed_by?: {
+    position: { confidence: string };
+    person_name: { confidence: string };
+  };
   attendees: { name: { confidence: string } }[];
   resolutions: { text: { confidence: string } }[];
   figures: {
@@ -136,6 +150,15 @@ export function countUnreviewed(e: {
     e.meeting_type.confidence,
     e.meeting_date.confidence,
     e.meeting_venue.confidence,
+    ...(e.meeting_time ? [e.meeting_time.confidence] : []),
+    ...(e.attendance_count ? [e.attendance_count.confidence] : []),
+    ...(e.adjournment ? [e.adjournment.confidence] : []),
+    ...(e.prepared_by
+      ? [e.prepared_by.position.confidence, e.prepared_by.person_name.confidence]
+      : []),
+    ...(e.endorsed_by
+      ? [e.endorsed_by.position.confidence, e.endorsed_by.person_name.confidence]
+      : []),
     ...e.attendees.map((a) => a.name.confidence),
     ...e.resolutions.map((r) => r.text.confidence),
     ...e.figures.flatMap((f) => [

@@ -1119,6 +1119,11 @@ export function MinutesProvider({
       e.meeting_type,
       e.meeting_date,
       e.meeting_venue,
+      ...(e.meeting_time ? [e.meeting_time] : []),
+      ...(e.attendance_count ? [e.attendance_count] : []),
+      ...(e.adjournment ? [e.adjournment] : []),
+      ...(e.prepared_by ? [e.prepared_by.position, e.prepared_by.person_name] : []),
+      ...(e.endorsed_by ? [e.endorsed_by.position, e.endorsed_by.person_name] : []),
       ...e.attendees.map((a) => a.name),
       ...e.resolutions.map((r) => r.text),
       ...e.figures.flatMap((f) => [f.description, f.amount_cents]),
@@ -1212,6 +1217,17 @@ export function MinutesProvider({
         extraction.meeting_type,
         extraction.meeting_date,
         extraction.meeting_venue,
+        // G1: the optional header/closing fields count only when present —
+        // parse pruned the ones the page never had.
+        ...(extraction.meeting_time ? [extraction.meeting_time] : []),
+        ...(extraction.attendance_count ? [extraction.attendance_count] : []),
+        ...(extraction.adjournment ? [extraction.adjournment] : []),
+        ...(extraction.prepared_by
+          ? [extraction.prepared_by.position, extraction.prepared_by.person_name]
+          : []),
+        ...(extraction.endorsed_by
+          ? [extraction.endorsed_by.position, extraction.endorsed_by.person_name]
+          : []),
       ]),
       attendees: count(extraction.attendees.map((a) => a.name)),
       resolutions: count(extraction.resolutions.map((r) => r.text)),

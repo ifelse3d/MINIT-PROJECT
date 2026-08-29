@@ -17,7 +17,7 @@ import { DiscussSection } from "./discuss-section";
 import { FieldRow } from "./field-row";
 import { AddRowButton, DeletableRow } from "./row-controls";
 import { useMinutes, type TextLikeField } from "./minutes-store";
-import type { ResolutionKind } from "@/lib/extraction";
+import type { MeetingNotesExtraction, ResolutionKind } from "@/lib/extraction";
 import { AttachIcon, ChooseFileLabel, UploadLimitNote } from "@/components/attach-icon";
 
 // D-7 / J review 27-evening #30 (2026-08-28): the review GROUPS what was
@@ -46,6 +46,92 @@ const RESOLUTION_KIND_LABEL: Record<ResolutionKind, { bm: string; zh: string; en
   duty: { bm: "Jawatan aktiviti", zh: "岗位", en: "Duty" },
   info: { bm: "Catatan", zh: "备注", en: "Info" },
 };
+
+/**
+ * One resolution row — the delete control, the field itself, the kind select.
+ * Module-level ON PURPOSE (STATE §6: a component defined inside render is a
+ * new component every render, state resets); it reads the store itself. Used
+ * by both groupings — by agenda section (G1 structured documents) and by kind.
+ */
+function ResolutionRowBlock({
+  r,
+  i,
+}: {
+  r: MeetingNotesExtraction["resolutions"][number];
+  i: number;
+}) {
+  const t = useTriText();
+  const {
+    updateField,
+    confirmField: confirm,
+    editField: edit,
+    markAbsent,
+    removeExtractionRow,
+    rowHasContent,
+  } = useMinutes();
+  return (
+    <DeletableRow
+      onDelete={() => removeExtractionRow("resolutions", i)}
+      hasContent={rowHasContent("resolutions", i)}
+      what={t(`Keputusan ${i + 1}`, `决议 ${i + 1}`, `Resolution ${i + 1}`)}
+    >
+      <FieldRow
+        labelBm={`Keputusan ${i + 1}`}
+        labelZh={`决议 ${i + 1}`}
+        labelEn={`Resolution ${i + 1}`}
+        field={r.text}
+        onConfirm={() =>
+          updateField((e) => {
+            confirm(e.resolutions[i].text);
+            return e;
+          })
+        }
+        onEdit={(v) =>
+          updateField((e) => {
+            edit(e.resolutions[i].text, v);
+            return e;
+          })
+        }
+        onMarkAbsent={() =>
+          updateField((e) => {
+            markAbsent(e.resolutions[i].text);
+            return e;
+          })
+        }
+      />
+      {/* The human can re-label a line the model filed wrong —
+          the label only moves the line between sections. */}
+      <label className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+        <Tri bm="Jenis" zh="类型" en="Kind" />
+        <select
+          value={r.kind ?? ""}
+          onChange={(ev) => {
+            const v = ev.target.value;
+            updateField((e) => {
+              e.resolutions[i].kind =
+                v === "" ? undefined : (v as ResolutionKind);
+              return e;
+            });
+          }}
+          className="w-full min-w-0 max-w-48 rounded-md border border-input bg-background px-2 py-1 text-sm"
+        >
+          <option value="">
+            {t("(belum dilabel)", "（未分类）", "(unlabelled)")}
+          </option>
+          {(Object.keys(RESOLUTION_KIND_LABEL) as ResolutionKind[]).map((k) => (
+            <option key={k} value={k}>
+              {t(
+                RESOLUTION_KIND_LABEL[k].bm,
+                RESOLUTION_KIND_LABEL[k].zh,
+                RESOLUTION_KIND_LABEL[k].en,
+              )}
+            </option>
+          ))}
+        </select>
+      </label>
+    </DeletableRow>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // /minutes — take a photo of the handwritten notes, then check what Minit read.
@@ -783,6 +869,193 @@ export function NotesReview() {
             }
           />
 
+          {/* G1 (work order 68): the rest of the standard minit header —
+              rendered ONLY when the page actually had them (parse prunes the
+              model's `missing` ones, so typed meetings and whiteboards grow
+              zero extra taps). */}
+          {extraction.meeting_time && (
+            <FieldRow
+              labelBm="Masa mesyuarat"
+              labelZh="会议时间"
+              labelEn="Meeting time"
+              field={extraction.meeting_time}
+              onConfirm={() =>
+                updateField((e) => {
+                  if (e.meeting_time) confirm(e.meeting_time);
+                  return e;
+                })
+              }
+              onEdit={(v) =>
+                updateField((e) => {
+                  if (e.meeting_time) edit(e.meeting_time, v);
+                  return e;
+                })
+              }
+              onMarkAbsent={() =>
+                updateField((e) => {
+                  if (e.meeting_time) markAbsent(e.meeting_time);
+                  return e;
+                })
+              }
+            />
+          )}
+          {extraction.attendance_count && (
+            <FieldRow
+              labelBm="Baris bilangan hadir (seperti tertulis)"
+              labelZh="出席人数那一行（照原文）"
+              labelEn="Headcount line (as written)"
+              field={extraction.attendance_count}
+              onConfirm={() =>
+                updateField((e) => {
+                  if (e.attendance_count) confirm(e.attendance_count);
+                  return e;
+                })
+              }
+              onEdit={(v) =>
+                updateField((e) => {
+                  if (e.attendance_count) edit(e.attendance_count, v);
+                  return e;
+                })
+              }
+              onMarkAbsent={() =>
+                updateField((e) => {
+                  if (e.attendance_count) markAbsent(e.attendance_count);
+                  return e;
+                })
+              }
+            />
+          )}
+          {extraction.adjournment && (
+            <FieldRow
+              labelBm="Ayat penangguhan (seperti tertulis)"
+              labelZh="散会那一句（照原文）"
+              labelEn="Adjournment line (as written)"
+              field={extraction.adjournment}
+              onConfirm={() =>
+                updateField((e) => {
+                  if (e.adjournment) confirm(e.adjournment);
+                  return e;
+                })
+              }
+              onEdit={(v) =>
+                updateField((e) => {
+                  if (e.adjournment) edit(e.adjournment, v);
+                  return e;
+                })
+              }
+              onMarkAbsent={() =>
+                updateField((e) => {
+                  if (e.adjournment) markAbsent(e.adjournment);
+                  return e;
+                })
+              }
+            />
+          )}
+          {extraction.prepared_by && (
+            <>
+              <FieldRow
+                labelBm="Disediakan oleh — nama"
+                labelZh="记录人（Disediakan oleh）姓名"
+                labelEn="Prepared by — name"
+                field={extraction.prepared_by.person_name}
+                onConfirm={() =>
+                  updateField((e) => {
+                    if (e.prepared_by) confirm(e.prepared_by.person_name);
+                    return e;
+                  })
+                }
+                onEdit={(v) =>
+                  updateField((e) => {
+                    if (e.prepared_by) edit(e.prepared_by.person_name, v);
+                    return e;
+                  })
+                }
+                onMarkAbsent={() =>
+                  updateField((e) => {
+                    if (e.prepared_by) markAbsent(e.prepared_by.person_name);
+                    return e;
+                  })
+                }
+              />
+              <FieldRow
+                labelBm="Disediakan oleh — jawatan"
+                labelZh="记录人职称"
+                labelEn="Prepared by — role"
+                field={extraction.prepared_by.position}
+                onConfirm={() =>
+                  updateField((e) => {
+                    if (e.prepared_by) confirm(e.prepared_by.position);
+                    return e;
+                  })
+                }
+                onEdit={(v) =>
+                  updateField((e) => {
+                    if (e.prepared_by) edit(e.prepared_by.position, v);
+                    return e;
+                  })
+                }
+                onMarkAbsent={() =>
+                  updateField((e) => {
+                    if (e.prepared_by) markAbsent(e.prepared_by.position);
+                    return e;
+                  })
+                }
+              />
+            </>
+          )}
+          {extraction.endorsed_by && (
+            <>
+              <FieldRow
+                labelBm="Disahkan oleh — nama"
+                labelZh="核准人（Disahkan oleh）姓名"
+                labelEn="Endorsed by — name"
+                field={extraction.endorsed_by.person_name}
+                onConfirm={() =>
+                  updateField((e) => {
+                    if (e.endorsed_by) confirm(e.endorsed_by.person_name);
+                    return e;
+                  })
+                }
+                onEdit={(v) =>
+                  updateField((e) => {
+                    if (e.endorsed_by) edit(e.endorsed_by.person_name, v);
+                    return e;
+                  })
+                }
+                onMarkAbsent={() =>
+                  updateField((e) => {
+                    if (e.endorsed_by) markAbsent(e.endorsed_by.person_name);
+                    return e;
+                  })
+                }
+              />
+              <FieldRow
+                labelBm="Disahkan oleh — jawatan"
+                labelZh="核准人职称"
+                labelEn="Endorsed by — role"
+                field={extraction.endorsed_by.position}
+                onConfirm={() =>
+                  updateField((e) => {
+                    if (e.endorsed_by) confirm(e.endorsed_by.position);
+                    return e;
+                  })
+                }
+                onEdit={(v) =>
+                  updateField((e) => {
+                    if (e.endorsed_by) edit(e.endorsed_by.position, v);
+                    return e;
+                  })
+                }
+                onMarkAbsent={() =>
+                  updateField((e) => {
+                    if (e.endorsed_by) markAbsent(e.endorsed_by.position);
+                    return e;
+                  })
+                }
+              />
+            </>
+          )}
+
           {/* #31 (approved 28/8): discuss THIS part with the AI — 1 action
               per message, said on the button; proposals applied by hand. */}
           <DiscussSection section="meeting" />
@@ -798,9 +1071,52 @@ export function NotesReview() {
           {/* #30: grouped by kind when the model (or a human) labelled the
               lines; a wholly unlabelled extraction renders exactly as the old
               flat list. The row's index into extraction.resolutions is kept,
-              so every edit callback stays honest through the grouping. */}
+              so every edit callback stays honest through the grouping.
+              G1 (work order 68): a STRUCTURED document (section markers from
+              the extraction) groups by its OWN agenda sections instead — the
+              confirm unit shows which section each paragraph belongs to. */}
           {(() => {
             const rows = extraction.resolutions.map((r, i) => ({ r, i }));
+            const anyStructure = rows.some(
+              ({ r }) => r.section_no !== undefined || r.section_title !== undefined,
+            );
+            if (anyStructure) {
+              const keyOf = (r: (typeof rows)[number]["r"]) =>
+                `${r.section_no ?? ""}|${r.section_title ?? ""}`;
+              const order: string[] = [];
+              const byKey = new Map<string, typeof rows>();
+              for (const row of rows) {
+                const k = keyOf(row.r);
+                if (!byKey.has(k)) {
+                  byKey.set(k, []);
+                  order.push(k);
+                }
+                byKey.get(k)!.push(row);
+              }
+              return order.map((k) => {
+                const group = byKey.get(k)!;
+                const no = group[0].r.section_no ?? "";
+                const title = group[0].r.section_title ?? "";
+                return (
+                  <div key={`sec-${k}`} className="flex flex-col gap-3">
+                    <p className="mt-1 border-b pb-1 text-sm font-semibold text-muted-foreground">
+                      {no !== "" || title !== "" ? (
+                        <>
+                          {t("Agenda", "议程", "Agenda")} {no}
+                          {title !== "" ? `: ${title}` : ""}
+                        </>
+                      ) : (
+                        <Tri bm="Tanpa bahagian" zh="没有归节的" en="No section" />
+                      )}{" "}
+                      <span className="font-normal">({group.length})</span>
+                    </p>
+                    {group.map(({ r, i }) => (
+                      <ResolutionRowBlock key={`res-${i}`} r={r} i={i} />
+                    ))}
+                  </div>
+                );
+              });
+            }
             const anyKind = rows.some(({ r }) => r.kind !== undefined);
             const sections = anyKind
               ? RESOLUTION_SECTIONS
@@ -828,69 +1144,7 @@ export function NotesReview() {
                     </p>
                   )}
                   {inSection.map(({ r, i }) => (
-                    <DeletableRow
-                      key={`res-${i}`}
-                      onDelete={() => removeExtractionRow("resolutions", i)}
-                      hasContent={rowHasContent("resolutions", i)}
-                      what={t(`Keputusan ${i + 1}`, `决议 ${i + 1}`, `Resolution ${i + 1}`)}
-                    >
-                      <FieldRow
-                        labelBm={`Keputusan ${i + 1}`}
-                        labelZh={`决议 ${i + 1}`}
-                        labelEn={`Resolution ${i + 1}`}
-                        field={r.text}
-                        onConfirm={() =>
-                          updateField((e) => {
-                            confirm(e.resolutions[i].text);
-                            return e;
-                          })
-                        }
-                        onEdit={(v) =>
-                          updateField((e) => {
-                            edit(e.resolutions[i].text, v);
-                            return e;
-                          })
-                        }
-                        onMarkAbsent={() =>
-                          updateField((e) => {
-                            markAbsent(e.resolutions[i].text);
-                            return e;
-                          })
-                        }
-                      />
-                      {/* The human can re-label a line the model filed wrong —
-                          the label only moves the line between sections. */}
-                      <label className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-                        <Tri bm="Jenis" zh="类型" en="Kind" />
-                        <select
-                          value={r.kind ?? ""}
-                          onChange={(ev) => {
-                            const v = ev.target.value;
-                            updateField((e) => {
-                              e.resolutions[i].kind =
-                                v === "" ? undefined : (v as ResolutionKind);
-                              return e;
-                            });
-                          }}
-                          className="w-full min-w-0 max-w-48 rounded-md border border-input bg-background px-2 py-1 text-sm"
-                        >
-                          <option value="">
-                            {t("(belum dilabel)", "（未分类）", "(unlabelled)")}
-                          </option>
-                          {(Object.keys(RESOLUTION_KIND_LABEL) as ResolutionKind[]).map(
-                            (k) => (
-                              <option key={k} value={k}>
-                                {t(
-                                  RESOLUTION_KIND_LABEL[k].bm,
-                                  RESOLUTION_KIND_LABEL[k].zh,
-                                  RESOLUTION_KIND_LABEL[k].en,
-                                )}
-                              </option>
-                            ),
-                          )}
-                        </select>
-                      </label>
-                    </DeletableRow>
+                    <ResolutionRowBlock key={`res-${i}`} r={r} i={i} />
                   ))}
                 </div>
               );
