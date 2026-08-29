@@ -8,6 +8,7 @@ import {
   listConfirmedMinutes,
 } from "@/db/minutes-list";
 import { loadFilingRoster } from "@/app/minutes/roster-actions";
+import { readOrgTypeFlags } from "@/lib/org-flags";
 import { buildPastePack } from "@/lib/paste-pack";
 import { loadStatementRows } from "@/app/money/report/data";
 import {
@@ -62,6 +63,9 @@ export default async function ErosesGuidePage({
   const docRaw = Array.isArray(sp.doc) ? sp.doc[0] : sp.doc;
   const docId = Number(docRaw ?? "");
   const todayIso = dayIsoMalaysia(new Date().toISOString())!;
+
+  // G3-5 (work order 68 §5-5): who this guide is even FOR, said out loud.
+  const { orgType } = await readOrgTypeFlags(active.id);
 
   const supabase = await getSupabaseServer();
   const [meetings, filingRoster, auditorsRead, orgRead, banksRead, branchesRead] =
@@ -172,7 +176,61 @@ export default async function ErosesGuidePage({
   }
 
   return (
-    <ErosesGuide
+    <>
+      {/* G3-5: LOUD empty states — a tester who lands here with an internal
+          committee or an empty history must never conclude "没做任何东西". */}
+      {orgType === "committee" && (
+        <div className="mx-auto mb-4 w-full max-w-3xl rounded-md border-2 border-amber-400 bg-amber-50 p-5 dark:bg-amber-400/10">
+          <p className="text-xl font-bold text-amber-900 dark:text-amber-100">
+            🏛️{" "}
+            <Tri
+              bm="Pertubuhan ini jawatankuasa dalaman — ia TIDAK perlu memfailkan eROSES."
+              zh="这个机构是内部委员会 —— 不用呈报 eROSES。"
+              en="This organisation is an internal committee — it does NOT file to eROSES."
+            />
+          </p>
+          <p className="mt-2 text-base text-amber-900/90 dark:text-amber-100/90">
+            <Tri
+              bm="Hanya pertubuhan berdaftar (PPM/ROS) memfailkan Penyata Tahunan. Untuk mencuba panduan ini, buka pertubuhan jenis “berdaftar”."
+              zh="只有注册社团（PPM/ROS）需要交年报。想试这份引导，请用「注册社团」类型的机构。"
+              en="Only a registered society (PPM/ROS) files the Annual Return. To try this guide, use an organisation of the “registered” type."
+            />
+          </p>
+        </div>
+      )}
+      {meetings.length === 0 && (
+        <div className="mx-auto mb-4 w-full max-w-3xl rounded-md border-2 border-[#a855f7]/50 bg-purple-50/70 p-5 dark:bg-purple-400/10">
+          <p className="text-xl font-bold">
+            1️⃣{" "}
+            <Tri
+              bm="Langkah pertama: simpan satu minit mesyuarat yang DISAHKAN dahulu."
+              zh="第一步：先去存一份确认过的会议记录。"
+              en="First step: save one CONFIRMED set of minutes."
+            />
+          </p>
+          <p className="mt-2 text-base text-muted-foreground">
+            <Tri
+              bm="Panduan ini mengisi Penyata Tahunan daripada minit yang sudah disahkan — sejarah anda masih kosong, jadi belum ada apa-apa untuk diisi."
+              zh="这份引导是用已确认的会议记录来填年报的 —— 您的历史还是空的，所以现在没有东西可填。"
+              en="This guide fills the Annual Return from confirmed minutes — your history is still empty, so there is nothing to fill in yet."
+            />
+          </p>
+          <p className="mt-3">
+            <Link
+              href="/minutes"
+              className="inline-block rounded-md bg-[color:var(--v2-primary-fill,#7c3aed)] px-5 py-2.5 text-base font-semibold text-white"
+            >
+              <Tri
+                bm="Rekod mesyuarat sekarang"
+                zh="现在去记录会议"
+                en="Record a meeting now"
+              />{" "}
+              →
+            </Link>
+          </p>
+        </div>
+      )}
+      <ErosesGuide
       meetings={meetings.map((m) => ({
         id: m.id,
         label:
@@ -200,5 +258,6 @@ export default async function ErosesGuidePage({
       fromIso={fromIso}
       toIso={toIso}
     />
+    </>
   );
 }

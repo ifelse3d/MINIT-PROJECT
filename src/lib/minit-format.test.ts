@@ -202,6 +202,21 @@ describe("renderMinitMd — the list (whiteboard / free notes) form", () => {
   });
 });
 
+describe("renderMinitMd — unresolved lines get one layer of numbering", () => {
+  it("strips a line's own enumerator in the unresolved block (held-out find)", () => {
+    const md = renderMinitMd({
+      lang: "bm",
+      orgName: "PERSATUAN CONTOH",
+      sections: [{ no: "", title: "A", items: [{ text: "perkara" }] }],
+      unresolved: ["3. 小视频 - 大事纪掌控 [歌: Saya Anak Malaysia?]"],
+      preparedBy: { name: "siti" },
+      audit: { confirmedBy: "siti", dateIso: "2026-08-29" },
+    });
+    expect(md).toContain("1. 小视频");
+    expect(md).not.toContain("1. 3. 小视频");
+  });
+});
+
 describe("renderMinitMd — zh reading copy carries the same layout", () => {
   const model = { ...structuredModel(), lang: "zh" as const };
   const md = renderMinitMd(model);

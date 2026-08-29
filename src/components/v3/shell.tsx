@@ -22,7 +22,7 @@
 // ---------------------------------------------------------------------------
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import {
   ChevronDown,
   PanelLeftClose,
@@ -70,6 +70,11 @@ const RAIL_KEY = "minit.rail.collapsed";
  *  opens itself. A person's own toggles are remembered per device. */
 const GROUPS_KEY = "minit.nav.groups.v1";
 
+/** G3-3 (work order 68, J #7): unfinished cloud-draft count for the
+ *  "New minutes" nav badge. Context, not prop-drilling — RailItem sits three
+ *  layers under AppShell and only the /minutes row cares. */
+const DraftsCountContext = createContext<number | null>(null);
+
 export function AppShell({
   children,
   showAiLauncher,
@@ -77,6 +82,7 @@ export function AppShell({
   aiUsedPct,
   aiBlocked,
   showAdmin = false,
+  minutesDraftsCount = null,
 }: {
   children: React.ReactNode;
   showAiLauncher: boolean;
@@ -88,6 +94,8 @@ export function AppShell({
    *  boolean only — the operator list itself never reaches the client, and
    *  /admin keeps its own fail-closed 404 whatever this says. */
   showAdmin?: boolean;
+  /** G3-3: unfinished workspace drafts (null = unknown → no badge). */
+  minutesDraftsCount?: number | null;
 }) {
   const pathname = usePathname();
   // Hooks must run on every render, including the bare /login branch below.
@@ -120,6 +128,7 @@ export function AppShell({
 
   return (
     <AppTooltipProvider>
+      <DraftsCountContext.Provider value={minutesDraftsCount}>
       <div className="v2-root v2-safe min-h-screen">
         {/* Desktop icon rail — fixed, full height, ≥1024px. */}
         {!inSettings && <Rail pathname={pathname ?? "/"} showAdmin={showAdmin} />}
@@ -172,6 +181,7 @@ export function AppShell({
         )}
         <FirstRunFlow />
       </div>
+      </DraftsCountContext.Provider>
     </AppTooltipProvider>
   );
 }
@@ -200,6 +210,7 @@ function RailItem({
 }) {
   const t = useTriText();
   const active = isActivePath(pathname, item.href, item.exact);
+  const draftsCount = useContext(DraftsCountContext);
   const Icon = item.icon;
   const link = (
     <Link
@@ -225,6 +236,21 @@ function RailItem({
       <span className="rail-label min-w-0 break-words py-1 leading-snug">
         <Tri bm={item.bm} zh={item.zh} en={item.en} />
       </span>
+      {/* G3-3 (J #7): "you started something" — the unfinished-drafts count
+          on the New minutes row. Amber like every other waiting-for-you
+          marker; absent when zero or unknown. */}
+      {item.href === "/minutes" && draftsCount !== null && draftsCount > 0 && (
+        <span
+          className="rail-label ml-auto rounded-full bg-amber-600 px-2 py-0.5 text-xs font-bold text-white dark:bg-amber-400 dark:text-black"
+          title={t(
+            `${draftsCount} minit belum siap`,
+            `${draftsCount} 份没写完`,
+            `${draftsCount} unfinished`,
+          )}
+        >
+          {draftsCount}
+        </span>
+      )}
     </Link>
   );
   // §4.3: every collapsed rail icon shows its full label on hover/focus.

@@ -9,6 +9,7 @@ import {
   minutesLine,
   moneyLine,
   statementLine,
+  unfinishedDraftsLine,
   type Line,
 } from "@/lib/home-card-lines";
 // TYPE-ONLY on purpose: home-stats.ts is "server-only", and importing any
@@ -156,7 +157,15 @@ function CardInner({
   );
 }
 
-export function TaskCards({ stats }: { stats: HomeStats }) {
+export function TaskCards({
+  stats,
+  unfinishedDrafts = null,
+}: {
+  stats: HomeStats;
+  /** G3-3 (J #7): unfinished cloud-draft workspaces — outranks the unsigned
+   *  count on the minutes card when > 0. null = unknown, no claim made. */
+  unfinishedDrafts?: number | null;
+}) {
   // Container variants (J #1, 2026-08-28): columns follow the CONTENT
   // column's width, not the viewport's — with the AI dock open on a 14"
   // laptop the old lg:grid-cols-4 forced four skinny towers.
@@ -174,7 +183,7 @@ export function TaskCards({ stats }: { stats: HomeStats }) {
             zh: "拍下笔记 → 正式的会议报告",
             en: "Photo of notes → a formal meeting report",
           }}
-          line={minutesLine(stats.minutesDrafts)}
+          line={unfinishedDraftsLine(unfinishedDrafts) ?? minutesLine(stats.minutesDrafts)}
         />
       </Link>
 

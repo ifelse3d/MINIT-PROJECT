@@ -265,6 +265,39 @@ export const emptyMeetingNotesExtraction: MeetingNotesExtraction = {
 };
 
 /**
+ * G3-8 (work order 68 §1-8, the REAL root cause of "The AI took too long"):
+ * gemini-3.5-flash-lite routinely fills a field's `value` while labelling it
+ * `missing` (an "I saw something but I'm not sure" tic). The contract rightly
+ * rejects that — but a rejection burns the WHOLE first read, and the rule-7
+ * retry then cannot fit inside the route's 50s budget, so an 8-page
+ * constitution came back as a timeout, twice, on J's own test.
+ *
+ * The fix is arithmetic, not begging the prompt: BELIEVE THE LABEL. A field
+ * that says `missing` has its value and source_ref DISCARDED before
+ * validation — the gap stays a gap. Nothing is ever promoted (that would be
+ * inventing); we only erase, which is exactly what Hard Rule 1 demands of a
+ * missing field. Recursive, shape-agnostic: any {value, confidence:"missing"}
+ * object anywhere in any extraction gets the same treatment.
+ */
+export function coerceMissingFieldsEmpty(raw: unknown): unknown {
+  if (Array.isArray(raw)) {
+    for (const item of raw) coerceMissingFieldsEmpty(item);
+    return raw;
+  }
+  if (typeof raw !== "object" || raw === null) return raw;
+  const obj = raw as Record<string, unknown>;
+  if (obj.confidence === "missing" && "value" in obj) {
+    // Numbers empty to null (amount fields); everything else empties to ""
+    // (text/date/enum fields). Never the other way around.
+    obj.value = typeof obj.value === "number" || obj.value === null ? null : "";
+    obj.source_ref = null;
+    return raw;
+  }
+  for (const v of Object.values(obj)) coerceMissingFieldsEmpty(v);
+  return raw;
+}
+
+/**
  * Validates raw LLM output against the contract.
  * The retry-once-with-error flow from CLAUDE.md rule 7 wires in here when
  * the live API call is connected.
@@ -275,7 +308,7 @@ export const emptyMeetingNotesExtraction: MeetingNotesExtraction = {
  * written down") is kept: that is a review verdict, not an absence.
  */
 export function parseMeetingNotesExtraction(raw: unknown) {
-  const parsed = meetingNotesExtractionSchema.safeParse(raw);
+  const parsed = meetingNotesExtractionSchema.safeParse(coerceMissingFieldsEmpty(raw));
   if (!parsed.success) return parsed;
   const e = parsed.data;
   for (const key of ["meeting_time", "attendance_count", "adjournment"] as const) {
@@ -331,7 +364,7 @@ export const emptyLedgerExtraction: LedgerExtraction = {
 };
 
 export function parseLedgerExtraction(raw: unknown) {
-  return ledgerExtractionSchema.safeParse(raw);
+  return ledgerExtractionSchema.safeParse(coerceMissingFieldsEmpty(raw));
 }
 
 // ---------------------------------------------------------------------------
@@ -355,7 +388,7 @@ export const expenseExtractionSchema = z.object({
 export type ExpenseExtraction = z.infer<typeof expenseExtractionSchema>;
 
 export function parseExpenseExtraction(raw: unknown) {
-  return expenseExtractionSchema.safeParse(raw);
+  return expenseExtractionSchema.safeParse(coerceMissingFieldsEmpty(raw));
 }
 
 // ---------------------------------------------------------------------------
@@ -386,7 +419,7 @@ export const constitutionExtractionSchema = z.object({
 export type ConstitutionExtraction = z.infer<typeof constitutionExtractionSchema>;
 
 export function parseConstitutionExtraction(raw: unknown) {
-  return constitutionExtractionSchema.safeParse(raw);
+  return constitutionExtractionSchema.safeParse(coerceMissingFieldsEmpty(raw));
 }
 
 // ---------------------------------------------------------------------------
@@ -411,5 +444,5 @@ export const eventsExtractionSchema = z.object({
 export type EventsExtraction = z.infer<typeof eventsExtractionSchema>;
 
 export function parseEventsExtraction(raw: unknown) {
-  return eventsExtractionSchema.safeParse(raw);
+  return eventsExtractionSchema.safeParse(coerceMissingFieldsEmpty(raw));
 }

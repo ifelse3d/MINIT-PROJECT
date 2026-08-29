@@ -322,3 +322,92 @@ describe("findTimeInText", () => {
     expect(findTimeInText("tiada masa ditulis")).toBe("");
   });
 });
+
+// ---------------------------------------------------------------------------
+// G3-9 (work order 68 s1-10): the explicit replacement resolution.
+// Golden case: the margin note on J's real printed sample, "Agenda 2.1:
+// Lim Guat Kiong ganti - Lee Moy" (fictional roster around it).
+// ---------------------------------------------------------------------------
+
+describe("findReplacementInText", () => {
+  it("reads the golden case: A ganti - B", async () => {
+    const { findReplacementInText } = await import("@/lib/minutes-suggestions");
+    expect(
+      findReplacementInText("Agenda 2.1: Lim Guat Kiong ganti - Lee Moy"),
+    ).toEqual({ newName: "Lim Guat Kiong", oldName: "Lee Moy" });
+  });
+
+  it("reads menggantikan, the passive oleh form, and the zh forms", async () => {
+    const { findReplacementInText } = await import("@/lib/minutes-suggestions");
+    expect(findReplacementInText("Puan Aminah menggantikan Puan Rosnah")).toEqual({
+      newName: "Aminah",
+      oldName: "Rosnah",
+    });
+    expect(findReplacementInText("Lee Moy digantikan oleh Lim Guat Kiong")).toEqual({
+      newName: "Lim Guat Kiong",
+      oldName: "Lee Moy",
+    });
+    expect(findReplacementInText("陈丽花 接替 王美美 出任财政")).toEqual({
+      newName: "陈丽花",
+      oldName: "王美美",
+    });
+    expect(findReplacementInText("财政一职 王美美 由 陈丽花 接替")).toEqual({
+      newName: "陈丽花",
+      oldName: "王美美",
+    });
+  });
+
+  it("refuses the direction-ambiguous bare diganti and nameless text", async () => {
+    const { findReplacementInText } = await import("@/lib/minutes-suggestions");
+    // No "oleh": which way does it run? Not our guess to make.
+    expect(findReplacementInText("Agenda 2.1 diganti Lee Moy")).toBeNull();
+    expect(findReplacementInText("usul ganti alamat surat-menyurat")).toBeNull();
+  });
+});
+
+describe("deriveSuggestions - the replacement card", () => {
+  const roster = [
+    { personName: "Lee Moy", position: "AJK" },
+    { personName: "Tan Ah Kow", position: "Pengerusi" },
+  ];
+
+  it("proposes the incoming person with the outgoing person's position", () => {
+    const cards = derive(
+      extraction({
+        resolutions: [resolution("Agenda 2.1: Lim Guat Kiong ganti - Lee Moy")],
+      }),
+      { roster },
+    );
+    const member = cards.find((c) => c.type === "add_member") as MemberSuggestion;
+    expect(member).toBeDefined();
+    expect(member.personName).toBe("Lim Guat Kiong");
+    expect(member.position).toBe("AJK");
+    expect(member.replaces).toEqual(["Lee Moy"]);
+    expect(member.termStartIso).toBe("2026-08-29");
+  });
+
+  it("stays silent when the outgoing name is not on the roster (not our replacement to invent)", () => {
+    const cards = derive(
+      extraction({
+        resolutions: [resolution("Lim Guat Kiong ganti - Lee Moy")],
+      }),
+      { roster: [{ personName: "Tan Ah Kow", position: "Pengerusi" }] },
+    );
+    expect(cards.filter((c) => c.type === "add_member")).toEqual([]);
+  });
+
+  it("stays silent when the incoming person is already on the roster", () => {
+    const cards = derive(
+      extraction({
+        resolutions: [resolution("Lim Guat Kiong ganti - Lee Moy")],
+      }),
+      {
+        roster: [
+          { personName: "Lee Moy", position: "AJK" },
+          { personName: "Lim Guat Kiong", position: "Bendahari" },
+        ],
+      },
+    );
+    expect(cards.filter((c) => c.type === "add_member")).toEqual([]);
+  });
+});

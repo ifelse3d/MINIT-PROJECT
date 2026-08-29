@@ -55,6 +55,18 @@ export function PhotoLightbox({
   // Where the window has been dragged to; null = the default CSS spot.
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
   const dragFrom = useRef<{ px: number; py: number; x: number; y: number } | null>(null);
+  // G3-1 (work order 68, J): resize from the bottom-LEFT corner too — the
+  // native CSS handle only lives bottom-right, and a window hugging the
+  // right edge can only grow leftward. Explicit size wins over the CSS
+  // default once either handle has been used.
+  const [size, setSize] = useState<{ w: number; h: number } | null>(null);
+  const resizeFrom = useRef<{
+    px: number;
+    py: number;
+    w: number;
+    h: number;
+    x: number;
+  } | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const step = zoomState.forIndex === index ? zoomState.step : 0;
   const setStep = (next: (s: number) => number) =>
@@ -75,8 +87,8 @@ export function PhotoLightbox({
         left: pos ? pos.x : undefined,
         top: pos ? pos.y : 72,
         right: pos ? undefined : 12,
-        width: "min(92vw, 460px)",
-        height: "min(64vh, 560px)",
+        width: size ? size.w : "min(92vw, 460px)",
+        height: size ? size.h : "min(64vh, 560px)",
         minWidth: 260,
         minHeight: 220,
         maxWidth: "96vw",
@@ -84,6 +96,40 @@ export function PhotoLightbox({
         resize: "both",
       }}
     >
+      {/* G3-1: the bottom-left grip. Growing leftward moves the left edge,
+          so an explicit position follows the pointer when the window has
+          been dragged off its right-anchored default. */}
+      <div
+        className="absolute bottom-0 left-0 z-10 h-5 w-5 cursor-sw-resize touch-none"
+        aria-hidden
+        onPointerDown={(e) => {
+          const rect = boxRef.current?.getBoundingClientRect();
+          if (!rect) return;
+          resizeFrom.current = {
+            px: e.clientX,
+            py: e.clientY,
+            w: rect.width,
+            h: rect.height,
+            x: rect.left,
+          };
+          (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+          e.preventDefault();
+        }}
+        onPointerMove={(e) => {
+          const r = resizeFrom.current;
+          if (!r) return;
+          const w = Math.max(260, Math.min(r.w + (r.px - e.clientX), window.innerWidth * 0.96));
+          const h = Math.max(220, Math.min(r.h + (e.clientY - r.py), window.innerHeight * 0.88));
+          setSize({ w, h });
+          if (pos) setPos({ x: r.x - (w - r.w), y: pos.y });
+        }}
+        onPointerUp={(e) => {
+          resizeFrom.current = null;
+          (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+        }}
+      >
+        <span className="absolute bottom-1 left-1 block h-2.5 w-2.5 rounded-[2px] border-b-2 border-l-2 border-white/60" />
+      </div>
       <div
         className="flex cursor-move touch-none flex-wrap items-center justify-between gap-2 pb-2 select-none"
         onPointerDown={(e) => {
@@ -183,11 +229,21 @@ export function PhotoLightbox({
           />
         ) : (
           <p className="mx-auto mt-10 max-w-md rounded-sm bg-white/90 p-6 text-base">
-            <Tri
-              bm="Fail PDF — pratonton tidak tersedia di sini."
-              zh="这是 PDF 文件 —— 这里没有预览。"
-              en="A PDF file — no preview here."
-            />
+            {/* G3-1 (work order 68 §5-1): say what the file actually IS —
+                a resumed draft's WhatsApp JPEG was being labelled a PDF. */}
+            {/\.pdf$/i.test(page.name) ? (
+              <Tri
+                bm="Fail PDF — pratonton tidak tersedia di sini."
+                zh="这是 PDF 文件 —— 这里没有预览。"
+                en="A PDF file — no preview here."
+              />
+            ) : (
+              <Tri
+                bm="Pratonton tidak tersedia pada peranti ini — gambar asal masih tersimpan."
+                zh="这台设备上没有预览 —— 原图还在云端保存着。"
+                en="No preview on this device — the original photo is still stored."
+              />
+            )}
           </p>
         )}
       </div>

@@ -28,9 +28,10 @@ import type { TokenUsage, VisionJsonProvider } from "./provider";
 
 export type DraftPlanResult =
   | { ok: true; plan: MinutesPlan }
-  /** Two attempts, still failing the arithmetic — the caller falls back to the
-   *  plain template rather than shipping a document with items missing. */
-  | { ok: false };
+  /** Two attempts, still failing the arithmetic — the caller falls back to
+   *  the plain template rather than shipping a document with items missing.
+   *  `repair` says WHICH check failed last (indices only — safe to log). */
+  | { ok: false; repair?: Parameters<typeof draftMinutesPrompt>[0]["repair"] };
 
 export async function runDraftMinutesPlan(opts: {
   provider: VisionJsonProvider;
@@ -99,7 +100,7 @@ export async function runDraftMinutesPlan(opts: {
       dropped: merged.dropped,
     };
   }
-  return { ok: false };
+  return { ok: false, repair };
 }
 
 // ---------------------------------------------------------------------------

@@ -216,9 +216,9 @@ export function MinutesChrome({ children }: { children: ReactNode }) {
           />
         ) : !allReviewed ? (
           <Tri
-            bm={`Ada ${outstanding} perkara yang MinitAI mahu anda semak — ${outstandingHereOutsideAttendance} di halaman ini, ${groups.attendees.outstanding} dalam senarai kehadiran.`}
-            zh={`有 ${outstanding} 项 MinitAI 希望您核对 —— 这一页 ${outstandingHereOutsideAttendance} 项，出席者名单 ${groups.attendees.outstanding} 项。`}
-            en={`${outstanding} item(s) need your check — ${outstandingHereOutsideAttendance} on this page, ${groups.attendees.outstanding} in the attendance list.`}
+            bm={`Ada ${outstanding} perkara menunggu pengesahan anda — ${outstandingHereOutsideAttendance} di halaman ini, ${groups.attendees.outstanding} dalam senarai kehadiran. Selepas semuanya disahkan barulah dokumen rasmi boleh ditulis.`}
+            zh={`还有 ${outstanding} 项等你确认 —— 这一页 ${outstandingHereOutsideAttendance} 项，出席者名单 ${groups.attendees.outstanding} 项。全部确认完，才能写正式文件。`}
+            en={`${outstanding} item(s) are waiting for you — ${outstandingHereOutsideAttendance} on this page, ${groups.attendees.outstanding} in the attendance list. The official document can be written once everything is confirmed.`}
           />
         ) : alreadySaved ? (
           <Tri

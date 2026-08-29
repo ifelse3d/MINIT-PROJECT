@@ -443,12 +443,28 @@ export function AttendanceReview() {
         </>
       )}
 
-      <NextStepLink
-        href="/minutes/document"
-        labelBm="Ke minit yang siap"
-        labelZh="去做好的会议记录"
-        labelEn="On to the finished minutes"
-      />
+      {/* G3-7 (work order 68 §1-9): the FORWARD step is gated — add at least
+          one attendee, or PRESS the defer button; silently walking past an
+          empty sheet is what put zero-attendance minutes in front of the
+          save gate looking done. The D30 escape hatch stays, but it has to
+          be pressed, not passed. Not a dead control: the box says exactly
+          what unlocks the step (CLAUDE.md rule 13). */}
+      {attendanceUnsettled && !nothingYet ? (
+        <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+          <Tri
+            bm="Langkah seterusnya dibuka selepas anda menambah sekurang-kurangnya seorang hadir — atau menekan “Isi kehadiran kemudian” di atas."
+            zh="加至少一个出席者，或按上面「出席名单稍后补上」，才能去下一步。"
+            en="The next step opens once you add at least one attendee — or press “I will insert the attendance later” above."
+          />
+        </p>
+      ) : (
+        <NextStepLink
+          href="/minutes/document"
+          labelBm="Ke minit yang siap"
+          labelZh="去做好的会议记录"
+          labelEn="On to the finished minutes"
+        />
+      )}
       <NextStepLink
         href="/minutes"
         back

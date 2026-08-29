@@ -164,6 +164,10 @@ within them: 崇德 stays 崇德 and not "Chong De"; 点传师 stays 点传师. 
 commonly known by in ${language} where one plainly exists; where none does,
 keep it as written. Keep every number, quantity and
 duration exactly as given.
+A COMPOSITE label joined with slashes or 、 (like 青/小/小小班) is copied
+WHOLE, exactly as written — never split into pieces and never recombined
+into new words (writing 青班 when the page wrote 青/小/小小班 fails the
+character check).
 
 Do not add a fact that is not in the items you were given. A line's "source"
 must list exactly the items that line covers — nothing folded in silently.${glossaryBlock}`;

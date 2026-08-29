@@ -565,12 +565,21 @@ export function NotesReview() {
             migration 33 (fail-open: the list is simply empty). */}
         {(cloudDrafts ?? []).filter((d) => d.clientKey !== currentDraftKey).length > 0 && (
           <div className="flex flex-col gap-2 rounded-md border-2 border-[color:var(--v2-border)] bg-white/60 p-4 dark:bg-white/5">
+            {/* G3-2 (work order 68 §5-2): the promise IN WRITING — resuming
+                never eats what is on screen; the store stashes it first. */}
             <p className="text-base font-semibold">
               ☁️{" "}
               <Tri
                 bm="Draf belum siap (awan)"
                 zh="还没写完的草稿（云端）"
                 en="Unfinished drafts (cloud)"
+              />
+            </p>
+            <p className="text-sm text-muted-foreground">
+              <Tri
+                bm="Tekan “Sambung” — apa yang ada di skrin sekarang disimpan dahulu sebagai draf secara automatik. Kedua-duanya kekal, tiada yang hilang."
+                zh="按「继续这一份」时，屏幕上现在这份会先自动存成草稿 —— 两份都在，不会丢。"
+                en="Press “Resume” — whatever is on screen now is stashed as a draft first, automatically. Both survive; nothing is lost."
               />
             </p>
             <ul className="flex flex-col divide-y divide-border/60">

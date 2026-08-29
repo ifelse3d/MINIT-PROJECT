@@ -305,7 +305,10 @@ export function renderMinitMd(model: MinitDocModel): string {
   const unresolved = model.unresolved ?? [];
   if (unresolved.length > 0) {
     out.push(`## ${L.unresolved}`, "");
-    unresolved.forEach((t, i) => out.push(`${i + 1}. ${tidy(t)}`));
+    // Same one-layer rule as the list items: this block numbers its lines,
+    // so a line's own enumerator is stripped (held-out sample: the
+    // whiteboard's "3. 小视频…" printed as "1. 3. 小视频…").
+    unresolved.forEach((t, i) => out.push(`${i + 1}. ${stripOwnEnumerator(tidy(t))}`));
     out.push("");
   }
 

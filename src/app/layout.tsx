@@ -12,6 +12,7 @@ import {
 import { getActiveOrg } from "@/lib/active-org";
 import { getSessionUser } from "@/db/supabase-server";
 import { getUsage } from "@/lib/ai/usage";
+import { countUnfinishedMinutesDrafts } from "@/lib/home-stats";
 import { readNeedsEinvois } from "@/lib/einvois-server";
 import { EinvoisProvider } from "@/lib/einvois-pref";
 import { StorageScopeProvider } from "@/lib/storage-scope";
@@ -98,10 +99,12 @@ export default async function RootLayout({
   // (needsEinvois: 0-4 — null = unknown → the client falls back to the
   // device preference; see src/lib/einvois-server.ts. user: S0-4 — the
   // localStorage scope, resolved server-side so a page cannot invent it.)
-  const [usage, needsEinvois, user] = await Promise.all([
+  const [usage, needsEinvois, user, minutesDraftsCount] = await Promise.all([
     active ? getUsage(active.id).catch(() => null) : Promise.resolve(null),
     active ? readNeedsEinvois(active.id) : Promise.resolve(null),
     getSessionUser().catch(() => null),
+    // G3-3 (work order 68, J #7): the New-minutes nav badge's count.
+    active ? countUnfinishedMinutesDrafts(active.id) : Promise.resolve(null),
   ]);
   const storageScope = `${user?.id ?? "anon"}:${active?.id ?? "none"}`;
   // P-4: ONE boolean crosses to the client — "may this session see the Ops
@@ -161,6 +164,7 @@ export default async function RootLayout({
                   aiUsedPct={usage?.usedPct ?? null}
                   aiBlocked={usage?.blocked ?? false}
                   showAdmin={showAdmin}
+                  minutesDraftsCount={minutesDraftsCount}
                 >
                   {children}
                 </AppShell>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -99,28 +99,22 @@ export function CreateOrgForm({
     setFile(picked);
   }
 
-  useEffect(() => {
-    if (!state.ok || handledRef.current) return;
-    handledRef.current = true;
-
-    // `replace`, not `push`: Back from the landing page must go to /orgs,
-    // not to a spent form that would re-show its success panel and invite a
-    // second organisation nobody asked for.
-    // C-2: an EXISTING society's landing card starts with the records it
-    // already has (constitution → committee roster → first notes).
-    if (!file) {
-      router.replace(
-        societyAge === "existing" ? `${AFTER_CREATE_HOME}&lama=1` : AFTER_CREATE_HOME,
-      );
-      return;
-    }
-
-    void (async () => {
+  /**
+   * The constitution read — ONE function, called by the post-create effect
+   * AND by the in-place "try again" button (work order 68 §1-8: a failed
+   * read used to offer no retry short of re-creating the organisation).
+   * The org exists by the time this runs, so retrying re-reads the SAME held
+   * file against the SAME org; the route refunds when the vendor never
+   * delivered, so a retry is not a double charge.
+   */
+  const runRead = useCallback(
+    async (f: File) => {
+      setReadFailed(null);
       setReading(true);
       try {
         // 48 + A-4: shrink photos in the browser; relay a big PDF via
         // Storage; refuse honestly what neither road can carry.
-        const prepared = await prepareUploadForSend(file);
+        const prepared = await prepareUploadForSend(f);
         if (prepared.send === "refuse") {
           setReadFailed(prepared.error);
           return;
@@ -158,7 +152,7 @@ export function CreateOrgForm({
         }
         writeIntake({
           kind: "constitution",
-          fileName: file.name,
+          fileName: f.name,
           extraction: json.extraction,
         });
         router.replace(AFTER_CREATE_WITH_FILE);
@@ -173,8 +167,32 @@ export function CreateOrgForm({
       } finally {
         setReading(false);
       }
-    })();
-  }, [state.ok, file, router, t, societyAge]);
+    },
+    [router, t],
+  );
+
+  useEffect(() => {
+    if (!state.ok || handledRef.current) return;
+    handledRef.current = true;
+
+    // `replace`, not `push`: Back from the landing page must go to /orgs,
+    // not to a spent form that would re-show its success panel and invite a
+    // second organisation nobody asked for.
+    // C-2: an EXISTING society's landing card starts with the records it
+    // already has (constitution → committee roster → first notes).
+    if (!file) {
+      router.replace(
+        societyAge === "existing" ? `${AFTER_CREATE_HOME}&lama=1` : AFTER_CREATE_HOME,
+      );
+      return;
+    }
+
+    // setTimeout(0): the frozen eslint baseline forbids synchronous setState
+    // in an effect (STATE §6) — runRead flips `reading` on its first line.
+    // No cleanup on purpose: handledRef makes this a one-shot, and a cleanup
+    // could cancel the queued read if a dep identity shifted in the same tick.
+    setTimeout(() => void runRead(file), 0);
+  }, [state.ok, file, router, t, societyAge, runRead]);
 
   // Stage R clean-ledger tokens (same recipe as authInputClass in login/glass).
   // The old glass style (white/50 on a white card) made these fields invisible
@@ -572,56 +590,29 @@ export function CreateOrgForm({
           not decoration: without it a failed router.replace() puts the dead end
           straight back. */}
       {state.ok ? (
-        <div className="flex flex-col gap-3 rounded-md border-2 border-green-400 bg-green-50 p-4">
-          <p className="text-lg font-semibold text-green-900">
-            ✓{" "}
-            <Tri
-              bm="Siap. Pertubuhan anda sudah didaftarkan dalam MinitAI."
-              zh="好了。您的机构已经登记在 MinitAI 里。"
-              en="Done. Your organisation is now set up in MinitAI."
-            />
-          </p>
-          {reading ? (
-            <p className="text-base text-green-900">
+        <div className="flex flex-col gap-3">
+          {/* Work order 68 §1-8: SUCCESS says success, FAILURE says failure —
+              never a red error inside a green "done" box. The org-created
+              fact keeps its green line; the reading gets its own card. */}
+          <div className="rounded-md border-2 border-green-400 bg-green-50 p-4">
+            <p className="text-lg font-semibold text-green-900">
+              ✓{" "}
               <Tri
-                bm="MinitAI sedang membaca perlembagaan anda… ini boleh mengambil masa seminit untuk dokumen yang panjang."
-                zh="MinitAI 正在读您的章程……文件长的话可能要等一分钟。"
-                en="MinitAI is reading your constitution… a long document can take a minute."
+                bm="Siap. Pertubuhan anda sudah didaftarkan dalam MinitAI."
+                zh="好了。您的机构已经登记在 MinitAI 里。"
+                en="Done. Your organisation is now set up in MinitAI."
               />
             </p>
-          ) : readFailed ? (
-            // The organisation exists; only the reading failed. Do not throw
-            // the person out of the flow — tell them, and let them go on.
-            <div className="flex flex-col gap-2">
-              <p className="text-base font-medium text-red-800">
-                {localizeError(readFailed)}
-              </p>
-              <p className="text-base text-green-900">
-                <Tri
-                  bm="Pertubuhan anda tetap sudah dicipta. Anda boleh cuba muat naik perlembagaan sekali lagi di halaman seterusnya."
-                  zh="您的机构还是建好了。可以在下一页再上传一次章程。"
-                  en="Your organisation was still created. You can try uploading the constitution again on the next page."
-                />
-              </p>
-              <Button asChild size="lg">
-                <Link href={AFTER_CREATE_WITH_FILE}>
-                  <Tri bm="Teruskan" zh="继续" en="Continue" /> →
-                </Link>
-              </Button>
-            </div>
-          ) : (
-            <>
-              <p className="text-base text-green-900">
+            {!reading && !readFailed && (
+              <p className="mt-2 text-base text-green-900">
                 <Tri
                   bm="Membuka langkah seterusnya…"
                   zh="正在打开下一步……"
                   en="Opening the next step…"
-                />
-              </p>
-              <p className="text-base">
+                />{" "}
                 <Link
                   href={file ? AFTER_CREATE_WITH_FILE : AFTER_CREATE_HOME}
-                  className="text-green-900 underline underline-offset-4"
+                  className="underline underline-offset-4"
                 >
                   <Tri
                     bm="Kalau halaman tidak terbuka sendiri, tekan di sini"
@@ -631,7 +622,58 @@ export function CreateOrgForm({
                   →
                 </Link>
               </p>
-            </>
+            )}
+          </div>
+          {reading && (
+            <p className="rounded-md border-2 border-input bg-white/70 p-3 text-base dark:bg-white/5">
+              ⏳{" "}
+              <Tri
+                bm="MinitAI sedang membaca perlembagaan anda… ini boleh mengambil masa seminit untuk dokumen yang panjang."
+                zh="MinitAI 正在读您的章程……文件长的话可能要等一分钟。"
+                en="MinitAI is reading your constitution… a long document can take a minute."
+              />
+            </p>
+          )}
+          {!reading && readFailed && (
+            <div className="flex flex-col gap-2 rounded-md border-2 border-red-300 bg-red-50 p-4 dark:bg-red-400/10">
+              <p className="text-base font-semibold text-red-900 dark:text-red-100">
+                <Tri
+                  bm="Perlembagaan tidak dapat dibaca."
+                  zh="章程这次没读成功。"
+                  en="The constitution could not be read this time."
+                />
+              </p>
+              <p className="text-base font-medium whitespace-pre-line text-red-900/90 dark:text-red-100/90">
+                {localizeError(readFailed)}
+              </p>
+              <p className="text-base text-red-900/80 dark:text-red-100/80">
+                <Tri
+                  bm="Pertubuhan anda tetap sudah dicipta, dan kuota tidak ditolak untuk bacaan yang gagal. Cuba sekali lagi di sini — tidak perlu cipta semula."
+                  zh="您的机构还是建好了，读不成功也没有扣额度。可以直接在这里再试一次 —— 不用重新创建。"
+                  en="Your organisation was still created, and a failed read is not charged. Try again right here — no need to create it again."
+                />
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  size="lg"
+                  onClick={() => {
+                    if (file) void runRead(file);
+                  }}
+                >
+                  🔄 <Tri bm="Cuba baca sekali lagi" zh="再试一次" en="Try again" />
+                </Button>
+                <Button asChild size="lg" variant="outline">
+                  <Link href={AFTER_CREATE_WITH_FILE}>
+                    <Tri
+                      bm="Teruskan tanpa bacaan"
+                      zh="先不读，继续下一步"
+                      en="Continue without the reading"
+                    />{" "}
+                    →
+                  </Link>
+                </Button>
+              </div>
+            </div>
           )}
         </div>
       ) : (

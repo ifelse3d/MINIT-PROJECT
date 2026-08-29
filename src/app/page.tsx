@@ -4,7 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Tri } from "@/components/language-provider";
 import { getActiveOrg } from "@/lib/active-org";
 import { getUsage } from "@/lib/ai/usage";
-import { getHomeFigures, homeStats } from "@/lib/home-stats";
+import {
+  countUnfinishedMinutesDrafts,
+  getHomeFigures,
+  homeStats,
+} from "@/lib/home-stats";
 import { dayIsoMalaysia } from "@/lib/history";
 import { computeStandardDeadlines } from "@/lib/standard-deadlines";
 import { readOrgTypeFlags } from "@/lib/org-flags";
@@ -95,12 +99,14 @@ export default async function Home() {
   // it the hard way on 2026-08-28 (「refresh 了 LOADING 超慢」) right after the
   // status lines became the fourth. If you add another read here, put it in
   // this array; if it depends on one of these, ask whether it really does.
-  const [agm, orgFlags, usage, figures] = await Promise.all([
+  const [agm, orgFlags, usage, figures, unfinishedDrafts] = await Promise.all([
     getLatestConfirmedAgm(),
     readOrgTypeFlags(active.id),
     getUsage(active.id).catch(() => null),
     // Carries its own deadline: the status lines may never hold up the page.
     getHomeFigures(active.id),
+    // G3-3 (J #7): the unfinished-workspace reminder on the minutes card.
+    countUnfinishedMinutesDrafts(active.id),
   ]);
   // B-5: an internal committee has no annual return — no nagging about one.
   const deadlines = computeStandardDeadlines(todayIso, { agm, orgType: orgFlags.orgType });
@@ -117,7 +123,7 @@ export default async function Home() {
       </Suspense>
 
       {/* 1 — the four task cards: what MinitAI makes, one tap each (A-1). */}
-      <TaskCards stats={stats} />
+      <TaskCards stats={stats} unfinishedDrafts={unfinishedDrafts} />
 
       {/* 2 — THE box: photo / file / typing, mixed; type first, then
           confirm to send; MinitAI asks back when unsure. Card ④ focuses it. */}

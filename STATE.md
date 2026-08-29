@@ -5,19 +5,22 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-29 深夜（MYT）· Fable 5（68 号 ⑦ 品质场进行中：G0 ✅ G1 ✅ G2 ✅）**
-**🔴 本场状态一句话：⑦ 品质场 G0（版式规格＋量尺，70 号）、G1（擷取端
-结构保留，71 号）、G2（成文端主菜，72 号）做完。真样本 A 现在
-拍照→确认→出 BM 文件＝**标准 minit 版式、量尺 0 缺陷、零 AI 费**
-（结构化文件确定性组装，模型只翻译要换语言的段落＋节标题，就地措辞
-逐 index 数）。中文版自然中文无公文腔；新围栏 checkLatinNames 挡下
-「Loo Sio San→发明汉字吕兆生」实战病（第一轮被挡 repair 第二轮全对）。
-敬语 dropdown（拍板 7 后半）上线：陈讲师→名册匹配 chips。预览与成品
-同源 byte 相同。模型对比已跑（72 号报告表：3.6-flash 又好又便宜但样本
-太小，等 J bench＋拍板，env 未动）。擷取 eval 基准 95.2%/invented=0。
-品质 eval 3/3 PASS 0 findings。累计真额度 ≈US$0.15/1.00。
-接下来 G3 UX 件（9 条：原图浮窗/草稿/出席闸/create-org timeout/
-ganti 换届卡…）→ held-out 最终验收。
+**最后更新：2026-08-30 凌晨（MYT）· Fable 5（68 号 ⑦ 品质场：G0–G3 全部收工）**
+**🔴 本场状态一句话：⑦ 品质场四包全做完（70/71/72/73 号报告），
+held-out 验收两半都过。J 的道教会样本拍照→确认→BM 文件＝标准 minit
+版式、量尺 0 缺陷、**零 AI 费**（结构化确定性组装；翻译才叫模型，
+就地措辞逐 index 数＋checkLatinNames 挡发明汉字）。「AI took too long」
+真因根治：flash-lite 会「标 missing 却塞值」→契约打回整份→重读爆
+50s 预算；现在 parse 前信标签抹值（coerceMissingFieldsEmpty，五条管线
+全装），**真机 create-org 传 CONTOH 8 页 33 秒一次过落地**。UX 九件全上
+（原图浮窗左下 resize、草稿照片签名 URL 载回=未决 15 结案、Resume
+白纸黑字、首页/侧栏未完成草稿提醒、步骤门人话、eROSES 空状态大声、
+出席 Next 闸、create-org 失败红卡+原地重试、ganti 换届卡）。
+擷取 eval 同 prompt 两轮 95.2%/93.6%、invented=0（对外引区间）；品质
+eval 3/3 PASS。累计真额度 ≈US$0.30/1.00。migration **32–36 探针实测已
+全部套用**（J 开工前贴好了，一支都不用贴）。🔴 J 的事：
+**push-cabang.bat**（线上还是 8/27 旧版，你实测的 timeout 一半原因就是
+没上线）→ 道教会样本亲手重走 → 叫 tester（73 号报告清单）。
 🔴 J 的事（上一场欠的照旧）：贴 migration 32–36（salin-migration.bat）→
 push-cabang.bat → 叫 tester（67 号报告第 4 点；旧清单 60＋55 号）→
 eROSES 下载官方 Penyata Kewangan 模板（60 号报告第 5 点）。**
@@ -29,6 +32,31 @@ eROSES 下载官方 Penyata Kewangan 模板（60 号报告第 5 点）。**
 > **已上线**：https://minit-project.vercel.app —— 截至 0ca62e7 已 push；
 > 51 号之后的 commit 等 J push-cabang.bat。
 > 线上 org：15「J」、58「avocado」、91「TESTING1」。
+
+### 这一场做了什么（68 号 ⑦ 品质场 · 包 G3 ✅，73 号报告——12 条 UX 件＋timeout 真因）
+
+- **「AI took too long」真因根治**（§1-8，三层）：①45s 修没上线（等 push）
+  ②**真病＝flash-lite「标 missing 却塞值」**→Hard Rule 1 打回整份→rule-7
+  重读爆 50s 预算→包装成 timeout。修＝`coerceMissingFieldsEmpty`（parse 前
+  信标签、抹值不提升，extraction.ts 五条管线全装）。实测 CONTOH 8 页
+  25s 读通 41 条；**真机 create-org 33.1s 一次过落地**（probe-createorg-68，
+  ZZZ 全删）③失败 UI 诚实化：红卡自己一张＋原地「再试一次」，绿框只讲
+  成功。⚠ 修后曾有一轮探针以旧指纹失败、紧接重跑全过（疑杀旧 server
+  race）——线上如再见，先查 app_errors 指纹。
+- **UX 九件**：浮窗左下 resize；草稿照片签名 URL 载回＋按真类型标
+  （signPhotoPaths，未决 15 结案）；Resume 承诺白纸黑字；首页卡＋侧栏
+  New minutes 未完成草稿徽章（countUnfinishedMinutesDrafts，读不到不出）；
+  「N 项等你确认＋确认完才能写正式文件」；eROSES 空状态大字（committee
+  型/无 confirmed minutes）；出席 Next 闸（没加人没按稍后补不放行）；
+  ganti/替换/menggantikan/digantikan oleh 换届卡（旧人须在名册给职位、
+  新人不在才出，golden=样本 A 页边那行）。
+- **held-out 最终验收（两半都过）**：白板活动照 0 缺陷（顺手修掉两个真病：
+  斜线复合标签被拆组→prompt 规则；未决区块双重编号→渲染层剥自带编号）；
+  手写 Charity 照 0 缺陷一次过；**中文 typed docx 自动走结构化路**，
+  42 段 zh→BM 一次过围栏 0 缺陷。
+- **测过**：tsc 0 · eslint 21 · vitest **1071（+13）** · build ✓ ·
+  三条 e2e 全绿（roles 一项偶发瞬断重跑过——既有陷阱型）· 品质 eval
+  3/3 PASS。真额度累计 ≈US$0.30/1.00，失败读取全退款。
 
 ### 这一场做了什么（68 号 ⑦ 品质场 · 包 G2 ✅，72 号报告——主菜）
 
@@ -494,17 +522,22 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
 
 ### 🔴 J 的事
 
-1. 看 **65 / 66 / 67** 号报告（各一分钟版在开头；旧场的 57–60 号照旧）。
-2. **贴五支 migration**：salin-migration.bat 依次选 **32 → 33 → 34 → 35 →
-   36**，每支 Supabase SQL Editor 贴上 → Run 等 Success 再下一支
-   （没贴之前系统照常，fail-open 全实测过）。
-3. 双击 **push-cabang.bat**。
-4. **叫 tester**：建议卡（67 号报告第 4 点：存一份有委任＋带日期决议的
-   会议记录→看卡→确认→对名册/日历→忽略一张→重开页不再来）；旧清单
-   （60 号＋55 号报告末尾）照旧。
-5. 有空照 **54 号 GUIDE** 设 Supabase 邮件（五分钟）；登入 eROSES 顺手
-   下载官方 Penyata Kewangan 模板（60 号报告第 5 点）。
-6. bench 那个视窗：你有空就跑（双击 bench-models.bat）。
+1. **双击 push-cabang.bat（最要紧）**——线上还在跑 8/27 旧版（git 探针：
+   ahead 4，48 号之后全部未 push）；你 8/29 晚实测撞到的「AI took too
+   long」有一半原因就是修了没上线，另一半（模型标 missing 却塞值）
+   这场也修掉了，push 完一起生效。
+2. 看 **70 / 71 / 72 / 73** 号报告（各一分钟版在开头；旧场 65–67 照旧）。
+   ~~贴 migration 32–36~~——**探针实测五支全部已套用**（你在 68 号单开工前
+   就贴好了，本场收尾 check:migrations 证实），一支都不用贴。
+3. **用道教会样本重走一遍**（68 号单 §6-5）：拍照→确认→「让 MinitAI 写成
+   正式记录」→看 BM 版像不像能交的 minit；中文版也点一下。圈还不满意的。
+4. **叫 tester**：73 号报告清单（草稿徽章/Resume 语义/出席闸/create-org
+   传章程/敬语 chips——32 已贴，现在就能试）＋建议卡旧清单（67 号第 4 点）。
+5. **模型拍板**（72 号报告对比表）：成文/翻译那步 flash-lite 要靠围栏
+   打回才对、3.6-flash 一次过还最便宜——要不要换 AI_MODEL_LONG_DOC，
+   你跑 bench（bench-models.bat）后定，我没动 env。
+6. 旧账照旧：54 号 GUIDE 设 Supabase 邮件；eROSES 下载官方 Penyata
+   Kewangan 模板（60 号报告第 5 点）。
 
 ### ❓ 未决问题
 
@@ -530,21 +563,21 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
 13. ~~check-ai.bat cd 旧资料夹~~ 已修（8/29 小修包 C-6）
 14. ~~C-14① 两套钱录入合并~~ **已做完**（8/29 包 D1，58 号报告：manual-income
     删除，类型/转账截图/拍单据门全进打字表格，旧资料一笔不丢）
-15. 云端草稿的跨装置照片预览：draft 只存 storage 路径，换装置续写时缩图是
-    占位符（原图还在 uploads bucket，要看得走签名 URL——之后要不要补，
-    看真用户反应）
+15. ~~云端草稿的跨装置照片预览~~ **已做完**（8/29 G3：signPhotoPaths 签名
+    URL 载回原图＋按真类型标示，73 号报告）
 
 ### ⏭ 下一个 session 从哪开始
 
-**⑥ AI 智能建议场（64 号总单）全部做完**（E1=65、E2=66、E3=67 号报告；
-⑤ eROSES 56 号总单上一场已收，D0=57、D1=58、D2=59、D3=60）。
+**⑦ 品质场（68 号总单）全部做完**（G0=70、G1=71、G2=72、G3=73 号报告；
+⑥ 建议场 E1–E3=65–67、⑤ eROSES D0–D3=57–60 更早已收）。
 接下来照 51 号 §5 的场次顺序（J 已点头）：
-**⑦ 品质场**（线索：draft_minutes 三笔退款，57 号报告；敬语/职衔 AI 对人，
-B-7 地基已铺；活动卡标题偶留尾巴，67 号报告第 7 点）→ ⑧ 助手＋AI 代办 →
-⑨ 上线后第一批。62 号竞赛材料场的单子没作废，J 说开才开。
-**等 J 反馈的**：引导文案 vs 真 portal 对版（J 圈哪步不对改哪步）；
-migration 32–36 贴上后 tester 重试清单（67 号＋60 号＋55 号报告）。
-竞赛材料 J 自己定 30/31 交，**不催**。
+**⑧ 助手＋AI 代办场**（61 号备忘：聊天面板 upload/手机版/Clear
+conversation/语言跟人走；未决 2 助手模型等 bench）→ ⑨ 上线后第一批。
+69 号 eROSES 申报重构与名册补完场的施工单已在 _J-要做的事，J 说开才开；
+62 号竞赛材料场同样待命。
+**等 J 反馈的**：道教会样本亲手重走（68 号 §6-5）；migration 32–36 贴上后
+tester 清单（73 号＋67 号报告）；模型拍板（72 号对比表）；引导文案 vs
+真 portal 对版照旧。竞赛 8/31 截止，材料 J 自己定，**不催**。
 RESPONSIVE：J 若再圈破版，贴 46 号单同段 PROMPT 继续。
 
 ---
@@ -570,6 +603,18 @@ RESPONSIVE：J 若再圈破版，贴 46 号单同段 PROMPT 继续。
 - ⚠ **grep 说 minutes-compose.ts 是 binary 不是坏档**——checkNames 里
   有一个刻意的字面 NUL（join("\0") 防跨串误配）。要搜这支档用 Read/
   PowerShell，别对 grep 的 binary 判定慌。
+- 🔴 **flash-lite 会把栏位标 `missing` 却又塞值——契约打回整份读取，
+  rule-7 重读又塞不进 50s 预算，最终包装成「AI took too long」。**
+  逾时是症状不是病。**修法：parse 前信标签（coerceMissingFieldsEmpty，
+  只抹值绝不提升——缺口保持缺口）；判断方法：timeout 案先本机跑
+  probe-constitution-speed.ts，看是「真慢」还是「读回来但 FAILED
+  CONTRACT」。** 上限算术（45s/50s/60s）本身没错，别再动它。
+- ⚠ **「上一轮量的数字一模一样」不是巧合是警报**——探针连四轮 54.2s/
+  51.2s 分秒不差＝量到的是我们自己的 deadline 墙（或旧进程），不是
+  vendor。看到 suspiciously identical timings，先确认到底在量谁。
+- 💡 **held-out 样本真的抓得到迭代组抓不到的病**（J 的防过拟合令实证）：
+  斜线复合标签「青/小/小小班」被模型拆组、未决区块双重编号，两条都是
+  held-out 才暴露。规矩留着：分半、迭代期间不碰。
 
 ### 2026-08-29 傍晚新增（64 号 AI 智能建议场）
 
@@ -1086,7 +1131,7 @@ J 手贴 migration 的步骤：记事本开档 → `Ctrl+A` `Ctrl+C` → Supabas
 | 模型对比 | `npm run bench`（--dry-run / --mock）· `bench-models.bat` · 报告在 `eval/reports/model-bench-<日期>.md` |
 | 「到底做了没有」 | `npm run status` / `status.bat` |
 | 示范章程（CONTOH） | `public/contoh/undang-undang-tubuh-contoh.pdf`（8 页 BM 完整章程，虚构社团）· 文字版 `docs/contoh-undang-undang-tubuh.md` · 重生 `npm run contoh:constitution`。十条条文与 `src/lib/sample-constitution.ts` **逐字相同**、印出来的页码对得上 `page_ref`，所以拿它测 `/constitution` 上传时**答案是已知的** |
-| migration | `supabase/migrations/`（**36 支；1–31 已套用（2026-08-29 探针实测）；32（roster note/honorific）、33（云端草稿）、34（审计员）、35（Maklumat Am＋银行户口）、36（建议卡留痕）只写档，等 J 贴**）· `salin-migration.bat`（36 项）· `npm run check:migrations`（含 32–36 探针） |
+| migration | `supabase/migrations/`（**36 支，全部已套用——2026-08-30 凌晨 check:migrations 实测，32–36 J 已在 68 号场开工前贴好**）· `salin-migration.bat`（36 项）· `npm run check:migrations` |
 | 给 J 双击的 `.bat` | `status.bat` · `salin-migration.bat` · `salin-env-vercel.bat` · `push-cabang.bat` · `bench-models.bat`。🔴 `push-to-github.bat` 不能用；⚠ `check-ai.bat` 还指旧资料夹 |
 | `competition/` | 顶层＝当前版（**[YOU] 两处还空着**）；`screenshots/` 60 张旧配色（拍板 0-9：只重拍首页主图，未拍——未决 7） |
 | `eval/reports/` | 整夹 gitignore；只有 `SUMMARY.md` 例外 |

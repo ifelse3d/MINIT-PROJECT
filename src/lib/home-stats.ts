@@ -153,6 +153,30 @@ function withDeadline<T>(work: Promise<T>, ms: number, fallback: T): Promise<T> 
  * then these — so on a Supabase in another region every visit paid four round
  * trips end to end. They are all independent; they belong in one wave.
  */
+/**
+ * G3-3 (work order 68, J #7): how many UNFINISHED workspace drafts (cloud
+ * drafts, migration 33) this org has — the "you started something and never
+ * finished it" reminder. Distinct from unsignedMinutesDrafts (documents at
+ * status 'draft'): these are half-typed workspaces nobody saved yet.
+ * null = the count could not be read (table not applied yet, D8 fail-open;
+ * or a hiccup) — then NO badge, never a wrong number.
+ */
+export async function countUnfinishedMinutesDrafts(
+  orgId: number,
+): Promise<number | null> {
+  try {
+    const supabase = await getSupabaseServer();
+    const { count, error } = await supabase
+      .from("minutes_drafts")
+      .select("client_key", { count: "exact", head: true })
+      .eq("org_id", orgId);
+    if (error) return null;
+    return count ?? 0;
+  } catch {
+    return null;
+  }
+}
+
 export async function getHomeFigures(orgId: number): Promise<HomeFigures> {
   const todayIso = dayIsoMalaysia(new Date().toISOString())!;
   const read = (async (): Promise<HomeFigures> => {

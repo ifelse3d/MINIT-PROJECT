@@ -280,6 +280,94 @@ function eventTitle(text: string, dateMatch: string, timeMatch: string): string 
 }
 
 // ---------------------------------------------------------------------------
+// Replacement resolutions — the 换届 signal (work order 68 §1-10).
+//
+// J's real sample: "Agenda 2.1: Lim Guat Kiong ganti - Lee Moy". E1 read
+// people only from the STRUCTURED office_bearers rows, so a replacement
+// written as a resolution produced no card. The literal signal is explicit
+// enough to act on (拍板 2's 寧缺勿濫 stands — see the guards below):
+//
+//   A ganti B · A menggantikan B          → A in, B out
+//   B diganti/digantikan oleh A           → A in, B out
+//   A 替换/接替/顶替 B · B 由 A 接替      → A in, B out
+//   A replaces B                          → A in, B out
+//
+// GUARDS: both sides must yield a name; the OUTGOING name must already be on
+// the roster (that is what makes it a replacement and tells us the position);
+// the incoming name must not. "diganti Lee Moy" WITHOUT "oleh" is ambiguous
+// about direction and deliberately not matched. Removal itself stays a
+// human's act on /members — the card only proposes the ADDITION and shows
+// who it replaces (same display the structured cards already have).
+// ---------------------------------------------------------------------------
+
+/** A personal-name-shaped run: Latin capitalised words (with bin/binti/a/l),
+ *  or a 2–4 character CJK run. */
+const NAME_RUN =
+  /(?:[A-Z][A-Za-z'.-]+(?:\s+(?:[A-Z][A-Za-z'.-]+|bin|binti|a\/[lp]))*)|[㐀-䶿一-鿿]{2,4}/g;
+
+/** Leading honorific stripped — the roster records people, not salutations. */
+const LEADING_HONORIFIC =
+  /^(?:En|Encik|Pn|Puan|Cik|Dr|Tuan|Dato'?|Datuk|Datin|Ustaz|Ustazah|Haji|Hajah)(?:\.\s*|\s+)/i;
+
+function nameRuns(s: string): string[] {
+  return [...s.matchAll(NAME_RUN)]
+    .map((m) => m[0].replace(LEADING_HONORIFIC, "").trim())
+    .filter((n) => n !== "");
+}
+
+/** Words that the Latin name regex matches but that are never a person. */
+const NOT_A_NAME = new Set(["agenda", "ajk", "en", "encik", "pn", "puan", "cik"]);
+
+function lastName(s: string): string | null {
+  const runs = nameRuns(s).filter((n) => !NOT_A_NAME.has(n.toLowerCase()));
+  return runs.length > 0 ? runs[runs.length - 1] : null;
+}
+function firstName(s: string): string | null {
+  const runs = nameRuns(s).filter((n) => !NOT_A_NAME.has(n.toLowerCase()));
+  return runs.length > 0 ? runs[0] : null;
+}
+
+export type Replacement = { newName: string; oldName: string };
+
+/** The explicit replacement in a resolution's text, or null. Exported for
+ *  tests — J's margin note is the golden case. */
+export function findReplacementInText(text: string): Replacement | null {
+  // Direction-explicit passive forms first.
+  const passive = /(.*?)\bdiganti(?:kan)?\s+oleh\b(.*)/i.exec(text);
+  if (passive) {
+    const oldName = lastName(passive[1]);
+    const newName = firstName(passive[2]);
+    if (oldName && newName && normKey(oldName) !== normKey(newName)) {
+      return { newName, oldName };
+    }
+    return null;
+  }
+  const zhPassive = /(.*?)由(.*?)(?:接替|替换|頂替|顶替)/.exec(text);
+  if (zhPassive) {
+    const oldName = lastName(zhPassive[1]);
+    const newName = firstName(zhPassive[2]);
+    if (oldName && newName && normKey(oldName) !== normKey(newName)) {
+      return { newName, oldName };
+    }
+    return null;
+  }
+  // Active forms: A <keyword> B. Bare "diganti X" (no oleh) stays unmatched —
+  // it does not say which way the replacement runs.
+  const active =
+    /(.*?)(?:\bmenggantikan\b|\bganti(?:kan)?\b|替换|接替|頂替|顶替|取代|\breplaces\b|\bto replace\b)(.*)/i.exec(
+      text,
+    );
+  if (active && !/\bdiganti/i.test(text)) {
+    const newName = lastName(active[1]);
+    const oldName = firstName(active[2]);
+    if (newName && oldName && normKey(oldName) !== normKey(newName)) {
+      return { newName, oldName };
+    }
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
 // Derivation.
 // ---------------------------------------------------------------------------
 
@@ -357,6 +445,35 @@ export function deriveSuggestions(input: DeriveInput): MinutesSuggestion[] {
         ),
       });
       if (members.length >= MAX_MEMBER_SUGGESTIONS) break;
+    }
+
+    // 换届 from resolution text (work order 68 §1-10): an explicit
+    // "A ganti B" where B IS on the roster (that row names the position)
+    // and A is not. The card proposes the addition and shows who it
+    // replaces; removing B stays a human's act on /members.
+    for (const r of extraction.resolutions) {
+      if (members.length >= MAX_MEMBER_SUGGESTIONS) break;
+      const text = r.text.value.trim();
+      if (text === "" || r.text.confidence === "missing") continue;
+      const rep = findReplacementInText(text);
+      if (!rep) continue;
+      const nNew = normKey(rep.newName);
+      if (rosterNames.has(nNew)) continue; // already added → nothing to do
+      const outgoing = roster.find((x) => normKey(x.personName) === normKey(rep.oldName));
+      if (!outgoing) continue; // not a roster person → not our replacement
+      const position = outgoing.position.trim();
+      const key = `member:${nNew}|${normKey(position)}`.slice(0, 200);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      members.push({
+        type: "add_member",
+        key,
+        position,
+        personName: rep.newName,
+        termStartIso: meetingDate,
+        replaces: [outgoing.personName],
+        source: fieldSource(r.text.source_ref, text),
+      });
     }
   }
 

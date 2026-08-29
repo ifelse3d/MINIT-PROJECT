@@ -97,18 +97,41 @@ async function main() {
     cost = cost === null || u.costMicros === null ? null : cost + u.costMicros;
   };
 
-  // 1. extract (rule-7 retry like the live route)
+  // 1. extract (rule-7 retry like the live route). A .docx goes through the
+  // route's own office branch — converted to LABELLED TEXT, no image.
   const { extractMeetingNotesPrompt } = await import("../src/prompts/extract-meeting-notes");
-  const basePrompt = extractMeetingNotesPrompt({
+  let basePrompt = extractMeetingNotesPrompt({
     orgName,
     todayIso: new Date().toISOString().slice(0, 10),
   });
-  const imageBase64 = readFileSync(imgPath).toString("base64");
-  const mimeType = imgPath.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg";
+  let media: { imageBase64?: string; mimeType?: string } = {};
+  if (/\.(docx|pptx)$/i.test(imgPath)) {
+    const { officeFileToText } = await import("../src/lib/office-text");
+    const { untrustedBlock } = await import("../src/prompts/untrusted");
+    const buf = readFileSync(imgPath);
+    const converted = await officeFileToText(
+      path.basename(imgPath),
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer,
+    );
+    if (!converted.ok) {
+      console.log("OFFICE FILE COULD NOT BE CONVERTED");
+      process.exitCode = 1;
+      return;
+    }
+    basePrompt += `\n\n${untrustedBlock(
+      "THE DOCUMENT'S FULL TEXT (converted from a Word/PowerPoint file on the server — there is no photo; read this text as the page itself)",
+      converted.text,
+    )}`;
+  } else {
+    media = {
+      imageBase64: readFileSync(imgPath).toString("base64"),
+      mimeType: imgPath.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg",
+    };
+  }
   let raw = await getVisionProvider("extract").extractJson({
     prompt: basePrompt,
-    imageBase64,
-    mimeType,
+    ...media,
     maxOutputTokens: EXTRACT_OUTPUT_CEILING.minutes,
     onUsage,
   });
@@ -118,8 +141,7 @@ async function main() {
       prompt:
         basePrompt +
         `\n\nYOUR PREVIOUS ANSWER FAILED VALIDATION:\n${JSON.stringify(parsed.error.issues.slice(0, 5))}\nReturn corrected JSON.`,
-      imageBase64,
-      mimeType,
+      ...media,
       maxOutputTokens: EXTRACT_OUTPUT_CEILING.minutes,
       onUsage,
     });
@@ -175,7 +197,9 @@ async function main() {
       onUsage,
     });
     if (!run.ok) {
-      console.log("PLAN FAILED THE CHECKS TWICE");
+      console.log("PLAN FAILED THE CHECKS TWICE — last repair:", JSON.stringify(run.repair));
+      const texts2 = usableResolutions(extraction).map((r, i) => `${i}: ${r.text.value}`);
+      for (const idx of run.repair?.altered ?? []) console.log("  altered source:", texts2[idx]);
       process.exitCode = 1;
       return;
     }

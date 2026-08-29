@@ -26,6 +26,20 @@ export type Line = { bm: string; zh: string; en: string };
 // zero is NOT that case: a brand-new society has zero of everything, and the
 // line is written as an invitation instead of a number.
 
+/**
+ * G3-3 (work order 68, J #7): the unfinished-workspace reminder outranks the
+ * unsigned-documents count — a half-typed meeting is the thing most likely
+ * to be forgotten. null/0 = fall through to minutesLine.
+ */
+export function unfinishedDraftsLine(count: number | null): Line | null {
+  if (count === null || count === 0) return null;
+  return {
+    bm: `${count} minit belum siap — sambung di sini`,
+    zh: `有 ${count} 份没写完的会议记录 —— 点进来继续`,
+    en: `${count} unfinished meeting${count === 1 ? "" : "s"} — continue here`,
+  };
+}
+
 export function minutesLine(drafts: number | null): Line | null {
   if (drafts === null) return null;
   if (drafts === 0) {

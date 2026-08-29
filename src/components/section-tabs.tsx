@@ -107,10 +107,12 @@ export function SectionTabs({
                   // number is. The old faint circle with a bare digit read as
                   // decoration, not as "3 things are waiting for you".
                   <span className="rounded-xs bg-amber-700 px-2 py-0.5 text-sm font-bold text-white dark:bg-amber-400 dark:text-black">
+                    {/* G3-4 (work order 68, J #8): "1 to check" read as
+                        jargon — say it the way a person would. */}
                     {t(
-                      `${tab.count} untuk disemak`,
-                      `${tab.count} 项待核对`,
-                      `${tab.count} to check`,
+                      `${tab.count} menunggu anda`,
+                      `${tab.count} 项等你确认`,
+                      `${tab.count} waiting for you`,
                     )}
                   </span>
                 )}

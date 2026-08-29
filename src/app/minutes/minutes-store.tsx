@@ -47,6 +47,7 @@ import {
   listDrafts,
   loadDraft,
   saveDraft,
+  signPhotoPaths,
   type DraftListItem,
 } from "./draft-actions";
 import {
@@ -432,6 +433,39 @@ export function MinutesProvider({
   const [evBusy, setEvBusy] = useState(false);
   const [evError, setEvError] = useState<string | null>(null);
 
+  /**
+   * G3-1 (work order 68 §5-1, 未决 15 结案): pages that came back WITHOUT a
+   * preview (a resumed cloud draft, or a restored blob whose signed link
+   * expired) get their ORIGINALS signed back from the uploads bucket.
+   * Fire-and-forget; [] (no session / RLS says no / bucket hiccup) leaves
+   * the placeholder tiles — nothing breaks.
+   */
+  const rehydratePhotoPages = useCallback(
+    (pages: { name: string; dataUrl: string; storagePath?: string | null }[]) => {
+      const needs = pages.filter(
+        (p) =>
+          (p.dataUrl === "" || p.dataUrl.startsWith("http")) &&
+          typeof p.storagePath === "string" &&
+          p.storagePath !== "",
+      );
+      if (needs.length === 0) return;
+      void signPhotoPaths(needs.map((p) => p.storagePath as string)).then((signed) => {
+        if (signed.length === 0) return;
+        const byPath = new Map(signed.map((s) => [s.path, s.url]));
+        setPhotoPages((prev) =>
+          prev.map((p) =>
+            (p.dataUrl === "" || p.dataUrl.startsWith("http")) &&
+            p.storagePath &&
+            byPath.has(p.storagePath)
+              ? { ...p, dataUrl: byPath.get(p.storagePath)! }
+              : p,
+          ),
+        );
+      });
+    },
+    [],
+  );
+
   // Restore saved work once on mount, then save on every change.
   //
   // The ref guard matters: React Strict Mode (on by default in dev) runs mount
@@ -499,12 +533,14 @@ export function MinutesProvider({
       setSourceLabel(saved.sourceLabel);
       // I-2: pages when the blob has them; a legacy single photo reads as
       // one page.
-      setPhotoPages(
+      const restoredPages =
         saved.photoPages ??
-          (saved.photoDataUrl
-            ? [{ name: saved.sourceLabel ?? "photo", dataUrl: saved.photoDataUrl }]
-            : []),
-      );
+        (saved.photoDataUrl
+          ? [{ name: saved.sourceLabel ?? "photo", dataUrl: saved.photoDataUrl }]
+          : []);
+      setPhotoPages(restoredPages);
+      // G3-1: previews that did not survive the blob come back signed.
+      rehydratePhotoPages(restoredPages);
       setTypedByHand(saved.typed === true);
       setNoAttendeesRecorded(saved.noAttendees === true);
       if (typeof saved.title === "string") setDocTitle(saved.title);
@@ -518,7 +554,7 @@ export function MinutesProvider({
       // saved-to-History blob is purged above and never restored at all.)
     }
     setRestored(true);
-  }, []);
+  }, [rehydratePhotoPages]);
 
   // C-13: what unfinished drafts does the CLOUD hold for this org? Loaded
   // once per visit; [] covers "none" and "DB behind migration 33" alike
@@ -558,7 +594,11 @@ export function MinutesProvider({
       sourceLabel,
       // Legacy slot carries the last page for older readers of the blob.
       photoDataUrl,
-      photoPages,
+      // G3-1: signed links expire within the hour — persisting one would
+      // restore as a broken tile. The path stays; restore re-signs.
+      photoPages: photoPages.map((p) =>
+        p.dataUrl.startsWith("http") ? { ...p, dataUrl: "" } : p,
+      ),
       typed: typedByHand,
       noAttendees: noAttendeesRecorded,
       title: docTitle,
@@ -945,14 +985,16 @@ export function MinutesProvider({
       setNoAttendeesRecorded(payload.noAttendees === true);
       setDocTitle(typeof payload.title === "string" ? payload.title : "");
       // Previews live on the device that took them; on another device the
-      // pages keep their names and storage paths, shown as file tiles.
-      setPhotoPages(
-        (payload.photoPages ?? []).flatMap((p) =>
-          typeof p?.name === "string"
-            ? [{ name: p.name, dataUrl: "", storagePath: p.storagePath ?? null }]
-            : [],
-        ),
+      // pages keep their names and paths — and G3-1 signs the ORIGINALS
+      // back from the uploads bucket, so a resumed draft shows its real
+      // photos, not grey placeholder tiles (未决 15).
+      const resumedPages = (payload.photoPages ?? []).flatMap((p) =>
+        typeof p?.name === "string"
+          ? [{ name: p.name, dataUrl: "", storagePath: p.storagePath ?? null }]
+          : [],
       );
+      setPhotoPages(resumedPages);
+      rehydratePhotoPages(resumedPages);
       setMixedInput(false);
       setShowSample(false);
       setEvRows(null);
@@ -971,6 +1013,7 @@ export function MinutesProvider({
       docTitle,
       draftPayloadNow,
       draftCannotReachCloud,
+      rehydratePhotoPages,
       t,
     ],
   );

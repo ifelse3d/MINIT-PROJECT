@@ -41,6 +41,39 @@ function isMissingTable(message: string | undefined): boolean {
   return /minutes_drafts|schema cache/i.test(message ?? "");
 }
 
+/**
+ * G3-1 (work order 68 §5-1, closes 未决 15): short-lived signed links for the
+ * ORIGINAL photos behind a resumed draft. A draft stores storage paths only;
+ * on another device the workspace then showed grey placeholder tiles
+ * mislabelled as PDFs (J put in WhatsApp JPEGs). The originals never left the
+ * uploads bucket — sign them and show them. User-scoped client: the storage
+ * RLS policy decides whose files sign (Hard Rule 5). Failures return [] —
+ * the tiles stay placeholders, nothing breaks.
+ */
+export async function signPhotoPaths(
+  paths: string[],
+): Promise<{ path: string; url: string }[]> {
+  const user = await getSessionUser();
+  if (!user) return [];
+  const clean = paths
+    .filter((p): p is string => typeof p === "string" && p !== "")
+    .slice(0, 12);
+  if (clean.length === 0) return [];
+  try {
+    const supabase = await getSupabaseServer();
+    const out: { path: string; url: string }[] = [];
+    for (const path of clean) {
+      const { data } = await supabase.storage
+        .from("uploads")
+        .createSignedUrl(path, 3600);
+      if (data?.signedUrl) out.push({ path, url: data.signedUrl });
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
 export async function saveDraft(input: {
   clientKey: string;
   title: string | null;

@@ -19,8 +19,8 @@
 | | |
 |---|---|
 | 狀態 | ✅ **已量測 —— 但量的是印刷體合成圖,⏳ 仍未以真實手寫樣本量測** |
-| 最後一次跑 | **2026-08-29**(68 號品質場 G1 prompt 重跑)· 對外公佈數字以這一輪為準 |
-| 結果 | **95.2%**(119/125 欄位正確),**invented = 0**。08-24 的 92.9%/invented=1 量的是 G1 之前的 prompt,已不描述現行系統 |
+| 最後一次跑 | **2026-08-29**(68 號品質場,現行 prompt 同日兩輪)· 對外公佈引用兩輪區間 |
+| 結果 | **95.2% 與 93.6% 兩輪**(119/125 · 117/125),**invented = 0(兩輪皆是)**。同一 prompt 兩輪差 2 格 text=抽樣雜訊,誠實寫區間不挑好看的那輪。08-24 的 92.9%/invented=1 量的是 G1 之前的 prompt,已不描述現行系統 |
 | 為什麼換成 08-29 那一輪 | 68 號品質場(G1)改了擷取 prompt:新增標準 minit 表頭/簽名欄欄位、文件結構標記、「清單逐行讀不跳號」與「一個事實只記一次」。最後那條順手治好了 08-24 的 invented=1(帶錢的行被同時抄進 resolutions 與 figures)。08-29 以現行 prompt 重跑,95.2%/invented=0 才是今天系統的誠實描述。08-07 的 `gpt-5.6-luna` 對照(結論不採用)見下方 |
 | ⚠️ 最重要的限制 | 那 10 個 case 全是 **900px 寬的電腦排版合成圖**,量的是「AI 讀印刷體」,<br>**不是** Minit 在賣的「讀手寫混語」。**這個數字不能拿來回答「你們讀手寫多準?」** |
 
@@ -181,8 +181,9 @@
 **現在能講的(印刷體):**
 
 ```
-95.2% of fields (119/125) across 10 synthetic typeset pages, 0 invented,
-on gemini-3.5-flash-lite (2026-08-29, current prompt). Method and cases in the repo.
+93.6–95.2% of fields across 10 synthetic typeset pages (two same-day runs,
+119/125 and 117/125), 0 invented in both, on gemini-3.5-flash-lite
+(2026-08-29, current prompt). Method and cases in the repo.
 ```
 
 **還不能講的(手寫)——真實樣本跑完才填:**

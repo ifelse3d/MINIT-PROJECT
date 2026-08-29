@@ -80,12 +80,18 @@ describe("G1 header/closing fields", () => {
     expect(r.data.prepared_by?.person_name.value).toBe("SITI");
   });
 
-  it("still rejects an invented optional field (missing must be empty)", () => {
+  it("a value smuggled under a `missing` label is DISCARDED, never kept (G3-8)", () => {
+    // Old behaviour: reject the whole read (which burned the retry and
+    // surfaced as a timeout — J's create-org case). New behaviour: believe
+    // the label — the value is erased, the field prunes away, the gap stays
+    // a gap. Hard Rule 1 semantics, without the burnt read.
     const r = parseMeetingNotesExtraction({
       ...emptyMeetingNotesExtraction,
       meeting_time: { value: "8.30 PM", confidence: "missing", source_ref: null },
     });
-    expect(r.success).toBe(false);
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expect(r.data.meeting_time).toBeUndefined();
   });
 });
 
@@ -134,6 +140,57 @@ describe("G1 structure markers on resolutions", () => {
   it("old documents without any of the new fields still parse unchanged", () => {
     const r = parseMeetingNotesExtraction(emptyMeetingNotesExtraction);
     expect(r.success).toBe(true);
+  });
+});
+
+describe("coerceMissingFieldsEmpty — believe the label (G3-8)", () => {
+  // The real root cause of J's "AI took too long": flash-lite fills a value
+  // while labelling the field `missing`, the contract rejects the WHOLE
+  // read, and the rule-7 retry no longer fits the route's time budget.
+  it("erases the value and source_ref of a field labelled missing", async () => {
+    const { coerceMissingFieldsEmpty } = await import("@/lib/extraction");
+    const raw = {
+      ...emptyMeetingNotesExtraction,
+      meeting_venue: {
+        value: "Dewan Contoh",
+        confidence: "missing",
+        source_ref: { location: "page 1", snippet: "Dewan" },
+      },
+    };
+    const r = parseMeetingNotesExtraction(coerceMissingFieldsEmpty(raw));
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expect(r.data.meeting_venue.value).toBe("");
+    expect(r.data.meeting_venue.source_ref).toBeNull();
+  });
+
+  it("runs inside every parse — a missing-with-value nested field no longer kills the read", () => {
+    const r = parseMeetingNotesExtraction({
+      ...emptyMeetingNotesExtraction,
+      resolutions: [
+        { text: confirmed("Perkara A.") },
+      ],
+      figures: [
+        {
+          description: confirmed("derma"),
+          // number value + missing: empties to null, not ""
+          amount_cents: { value: 12345, confidence: "missing", source_ref: null },
+        },
+      ],
+    });
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expect(r.data.figures[0].amount_cents.value).toBeNull();
+  });
+
+  it("never touches confirmed or check fields", () => {
+    const r = parseMeetingNotesExtraction({
+      ...emptyMeetingNotesExtraction,
+      meeting_venue: confirmed("Dewan Contoh"),
+    });
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expect(r.data.meeting_venue.value).toBe("Dewan Contoh");
   });
 });
 
