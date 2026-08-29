@@ -30,7 +30,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ArrowRight, ArrowUp, RotateCcw, Sparkles, X } from "lucide-react";
 import { Tri, useTriText } from "@/components/language-provider";
 import { GlassBadge } from "./surfaces";
@@ -117,6 +117,7 @@ export function AIPanel({
 }) {
   const t = useTriText();
   const router = useRouter();
+  const pathname = usePathname();
   const [question, setQuestion] = useState("");
   // F-4: the transcript survives page changes and browser restarts, per
   // user+org scope. See the header comment for the PDPA reasoning.
@@ -316,7 +317,18 @@ export function AIPanel({
               {turn.button && (
                 <Link
                   href={turn.button.href}
-                  onClick={onNavigate}
+                  // I3 (work order 81): the probed-alive wiring has ONE dead
+                  // case left — the person is ALREADY on the destination, so
+                  // the Link is a no-op and the tap looks ignored (on the
+                  // docked rail nothing whatsoever happens). Same path ⇒
+                  // scroll the page to the top of the content the button
+                  // promises: the tap always visibly does something.
+                  onClick={() => {
+                    onNavigate?.();
+                    if (turn.button && turn.button.href.split("?")[0] === pathname) {
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }
+                  }}
                   className="v2-pill mt-3 inline-flex min-h-11 items-center gap-2 bg-[color:var(--v2-primary-fill)] px-5 text-base font-semibold text-white"
                 >
                   <Tri
