@@ -38,17 +38,25 @@ const SPEC: Record<
     // for the APPOINTMENT date only, and an end date quietly expiring people
     // was removed from the whole feature. Old files that still carry a fifth
     // column are accepted (the parser reads it) and the end date is ignored.
+    // H1 (work order 69, §1-4): the rest of what the eROSES AJK step asks —
+    // Gelaran, E-mel, Negeri — plus the society's own Nota. The parser reads
+    // this sheet BY ITS HEADER ROW, so the column order here and the header
+    // words are load-bearing (src/lib/bulk-paste.ts HEADER_RULES).
     columns: [
-      { header: "Jawatan / 职位 / Position", width: 34 },
-      { header: "Nama / 姓名 / Name", width: 26 },
-      { header: "Nama seperti dalam IC / 马来文姓名（如 IC）/ Name as on IC", width: 34 },
+      { header: "Jawatan / 职位 / Position", width: 30 },
+      { header: "Nama / 姓名 / Name", width: 24 },
+      { header: "Gelaran / 称呼职衔 / Title (optional)", width: 22 },
+      { header: "Nama seperti dalam IC / 身份证上的名字 / Name as on IC", width: 34 },
+      { header: "E-mel / 电邮 / Email", width: 26 },
+      { header: "Negeri / 州属 / State", width: 20 },
+      { header: "Nota / 备注 / Note", width: 20 },
       { header: "Tarikh perlantikan / 任命日期 / Appointed (YYYY-MM-DD)", width: 30 },
     ],
     examples: [
-      ["Pengerusi / 主席", "陈大明", "TAN TAI BENG", "2026-01-01"],
-      ["Setiausaha / 秘书", "林小美", "LIM SIEW MEI", ""],
-      ["Bendahari / 财政", "王小强", "", ""],
-      ["Ahli Jawatankuasa (AJK) / 理事", "李美玲", "", ""],
+      ["Pengerusi / 主席", "陈大明", "Dato'", "TAN TAI BENG", "taitb@contoh.my", "Selangor", "", "2026-01-01"],
+      ["Setiausaha / 秘书", "林小美", "", "LIM SIEW MEI", "", "Selangor", "", ""],
+      ["Bendahari / 财政", "王小强", "", "", "", "", "（大）", ""],
+      ["Ahli Jawatankuasa (AJK) / 理事", "李美玲", "", "", "", "", "", ""],
     ],
     notes: [
       "Isi satu orang satu baris. Padamkan baris contoh sebelum muat naik.",
@@ -58,6 +66,12 @@ const SPEC: Record<
       "Jawatan dan Nama WAJIB. Lajur lain boleh dibiarkan kosong.",
       "「职位」和「姓名」一定要填。其他栏可以留空。",
       "Position and Name are required. The other columns may be left blank.",
+      "",
+      "E-mel dan Negeri: eROSES memintanya untuk setiap pemegang jawatan dalam",
+      "langkah AJK. Boleh diisi kemudian dalam aplikasi (butang Edit).",
+      "电邮和州属：eROSES 的理事步骤会要每一位的电邮和州属。之后在 App 里按 Edit 补也行。",
+      "Email and State: the eROSES committee step asks for them. You can also",
+      "fill them in later inside the app (the Edit button).",
       "",
       "⚠ Lajur ketiga ialah nama SEPERTI DALAM KAD PENGENALAN — itulah nama yang",
       "eROSES mahu, kerana itu nama yang boleh dipadankan dengan seseorang.",
@@ -135,9 +149,12 @@ export async function buildTemplateXlsx(kind: TemplateKind): Promise<Buffer> {
  * takes — so xlsx, csv and a pasted WhatsApp message all meet the same parser
  * and the same refusal rules.
  *
- * The header row is dropped only when it looks like our own header; a file
- * whose first row is real data keeps it, because silently eating somebody's
- * chairman is exactly the class of bug the all-or-nothing rule exists for.
+ * The header row is passed THROUGH, not dropped (H1, work order 69): the
+ * committee parser reads our header as a column map, which is how the
+ * optional columns (Gelaran/E-mel/Negeri/Nota) land in the right fields.
+ * Each parser consumes its own header; a file whose first row is real data
+ * keeps it, because silently eating somebody's chairman is exactly the class
+ * of bug the all-or-nothing rule exists for.
  */
 export async function xlsxToPasteText(data: ArrayBuffer): Promise<string> {
   const wb = new ExcelJS.Workbook();
@@ -146,7 +163,7 @@ export async function xlsxToPasteText(data: ArrayBuffer): Promise<string> {
   if (!ws) return "";
 
   const lines: string[] = [];
-  ws.eachRow((row, rowNumber) => {
+  ws.eachRow((row) => {
     const cells: string[] = [];
     // `row.values` is 1-based with a hole at index 0.
     const values = Array.isArray(row.values) ? row.values.slice(1) : [];
@@ -172,24 +189,10 @@ export async function xlsxToPasteText(data: ArrayBuffer): Promise<string> {
 
     const line = cells.join("\t").replace(/\t+$/, "");
     if (line.trim() === "") return;
-    if (rowNumber === 1 && looksLikeOurHeader(line)) return;
     lines.push(line);
   });
 
   return lines.join("\n");
-}
-
-/** Our own header row, in any of the three languages it is printed in. */
-function looksLikeOurHeader(line: string): boolean {
-  const l = line.toLowerCase();
-  return (
-    l.includes("jawatan") ||
-    l.includes("职位") ||
-    l.includes("position") ||
-    l.includes("perkataan") ||
-    l.includes("那个词") ||
-    l.includes("the word")
-  );
 }
 
 export const TEMPLATE_FILENAME: Record<TemplateKind, string> = {

@@ -158,9 +158,11 @@ async function main() {
   const body0 = await page.evaluate(() => document.body.innerText);
   check("B-1: no 任期结束 box anywhere", !body0.includes("任期结束"));
   check("B-11: the badge says 现任 0 人", body0.includes("现任 0 人"));
+  // §1-9 (work order 69): the pointer LINE is gone too — J's decision. The
+  // original B-8 check ("card removed") still holds by implication.
   check(
-    "B-8: who-can-log-in moved out (pointer to Settings stays)",
-    !body0.includes("谁可以用 MinitAI") && body0.includes("成员与邀请"),
+    "B-8/§1-9: no who-can-log-in card OR pointer line",
+    !body0.includes("谁可以用 MinitAI") && !body0.includes("谁可以登入用"),
   );
 
   // B-4 + the plain add: form on top, clears after a successful add.

@@ -5,8 +5,12 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-30 凌晨（MYT）· Fable 5（68 号 ⑦ 品质场：G0–G3 全部收工）**
-**🔴 本场状态一句话：⑦ 品质场四包全做完（70/71/72/73 号报告），
+**最后更新：2026-08-30 凌晨（MYT）· Fable 5（69 号 eROSES 重构+名册场：包 H1 ✅，H2 进行中）**
+**🔴 本场（69 号）状态一句话：包 H1 名册补完做完（74 号报告）——列内
+Edit、email/Negeri 欄（migration 37 只写档等 J 贴）、「加常见职位」一键
+起表＋章程对照、Excel 模板 8 欄照表头认欄、敬语分组、文案图标全上；
+四道关＋三条 e2e＋probe-h1-69 18 项全 PASS。下面是上一场（68 号）的快照：**
+**⑦ 品质场四包全做完（70/71/72/73 号报告），
 held-out 验收两半都过。J 的道教会样本拍照→确认→BM 文件＝标准 minit
 版式、量尺 0 缺陷、**零 AI 费**（结构化确定性组装；翻译才叫模型，
 就地措辞逐 index 数＋checkLatinNames 挡发明汉字）。「AI took too long」
@@ -29,11 +33,44 @@ eROSES 下载官方 Penyata Kewangan 模板（60 号报告第 5 点）。**
 
 ---
 
-## 🌙 现在在哪里（2026-08-29 晚，68 号 ⑦ 品质场进行中）
+## 🌙 现在在哪里（2026-08-29 晚，69 号 eROSES 重构+名册场进行中）
 
-> **已上线**：https://minit-project.vercel.app —— 截至 **20c6d52**（64 号
-> 场全部）已 push；**68 号品质场的 4 支 commit（ahead 4）等 J
-> push-cabang.bat**。线上 org：15「J」、58「avocado」、91「TESTING1」。
+> **已上线**：https://minit-project.vercel.app —— 68 号场 J 已 push
+> （开工时 main == origin/main）；**69 号场的 commit 等 J push-cabang.bat**。
+> 线上 org：15「J」、58「avocado」、91「TESTING1」。
+
+### 这一场做了什么（69 号场 · 包 H1 ✅，74 号报告——名册补完）
+
+- **Migration 37 只写档等 J 贴**（`20260915000000_roster_email_state.sql`＋
+  salin 37 项＋check:migrations 2 条探针——实测 37 是唯一 NOT YET）：
+  committee_roster + email + state（eROSES AJK 步真的要的欄）。fail-open：
+  增/改走点名剥离重试梯度（OPTIONAL_COLUMNS 四欄共用一个 ladder），
+  页面读取三阶退阶（37→32→base）。
+- **§1-3 列内 Edit**（committee-table + EditCommitteeRow）：每列全欄位可改；
+  空姓名（种子列）显示 amber「还没填」。电邮格故意 `type="text"`——
+  `type="email"` 的浏览器原生验证会抢在前面且只讲浏览器语言（探针撞到
+  才改），现在坏电邮由伺服器三语拒绝＋该格红框。
+- **§1-5 「加常见职位」一键起表**（positions-template.tsx＋
+  seedCommonPositions）：默认 7 列（四职位＋AJK×3），只补缺的（按「/」
+  分段精确比对防止 Pengerusi 误盖 Naib Pengerusi），名字空着等 Edit；
+  **章程接上**：新纯函数 `src/lib/constitution-committee.ts` 零 AI 解析
+  「terdiri daripada seorang Pengerusi…」句（CONTOH 实测 5 职位 11 人），
+  显示「照章程（Fasal N）要 X 名现在有 Y 名」，读不出整块不显示。
+  Pemeriksa Kira-kira 刻意不进种子（auditors 卡才是它的家，一行字指路）。
+- **§1-4 Excel 模板 8 欄**（+Gelaran/E-mel/Negeri/Nota）＋解析器**照表头
+  认欄**（bulk-paste committeeHeaderMap：空格是位置；认不得的欄有资料
+  整行拒收；旧 4 欄模板照样对号）；无表头贴字新增 @→email、州名整值
+  比对→state 两个辨识；批量匯入带四个可选欄＋整批剥离重试。
+  xlsxToPasteText 不再代吞表头（两个 parser 各自吞自己的）。
+- **§1-7/8/9**：敬语按语言分组、介面语言组排最前；Title (optional)；
+  📅→lucide CalendarDays；长日期句删；IC 说明缩一句；「Who can log in」
+  行删（probe-members-51 的旧断言按新契约改）。
+- **测过**：tsc 0 · eslint 21 · vitest **1084（+13）** · build ✓ ·
+  **三条 e2e 全绿** · `probe-h1-69.mjs` **18 项 PASS**（一键起表→再按不重
+  →Edit 补名/IC/电邮/州→表单加人→坏电邮三语拒→8 欄 xlsx 真上传匯入
+  →ZZZ 全删）· probe-members-51 17 项重跑全 PASS。
+- ⚠ 没能验证的：37 贴上后 email/state 真存档路（两处 [SKIP] 写明，贴完
+  重跑 probe-h1-69 即变 PASS）；章程对照行的真章程 org 路（单元测试钉住）。
 
 ### 这一场做了什么（68 号 ⑦ 品质场 · 包 G3 ✅，73 号报告——12 条 UX 件＋timeout 真因）
 
@@ -572,13 +609,11 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
 
 ### ⏭ 下一个 session 从哪开始
 
-**⑦ 品质场（68 号总单）全部做完**（G0=70、G1=71、G2=72、G3=73 号报告；
-⑥ 建议场 E1–E3=65–67、⑤ eROSES D0–D3=57–60 更早已收）。
-接下来照 51 号 §5 的场次顺序（J 已点头）：
-**⑧ 助手＋AI 代办场**（61 号备忘：聊天面板 upload/手机版/Clear
-conversation/语言跟人走；未决 2 助手模型等 bench）→ ⑨ 上线后第一批。
-69 号 eROSES 申报重构与名册补完场的施工单已在 _J-要做的事，J 说开才开；
-62 号竞赛材料场同样待命。
+**69 号场（eROSES 申报重构＋名册补完）进行中**：包 H1 ✅（74 号报告）→
+接下来 **H2 eROSES flow 重构（主菜）** → H3 onboarding → H4 收尾小修。
+（⑦ 品质场 68 号已全收：70–73 号报告；⑥ 建议场 65–67；⑤ eROSES 57–60。）
+之后照 51 号 §5 顺序：**⑧ 助手＋AI 代办场**（61 号备忘）→ ⑨ 上线后第一批；
+62 号竞赛材料场待命。
 **等 J 反馈的**：道教会样本亲手重走（68 号 §6-5）；migration 32–36 贴上后
 tester 清单（73 号＋67 号报告）；模型拍板（72 号对比表）；引导文案 vs
 真 portal 对版照旧。竞赛 8/31 截止，材料 J 自己定，**不催**。
@@ -1135,7 +1170,7 @@ J 手贴 migration 的步骤：记事本开档 → `Ctrl+A` `Ctrl+C` → Supabas
 | 模型对比 | `npm run bench`（--dry-run / --mock）· `bench-models.bat` · 报告在 `eval/reports/model-bench-<日期>.md` |
 | 「到底做了没有」 | `npm run status` / `status.bat` |
 | 示范章程（CONTOH） | `public/contoh/undang-undang-tubuh-contoh.pdf`（8 页 BM 完整章程，虚构社团）· 文字版 `docs/contoh-undang-undang-tubuh.md` · 重生 `npm run contoh:constitution`。十条条文与 `src/lib/sample-constitution.ts` **逐字相同**、印出来的页码对得上 `page_ref`，所以拿它测 `/constitution` 上传时**答案是已知的** |
-| migration | `supabase/migrations/`（**36 支，全部已套用——2026-08-30 凌晨 check:migrations 实测，32–36 J 已在 68 号场开工前贴好**）· `salin-migration.bat`（36 项）· `npm run check:migrations` |
+| migration | `supabase/migrations/`（**37 支：1–36 已套用，37 只写档等 J 贴——2026-08-29 晚 check:migrations 实测 37 是唯一 NOT YET**）· `salin-migration.bat`（37 项）· `npm run check:migrations` |
 | 给 J 双击的 `.bat` | `status.bat` · `salin-migration.bat` · `salin-env-vercel.bat` · `push-cabang.bat` · `bench-models.bat`。🔴 `push-to-github.bat` 不能用；⚠ `check-ai.bat` 还指旧资料夹 |
 | `competition/` | 顶层＝当前版（**[YOU] 两处还空着**）；`screenshots/` 60 张旧配色（拍板 0-9：只重拍首页主图，未拍——未决 7） |
 | `eval/reports/` | 整夹 gitignore；只有 `SUMMARY.md` 例外 |

@@ -16,13 +16,17 @@ describe("buildTemplateXlsx", () => {
   it("gives the committee form the columns the parser expects", async () => {
     const ws = await sheetOf(await buildTemplateXlsx("committee"));
     const header = (ws.getRow(1).values as unknown[]).slice(1).map(String);
+    // H1 (work order 69, §1-4): all the columns the eROSES AJK step asks —
+    // the parser reads this sheet BY ITS HEADER, so order is load-bearing.
+    expect(header).toHaveLength(8);
     expect(header[0]).toContain("职位");
     expect(header[1]).toContain("姓名");
-    // B-1 (work order 51): four columns — the "term end" column is gone;
-    // the date column is the eROSES appointment date.
-    expect(header).toHaveLength(4);
-    expect(header[2]).toContain("IC");
-    expect(header[3]).toContain("任命日期");
+    expect(header[2]).toContain("Gelaran");
+    expect(header[3]).toContain("IC");
+    expect(header[4]).toContain("E-mel");
+    expect(header[5]).toContain("Negeri");
+    expect(header[6]).toContain("Nota");
+    expect(header[7]).toContain("任命日期");
   });
 
   it("ships an instructions sheet, not just a grid", async () => {
@@ -31,6 +35,29 @@ describe("buildTemplateXlsx", () => {
     await wb.xlsx.load(new Uint8Array(buf).buffer as ArrayBuffer);
     expect(wb.worksheets).toHaveLength(2);
     expect(wb.worksheets[1].name).toContain("说明");
+  });
+
+  it("round-trips its own example rows through the parser", async () => {
+    // The example rows in the shipped template must parse — otherwise the
+    // very first thing a person uploads (the form, forgot to delete the
+    // examples) reports errors about OUR rows.
+    const buf = await buildTemplateXlsx("committee");
+    const text = await xlsxToPasteText(
+      new Uint8Array(buf).buffer as ArrayBuffer,
+    );
+    const { rows, bad } = parseCommitteePaste(text);
+    expect(bad).toEqual([]);
+    expect(rows.length).toBeGreaterThanOrEqual(4);
+    const first = rows[0].row;
+    expect(first).toMatchObject({
+      position: "Pengerusi / 主席",
+      personName: "陈大明",
+      honorific: "Dato'",
+      nameOfficial: "TAN TAI BENG",
+      email: "taitb@contoh.my",
+      state: "Selangor",
+      termStart: "2026-01-01",
+    });
   });
 });
 
@@ -44,7 +71,8 @@ describe("xlsxToPasteText", () => {
     return xlsxToPasteText(new Uint8Array(buf).buffer as ArrayBuffer);
   };
 
-  it("feeds a filled-in committee form straight into the paste parser", async () => {
+  it("feeds a filled-in OLD committee form straight into the paste parser", async () => {
+    // Files people downloaded before H1 still parse — by their own header.
     const text = await roundTrip(
       [
         ["主席", "陈大明", "TAN TAI BENG", "2026-01-01", "2027-12-31"],
@@ -54,22 +82,19 @@ describe("xlsxToPasteText", () => {
     );
     const { rows, bad } = parseCommitteePaste(text);
     expect(bad).toEqual([]);
-    expect(rows.map((r) => r.row)).toEqual([
-      {
-        position: "主席",
-        personName: "陈大明",
-        nameOfficial: "TAN TAI BENG",
-        termStart: "2026-01-01",
-        termEnd: "2027-12-31",
-      },
-      {
-        position: "Setiausaha",
-        personName: "林小美",
-        nameOfficial: null,
-        termStart: null,
-        termEnd: null,
-      },
-    ]);
+    expect(rows[0].row).toMatchObject({
+      position: "主席",
+      personName: "陈大明",
+      nameOfficial: "TAN TAI BENG",
+      termStart: "2026-01-01",
+      termEnd: "2027-12-31",
+    });
+    expect(rows[1].row).toMatchObject({
+      position: "Setiausaha",
+      personName: "林小美",
+      nameOfficial: null,
+      termStart: null,
+    });
   });
 
   it("does the same for the glossary form, empty column meaning keep", async () => {

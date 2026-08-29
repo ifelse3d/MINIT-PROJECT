@@ -9,6 +9,12 @@ import { can } from "@/lib/roles";
 import { AddCommitteeRow, ImportCommittee } from "./members-form";
 import { CommitteeTable, type CommitteeRow } from "./committee-table";
 import { AuditorsCard, type AuditorRow } from "./auditors-card";
+import { PositionsTemplate, type RequirementLine } from "./positions-template";
+import { loadConstitutionClauses } from "@/app/constitution/actions";
+import {
+  committeeRequirementFromClauses,
+  countRosterAgainstRequirement,
+} from "@/lib/constitution-committee";
 
 // /members — who is in this society, and in what capacity.
 //
@@ -40,25 +46,36 @@ export default async function MembersPage() {
   let auditorsDbBehind = false;
   if (user && active) {
     const supabase = await getSupabaseServer();
-    // Migration 32 columns first; a database that is behind (D8) answers with
-    // an unknown-column error, and the select retries without them — the
-    // page never white-screens over a schema gap.
-    const withNew = await supabase
+    // Newest columns first; a database that is behind (D8) answers with an
+    // unknown-column error, and the select retries one migration back per
+    // step (37 → 32 → base) — the page never white-screens over a schema gap.
+    const with37 = await supabase
       .from("committee_roster")
       .select(
-        "id, position, person_name, name_official, term_start, note, honorific",
+        "id, position, person_name, name_official, term_start, note, honorific, email, state",
       )
       .eq("org_id", active.id)
       .order("id", { ascending: true });
-    if (!withNew.error && withNew.data) {
-      committee = withNew.data as CommitteeRow[];
+    if (!with37.error && with37.data) {
+      committee = with37.data as CommitteeRow[];
     } else {
-      const legacy = await supabase
+      const with32 = await supabase
         .from("committee_roster")
-        .select("id, position, person_name, name_official, term_start")
+        .select(
+          "id, position, person_name, name_official, term_start, note, honorific",
+        )
         .eq("org_id", active.id)
         .order("id", { ascending: true });
-      committee = (legacy.data ?? []) as CommitteeRow[];
+      if (!with32.error && with32.data) {
+        committee = with32.data as CommitteeRow[];
+      } else {
+        const legacy = await supabase
+          .from("committee_roster")
+          .select("id, position, person_name, name_official, term_start")
+          .eq("org_id", active.id)
+          .order("id", { ascending: true });
+        committee = (legacy.data ?? []) as CommitteeRow[];
+      }
     }
 
     const auditorsRead = await supabase
@@ -76,6 +93,28 @@ export default async function MembersPage() {
   // Matches the server action's own check (minutes_write) — the UI is
   // never the authority, but it must not offer a form the server will refuse.
   const canEdit = active !== null && can(active.role, "minutes_write");
+
+  // H1 (§1-5): what the constitution says the committee looks like — parsed
+  // by code from the clauses the human already confirmed, never by AI, and
+  // only shown when the classic composition sentence parses cleanly.
+  let templatePositions: { position: string; count: number }[] | null = null;
+  let requirementLines: RequirementLine[] | null = null;
+  let requirementClause: string | null = null;
+  if (canEdit) {
+    const clauses = await loadConstitutionClauses();
+    const requirement = committeeRequirementFromClauses(clauses);
+    if (requirement) {
+      templatePositions = requirement.positions.map((p) => ({
+        position: p.title,
+        count: p.count,
+      }));
+      requirementLines = countRosterAgainstRequirement(
+        requirement,
+        committee.map((m) => m.position),
+      );
+      requirementClause = requirement.clauseNo;
+    }
+  }
 
   // How many of the filed committee still have no name as printed on their IC.
   //
@@ -169,6 +208,12 @@ export default async function MembersPage() {
             <CardContent className="flex flex-col gap-5">
               {canEdit && (
                 <>
+                  <PositionsTemplate
+                    requirement={templatePositions}
+                    requirementLines={requirementLines}
+                    clauseNo={requirementClause}
+                    rosterEmpty={committee.length === 0}
+                  />
                   <AddCommitteeRow />
                   <ImportCommittee />
                 </>
@@ -234,25 +279,9 @@ export default async function MembersPage() {
             </CardContent>
           </Card>
 
-          {/* B-8: accounts & permissions live where they are MANAGED. */}
-          <p className="text-base text-muted-foreground">
-            <Tri
-              bm="Siapa boleh log masuk dan guna MinitAI —"
-              zh="谁可以登入用 MinitAI ——"
-              en="Who can log in and use MinitAI —"
-            />{" "}
-            <Link
-              href="/settings/members"
-              className="underline underline-offset-4"
-            >
-              <Tri
-                bm="Tetapan → Ahli & jemputan"
-                zh="设置 → 成员与邀请"
-                en="Settings → Members & invites"
-              />{" "}
-              →
-            </Link>
-          </p>
+          {/* §1-9 (work order 69, J's decision): the "who can log in" pointer
+              line is GONE — Settings → Members & invites manages accounts and
+              this page stopped mentioning them. */}
         </div>
       )}
     </div>
