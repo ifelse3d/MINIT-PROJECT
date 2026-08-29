@@ -13,8 +13,11 @@
 每条建议带 source_ref；32 支测试钉「不该出的不出」。零 AI 呼叫零额度。
 四道关全绿（tsc 0 · eslint 21 基准 · vitest 1008 · build ✓）。
 「改地点/改资料」型不上（orgs 无地址栏无处可写，报告写明）。
-接下来：包 E2（AI 补位判断）→ 包 E3（migration 36 留痕表＋成品页卡片 UI＋
-一键确认走既有 action＋e2e/探针）。
+包 E2 ✅（66 号报告，程式零行）：AI 补位**不另开呼叫不动 prompt**——
+规则已吃模型结构化好的 office_bearers/kind（同一次读取同一笔费用）；
+动 prompt＝量测作废、独立呼叫＝建议卡变相收费，三条路都写明为什么不走。
+接下来：包 E3（migration 36 留痕表＋成品页卡片 UI＋一键确认走既有
+action＋e2e/探针）。
 🔴 J 的事（沿上一场，未变）：贴 migration 32/33/34/35（salin-migration.bat）→
 push-cabang.bat → 叫 tester（清单在 60 号＋55 号报告末尾）→ 登入 eROSES
 顺手下载官方 Penyata Kewangan 模板（60 号报告第 5 点）。**
