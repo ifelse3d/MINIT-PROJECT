@@ -5,19 +5,19 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-29 晚（MYT）· Fable 5（68 号 ⑦ 品质场进行中：G0 ✅ G1 ✅）**
-**🔴 本场状态一句话：⑦ 品质场（68 号单）G0 版式规格＋量尺（70 号报告）
-与 G1 擷取端结构保留（71 号报告）做完。G0：minit 版式是程式规格
-（src/lib/minit-format.ts）＋量尺（npm run eval:quality）；改前基准
-打印正式型 6 findings。G1：schema＋prompt 学会整个版式（MASA/出席人数/
-散会句/签名栏/节结构/原编号，零 migration 全在 JSON），打印文件逐段
-照抄不摘要、清单逐行不跳号、一个事实只记一次；真样本 A 五节逐节对上、
-样本 B 1–12 无缺口（探针 scripts/probe-sample-extract.ts）。
-🔴 **擷取 eval 重立基准：95.2%（119/125）invented=0**（prompt 已动、
-92.9% 作废；SUMMARY 与 onepager 已同步）。样本夹已分半：迭代组
-（样本 A＋手写页＋样本 B＋青班6 docx）／held-out（其余 5 份不碰）。
-接下来 G2 成文端主菜（量尺 6 findings 归 0＋中文自然化＋敬语＋PDF）
-→ G3 UX 件（9 条）。
+**最后更新：2026-08-29 深夜（MYT）· Fable 5（68 号 ⑦ 品质场进行中：G0 ✅ G1 ✅ G2 ✅）**
+**🔴 本场状态一句话：⑦ 品质场 G0（版式规格＋量尺，70 号）、G1（擷取端
+结构保留，71 号）、G2（成文端主菜，72 号）做完。真样本 A 现在
+拍照→确认→出 BM 文件＝**标准 minit 版式、量尺 0 缺陷、零 AI 费**
+（结构化文件确定性组装，模型只翻译要换语言的段落＋节标题，就地措辞
+逐 index 数）。中文版自然中文无公文腔；新围栏 checkLatinNames 挡下
+「Loo Sio San→发明汉字吕兆生」实战病（第一轮被挡 repair 第二轮全对）。
+敬语 dropdown（拍板 7 后半）上线：陈讲师→名册匹配 chips。预览与成品
+同源 byte 相同。模型对比已跑（72 号报告表：3.6-flash 又好又便宜但样本
+太小，等 J bench＋拍板，env 未动）。擷取 eval 基准 95.2%/invented=0。
+品质 eval 3/3 PASS 0 findings。累计真额度 ≈US$0.15/1.00。
+接下来 G3 UX 件（9 条：原图浮窗/草稿/出席闸/create-org timeout/
+ganti 换届卡…）→ held-out 最终验收。
 🔴 J 的事（上一场欠的照旧）：贴 migration 32–36（salin-migration.bat）→
 push-cabang.bat → 叫 tester（67 号报告第 4 点；旧清单 60＋55 号）→
 eROSES 下载官方 Penyata Kewangan 模板（60 号报告第 5 点）。**
@@ -29,6 +29,29 @@ eROSES 下载官方 Penyata Kewangan 模板（60 号报告第 5 点）。**
 > **已上线**：https://minit-project.vercel.app —— 截至 0ca62e7 已 push；
 > 51 号之后的 commit 等 J push-cabang.bat。
 > 线上 org：15「J」、58「avocado」、91「TESTING1」。
+
+### 这一场做了什么（68 号 ⑦ 品质场 · 包 G2 ✅，72 号报告——主菜）
+
+- **成文分两条路**：结构化（G1 读出的打印 minit）＝**确定性组装零 AI 费**
+  （composeStructuredMinutesMd：总表由节重建、段落 verbatim、own_no 原样）；
+  要换语言的段落＋节标题才叫模型（runPhraseMinutesItems 就地措辞，
+  buildPhraseWork 一份协议 route/eval/probe 三处共用）；无结构照旧模型
+  编排，渲染统一走 minit-format 版式。
+- **新围栏 checkLatinNames**（实战抓到）：zh 版把 Latin 人名音译成发明
+  汉字（checkNames 对 zh 天生盲）——名字形状的拉丁字串（敬称标记人名＋
+  大写多词串扣文体词表）必须逐字存活，违者进 repair。实测第一轮被挡、
+  第二轮全对。两个迴圈（编排/措辞）都装了。
+- **zh 自然化**：kind 前缀 zh 不印（bm/en 保留）；措辞 prompt 禁公文腔。
+- **敬语 chips**（拍板 7 后半）：honorific-match.ts 纯函数＋FieldRow
+  suggestions prop＋loadFilingRoster 带 honorific（32 未贴退阶）。
+- **预览同源**：结构化文件免费预览＝同一支组装器（byte 相同，只差水印/
+  audit line）；PDF 学会 **粗体** 会议标题行（置中）。
+- **真样本验收**：样本 A→BM 量尺 0 缺陷（改前 6）＋§1 病 1-4 全消；
+  样本 A→zh 0 缺陷＋名字全保。品质 eval 3/3 PASS。模型对比
+  flash-lite（要 repair）/flash/3.6-flash（一次过最便宜）——72 号报告表，
+  等 J 拍板，env 没动。
+- **测过**：tsc 0 · eslint 21 · vitest **1061（+22）** · build ✓ ·
+  e2e:minutes ✓ · eval:quality 0 findings。
 
 ### 这一场做了什么（68 号 ⑦ 品质场 · 包 G1 ✅，71 号报告）
 
@@ -527,6 +550,26 @@ RESPONSIVE：J 若再圈破版，贴 46 号单同段 PROMPT 继续。
 ---
 
 ## 6. 已知陷阱（踩过的，别再踩）
+
+### 2026-08-29 深夜新增（68 号 ⑦ 品质场）
+
+- 🔴 **模型会把拉丁人名音译成「发明的汉字」——而 checkNames 对中文文件
+  天生不设防**（它只会问「这个汉字哪来的」，中文文件满页汉字问不了）。
+  实战：zh 版把 En.Loo Sio San 写成「吕兆生先生」，字字是猜的，盖在真人
+  头上。**修法：反向围栏 checkLatinNames（minutes-compose.ts）——原文里
+  名字形状的拉丁字串必须逐字存活；判断方法：凡「输出语言＝中文」的
+  AI 写作路，先问拉丁名字靠什么活下来。**「不准改名字」是指令不是保证，
+  再次验证。
+- ⚠ **给「大写词串＝名字」类启发式加豁免词表时，敬称缩写（En./Pn./Dr.）
+  要进词表**——否则「Setiausaha En」这种半截串被当名字，合法翻译全被
+  误杀（写测试当场撞到）。
+- 💡 **结构化文件的成文＝组装不是写作，能做到零 AI 费**：打印 BM minit
+  出 BM 版全程 code（分节/编号/段落 verbatim），模型只翻要换语言的段落。
+  「确定性管线优先」在成文端的形状就是这个——先问「这一步真的需要
+  判断吗」，再决定要不要花钱。
+- ⚠ **grep 说 minutes-compose.ts 是 binary 不是坏档**——checkNames 里
+  有一个刻意的字面 NUL（join("\0") 防跨串误配）。要搜这支档用 Read/
+  PowerShell，别对 grep 的 binary 判定慌。
 
 ### 2026-08-29 傍晚新增（64 号 AI 智能建议场）
 

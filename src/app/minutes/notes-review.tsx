@@ -19,6 +19,7 @@ import { AddRowButton, DeletableRow } from "./row-controls";
 import { useMinutes, type TextLikeField } from "./minutes-store";
 import type { MeetingNotesExtraction, ResolutionKind } from "@/lib/extraction";
 import { AttachIcon, ChooseFileLabel, UploadLimitNote } from "@/components/attach-icon";
+import { honorificSuggestions } from "@/lib/honorific-match";
 
 // D-7 / J review 27-evening #30 (2026-08-28): the review GROUPS what was
 // decided instead of printing one flat transcription wall. The model labels
@@ -187,6 +188,7 @@ export function NotesReview() {
     groups,
     firstUnfinishedHere,
     extraction,
+    filingRoster,
     updateField,
     confirmField: confirm,
     editField: edit,
@@ -1340,6 +1342,9 @@ export function NotesReview() {
                   : `Who (position ${i + 1})`
               }
               field={b.person_name}
+              // G2 (拍板 7 後半): "陈讲师" written in the notes, resolved
+              // against the roster's own honorific column — code, not AI.
+              suggestions={honorificSuggestions(b.person_name.value, filingRoster)}
               onConfirm={() =>
                 updateField((e) => {
                   confirm(e.office_bearers[i].person_name);

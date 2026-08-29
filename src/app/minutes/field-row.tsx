@@ -59,6 +59,7 @@ export function FieldRow({
   onConfirm,
   onEdit,
   onMarkAbsent,
+  suggestions,
 }: {
   labelBm: string;
   labelZh: string;
@@ -74,6 +75,11 @@ export function FieldRow({
    *  never written down. Without it a `missing` field blocks saving forever and
    *  the only way out is for the human to invent a value. */
   onMarkAbsent?: () => void;
+  /** G2 (拍板 7 後半): one-tap replacements computed by CODE from the
+   *  society's own roster — e.g. the AI read "陈讲师" and the roster has a
+   *  讲师 surnamed 陈. Tapping one is a normal edit (human source of truth).
+   *  Never AI, never a guess: absent unless the roster actually matches. */
+  suggestions?: { label: string; value: string }[];
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(field.value);
@@ -301,6 +307,27 @@ export function FieldRow({
           </>
         )}
       </div>
+
+      {/* G2 (拍板 7 後半): the roster's own matches for an honorific-style
+          name ("陈讲师" → the roster's 讲师 surnamed 陈). Computed by code,
+          applied as a normal human edit — one tap, zero AI. */}
+      {!editing && !isSample && suggestions && suggestions.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted-foreground">
+            <Tri bm="Padanan senarai AJK:" zh="名册里的匹配：" en="Roster match:" />
+          </span>
+          {suggestions.map((s) => (
+            <button
+              key={s.value}
+              type="button"
+              onClick={() => onEdit(s.value)}
+              className="rounded-full border border-green-500 bg-green-50 px-3 py-1 text-sm font-medium text-green-900 hover:bg-green-100 dark:bg-green-400/10 dark:text-green-100"
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* D-3 (work order 31, J #8): the ORIGINAL page, beside the editor —
           inline above the keyboard on a phone, a floating card on the right on

@@ -170,14 +170,27 @@ must list exactly the items that line covers — nothing folded in silently.${gl
 
   if (!repair) return base;
 
-  const problems = [
+  const problems = repairProblems(repair);
+
+  return `${base}
+
+=== YOUR PREVIOUS ANSWER WAS REJECTED ===
+${problems}
+
+Return the corrected JSON, with every index from 0 to ${resolutionTexts.length - 1} appearing exactly once and every Chinese character run copied exactly.`;
+}
+
+function repairProblems(repair: NonNullable<DraftMinutesPromptParams["repair"]>): string {
+  return [
     repair.missing.length ? `MISSING (you left these out): ${repair.missing.join(", ")}` : "",
     repair.duplicated.length ? `DUPLICATED (you used these more than once): ${repair.duplicated.join(", ")}` : "",
     repair.unknown.length ? `NOT REAL INDICES (you invented these): ${repair.unknown.join(", ")}` : "",
     repair.altered.length
-      ? `CHANGED CHARACTERS (you altered a name or label — every run of Chinese ` +
+      ? `CHANGED NAMES (you altered a name or label — every run of Chinese ` +
         `characters you write must appear character for character in the item it ` +
-        `came from): ${repair.altered.join(", ")}`
+        `came from, and every Latin-letter personal/organisation name must be ` +
+        `copied letter for letter, never turned into Chinese characters): ` +
+        repair.altered.join(", ")
       : "",
     repair.dropped?.length
       ? `MERGED AWAY (a merged line lost this item's name or number — a merged ` +
@@ -187,11 +200,89 @@ must list exactly the items that line covers — nothing folded in silently.${gl
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+// ---------------------------------------------------------------------------
+// G2 (work order 68): PHRASE-IN-PLACE — the structured document's prompt.
+//
+// A printed formal minit already HAS its arrangement (G1 preserved it), so
+// the model is not asked to arrange anything: section order, numbering and
+// membership are fixed by code. Its only job here is language — each listed
+// paragraph rewritten in the target language, one for one, in the register
+// of formal minutes. Coverage arithmetic (every index exactly once) and the
+// checkNames guard run on the result exactly as in the arranging prompt.
+// ---------------------------------------------------------------------------
+
+export type PhraseMinutesItemsPromptParams = {
+  /** index (into the shared resolution numbering) → the paragraph to phrase. */
+  items: { index: number; text: string }[];
+  lang?: MinutesLang;
+  glossaryBlock?: string;
+  repair?: DraftMinutesPromptParams["repair"];
+};
+
+export function phraseMinutesItemsPrompt({
+  items,
+  lang = "bm",
+  glossaryBlock = "",
+  repair,
+}: PhraseMinutesItemsPromptParams): string {
+  const language = LANGUAGE_NAME[lang];
+  const numbered = items.map((it) => `${it.index}: ${it.text}`).join("\n");
+  const indices = items.map((it) => it.index).join(", ");
+
+  const naturalZh =
+    lang === "zh"
+      ? `\nWrite NATURAL written Chinese, the way a society's secretary actually
+writes minutes — full sentences, plain register. Do not write bureaucratic
+boilerplate (no "兹决议", no clause-style fragments); keep it formal but
+human.`
+      : "";
+
+  const base = `You are rewriting individual paragraphs of a Malaysian society's meeting minutes into ${language}. The document's structure is already fixed by other means; you rewrite ONLY the paragraphs listed, one for one. A human has verified every paragraph — you decide the WORDING in ${language}, never what is true.
+
+THE PARAGRAPHS (index: text). There are exactly ${items.length}, with indices ${indices}:
+${numbered}
+
+=== WHAT YOU RETURN ===
+JSON, and nothing else:
+
+{ "items": [ { "source": <index>, "text": "the same paragraph, written in ${language}" } ] }
+
+=== THE RULE THAT IS CHECKED BY CODE ===
+Each listed index appears EXACTLY ONCE in your answer — no index skipped, no
+index repeated, no index invented. Your answer is rejected and sent back if
+this does not hold.
+
+=== HOW TO PHRASE ===
+- COMPLETE content: every sentence of the original paragraph is carried into
+  the rewritten one. Shortening a paragraph loses facts from a signed
+  document — as bad as inventing one.
+- Formal minutes prose in ${language}, complete sentences, ending with a full
+  stop. For example: ${ORDINARY_WORD_EXAMPLES[lang]}.${naturalZh}
+- Proper nouns are copied EXACTLY, character for character. A personal name in
+  Chinese characters STAYS in Chinese characters — never romanised, never
+  translated, never "corrected". Same for organisation names and titles of
+  office within a teaching (点传师 stays 点传师).
+- THE MIRROR RULE, checked by code: a personal name written in LATIN letters
+  stays in Latin letters, letter for letter — "Loo Sio San" NEVER becomes
+  invented Chinese characters (no 吕兆生, no guessing what characters a name
+  "should" be). In a Chinese sentence write it as-is: "秘书 Loo Sio San 先生".
+  An honorific abbreviation (En., Puan) may be translated (先生/女士); the
+  name itself may not change by one letter. Organisation names and addresses
+  in Latin letters also stay exactly as written.
+- Keep every number, date, time, quantity and duration exactly as given.
+- A line's leading list number (like "3." in "3. 同行 10位") stays at the
+  start of the rewritten line, unchanged.
+- Do not add anything that is not in the paragraph you were given.${glossaryBlock}`;
+
+  if (!repair) return base;
 
   return `${base}
 
 === YOUR PREVIOUS ANSWER WAS REJECTED ===
-${problems}
+${repairProblems(repair)}
 
-Return the corrected JSON, with every index from 0 to ${resolutionTexts.length - 1} appearing exactly once and every Chinese character run copied exactly.`;
+Return the corrected JSON, with each listed index appearing exactly once and every Chinese character run copied exactly.`;
 }
+

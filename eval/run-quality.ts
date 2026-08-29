@@ -22,9 +22,15 @@ import path from "node:path";
 import "../scripts/allow-server-only";
 
 import { getVisionProvider, resolveModel, type TokenUsage } from "../src/lib/ai/provider";
-import { runDraftMinutesPlan } from "../src/lib/ai/draft-minutes-run";
+import { runDraftMinutesPlan, runPhraseMinutesItems } from "../src/lib/ai/draft-minutes-run";
 import { parseMeetingNotesExtraction } from "../src/lib/extraction";
-import { composeMinutesMd } from "../src/lib/minutes-compose";
+import {
+  buildPhraseWork,
+  composeMinutesMd,
+  composeStructuredMinutesMd,
+  minutesStructure,
+  usableResolutions,
+} from "../src/lib/minutes-compose";
 import { lintMinitMd, type MinitLintExpectations, type MinitLintFinding } from "../src/lib/minit-format";
 import { isMinutesLang } from "../src/lib/minutes-lang";
 
@@ -111,24 +117,45 @@ async function main() {
     };
 
     try {
-      const resolutionTexts = extraction.resolutions
-        .filter((r) => r.text.confidence !== "missing" && r.text.value !== "")
-        .map((r) => r.text.value);
-
-      const run = await runDraftMinutesPlan({
-        provider: getVisionProvider("long_doc"),
-        resolutionTexts,
-        lang,
-        onUsage,
-      });
-      if (!run.ok) throw new Error("plan failed the coverage/name/merge checks twice");
-
-      const markdown = composeMinutesMd(run.plan, extraction, {
+      const composeOpts = {
         orgName: meta.orgName,
         confirmedBy: "eval",
         dateIso: new Date().toISOString().slice(0, 10),
         lang,
-      });
+      };
+
+      // The SAME decision tree the route runs (G2): a structured document is
+      // assembled deterministically (model phrases only what needs the target
+      // language); an unstructured one goes through the arranging loop.
+      let markdown: string;
+      const structure = minutesStructure(extraction);
+      if (structure) {
+        const work = buildPhraseWork(extraction, lang);
+        if (work.items.length === 0) {
+          markdown = composeStructuredMinutesMd(extraction, composeOpts);
+        } else {
+          const run = await runPhraseMinutesItems({
+            provider: getVisionProvider("long_doc"),
+            items: work.items,
+            allTexts: work.allTexts,
+            lang,
+            onUsage,
+          });
+          if (!run.ok) throw new Error("phrasing failed the coverage/name checks twice");
+          const { texts, titles } = work.split(run.phrased);
+          markdown = composeStructuredMinutesMd(extraction, composeOpts, texts, titles);
+        }
+      } else {
+        const resolutionTexts = usableResolutions(extraction).map((r) => r.text.value);
+        const run = await runDraftMinutesPlan({
+          provider: getVisionProvider("long_doc"),
+          resolutionTexts,
+          lang,
+          onUsage,
+        });
+        if (!run.ok) throw new Error("plan failed the coverage/name/merge checks twice");
+        markdown = composeMinutesMd(run.plan, extraction, composeOpts);
+      }
 
       const findings = lintMinitMd(markdown, { ...meta.expect, lang });
       console.log(

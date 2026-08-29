@@ -105,8 +105,7 @@ const structuredModel = (): MinitDocModel => ({
   adjournment: "Mesyuarat ditangguhkan pada 10.30 PM.",
   preparedBy: { name: "SITI CONTOH", role: "Setiausaha" },
   endorsedBy: { name: "AHMAD CONTOH", role: "Pengerusi" },
-  confirmedBy: "siti",
-  dateIso: "2026-08-29",
+  audit: { confirmedBy: "siti", dateIso: "2026-08-29" },
 });
 
 describe("renderMinitMd — the structured (printed formal) form", () => {
@@ -188,8 +187,7 @@ describe("renderMinitMd — the list (whiteboard / free notes) form", () => {
       },
     ],
     preparedBy: { name: "siti" },
-    confirmedBy: "siti",
-    dateIso: "2026-08-29",
+    audit: { confirmedBy: "siti", dateIso: "2026-08-29" },
   });
 
   it("numbers devised sections by position and items one layer deep", () => {

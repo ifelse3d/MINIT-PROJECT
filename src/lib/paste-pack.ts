@@ -36,6 +36,9 @@ export type FilingRosterEntry = {
   name: string;
   position: string;
   nameOfficial: string | null;
+  /** G2 (拍板 7 後半): the roster's own honorific/title column (migration
+   *  32) — optional so every existing caller and fixture stays valid. */
+  honorific?: string | null;
 };
 
 /** Trilingual single-string note, same shape the map's own notes use. */

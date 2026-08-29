@@ -21,6 +21,9 @@ import { PDF_PRODUCER } from "@/lib/brand";
 export type MinutesPdfLine =
   | { kind: "h1"; text: string }
   | { kind: "h2"; text: string }
+  /** G2: a full-line `**bold**` — the formal meeting-title line under the
+   *  letterhead ("MESYUARAT AGUNG TAHUNAN 2026"). Centred, bold, no `**`. */
+  | { kind: "strong"; text: string }
   | { kind: "rule" }
   | { kind: "blank" }
   | { kind: "body"; text: string };
@@ -44,6 +47,8 @@ export function minutesPdfLines(finalMd: string): MinutesPdfLine[] {
       out.push({ kind: "h1", text: trimmed.slice(2).trim() });
     } else if (trimmed.startsWith("## ")) {
       out.push({ kind: "h2", text: trimmed.slice(3).trim() });
+    } else if (/^\*\*[^*]+\*\*$/.test(trimmed)) {
+      out.push({ kind: "strong", text: trimmed.slice(2, -2).trim() });
     } else {
       out.push({ kind: "body", text: line.trimStart() });
     }
@@ -191,6 +196,16 @@ export async function buildMinutesPdf(params: MinutesPdfParams): Promise<Uint8Ar
           y -= 18;
         }
         y -= 2;
+        break;
+      }
+      case "strong": {
+        // The meeting-title line — centred under the letterhead, like the
+        // printed documents societies actually file.
+        for (const l of wrap(item.text, 12.5, true, width)) {
+          ensureRoom(22);
+          drawAt(l, (pageW - widthOf(l, 12.5, true)) / 2, y, 12.5, { bold: true });
+          y -= 18;
+        }
         break;
       }
       case "body": {

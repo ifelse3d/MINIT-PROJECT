@@ -1,6 +1,8 @@
 import type { MeetingNotesExtraction } from "@/lib/extraction";
 import { meetingTypeLabel } from "@/lib/meeting-types";
 import { draftedByLine } from "@/lib/brand";
+import { formatRm } from "@/lib/minit-format";
+import { composeStructuredMinutesMd, minutesStructure } from "@/lib/minutes-compose";
 
 // ---------------------------------------------------------------------------
 // DETERMINISTIC BM minutes renderer (template fill, no LLM).
@@ -16,11 +18,9 @@ import { draftedByLine } from "@/lib/brand";
 
 export const DRAFT_WATERMARK = "DRAF — sila semak sebelum guna / DRAFT — review before use";
 
-export function formatRm(amountCents: number): string {
-  const rm = Math.trunc(amountCents / 100);
-  const sen = Math.abs(amountCents % 100);
-  return `RM${rm.toLocaleString("en-MY")}.${String(sen).padStart(2, "0")}`;
-}
+// Moved to minit-format.ts (the format owns how money prints); re-exported
+// unchanged for this file's many importers.
+export { formatRm };
 
 export type MinutesDraftOptions = {
   orgName: string;
@@ -32,6 +32,22 @@ export function renderMinutesDraftBm(
   e: MeetingNotesExtraction,
   opts: MinutesDraftOptions
 ): string {
+  // G2 (work order 68 §4): a STRUCTURED document (a printed formal minit read
+  // by G1) previews through the SAME standard-format composer that produces
+  // the final document — J judges the product by this preview, so a preview
+  // in a different layout than the finished document is a lie about the
+  // product. Deterministic, zero AI, paragraphs verbatim.
+  if (minutesStructure(e)) {
+    const md = composeStructuredMinutesMd(e, {
+      orgName: opts.orgName,
+      confirmedBy: opts.confirmedBy?.name ?? "",
+      dateIso: opts.confirmedBy?.dateIso ?? "",
+      lang: "bm",
+      unconfirmedPreview: !opts.confirmedBy,
+    });
+    return opts.confirmedBy ? md : `[${DRAFT_WATERMARK}]\n\n${md}`;
+  }
+
   const lines: string[] = [];
 
   if (!opts.confirmedBy) lines.push(`[${DRAFT_WATERMARK}]`, "");

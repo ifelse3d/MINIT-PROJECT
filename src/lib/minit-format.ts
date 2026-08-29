@@ -5,7 +5,19 @@ import {
   type ItemKind,
   type MinutesLang,
 } from "@/lib/minutes-lang";
-import { SIGNATURE_LINE } from "@/lib/minutes-compose";
+
+/** J 28/8 evening item 3: wide enough to sign on. Lives HERE (the format);
+ *  minutes-compose re-exports it for its existing importers. */
+export const SIGNATURE_LINE = "_".repeat(40);
+
+/** RM from integer sen, no floating-point drift. Lives with the format (it is
+ *  how documents PRINT money); minutes-draft re-exports it for its importers.
+ *  Hard Rule 2 arithmetic stays wherever the sums are computed. */
+export function formatRm(amountCents: number): string {
+  const rm = Math.trunc(amountCents / 100);
+  const sen = Math.abs(amountCents % 100);
+  return `RM${rm.toLocaleString("en-MY")}.${String(sen).padStart(2, "0")}`;
+}
 
 // ---------------------------------------------------------------------------
 // THE STANDARD MINIT FORMAT — work order 68 (⑦ quality), package G0.
@@ -95,9 +107,13 @@ export type MinitDocModel = {
   /** Endorsement is a labelled blank unless the document names the endorser
    *  (sample A does: Disahkan oleh — PENGERUSI, with the chairperson's name). */
   endorsedBy?: { name?: string; role?: string };
-  /** Hard Rule 8 — who confirmed, when. */
-  confirmedBy: string;
-  dateIso: string;
+  /** The TUJUAN opening summary (unstructured documents only — a structured
+   *  document's agenda table already says what the meeting was about). */
+  purpose?: string[];
+  /** Hard Rule 8 audit line — printed ONLY when the document is confirmed.
+   *  The free live preview of an unconfirmed extraction carries no audit
+   *  line (it would claim a confirmation that has not happened). */
+  audit?: { confirmedBy: string; dateIso: string };
 };
 
 // --- enumerator handling (the double-numbering fix) ------------------------
@@ -224,6 +240,13 @@ export function renderMinitMd(model: MinitDocModel): string {
     out.push("");
   }
 
+  // The TUJUAN opening summary — unstructured documents only; assembled from
+  // headings upstream, never free prose (the camping-trip incident).
+  const purpose = model.purpose ?? [];
+  if (purpose.length > 0) {
+    out.push(`## ${L.purpose}`, "", ...purpose, "");
+  }
+
   // The attendance sheet (named list) — after the header, before the body.
   const attendees = model.attendees ?? [];
   if (attendees.length > 0) {
@@ -246,7 +269,10 @@ export function renderMinitMd(model: MinitDocModel): string {
       : `${si + 1}. ${tidy(s.title)}`;
     out.push(`## ${heading}`, "");
     s.items.forEach((it, ii) => {
-      const prefix = it.kind ? `${L.kind[it.kind]}: ` : "";
+      // zh prints NO mechanical kind prefixes — "2.1 行动：…" was the
+      // officialese J named in his test list (work order 68 §1-5). BM/EN keep
+      // Perbincangan / Keputusan / Tindakan, the genre's own labels.
+      const prefix = it.kind && lang !== "zh" ? `${L.kind[it.kind]}: ` : "";
       const body = tidy(it.text);
       if (structured) {
         // Prose paragraphs. Own enumerator (a sub-numbered line like "2.1")
@@ -289,8 +315,10 @@ export function renderMinitMd(model: MinitDocModel): string {
 
   // Signature block. Roles print under the names when known (sample A:
   // SETIAUSAHA under the preparer, PENGERUSI under the endorser); the
-  // endorsement name stays a labelled blank when nobody recorded it.
-  out.push(L.preparedBy, "", SIGNATURE_LINE, `( ${model.preparedBy.name} )`);
+  // endorsement name stays a labelled blank when nobody recorded it, and an
+  // unconfirmed preview's empty preparer prints as a blank slot, not "(  )".
+  out.push(L.preparedBy, "", SIGNATURE_LINE);
+  if (model.preparedBy.name.trim() !== "") out.push(`( ${model.preparedBy.name} )`);
   if (model.preparedBy.role) out.push(model.preparedBy.role.toUpperCase());
   out.push("", L.endorsedBy, "", SIGNATURE_LINE);
   const endorseName = model.endorsedBy?.name?.trim();
@@ -298,7 +326,9 @@ export function renderMinitMd(model: MinitDocModel): string {
   if (model.endorsedBy?.role) out.push(model.endorsedBy.role.toUpperCase());
   out.push("");
 
-  out.push("---", minutesAuditLine(lang, model.confirmedBy, model.dateIso));
+  if (model.audit) {
+    out.push("---", minutesAuditLine(lang, model.audit.confirmedBy, model.audit.dateIso));
+  }
   return out.join("\n");
 }
 

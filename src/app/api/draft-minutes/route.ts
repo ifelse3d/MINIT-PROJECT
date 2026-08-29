@@ -4,8 +4,15 @@ import { inputProblemError, joinUserError, USER_ERRORS } from "@/lib/user-errors
 import { getVisionProvider } from "@/lib/ai/provider";
 import { createUsageRecorder, refundUsage, requireAiQuota } from "@/lib/ai/usage";
 import { parseMeetingNotesExtraction } from "@/lib/extraction";
-import { runDraftMinutesPlan } from "@/lib/ai/draft-minutes-run";
-import { composeMinutesMd, type MinutesPlan } from "@/lib/minutes-compose";
+import { runDraftMinutesPlan, runPhraseMinutesItems } from "@/lib/ai/draft-minutes-run";
+import {
+  buildPhraseWork,
+  composeMinutesMd,
+  composeStructuredMinutesMd,
+  minutesStructure,
+  usableResolutions,
+  type MinutesPlan,
+} from "@/lib/minutes-compose";
 import { getDocumentIdentity } from "@/lib/doc-identity";
 import { countUnreviewed } from "@/lib/extraction-rows";
 import { dayIsoMalaysia } from "@/lib/history";
@@ -84,15 +91,79 @@ export async function POST(req: Request) {
       );
     }
 
+    const todayIso = dayIsoMalaysia(new Date().toISOString())!;
+    const composeOpts = {
+      orgName: identity.orgName,
+      confirmedBy: identity.confirmedBy,
+      dateIso: todayIso,
+      lang,
+      // C-1 / D-1: the registration number on the letterhead. The save action
+      // re-stamps it from the org record either way; passing it here means the
+      // person READS the same document they will sign.
+      ppmNo: identity.ppmNo,
+    };
+
+    // ------------------------------------------------------------------
+    // G2 (work order 68): the STRUCTURED path. A printed formal minit read
+    // by G1 carries its own sections — arranging it is not a judgement
+    // call, so the model is not asked to arrange. Two sub-cases:
+    //
+    //   * nothing needs a language conversion → the document is assembled
+    //     deterministically, paragraph for paragraph, ZERO vendor calls —
+    //     and therefore ZERO charge (reaching the vendor is what costs an
+    //     action; nothing was reached).
+    //   * some paragraphs need the target language → ONE charged action;
+    //     the model phrases those paragraphs in place, checked by counting.
+    // ------------------------------------------------------------------
+    const structure = minutesStructure(extraction);
+    if (structure) {
+      const work = buildPhraseWork(extraction, lang);
+      if (work.items.length === 0) {
+        const markdown = composeStructuredMinutesMd(extraction, composeOpts);
+        return NextResponse.json({ markdown, provider: "structure" });
+      }
+
+      const sGate = await requireAiQuota(["draft_minutes"], { cap: "upload" });
+      if (!sGate.ok) {
+        return NextResponse.json(sGate.body, { status: sGate.status });
+      }
+      const sGlossary = await loadGlossary(sGate.org.id);
+      try {
+        const run = await runPhraseMinutesItems({
+          provider: getVisionProvider("long_doc"),
+          items: work.items,
+          allTexts: work.allTexts,
+          lang,
+          glossaryBlock: glossaryPromptBlockForWriting(sGlossary),
+          allowedRuns: glossaryAllowedRuns(sGlossary),
+          onUsage: createUsageRecorder(sGate.org.id, sGate.charges[0]),
+          deadlineAt: Date.now() + ROUTE_AI_DEADLINE_MS,
+        });
+        if (!run.ok) {
+          await refundUsage(sGate.org.id, sGate.charges[0]);
+          return NextResponse.json(
+            { error: joinUserError(USER_ERRORS.aiCouldNotRead) },
+            { status: 422 },
+          );
+        }
+        const { texts, titles } = work.split(run.phrased);
+        const markdown = composeStructuredMinutesMd(extraction, composeOpts, texts, titles);
+        return NextResponse.json({
+          markdown,
+          provider: getVisionProvider("long_doc").name,
+        });
+      } catch (e) {
+        await refundUsage(sGate.org.id, sGate.charges[0]);
+        return vendorFailureResponse("/api/draft-minutes", e, sGate.org.id);
+      }
+    }
+
     const gate = await requireAiQuota(["draft_minutes"], { cap: "upload" });
     if (!gate.ok) {
       return NextResponse.json(gate.body, { status: gate.status });
     }
 
-    const todayIso = dayIsoMalaysia(new Date().toISOString())!;
-    const resolutionTexts = extraction.resolutions
-      .filter((r) => r.text.confidence !== "missing" && r.text.value !== "")
-      .map((r) => r.text.value);
+    const resolutionTexts = usableResolutions(extraction).map((r) => r.text.value);
 
     // The society's own words, so the same term comes out the same way every
     // month. Never blocks: an empty glossary leaves the prompt as it was.
@@ -141,16 +212,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const markdown = composeMinutesMd(plan, extraction, {
-      orgName: identity.orgName,
-      confirmedBy: identity.confirmedBy,
-      dateIso: todayIso,
-      lang,
-      // C-1 / D-1: the registration number on the letterhead. The save action
-      // re-stamps it from the org record either way; passing it here means the
-      // person READS the same document they will sign.
-      ppmNo: identity.ppmNo,
-    });
+    const markdown = composeMinutesMd(plan, extraction, composeOpts);
 
     return NextResponse.json({ markdown, provider: provider.name });
   } catch (e) {
