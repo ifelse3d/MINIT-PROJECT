@@ -5,44 +5,86 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-30（MYT）· Fable 5（78 号小单：eROSES 前门修正＋flow COPY 圈进围栏）**
-**🔴 本场（78 号小单）状态一句话（80 号报告）：
-① 前门修好——/filings 永久转址（308）到 /filings/eroses 卡片入口，?doc
-跟着走；侧栏照旧指 /filings（前缀比对整族点亮，nav 零改动）；846 行旧长页
-filings-view.tsx 删除，残余功能逐项搬进 flow（盘点表在 80 号报告：
-不可登记会议的「结论先行＋摺叠」、PDF 两颗按钮＋干净下载＋25MB 句搬进
-mesyuarat 页；净额与「minit 内财务摘要交叉核对」补进年报第 5 步；laporan
-直达连结补在卡片入口下方——一项没丢）。
-② flow COPY 圈进免费围栏（J 8/30 拍板）：loadFlowBase 带 fence 状态，
-ValueRow 新 locked prop——免费版九步＋登记页每格值 select-none＋copy/cut/
-右键全拦、按钮变 🔒「复制（付费版）」；demo/CONTOH 照 isDemo 禁令不锁；
-干净 PDF 走 mesyuarat 页自己的 FenceCleanDownload（402 句原地显示）。
-测过：tsc 0 · **eslint 20（旧长页删除带走一条基准旧错，新基准 20=19 错
-+1 警告）** · vitest 1087 · build ✓ · **三条 e2e 全绿**（minutes 新增 6 条：
-转址门牌＋trial 真被锁＋无活复制按钮漏网）· probe-h2-69 51 项重跑全 PASS
-（§1-11 两条改打 flow 第 1 步）· probe-d2-56 重跑全 PASS · 零 migration ·
-零 AI 费。**🔴 J 的事：双击 push-cabang.bat（本场 2 支 commit）→ 上线后
-30 秒验收（侧栏点 eROSES 申报＝三张卡；TESTING1 进年报任一步＝🔒）。**
-上一场（69 号，全上线）：H1–H4 四包（74–77 号报告）——名册补完、eROSES
-flow 重构（入口三张卡＋九步一步一页＋缺值原地填＋示意图）、onboarding
-＋机构上限（免费 1 个总机构）、收尾小修 14 处删除确认等；migration 1–38
-探针实测全 APPLIED、main==origin/main（讨论场 8/30 查证，79 号 HANDOFF）。
-再上一场（68 号 ⑦ 品质场，70–73 号报告）：minit 版式量尺＋结构化成文
-零 AI 费＋checkLatinNames＋「AI took too long」真因根治
-（coerceMissingFieldsEmpty）；擷取 eval 95.2% invented=0。
-J 的旧账照旧：tester 清单（73/77 号）、bench 模型拍板（72 号对比表）、
-54 号 GUIDE 设 Supabase 邮件、eROSES 官方 Penyata Kewangan 模板（60 号
-第 5 点）、竞赛 8/31 23:59 截止（J 自定，不催）。**
+**最后更新：2026-08-30（MYT）· Fable 5（81 号场：章程分段读根治＋A6 特例＋死按钮＋出席同名＋bench 真数据）**
+**🔴 本场（81 号场）状态一句话（83 号报告）：
+① 章程读取根治（I1）——「App 自己拆页分段读」上线：浏览器把长 PDF 拆成
+≤4 页一段（pdf-lib），每段各自一个请求（永远躲开 60s 墙），签名续读令牌
+让整份章程只扣会员 1 个 extract action、成本照实累计到同一 ai_usage 行；
+三个门（/constitution、create-org、首页 intake 长 PDF 先 classifyOnly）全接；
+段失败原地续读不重扣。真机验收：合成 21 页 PDF 走真 UI 43.8s 六段一次过、
+ai_usage 恰 1 行 cost 累计、42 条条文含第 21 页（probe-i1-81 全 PASS）。
+诊断先行：org197 两枚 app_errors 指纹暴力对上＝「Gemini timed out after
+~20s」＝契约打回后 rule-7 重读只剩 ~20s 预算而死，不只是真慢。
+② A6 特例（I2/D45）——章程一律扣 min(实际页数,5) 页、分段读整份只收一次
+（4→4、5→5、30→5 测试钉住；probe 实测 21 页 fence 只走 5）。
+③ 死按钮（I3）——探针证实接线是活的（手机 sheet＋桌面 rail 长答案紫按钮
+真的带到 /money/einvois，无遮挡）；唯一坐实的死案＝人已在目标页＝同 URL
+no-op，最小修：同路径点击滚回页顶（probe-i3-81 留作回归断言）。
+④ 出席同名分开勾（I4）——身份改 name+note（attendeeIdentityKey），
+「Ali (青年组)」「Ali (妇女组)」各自可勾各自变灰；attendee schema 加可选
+note，旧资料无 note 照旧解析（相容测试钉住）。
+⑤ bench 真数据（I5）——flash-lite 93.6%/$0.0033/3.4s/0 失败 vs 3.6-flash
+93.3%/$0.0039/30.5s/2 案逾时；章程速度实测 3.6-flash 92.3s(139tok/s) vs
+flash-lite 24.8s(489tok/s)——**LONG_DOC 换 3.6-flash 的答案是不要**（env
+没动）。probe-e3-64 按「36 已贴」新契约改后全 PASS——「忽略跨装置」结案。
+测过：tsc 0 · eslint 20（基准逐字同）· vitest **1109（+22）** · build ✓ ·
+三条 e2e 全绿 · probe-i1-81/probe-i3-81 全 PASS · check:migrations 38 支全
+APPLIED · 零 migration · 真额度合计 ≈US$0.24（授权 ≤0.30 内，明细 83 号）。
+**🔴 J 的事：双击 push-cabang.bat（本场 commit；78 场那 2 支开工实测
+已在线上）；其余见 83 号报告收尾清单。**
+上一场（78 号小单，80 号报告）：/filings 308 转址到 /filings/eroses 三张卡
+＋flow COPY 圈进围栏；再上一场（69 号，H1–H4 已全上线）。
+J 的旧账照旧：tester 清单（73/77 号）、54 号 GUIDE 设 Supabase 邮件、
+MyInvois 模板下载（81 号 §1-4 有路径）、竞赛 8/31 23:59 截止（J 自定，不催）。**
 
 ---
 
-## 🌙 现在在哪里（2026-08-30，78 号小单收工）
+## 🌙 现在在哪里（2026-08-30，81 号场收工）
 
-> **已上线**：https://minit-project.vercel.app —— 68/69 号场 J 已全部 push
-> （78 号开工时 main == origin/main，migration 1–38 全 APPLIED）；
-> **78 号场的 2 支 commit 等 J push-cabang.bat**。
-> 线上 org：15「J」、58「avocado」、91「TESTING1」（三个不同 email 的
-> 帐号各持一个——不是同一人三个机构，79 号 HANDOFF 备忘）。
+> **已上线**：https://minit-project.vercel.app —— **至 78 号场 J 已全部
+> push**（81 场开工实测 main == origin/main）；**81 号场的 commit 等 J
+> push-cabang.bat**。migration 1–38 全 APPLIED（本场收尾实测）。
+> 线上 org：15「J」、58「avocado」、91「TESTING1」、197「TESTING2」
+> （91/197 quota 15＝仍在免费围栏内；J 要拿来测付费面见 83 号 §7 的 SQL）。
+
+### 这一场做了什么（81 号场 ✅，83 号报告——章程分段读＋A6＋三件修）
+
+- **I1 章程分段读**（主菜）：`src/lib/constitution-pages.ts`（段长 4 页＋
+  A6 数字，纯逻辑+测试）· `constitution-continuation.ts`（HMAC 续读令牌：
+  rowId+orgId+pagesLeft+30min 期限，pagesLeft 是防滥用上限，零 migration）·
+  `constitution-read-client.ts`（浏览器数页/拆段/逐段送/合并/断点续读，
+  三个门共用）。/api/extract-constitution 学会 `docPages`（首段declare＋
+  收 1 action＋A6 围栏一次）与 `continuation`（后续段零收费、cost 种子
+  累计到同一行，createUsageRecorder 新 seed 参数）；「教人拆档」句从
+  章程路退役。/api/intake 学会 `classifyOnly=1`（长 PDF 只送第一段问
+  「这是什么」，只收 classify；章程转分段读器、其他类型整份照旧）＋
+  围栏改「先收 min(页数,5)、分类后非章程补差额」。
+- **I2 A6/D45**：三个章程门一律扣 min(实际页数,5)；分段读整份只收一次；
+  DECISIONS.md D45 落档（822 行「等 J 说」过期句改掉）。
+- **I3 死按钮**：probe-i3-81 证实两个面（手机 sheet／桌面 rail）按钮可点
+  可导航、elementFromPoint 无遮挡——61 号嫌疑 (a) 现版重现不出；坐实的
+  死案只有「已在目标页＝同 URL no-op」，ai-panel 的按钮同路径点击时
+  window.scrollTo 顶部（永远有可见回应）。完整版重设计仍归 ⑧ 助手场。
+- **I4 出席同名**：`src/lib/attendee-identity.ts`（name+note 身份键）贯穿
+  roster-picker（勾选/全选/变灰全按键）、minutes-store.addNamedAttendees
+  （签名改收 {name,note}[]、note 写进出席列）、attendance-review（打字加人
+  同键、备注在收合行与展开行都显示）；extraction.attendeeSchema 加可选
+  note（AI 不吐、旧资料无键照旧，round-trip 相容测试钉住）。
+- **I5**：probe-e3-64 按「migration 36 已贴」新契约改（fail-open 提示不得
+  出现＋ignore 必须落 suggestion_marks 行）重跑全 PASS；bench 真数据表
+  与 3.6-flash 章程速度实测（数字在上方一句话与 83 号报告；env 没动。
+  gemini-3.5-flash 没跑：单模型估价 $0.24 就爆掉本场 ≤$0.30 授权，
+  72 号表已载它不是候选）。
+- **测过**：tsc 0 · eslint 20（基准）· vitest 1109（+22：constitution-pages
+  8+continuation 5+attendee-identity 5+extraction note 相容 1 ≈22 支净增）·
+  build ✓ · 三条 e2e 全绿 · probe-i1-81 全 PASS（最终 build 复跑过）·
+  probe-i3-81 全 PASS · probe-e3-64 全 PASS · 真额度 ≈US$0.24。
+- ⚠ 没能验证的：J 的真 undang-undang 件走分段读（org197 的指纹病灶——
+  合成 21 页与 CONTOH 都过了，真件等 J 传一次）；分段读在 Vercel 线上的
+  真行为（本机 next start 无 60s 杀，但每段各自一请求＝设计上已在墙内）；
+  续读令牌 30 分钟过期后的降级路（代码走「重新收费的新读取」，未实测）；
+  手机真机的死按钮原始场景仍未能重现（tester 若再报，先问「当时是不是
+  已经在那一页上」）。
 
 ### 这一场做了什么（78 号小单 ✅，80 号报告——eROSES 前门＋COPY 围栏）
 
@@ -641,7 +683,9 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
 
 ### ⚠️ 围栏的已知后果（设计使然，不是 bug）
 
-- 章程常 20–40 页 > 免费 20 页 ⇒ 免费版基本传不完一本完整章程。要开口子等 J。
+- ~~章程常 20–40 页 > 免费 20 页 ⇒ 免费版基本传不完~~ **口子已开（D45/A6，
+  81 场落地）**：章程一律扣 min(实际页数,5) 页、分段读整份只收一次；
+  其他文件照旧按实页数扣（引流引擎在钱区，口子只开给章程）。
 - 转账证明照片、贴上的文字、Office/表格转文字**不占页数**（钱区免费是引流
   引擎；页数只数 AI 读的「纸」）。
 - 上传门的「还剩几页」目前只显示在 /settings/plan 与拒绝讯息里，没有印在每个
@@ -664,25 +708,26 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
   真 HEIC 大图在真手机浏览器上的行为（helper 的 HEIC 退路只有单元测试）；
   围栏真挡下（未决 #1 照旧）；真 vendor 合并写作（D37 旧项）。
 
-### 🔴 J 的事
+### 🔴 J 的事（2026-08-30，81 场收工版）
 
-1. **双击 push-cabang.bat（最要紧）**——git 探针：origin/main 停在
-   20c6d52（你已把 56/64 场 push 上线了），本场 4 支 commit（ahead 4）
-   还没上。里面有「AI took too long」的**真因修**：你 8/29 晚是在 45s 修
-   已上线的情况下照样撞，真因是模型「标 missing 却塞值」害整份读取被
-   打回重读——本场修掉并真机验证（create-org 传 CONTOH 33 秒落地）。
-2. 看 **70 / 71 / 72 / 73** 号报告（各一分钟版在开头；旧场 65–67 照旧）。
-   ~~贴 migration 32–36~~——**探针实测五支全部已套用**（你在 68 号单开工前
-   就贴好了，本场收尾 check:migrations 证实），一支都不用贴。
-3. **用道教会样本重走一遍**（68 号单 §6-5）：拍照→确认→「让 MinitAI 写成
-   正式记录」→看 BM 版像不像能交的 minit；中文版也点一下。圈还不满意的。
-4. **叫 tester**：73 号报告清单（草稿徽章/Resume 语义/出席闸/create-org
-   传章程/敬语 chips——32 已贴，现在就能试）＋建议卡旧清单（67 号第 4 点）。
-5. **模型拍板**（72 号报告对比表）：成文/翻译那步 flash-lite 要靠围栏
-   打回才对、3.6-flash 一次过还最便宜——要不要换 AI_MODEL_LONG_DOC，
-   你跑 bench（bench-models.bat）后定，我没动 env。
-6. 旧账照旧：54 号 GUIDE 设 Supabase 邮件；eROSES 下载官方 Penyata
-   Kewangan 模板（60 号报告第 5 点）。
+1. **双击 push-cabang.bat（最要紧）**——81 号场的 commit 还没上
+   （78 场那 2 支开工实测已在线上）。里面有：章程分段读根治（你 8/29
+   连撞七次的那个病）＋A6 五页特例＋出席同名分开勾＋死按钮最小修。
+2. **看 83 号报告**（一分钟版在开头）。
+3. 想拿 TESTING1/TESTING2 当付费测试 org：Supabase SQL Editor 跑
+   `update orgs set monthly_free_quota = 100 where id in (91, 197);`
+   （围栏看 quota：15＝被围，100＝不围。不跑也行——J/avocado 本来就通。）
+4. **模型拍板（bench 真数据已出，83 号报告有表）**：AI_MODEL_LONG_DOC
+   **不建议**换 3.6-flash——准确率打平（93.3% vs 93.6%）、更贵一点、
+   **每案慢 9 倍**（30.5s vs 3.4s）且 10 案里 2 案逾时；章程整本实测
+   92.3s vs 24.8s。env 我没动，要不要就此定案你一句话。
+5. **MyInvois 模板下载**（81 号 §1-4 的路径）：登入 MyInvois → New
+   Documents → Drafts → Batch Upload → Step 1 下载 BatchSubmission-v1.xlsx，
+   丢给下一场（未决 #12 等这个档开工）。
+6. **拿你的真 undang-undang 再传一次章程**（create-org 或 /constitution 都行）
+   ——合成 21 页与 CONTOH 都验过了，真件过一次就能把 8/29 的病历合上。
+7. 旧账照旧：tester 清单（73/77 号）、54 号 GUIDE 设 Supabase 邮件、
+   道教会样本重走（68 号 §6-5）、#8 定价测试。
 
 ### ❓ 未决问题
 
@@ -713,22 +758,38 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
 
 ### ⏭ 下一个 session 从哪开始
 
-**78 号小单（eROSES 前门＋flow COPY 围栏）做完**（80 号报告；之前：
-69 号场 H1–H4=74–77 号、⑦ 品质场 68 号=70–73 号）。migration 1–38 全
-APPLIED、69 号场已全上线；**78 号的 2 支 commit 等 J push-cabang.bat**。
-接下来照 51 号 §5 顺序（J 已点头）：**⑧ 助手＋AI 代办场**（61 号备忘：
-聊天面板 upload/手机版/Clear conversation/语言跟人走/免 AI 预备问答层；
-未决 2 助手模型等 bench）→ ⑨ 上线后第一批；62 号竞赛材料场待命。
-**等 J 反馈的**：78 号上线后 30 秒验收（80 号报告第 5 点）；tester 清单
-（73/77 号）；道教会样本亲手重走（68 号 §6-5）；模型拍板（72 号对比表）；
-引导文案 vs 真 portal 对版照旧。竞赛 8/31 截止，材料 J 自己定，**不催**。
+**81 号场（章程分段读根治＋A6＋死按钮最小修＋出席同名＋bench 真数据）
+做完**（83 号报告；之前：78 号=80 号、69 号场 H1–H4=74–77 号）。
+migration 1–38 全 APPLIED、至 78 场已全上线；**81 号场 commit 等 J
+push-cabang.bat**。接下来：**⑧ 助手场（82 号施工单已写好，讨论场 8/30）**
+——聊天面板 upload/手机版/Clear conversation 重设计/语言跟人走/免 AI
+预备问答层/死按钮完整版（I3 只做了最小修＋回归探针）→ ⑨ 上线后第一批；
+62 号竞赛材料场待命。
+**等 J 反馈的**：模型拍板（bench 真数据在 83 号，建议＝LONG_DOC 不换）；
+真 undang-undang 重传一次（合上 8/29 病历）；tester 清单（73/77 号）；
+道教会样本重走（68 号 §6-5）；MyInvois 模板原档（未决 #12）。
+竞赛 8/31 截止，材料 J 自己定，**不催**。
 RESPONSIVE：J 若再圈破版，贴 46 号单同段 PROMPT 继续。
 
 ---
 
 ## 6. 已知陷阱（踩过的，别再踩）
 
-### 2026-08-29 深夜新增（69 号 eROSES 重构场）
+### 2026-08-30 深夜新增（81 号章程分段读场）
+
+- 🔴 **换「读长文件」的模型，先量它的生成速度（tok/s），再跟时间墙比。**
+  3.6-flash 在 72 号表里「一次过最自然还便宜」，但章程实测 139 tok/s——
+  比 flash-lite（489 tok/s）慢 3.5 倍，整本 92.3s、bench 10 案 2 案直接
+  逾时。「上限要装得下同路径最大件」的时间维度对**模型**也成立：
+  `npx tsx scripts/probe-constitution-speed.ts <provider:model>` 一条命令
+  就能量，换 AI_MODEL_LONG_DOC 前先跑它。
+- ⚠ **对模型输出做字面断言要大小写不敏感**——探针断言合成 PDF 里的
+  「PEMBUBARAN」，模型正常化成「Pembubaran」，断言红了但产品是对的。
+  probe-i1-81 第一轮就踩了；对 AI 吐回的字串一律 `/…/i`。
+- 💡 **app_errors 只存 hash，但含变量的讯息也能暴力还原**：两枚指纹对不上
+  任何固定句，把「timed out after {N}ms」的 N 从 0 扫到 60000 一秒就对上
+  （19753ms/20402ms）——还原出的不是句子，是**当时剩多少预算**这条证据。
+  取证时先想「讯息里哪一段是变量、值域多大」。
 
 - 🔴 **从 "use client" 档 import「非元件」的导出到 server component，拿到
   的是 client reference 不是值**——LANGKAH 常数阵列放在 flow-ui.tsx
