@@ -43,13 +43,17 @@ const CHIPS = [
     en: "Where do I make receipts?",
     href: "/money/receipts?dari=ai",
   },
-  {
-    bm: "Apa itu e-Invois?",
-    zh: "e-Invois 是什么？",
-    en: "What is e-Invois?",
-    href: "/money/einvois?dari=ai",
-  },
 ];
+// D49 (work order 94; probe updated in 97): the e-Invois chip sits BEHIND
+// the beta gate — a non-operator (this probe's ZZZ user) must not see it at
+// all, and its prepared entry is gated with it, so TYPING the question would
+// legitimately reach the model and be charged. The old probe did exactly
+// that and burned three chat_turns. New contract: assert the chip is ABSENT.
+const GATED_EINVOIS_CHIP = {
+  bm: "Apa itu e-Invois?",
+  zh: "e-Invois 是什么？",
+  en: "What is e-Invois?",
+};
 const FREE_NOTE = {
   bm: "kuota AI tidak digunakan",
   zh: "不扣 AI 用量",
@@ -214,6 +218,15 @@ async function run() {
           bubble?.href ?? "none",
         );
       }
+      // D49: the gated e-Invois chip never renders for a non-operator.
+      const gatedSeen = await page.evaluate(
+        (label) =>
+          [...document.querySelectorAll("section button")].some(
+            (b) => (b.textContent ?? "").trim() === label,
+          ),
+        GATED_EINVOIS_CHIP[lang],
+      );
+      check(`home ${lang}: e-Invois chip ABSENT behind the D49 gate`, !gatedSeen);
     }
 
     // ---- PANEL: the 3 chips (zh) + the confirm-first Clear (K2) ----------
@@ -253,6 +266,15 @@ async function run() {
           bubble?.href ?? "none",
         );
       }
+      // D49: the gated e-Invois chip never renders in the panel either.
+      const panelGated = await page.evaluate(
+        (label) =>
+          [...document.querySelectorAll("aside button")].some(
+            (b) => (b.textContent ?? "").trim() === label,
+          ),
+        GATED_EINVOIS_CHIP.zh,
+      );
+      check("panel: e-Invois chip ABSENT behind the D49 gate", !panelGated);
 
       // K2: clearing confirms first, then really clears.
       const clearIcon = await page.$('aside button[aria-label="清除对话"]');
