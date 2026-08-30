@@ -110,13 +110,26 @@ export function createOpenAiProvider(model: string): VisionJsonProvider {
       const content: Array<
         | { type: "input_text"; text: string }
         | { type: "input_image"; image_url: string; detail: string }
+        | { type: "input_file"; filename: string; file_data: string }
       > = [{ type: "input_text", text: prompt }];
       if (imageBase64 && mimeType) {
-        content.push({
-          type: "input_image",
-          image_url: `data:${mimeType};base64,${imageBase64}`,
-          detail,
-        });
+        if (mimeType === "application/pdf") {
+          // A PDF is NOT an image: the Responses API rejects a PDF wrapped in
+          // input_image with a 400 before any model runs (the 2026-08-30 home
+          // door incident — three orgs, fingerprint a53557e2c89a6e2d). PDFs go
+          // in as input_file, which is the documented shape for documents.
+          content.push({
+            type: "input_file",
+            filename: "dokumen.pdf",
+            file_data: `data:application/pdf;base64,${imageBase64}`,
+          });
+        } else {
+          content.push({
+            type: "input_image",
+            image_url: `data:${mimeType};base64,${imageBase64}`,
+            detail,
+          });
+        }
       }
 
       // The timeout, the transient retry and the backoff live in ./http.ts —
