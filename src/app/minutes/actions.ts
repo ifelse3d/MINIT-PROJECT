@@ -31,11 +31,13 @@ import { dayIsoMalaysia, formatMytDateTime } from "@/lib/history";
 import { BRAND_NAME } from "@/lib/brand";
 import {
   isMinutesLang,
+  LABELS,
   minutesAuditLine,
   minutesTitle,
   MINUTES_TITLE_PATTERN,
   type MinutesLang,
 } from "@/lib/minutes-lang";
+import { normalizeFullwidth } from "@/lib/bm-guard";
 import { cleanMinutesTitle } from "@/lib/minutes-title";
 import { ppmLine, PPM_LINE_PATTERN } from "@/lib/minutes-compose";
 import { countUnreviewed } from "@/lib/extraction-rows";
@@ -171,7 +173,7 @@ export async function saveConfirmedMinutes(input: {
   const lang: MinutesLang = isMinutesLang(input.language ?? "")
     ? (input.language as MinutesLang)
     : "bm";
-  const finalMd =
+  const stampedMd =
     aiDraft !== "" && aiDraft.length <= MAX_DRAFT_CHARS
       ? stampIdentity(aiDraft, {
           orgName: identity.orgName,
@@ -199,6 +201,14 @@ export async function saveConfirmedMinutes(input: {
             ppmNo: identity.ppmNo,
           },
         );
+  // 97 §2: what is SAVED as the BM document is normalized too — the person
+  // may have edited with a Chinese IME after the draft was generated. The
+  // fallback branch is BM by definition; the AI-draft branch follows `lang`.
+  // Chinese documents are never normalized. Org name + signer stay verbatim.
+  const savedAsBm = aiDraft === "" || aiDraft.length > MAX_DRAFT_CHARS || lang === "bm";
+  const finalMd = savedAsBm
+    ? normalizeFullwidth(stampedMd, [identity.orgName, identity.confirmedBy])
+    : stampedMd;
 
   if (!finalMd.trim()) {
     return {
@@ -430,10 +440,20 @@ export async function updateSavedMinutes(input: {
     return { error: null, ok: true };
   }
 
+  // 97 §2: an EDIT to a BM document is normalized like the save was — the
+  // fullwidth ＃ a Chinese IME slips in must not survive into the official
+  // document. Which language a saved document is in is read off its own
+  // letterhead (the only place it is recorded); non-BM documents pass
+  // through untouched. Org name + signer stay verbatim.
+  const isBmDoc = new RegExp(`^#\\s*${LABELS.bm.title}`, "m").test(body);
+  const normalizedBody = isBmDoc
+    ? normalizeFullwidth(body, [identity.orgName, identity.confirmedBy])
+    : body;
+
   const nowIso = new Date().toISOString();
   const stamp = formatMytDateTime(nowIso);
   const editLine = `_Dipinda oleh ${identity.confirmedBy} pada ${stamp} / Edited by ${identity.confirmedBy} on ${stamp}_`;
-  const finalMd = `${body}\n${editLine}`;
+  const finalMd = `${normalizedBody}\n${editLine}`;
 
   // Same ladder as the insert: edited_at/edited_by are migration 30 — when
   // the database has not caught up, the update still lands with the

@@ -3,6 +3,7 @@ import { meetingTypeLabel } from "@/lib/meeting-types";
 import { draftedByLine } from "@/lib/brand";
 import { formatRm } from "@/lib/minit-format";
 import { composeStructuredMinutesMd, minutesStructure } from "@/lib/minutes-compose";
+import { normalizeFullwidth } from "@/lib/bm-guard";
 
 // ---------------------------------------------------------------------------
 // DETERMINISTIC BM minutes renderer (template fill, no LLM).
@@ -29,6 +30,19 @@ export type MinutesDraftOptions = {
 };
 
 export function renderMinutesDraftBm(
+  e: MeetingNotesExtraction,
+  opts: MinutesDraftOptions
+): string {
+  // 97 §2: this renderer only ever produces the BM document, so fullwidth
+  // keyboard residue (＃ － 。 fullwidth space) is normalized away here —
+  // deterministic, zero AI. The registered org name and the signer print
+  // verbatim, fullwidth marks included.
+  const preserve = [opts.orgName, opts.confirmedBy?.name ?? ""];
+  const bm = (md: string) => normalizeFullwidth(md, preserve);
+  return bm(renderMinutesDraftBmRaw(e, opts));
+}
+
+function renderMinutesDraftBmRaw(
   e: MeetingNotesExtraction,
   opts: MinutesDraftOptions
 ): string {

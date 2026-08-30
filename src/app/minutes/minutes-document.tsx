@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
 import { NextStepLink, PageSection } from "@/components/page-section";
 import { PhotoLightbox } from "@/components/page-thumbs";
-import { cjkSnippets } from "@/lib/bm-guard";
+import { cjkSegments, cjkSnippets } from "@/lib/bm-guard";
 import { EinvoisBetaBadge } from "@/components/einvois-beta-badge";
 import { useEinvoisVisible } from "@/lib/einvois-pref";
 import {
@@ -518,7 +518,21 @@ export function MinutesDocument() {
                           className="max-w-full truncate text-left text-sm text-red-900/90 underline-offset-4 hover:underline dark:text-red-100/90"
                           title={s}
                         >
-                          · {s}
+                          {/* 97 §2: the characters that TRIGGERED the guard
+                              are painted, so nobody plays spot-the-difference
+                              with a line that looks fully BM. */}
+                          · {cjkSegments(s).map((seg, i) =>
+                            seg.cjk ? (
+                              <mark
+                                key={i}
+                                className="rounded-xs bg-red-200 px-0.5 font-bold text-red-950 dark:bg-red-500/40 dark:text-red-50"
+                              >
+                                {seg.text}
+                              </mark>
+                            ) : (
+                              <span key={i}>{seg.text}</span>
+                            ),
+                          )}
                         </button>
                         <span aria-hidden className="text-red-900/60 dark:text-red-100/60">→</span>
                         <input

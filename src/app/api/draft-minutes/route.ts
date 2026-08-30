@@ -19,6 +19,7 @@ import { dayIsoMalaysia } from "@/lib/history";
 import { glossaryAllowedRuns, glossaryPromptBlockForWriting } from "@/lib/glossary";
 import { loadGlossary } from "@/lib/glossary-server";
 import { isMinutesLang, type MinutesLang } from "@/lib/minutes-lang";
+import { normalizeFullwidth } from "@/lib/bm-guard";
 import { ROUTE_AI_DEADLINE_MS } from "@/lib/ai/http";
 import { vendorFailureResponse } from "@/lib/ai/vendor-failure";
 
@@ -92,6 +93,14 @@ export async function POST(req: Request) {
     }
 
     const todayIso = dayIsoMalaysia(new Date().toISOString())!;
+    // 97 §2: a BM document is normalized on the way out — fullwidth keyboard
+    // residue (＃ － 。) becomes its plain meaning, deterministically, zero
+    // AI. The registered org name and the signer stay verbatim. The Chinese
+    // version is untouched (Chinese text is SUPPOSED to be fullwidth).
+    const finishMd = (md: string) =>
+      lang === "bm"
+        ? normalizeFullwidth(md, [identity.orgName, identity.confirmedBy])
+        : md;
     const composeOpts = {
       orgName: identity.orgName,
       confirmedBy: identity.confirmedBy,
@@ -119,7 +128,7 @@ export async function POST(req: Request) {
     if (structure) {
       const work = buildPhraseWork(extraction, lang);
       if (work.items.length === 0) {
-        const markdown = composeStructuredMinutesMd(extraction, composeOpts);
+        const markdown = finishMd(composeStructuredMinutesMd(extraction, composeOpts));
         return NextResponse.json({ markdown, provider: "structure" });
       }
 
@@ -147,7 +156,9 @@ export async function POST(req: Request) {
           );
         }
         const { texts, titles } = work.split(run.phrased);
-        const markdown = composeStructuredMinutesMd(extraction, composeOpts, texts, titles);
+        const markdown = finishMd(
+          composeStructuredMinutesMd(extraction, composeOpts, texts, titles),
+        );
         return NextResponse.json({
           markdown,
           provider: getVisionProvider("long_doc").name,
@@ -212,7 +223,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const markdown = composeMinutesMd(plan, extraction, composeOpts);
+    const markdown = finishMd(composeMinutesMd(plan, extraction, composeOpts));
 
     return NextResponse.json({ markdown, provider: provider.name });
   } catch (e) {
