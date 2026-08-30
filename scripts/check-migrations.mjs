@@ -166,6 +166,27 @@ for (const [label, table, column] of probes) {
   );
 }
 
+// 2026-08-30 (migration 39, work order 87 ②): role-aware RLS adds no column —
+// but it adds ONE function, so the RPC is the probe (same trick as
+// save_register_rows). auth.uid() is null for the service key, so the call
+// returns 200 [] and writes nothing; 404/PGRST202 = migration 39 not run.
+// NOTE the probe can only prove the FUNCTION exists, not that the policies
+// were replaced (the function has to come first in the file — the policies
+// refer to it). A half-applied paste shows red in the SQL editor; the REAL acceptance
+// is probe-rls-87.mjs, which exercises the policies themselves.
+{
+  const r = await fetch(`${url}/rest/v1/rpc/accessible_orgs_with_roles`, {
+    method: "POST",
+    headers: { ...headers, "Content-Type": "application/json" },
+    body: JSON.stringify({ p_roles: ["hq_admin"] }),
+  });
+  const text = await r.text();
+  const ok = r.status !== 404 && !/PGRST202/.test(text);
+  console.log(
+    `${ok ? "[ APPLIED  ]" : "[ NOT YET  ]"} ${"20260917000000 role-aware RLS (87 ②)".padEnd(46)} rpc/accessible_orgs_with_roles${ok ? "" : "   " + text.slice(0, 120).replace(/\s+/g, " ")}`,
+  );
+}
+
 // 2026-08-20: two of the migrations add NO column that PostgREST can see, so
 // "everything above says APPLIED" does NOT mean every file ran. Saying so out
 // loud, in the same idiom as npm run status, is cheaper than someone
