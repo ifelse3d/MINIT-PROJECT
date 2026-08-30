@@ -204,10 +204,11 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
       "/minutes",
       "/minutes/history",
     ]);
+    // 97 §5: /money/receipts turned railOnly — no menu row, but the group
+    // still lights there (its door is Receipt history's header).
     expect(visibleGroupChildren(money, ALL_ON).map((c) => c.href)).toEqual([
       "/money",
       "/money/expenses",
-      "/money/receipts",
       "/money/report",
       "/money/history",
     ]);

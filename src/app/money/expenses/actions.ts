@@ -16,6 +16,8 @@
 
 import { getSupabaseServer, getSessionUser } from "@/db/supabase-server";
 import { getActiveOrg } from "@/lib/active-org";
+import { recordUpload } from "@/lib/record-upload";
+import { fileFromRelay } from "@/lib/upload-relay-server";
 import {
   canDecideClaim,
   canSubmitClaim,
@@ -44,6 +46,14 @@ export type ExpenseRow = {
   source: string | null;
   /** True when the signed-in member submitted this claim. */
   mine: boolean;
+  /**
+   * 97 §5 (migration 40): the shop receipt attached to THIS row — a storage
+   * path in the uploads bucket, or null. `noReceipt` true = the person
+   * explicitly recorded "there is no receipt" (an honest fact, never a
+   * default). Both null while migration 40 is not applied.
+   */
+  receiptPath: string | null;
+  noReceipt: boolean | null;
 };
 
 export type ExpenseOutcome =
@@ -289,12 +299,28 @@ export async function loadExpenses(): Promise<LoadExpensesResult> {
   if (!active) return { ok: false, reason: "no_org" };
 
   const supabase = await getSupabaseServer();
-  const { data, error } = await supabase
+  // Select ladder (D8: code is always a while ahead of the database): first
+  // ask WITH the migration-40 receipt columns; when the database has not
+  // caught up, ask again without them — the page keeps working, the receipt
+  // controls report "migration 40" when used.
+  const first = await supabase
     .from("expenses")
-    .select(CLAIM_COLUMNS)
+    .select(`${CLAIM_COLUMNS}, receipt_path, no_receipt`)
     .eq("org_id", active.id)
     .order("id", { ascending: false })
     .limit(500);
+  let data: unknown = first.data;
+  let error = first.error;
+  if (error && isMissingColumn(error.message)) {
+    const second = await supabase
+      .from("expenses")
+      .select(CLAIM_COLUMNS)
+      .eq("org_id", active.id)
+      .order("id", { ascending: false })
+      .limit(500);
+    data = second.data;
+    error = second.error;
+  }
   if (error) {
     return {
       ok: false,
@@ -318,6 +344,8 @@ export async function loadExpenses(): Promise<LoadExpensesResult> {
     reject_reason: string | null;
     created_by: string | null;
     source: string | null;
+    receipt_path?: string | null;
+    no_receipt?: boolean | null;
   };
   const rows = ((data ?? []) as Raw[]).map((r) => ({
     id: r.id,
@@ -337,6 +365,129 @@ export async function loadExpenses(): Promise<LoadExpensesResult> {
     createdBy: r.created_by,
     source: r.source,
     mine: r.claimant_user_id === user.id,
+    receiptPath: r.receipt_path ?? null,
+    noReceipt: r.no_receipt ?? null,
   }));
   return { ok: true, rows, role: active.role };
+}
+
+// ---------------------------------------------------------------------------
+// 97 §5 — "this row's receipt", the last step of recording an expense
+// (J 8/30 #9: 收/支流程最後一步都要見到收據 — the spending half).
+//
+// Attach a photo/PDF of the shop receipt, or record honestly that there is
+// none. Neither blocks saving; neither is forced. Who may answer: whoever
+// put the row in (created_by / the claimant) and the money deciders. The
+// file itself goes through recordUpload (kind "expense") — same private
+// bucket, an Inbox row rides along — and only the PATH lands on the
+// expense row. Zero AI, zero charge, the fence untouched.
+// ---------------------------------------------------------------------------
+
+export type ReceiptAttachOutcome =
+  | { ok: true; receiptPath: string | null }
+  | {
+      ok: false;
+      reason:
+        | "no_session"
+        | "no_org"
+        | "permission"
+        | "invalid"
+        | "db_behind"
+        | "upload_failed"
+        | "db";
+    };
+
+async function expenseRowForReceipt(
+  expenseId: number,
+): Promise<
+  | { ok: true; orgId: number }
+  | { ok: false; reason: "no_session" | "no_org" | "permission" | "invalid" | "db" }
+> {
+  const user = await getSessionUser();
+  if (!user) return { ok: false, reason: "no_session" };
+  const active = await getActiveOrg();
+  if (!active) return { ok: false, reason: "no_org" };
+  if (!Number.isInteger(expenseId) || expenseId <= 0)
+    return { ok: false, reason: "invalid" };
+
+  const supabase = await getSupabaseServer();
+  const { data: row, error } = await supabase
+    .from("expenses")
+    .select("id, created_by, claimant_user_id")
+    .eq("org_id", active.id)
+    .eq("id", expenseId)
+    .maybeSingle();
+  if (error || !row) return { ok: false, reason: "db" };
+
+  const isOwner =
+    (row.created_by !== null && row.created_by === (user.email ?? "")) ||
+    row.claimant_user_id === user.id;
+  if (!isOwner && !canDecideClaim(active.role))
+    return { ok: false, reason: "permission" };
+  return { ok: true, orgId: active.id };
+}
+
+/** Attach the shop receipt photo/PDF to one expense row. FormData carries
+ *  `expenseId` and either `file` (already shrunk in the browser) or
+ *  `storagePath` (the Storage relay road for a big PDF). */
+export async function attachExpenseReceipt(
+  form: FormData,
+): Promise<ReceiptAttachOutcome> {
+  const expenseId = Number(form.get("expenseId"));
+  const gate = await expenseRowForReceipt(expenseId);
+  if (!gate.ok) return gate;
+
+  let file: File | null = null;
+  const posted = form.get("file");
+  if (posted instanceof File && posted.size > 0) {
+    file = posted;
+  } else {
+    const relayed = await fileFromRelay(form.get("storagePath"));
+    if (relayed && relayed.ok) file = relayed.file;
+  }
+  if (!file) return { ok: false, reason: "invalid" };
+
+  // Same private bucket, an Inbox row rides along (kind "expense") — so even
+  // a database that is behind keeps the photo findable.
+  const path = await recordUpload(file, "expense");
+  if (!path) return { ok: false, reason: "upload_failed" };
+
+  const supabase = await getSupabaseServer();
+  const { error } = await supabase
+    .from("expenses")
+    .update({ receipt_path: path, no_receipt: null })
+    .eq("org_id", gate.orgId)
+    .eq("id", expenseId);
+  if (error) {
+    // The photo IS stored (Inbox) — only the link is missing. Fail open,
+    // say which migration (the UI adds the honest sentence).
+    return {
+      ok: false,
+      reason: isMissingColumn(error.message) ? "db_behind" : "db",
+    };
+  }
+  return { ok: true, receiptPath: path };
+}
+
+/** Record, honestly, that this expense has no receipt. A recorded choice —
+ *  never a default, never forced (J: 不擋保存、不強迫). */
+export async function declareNoReceipt(input: {
+  expenseId: number;
+}): Promise<ReceiptAttachOutcome> {
+  const gate = await expenseRowForReceipt(Number(input.expenseId));
+  if (!gate.ok) return gate;
+
+  const supabase = await getSupabaseServer();
+  const { error } = await supabase
+    .from("expenses")
+    .update({ no_receipt: true })
+    .eq("org_id", gate.orgId)
+    .eq("id", Number(input.expenseId));
+  if (error) {
+    return {
+      ok: false,
+      reason: isMissingColumn(error.message) ? "db_behind" : "db",
+    };
+  }
+  return { ok: true, receiptPath: null };
 }

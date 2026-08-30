@@ -87,6 +87,8 @@ const probes = [
   ["20260915000000 roster email (69 H1)", "committee_roster", "email"],
   ["20260915000000 roster state/Negeri (69 H1)", "committee_roster", "state"],
   ["20260916000000 orgs.created_by (69 H3)", "orgs", "created_by"],
+  ["20260918000000 expense receipt path (97 §5)", "expenses", "receipt_path"],
+  ["20260918000000 expense no-receipt flag (97 §5)", "expenses", "no_receipt"],
 ];
 
 const headers = { apikey: key, Authorization: `Bearer ${key}` };

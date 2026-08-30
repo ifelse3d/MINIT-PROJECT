@@ -107,6 +107,8 @@ echo    38.  20260916000000  orgs.created_by / siapa buka pertubuhan (69 H3)
 echo         peraturan baru: akaun percuma buka SATU pertubuhan induk sahaja
 echo    39.  20260917000000  RLS ikut peranan / role-aware RLS (87 nombor 2)
 echo         PENTING: baca kepala fail dulu - lepas Run, jalankan probe-rls-87
+echo    40.  20260918000000  resit kedai pada perbelanjaan (97 nombor 5)
+echo         gambar resit / "tiada resit" pada setiap baris perbelanjaan
 echo.
 echo     0.  Keluar / Quit
 echo.
@@ -152,6 +154,7 @@ if "%pick%"=="36" set f=20260914000000_suggestion_marks.sql& goto copy
 if "%pick%"=="37" set f=20260915000000_roster_email_state.sql& goto copy
 if "%pick%"=="38" set f=20260916000000_orgs_created_by.sql& goto copy
 if "%pick%"=="39" set f=20260917000000_role_rls.sql& goto copy
+if "%pick%"=="40" set f=20260918000000_expense_receipt.sql& goto copy
 
 echo.
 echo    Nombor tak sah / not a valid number.

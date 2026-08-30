@@ -110,7 +110,11 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/money/issue", icon: Receipt, bm: "Resit pusingan ini", zh: "开收据（这一轮）", en: "This round's receipts", railOnly: true },
   // Stage E: spending + the claim flow — the row J's 錢-group list reserved.
   { href: "/money/expenses", icon: CreditCard, bm: "Rekod perbelanjaan & tuntutan", zh: "记开支与报销", en: "Spending & claims" },
-  { href: "/money/receipts", icon: Receipt, bm: "Urus resit", zh: "开收据 · 管理", en: "Manage receipts" },
+  // 97 §5 (J 8/30 拍板): "Manage receipts" left the sidebar — railOnly, so
+  // the menus render no row but the money group still lights when you are
+  // there. Its doors: one tap from Receipt history's header, and the round's
+  // own issue page links it. Route, register, fences, counters untouched.
+  { href: "/money/receipts", icon: Receipt, bm: "Urus resit", zh: "开收据 · 管理", en: "Manage receipts", railOnly: true },
   // 97 §4 (J 8/30 拍板): three rows LEFT the sidebar — every route stays.
   //   * /money/custody (Hand over cash): row hidden; the custody engine,
   //     tests and page are untouched. Direction in DECISIONS D50: custody

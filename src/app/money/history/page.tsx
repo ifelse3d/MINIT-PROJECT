@@ -190,6 +190,24 @@ export default async function MoneyHistoryPage({
             <Tri bm="Buku perbelanjaan" zh="开支簿" en="Expense book" /> →
           </Link>
         </p>
+        {/* 97 §5: "Manage receipts" left the sidebar — THIS page is its door
+            now. The full register (issue receipts for older rows, the whole
+            book at once) is one tap away; nothing was removed, only the
+            doorway moved (J: 功能一項不准刪，只搬門). */}
+        <p className="mt-2">
+          <Link
+            href="/money/receipts"
+            className="inline-flex min-h-10 items-center gap-1.5 rounded-sm border-2 border-[color:var(--v2-outline-border)] px-3 text-base font-medium hover:bg-accent"
+          >
+            🧾{" "}
+            <Tri
+              bm="Daftar penuh & jana resit lama"
+              zh="整本登记簿 · 补开收据"
+              en="Full register & issue older receipts"
+            />{" "}
+            →
+          </Link>
+        </p>
       </div>
 
       {/* §1-8: rows registered but not yet receipted are not in this list —

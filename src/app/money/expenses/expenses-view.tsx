@@ -40,6 +40,7 @@ import {
   type ExpenseOutcome,
   type ExpenseRow,
 } from "./actions";
+import { ExpenseReceiptControls } from "./receipt-attach";
 import {
   AttachIcon,
   ChooseFileLabel,
@@ -152,6 +153,8 @@ export function ExpensesView({ role }: { role: string }) {
   const [formNotice, setFormNotice] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [clientId, setClientId] = useState(newClientId);
+  // 97 §5: after a save, offer "this row's receipt" as the flow's last step.
+  const [receiptAsk, setReceiptAsk] = useState(false);
 
   // --- the photo reader (pre-fills the form; the human confirms by saving) --
   const [reading, setReading] = useState(false);
@@ -222,6 +225,9 @@ export function ExpensesView({ role }: { role: string }) {
       setDate(today);
       setSource("manual");
       setClientId(newClientId());
+      // 97 §5 (J #9): the LAST step of recording spending is this row's
+      // receipt — the prompt card renders once the refreshed list arrives.
+      setReceiptAsk(true);
       void refresh();
       return;
     }
@@ -358,6 +364,15 @@ export function ExpensesView({ role }: { role: string }) {
   const pending = (rows ?? []).filter((r) => r.status === "submitted");
   const approvedUnpaid = (rows ?? []).filter((r) => r.status === "approved");
   const mine = (rows ?? []).filter((r) => r.mine);
+
+  // 97 §5 (J #9): the flow's LAST step — the row just saved (newest, id
+  // desc) asks for its receipt. Never blocks anything: "later" dismisses,
+  // and the same controls stay on the row in the book below.
+  const newest = rows !== null && rows.length > 0 ? rows[0] : null;
+  const askRow =
+    receiptAsk && newest !== null && newest.receiptPath === null && newest.noReceipt !== true
+      ? newest
+      : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -649,6 +664,45 @@ export function ExpensesView({ role }: { role: string }) {
         </PageSection>
       )}
 
+      {/* --- 97 §5: the flow's last step — this row's receipt -------------- */}
+      {askRow && (
+        <div
+          className="flex flex-col gap-3 rounded-md border-2 border-[color:var(--v2-primary)] bg-[color:var(--v2-primary-soft)] p-4"
+          data-probe="expense-receipt-ask"
+        >
+          <p className="text-base font-semibold">
+            🧾{" "}
+            <Tri
+              bm="Langkah terakhir: resit untuk baris ini"
+              zh="最后一步：这一笔的单据"
+              en="Last step: this row's receipt"
+            />
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {askRow.description} · {formatRm(askRow.amountCents)}
+          </p>
+          <p className="text-sm">
+            <Tri
+              bm="Lampirkan gambar resit kedai — atau, kalau memang tiada, rekodkan itu dengan jujur. Kedua-duanya percuma; tiada yang wajib."
+              zh="挂上店家单据的照片 —— 真的没有的话，就如实记下「没有单据」。都免费；都不强迫。"
+              en="Attach a photo of the shop receipt — or, if there truly is none, record that honestly. Both free; neither forced."
+            />
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <ExpenseReceiptControls
+              row={askRow}
+              onChanged={() => {
+                setReceiptAsk(false);
+                void refresh();
+              }}
+            />
+            <Button size="sm" variant="ghost" onClick={() => setReceiptAsk(false)}>
+              <Tri bm="Kemudian" zh="稍后再说" en="Later" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* --- the treasurer's pending list --------------------------------- */}
       {decider && (pending.length > 0 || approvedUnpaid.length > 0) && (
         <PageSection
@@ -861,6 +915,22 @@ export function ExpensesView({ role }: { role: string }) {
                     {r.category ?? "—"} · {r.spentAtIso ?? "—"}
                     {r.claimantName ? ` · ${r.claimantName}` : ""}
                   </p>
+                  {/* 97 §5: every row carries its receipt state — attached
+                      (open), honestly none, or the two zero-AI buttons for
+                      whoever may answer (the row's owner or a decider). */}
+                  <div className="mt-1.5">
+                    {decider || r.mine ? (
+                      <ExpenseReceiptControls row={r} onChanged={refresh} />
+                    ) : r.receiptPath ? (
+                      <span className="text-sm text-green-800 dark:text-green-300">
+                        🧾 <Tri bm="Resit dilampirkan" zh="单据已挂上" en="Receipt attached" />
+                      </span>
+                    ) : r.noReceipt === true ? (
+                      <span className="text-sm text-muted-foreground">
+                        <Tri bm="Tiada resit (direkodkan)" zh="没有单据（已如实记录）" en="No receipt (recorded honestly)" />
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <Badge variant="outline" className={STATUS_BADGE[r.status].cls}>
