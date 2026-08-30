@@ -41,11 +41,8 @@ import {
   type ConstitutionReadResume,
 } from "@/lib/constitution-read-client";
 import { ConstitutionReadEstimate } from "@/components/constitution-read-estimate";
-import {
-  annotateClauseHierarchy,
-  shortPageRef,
-  splitClauseText,
-} from "@/lib/constitution-display";
+import { cleanClauseField } from "@/lib/constitution-display";
+import { ClauseList } from "./clause-list";
 import { canStageTogether, isPhotoType } from "@/lib/multi-page-staging";
 import { compressPhoto } from "@/app/minutes/minutes-storage";
 import { X } from "lucide-react";
@@ -122,9 +119,17 @@ function clausesFromExtraction(e: ConstitutionExtraction): ConfirmedClause[] {
     )
     .map((c) => ({
       clause_no: c.clause_no.value,
-      heading: c.heading.confidence === "missing" ? "" : c.heading.value,
+      // 97 §3(a): the model was taught (until tonight) to write the literal
+      // word "missing" as a heading value, and confidence stayed "confirmed"
+      // so the confidence check alone let it through. cleanClauseField
+      // catches the word itself, whatever the label says.
+      heading: cleanClauseField(
+        c.heading.confidence === "missing" ? "" : c.heading.value,
+      ),
       text: c.text.value,
-      page_ref: c.page_ref.confidence === "missing" ? "" : c.page_ref.value,
+      page_ref: cleanClauseField(
+        c.page_ref.confidence === "missing" ? "" : c.page_ref.value,
+      ),
     }));
 }
 
@@ -1010,48 +1015,11 @@ export function ConstitutionReview({
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
-          {/* ① (work order 89): display-only combing. Sub-clauses with their
-              own card (8.1, 13.2…) indent under their parent; an untitled
-              clause shows NO "—" placeholder (the missing heading is the
-              book's own fact); the page line shortens to "m/s X" with the
-              verbatim ref in the tooltip. clauses_json is untouched. */}
-          {annotateClauseHierarchy(sortClauses(clauses)).map(({ clause: c, child }) => (
-            <details
-              key={c.clause_no}
-              className={`group rounded-sm border ${
-                child ? "ml-5 border-l-4 border-l-purple-300 @xl:ml-8" : ""
-              }`}
-            >
-              <summary className="flex cursor-pointer list-none items-center gap-3 rounded-sm p-4 hover:bg-accent">
-                <Badge variant="outline" className="shrink-0 border-purple-300 bg-purple-50 text-purple-900">
-                  {c.clause_no}
-                </Badge>
-                <span className="flex-1 font-medium">{c.heading}</span>
-                <span className="text-sm text-muted-foreground" title={c.page_ref}>
-                  {shortPageRef(c.page_ref)}
-                </span>
-                <span className="text-muted-foreground transition-transform group-open:rotate-90">
-                  ›
-                </span>
-              </summary>
-              {/* Was text-muted-foreground: the entire body of the constitution
-                  rendered at ~4:1 contrast. (2026-07-28 audit.)
-                  ① inline "N.M" sentences break into indented paragraphs —
-                  the text itself stays verbatim (Hard Rule 1). */}
-              <div className="border-t p-4">
-                {splitClauseText(c.clause_no, c.text).map((part, i) => (
-                  <p
-                    key={i}
-                    className={`text-base leading-relaxed ${i > 0 ? "mt-2" : ""} ${
-                      part.label !== null ? "pl-4" : ""
-                    }`}
-                  >
-                    {part.text}
-                  </p>
-                ))}
-              </div>
-            </details>
-          ))}
+          {/* 97 §3(d): ONE shared clause list (search + hierarchy + orphan
+              sinking + the "missing"-word scrub) — the same component
+              /constitution/clauses renders, in its collapsible skin.
+              clauses_json is untouched. */}
+          <ClauseList book={sortClauses(clauses)} variant="collapsible" />
         </CardContent>
       </Card>
       )}

@@ -2,7 +2,6 @@ import {
   Activity,
   Banknote,
   BarChart3,
-  BookOpen,
   Building2,
   CalendarClock,
   CircleDollarSign,
@@ -134,9 +133,11 @@ export const NAV_ITEMS: NavItem[] = [
   // filing tool, so it does not live in the 申报 group.
   { href: "/calendar", icon: CalendarClock, bm: "Kalendar & peringatan", zh: "日历与提醒", en: "Calendar & reminders" },
   { href: "/filings", icon: FileCheck, bm: "Pemfailan eROSES", zh: "eROSES 申报", en: "eROSES filings" },
-  // The organisation's own facts.
-  { href: "/constitution", icon: ScrollText, bm: "Perlembagaan", zh: "章程", en: "Constitution", exact: true },
-  { href: "/constitution/clauses", icon: BookOpen, bm: "Fasal penuh", zh: "条文全文", en: "All clauses" },
+  // The organisation's own facts. 97 §3(d): the "All clauses" sidebar row is
+  // gone — /constitution's own "whole book" block carries the same search
+  // and list now. The /constitution/clauses ROUTE stays (AI answers cite
+  // clauses by linking there); dropping `exact` lets it light this row.
+  { href: "/constitution", icon: ScrollText, bm: "Perlembagaan", zh: "章程", en: "Constitution" },
   { href: "/members", icon: Users, bm: "Ahli", zh: "成员", en: "Members" },
   { href: "/inbox", icon: Upload, bm: "Gambar asal", zh: "原始照片", en: "Original photos" },
   { href: "/history", icon: History, bm: "Sejarah", zh: "历史", en: "History" },
@@ -243,7 +244,6 @@ export const PRIMARY_NAV: NavEntry[] = [
       byHref("/filings"),
       byHref("/agm-pack"),
       byHref("/constitution"),
-      byHref("/constitution/clauses"),
       byHref("/members"),
       byHref("/inbox"),
       byHref("/history"),
@@ -339,7 +339,6 @@ export const SIDEBAR_NAV: NavEntry[] = [
     children: [
       byHref("/members"),
       byHref("/constitution"),
-      byHref("/constitution/clauses"),
       byHref("/orgs"),
     ],
   },

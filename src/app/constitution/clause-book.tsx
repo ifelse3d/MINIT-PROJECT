@@ -1,25 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Tri, useTriText } from "@/components/language-provider";
+import { Tri } from "@/components/language-provider";
 import {
   isConfirmedClauseArray,
   mergeClauses,
-  searchClauses,
   sortClauses,
   QA_DISCLAIMER_BM,
   QA_DISCLAIMER_EN,
   QA_DISCLAIMER_ZH,
   type ConfirmedClause,
 } from "@/lib/constitution";
-import {
-  annotateClauseHierarchy,
-  shortPageRef,
-  splitClauseText,
-} from "@/lib/constitution-display";
+import { ClauseList } from "./clause-list";
 import { usePersistentState } from "@/lib/use-persistent-state";
 import { useScopedKey } from "@/lib/storage-scope";
 
@@ -68,9 +62,6 @@ export function ClauseBook({
   orgClauses: ConfirmedClause[];
   orgName: string | null;
 }) {
-  const t = useTriText();
-  const [query, setQuery] = useState("");
-
   // Read-only here: this page never writes the constitution. It reads the
   // device's copy because a page photographed a minute ago is on THIS device
   // before it is anywhere else, and a reader who has just finished
@@ -89,13 +80,6 @@ export function ClauseBook({
   const book = useMemo(
     () => sortClauses(mergeClauses(orgClauses, stored?.clauses ?? [])),
     [orgClauses, stored],
-  );
-  const shown = useMemo(
-    // ① (work order 89): display-only combing — sub-clauses that have their
-    // own card (8.1, 13.2…) indent under their parent when the parent is in
-    // the shown list. The data itself is untouched (Hard Rule 1).
-    () => annotateClauseHierarchy(searchClauses(book, query)),
-    [book, query],
   );
   const title = stored?.title ?? "";
 
@@ -127,41 +111,6 @@ export function ClauseBook({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-3 rounded-md border-2 border-[color:var(--v2-border)] bg-white/60 p-4 dark:bg-white/5">
-        <label className="flex min-w-56 flex-1 items-center gap-2">
-          <Search aria-hidden className="size-5 shrink-0 text-muted-foreground" strokeWidth={2} />
-          <span className="sr-only">
-            <Tri bm="Cari dalam perlembagaan" zh="在章程里搜索" en="Search the constitution" />
-          </span>
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t(
-              "Cari fasal, tajuk atau perkataan — cth. 12.3, kuorum, notis",
-              "找条号、标题或字词 —— 例如 12.3、法定人数、通知",
-              "Find a clause, heading or word — e.g. 12.3, quorum, notice",
-            )}
-            className="min-h-11 w-full rounded-md border border-input bg-background px-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          />
-        </label>
-        <p className="text-base text-muted-foreground">
-          {query.trim() === "" ? (
-            <Tri
-              bm={`${book.length} fasal`}
-              zh={`共 ${book.length} 条`}
-              en={`${book.length} clauses`}
-            />
-          ) : (
-            <Tri
-              bm={`${shown.length} daripada ${book.length} fasal`}
-              zh={`${book.length} 条里符合 ${shown.length} 条`}
-              en={`${shown.length} of ${book.length} clauses`}
-            />
-          )}
-        </p>
-      </div>
-
       <p className="text-sm text-muted-foreground">
         {orgName ?? ""}
         {title ? ` · ${title}` : ""}
@@ -169,60 +118,10 @@ export function ClauseBook({
         <Tri bm={QA_DISCLAIMER_BM} zh={QA_DISCLAIMER_ZH} en={QA_DISCLAIMER_EN} />
       </p>
 
-      {shown.length === 0 ? (
-        <p className="rounded-md border-2 border-dashed p-4 text-base text-muted-foreground">
-          {/* Says which of the two things happened. "Not in your constitution"
-              and "we have not read that page yet" are very different news to
-              somebody deciding whether they may hold a meeting. */}
-          <Tri
-            bm={`Tiada fasal mengandungi “${query.trim()}”. Ia mungkin memang tiada dalam perlembagaan anda — atau muka surat itu belum difoto lagi.`}
-            zh={`没有条文包含「${query.trim()}」。可能您的章程里本来就没有这一条 —— 也可能那一页还没有拍进来。`}
-            en={`No clause contains “${query.trim()}”. It may genuinely not be in your constitution — or that page may not have been photographed yet.`}
-          />
-        </p>
-      ) : (
-        <ol className="flex flex-col gap-3">
-          {shown.map(({ clause: c, child }) => (
-            <li
-              key={c.clause_no}
-              // Anchored so an answer elsewhere can link straight to the clause
-              // it cited, which is the whole point of citing it.
-              id={`clause-${encodeURIComponent(c.clause_no)}`}
-              // ① child = a sub-clause whose parent card is right above it —
-              // indented with a spine so 8.1 reads as part of Fasal 8.
-              className={`scroll-mt-24 rounded-md border-2 border-[color:var(--v2-border)] bg-white/60 p-4 target:border-amber-400 dark:bg-white/5 ${
-                child ? "ml-5 border-l-4 border-l-[#a855f7]/35 @xl:ml-8" : ""
-              }`}
-            >
-              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <span className="font-mono text-base font-bold">{c.clause_no}</span>
-                {/* ① an untitled clause (13.2 in org 197's book) shows no
-                    placeholder — the missing heading is the book's own fact. */}
-                {c.heading && <span className="text-lg font-semibold">{c.heading}</span>}
-                {c.page_ref && (
-                  <span className="text-sm text-muted-foreground" title={c.page_ref}>
-                    {shortPageRef(c.page_ref)}
-                  </span>
-                )}
-              </div>
-              {/* whitespace-pre-line: the clause is stored exactly as printed,
-                  and a constitution's line breaks are part of how it reads.
-                  ① inline "N.M" sentences (printed that way in the original)
-                  break into their own indented paragraphs — text verbatim. */}
-              {splitClauseText(c.clause_no, c.text).map((part, i) => (
-                <p
-                  key={i}
-                  className={`mt-2 whitespace-pre-line text-base ${
-                    part.label !== null ? "pl-4" : ""
-                  }`}
-                >
-                  {part.text}
-                </p>
-              ))}
-            </li>
-          ))}
-        </ol>
-      )}
+      {/* 97 §3(d): search + list + hierarchy + orphan sinking live in ONE
+          shared component now — /constitution's "whole book" block renders
+          the same code with the collapsible skin. */}
+      <ClauseList book={book} variant="cards" />
     </div>
   );
 }

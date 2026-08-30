@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   annotateClauseHierarchy,
   clauseParentNo,
+  cleanClauseField,
   shortPageRef,
+  sinkOrphanClauses,
   splitClauseText,
 } from "@/lib/constitution-display";
 import type { ConfirmedClause } from "@/lib/constitution";
@@ -127,6 +129,60 @@ describe("splitClauseText (the inline 1.2 sentences)", () => {
   it("a clause number it cannot read means no splitting at all", () => {
     const parts = splitClauseText("Fasal 3(a)", "3.1 Ini ayat. 3.2 Ini lagi.");
     expect(parts).toHaveLength(1);
+  });
+});
+
+describe("cleanClauseField (the literal word 'missing' as a value)", () => {
+  it("turns the English word 'missing' into an empty string", () => {
+    expect(cleanClauseField("missing")).toBe("");
+    expect(cleanClauseField("  Missing ")).toBe("");
+    expect(cleanClauseField("MISSING")).toBe("");
+  });
+  it("leaves real headings alone — even ones containing the word", () => {
+    expect(cleanClauseField("NAMA")).toBe("NAMA");
+    expect(cleanClauseField("Missing Members Procedure")).toBe(
+      "Missing Members Procedure",
+    );
+    expect(cleanClauseField("")).toBe("");
+  });
+});
+
+describe("sinkOrphanClauses (org 197's real-book shape)", () => {
+  // The real 2026-08-30 case: a Fasal-style book where a page photographed
+  // from the middle of a Fasal produced bare "(3)"…"(10)" clauses that
+  // sortClauses tops the book with.
+  const FASAL_BOOK: ConfirmedClause[] = [
+    clause("(3)", "", "Sub-perkara yang fasalnya tidak difoto."),
+    clause("(4)", "", "Lagi satu sub-perkara."),
+    clause("Fasal 1", "NAMA", "Pertubuhan ini dikenali sebagai Persatuan Contoh."),
+    clause("Fasal 2", "TEMPAT", "Alamat berdaftar ialah…"),
+  ];
+
+  it("sinks bare-(N) orphans below the Fasal clauses", () => {
+    const { main, orphans } = sinkOrphanClauses(FASAL_BOOK);
+    expect(main.map((c) => c.clause_no)).toEqual(["Fasal 1", "Fasal 2"]);
+    expect(orphans.map((c) => c.clause_no)).toEqual(["(3)", "(4)"]);
+  });
+
+  it("keeps a dotted sub-clause whose Fasal parent IS in the book", () => {
+    const { main, orphans } = sinkOrphanClauses([
+      clause("Fasal 8", "MESYUARAT", "…"),
+      clause("8.1", "Kuorum", "…"),
+    ]);
+    expect(orphans).toEqual([]);
+    expect(main.map((c) => c.clause_no)).toEqual(["Fasal 8", "8.1"]);
+  });
+
+  it("does NOT touch a book numbered entirely without Fasal (org 197 fixture)", () => {
+    const { main, orphans } = sinkOrphanClauses(ORG197_SHAPE);
+    expect(orphans).toEqual([]);
+    expect(main).toEqual(ORG197_SHAPE);
+  });
+
+  it("never touches the clause objects themselves", () => {
+    const { main, orphans } = sinkOrphanClauses(FASAL_BOOK);
+    expect([...main, ...orphans].length).toBe(FASAL_BOOK.length);
+    for (const c of FASAL_BOOK) expect([...main, ...orphans]).toContain(c);
   });
 });
 

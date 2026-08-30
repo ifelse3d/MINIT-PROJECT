@@ -82,11 +82,12 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
       "/filings",
       "/agm-pack",
     ]);
-    // 组织: 成员 · 章程 · 条文全文 · 组织与分会 (词库 → /settings/glossary, §3.2).
+    // 组织: 成员 · 章程 · 组织与分会 (词库 → /settings/glossary, §3.2;
+    // 条文全文 merged into /constitution's own book block, 97 §3(d) — the
+    // /constitution/clauses ROUTE stays as the citation anchor).
     expect(byId("organisation").children.map((c) => c.href)).toEqual([
       "/members",
       "/constitution",
-      "/constitution/clauses",
       "/orgs",
     ]);
     // 记录: 历史 · 原始照片.
@@ -183,7 +184,6 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
       "/calendar",
       "/filings",
       "/constitution",
-      "/constitution/clauses",
       "/members",
       "/settings/glossary",
       "/inbox",

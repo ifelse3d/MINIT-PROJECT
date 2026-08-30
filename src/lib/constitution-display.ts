@@ -18,6 +18,58 @@
 import type { ConfirmedClause } from "@/lib/constitution";
 
 /**
+ * (a) work order 97 §3: the model was TAUGHT (extract-constitution.ts, until
+ * tonight) to write the English word "missing" as a heading value, and some
+ * stored books carry it (org 197's real book). The stored bytes stay exactly
+ * as they are (Hard Rule 1) — but no screen prints the word "missing" as if
+ * the constitution said it. Trimmed, case-insensitive; applied at the
+ * flatten layer AND at the display layer, so old stored books heal too.
+ */
+export function cleanClauseField(value: string): string {
+  const v = value.trim();
+  return v.toLowerCase() === "missing" ? "" : value;
+}
+
+/**
+ * (c) work order 97 §3: a page photographed from the MIDDLE of a Fasal gives
+ * clauses numbered only "(3)"…"(10)" — sub-clauses whose Fasal heading was
+ * never in frame. sortClauses puts numbers before words, so those orphans
+ * used to sit ABOVE Fasal 1 at the very top of the book.
+ *
+ * Display-only: when the book is Fasal-style (any clause_no says "Fasal"),
+ * bare-number / "(N)"-style clauses with no parent in the book sink to the
+ * END, where the screens hang an honest note under them ("these belong to
+ * some Fasal — re-photograph the page with the heading and they slot in").
+ * A book numbered entirely without "Fasal" (org 197's fixture shape: 1, 8,
+ * 8.1…) is left exactly as sorted — bare numbers ARE its style.
+ */
+export function sinkOrphanClauses(clauses: readonly ConfirmedClause[]): {
+  main: ConfirmedClause[];
+  orphans: ConfirmedClause[];
+} {
+  const hasFasal = clauses.some((c) => /^\s*fasal\b/i.test(c.clause_no));
+  if (!hasFasal) return { main: [...clauses], orphans: [] };
+
+  const numbers = new Set(clauses.map((c) => c.clause_no.trim().toLowerCase()));
+  const hasParent = (no: string): boolean => {
+    const parent = clauseParentNo(no.replace(/[()]/g, ""));
+    if (parent === null) return false;
+    return numbers.has(parent) || numbers.has(`fasal ${parent}`);
+  };
+  const isOrphan = (c: ConfirmedClause): boolean => {
+    const no = c.clause_no.trim();
+    // Bare "(3)" / "3" / "3.1" shapes only — anything wordier keeps its place.
+    if (!/^\(?\d+(\.\d+)?\)?$/.test(no)) return false;
+    return !hasParent(no);
+  };
+
+  const main: ConfirmedClause[] = [];
+  const orphans: ConfirmedClause[] = [];
+  for (const c of clauses) (isOrphan(c) ? orphans : main).push(c);
+  return { main, orphans };
+}
+
+/**
  * "8.1" → "8", "12.10" → "12". Only plain dotted numbers have a parent —
  * "Fasal 3(a)" or a top-level "12" answer null, and so does anything this
  * cannot read with certainty (a wrong indent is worse than none).
