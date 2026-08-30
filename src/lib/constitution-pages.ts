@@ -36,6 +36,49 @@ export const CONSTITUTION_SEGMENT_PAGES = 4;
 /** A6: the most fence pages one constitution may ever cost a free org. */
 export const CONSTITUTION_FENCE_PAGE_CAP = 5;
 
+// ---------------------------------------------------------------------------
+// D47 — WHAT A CONSTITUTION READ COSTS IN AI ACTIONS (J, ruled 2026-08-30
+// night, work order 89 ⑧; REPLACES work order 81's "one action for the whole
+// document, however many segments"). J's words: 「不然他丟50張我們就半死，
+// 我們也不是做慈善」— a flat 1 action made a 50-page book cost the same as a
+// 4-page one while we paid the vendor per page.
+//
+//   actions(N) = ceil(min(N, 20) / 5) + max(0, N − 20)
+//
+// First 20 pages: every 5 pages (or part thereof) is 1 action. From page 21:
+// every page is 1 action. Pinned: 4→1 · 5→1 · 8→2 · 20→4 · 21→5 · 50→34.
+//
+// The charge FOLLOWS the read: each segment pays only the delta its own
+// pages add (constitutionActionsDelta), so a failed run has paid only for
+// what was delivered, and a resume on the continuation token never pays for
+// pages already read. This is the MEMBER's price only — the A6 fence
+// (lifetime free pages, min(N,5) above) is a different meter and is NOT
+// touched by D47.
+// ---------------------------------------------------------------------------
+
+/** D47: total AI actions a document of `pageCount` pages costs to read. */
+export function constitutionReadActions(pageCount: number): number {
+  const pages = Math.max(Math.floor(pageCount), 0);
+  if (pages === 0) return 0;
+  return Math.ceil(Math.min(pages, 20) / 5) + Math.max(0, pages - 20);
+}
+
+/**
+ * D47: what a segment covering pages `doneBefore+1 … doneAfter` adds to the
+ * bill. Summing the deltas over any split of N pages reproduces
+ * constitutionReadActions(N) exactly — a segment can cost 0 (pages 17–20 of
+ * a 21-page book fall inside an already-paid block of five).
+ */
+export function constitutionActionsDelta(
+  doneBefore: number,
+  doneAfter: number,
+): number {
+  return Math.max(
+    0,
+    constitutionReadActions(doneAfter) - constitutionReadActions(doneBefore),
+  );
+}
+
 /** A6: what a constitution of `pageCount` pages costs the free fence. */
 export function constitutionFencePages(pageCount: number): number {
   const pages = Math.max(Math.floor(pageCount), 0);
@@ -52,6 +95,8 @@ export const CONSTITUTION_SECONDS_PER_PAGE = 3.1;
 
 export type ConstitutionReadEstimate = {
   pages: number;
+  /** D47: the AI actions the whole read will deduct. */
+  actions: number;
   /** What the free fence will deduct: min(pages, cap). */
   fencePages: number;
   /** How many requests the read is cut into (a photo set overrides this). */
@@ -67,6 +112,7 @@ export function estimateConstitutionRead(
   const pages = Math.max(1, Math.floor(pageCount));
   return {
     pages,
+    actions: constitutionReadActions(pages),
     fencePages: constitutionFencePages(pages),
     segments: Math.max(1, planConstitutionSegments(pages).length),
     seconds: Math.ceil(pages * CONSTITUTION_SECONDS_PER_PAGE),

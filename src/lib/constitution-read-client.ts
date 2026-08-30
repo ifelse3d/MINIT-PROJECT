@@ -15,9 +15,12 @@
 // (mergeConstitutionExtractions), exactly like the multi-photo path always
 // has.
 //
-// BILLING (J's ruling): the FIRST segment declares the document's total
-// pages, pays the one extract action + the one A6 fence charge, and gets a
-// continuation token; later segments ride the token and pay nothing.
+// BILLING — D47 (work order 89 ⑧, replacing 81's flat one-action rule):
+// actions(N) = ceil(min(N,20)/5) + max(0,N−20), and the charge follows the
+// read. The FIRST segment declares the document's total pages, pays its own
+// pages' share + the one A6 fence charge (min(N,5), a separate meter), and
+// gets a continuation token; each later segment rides the token and pays
+// only the delta its pages add — pages already read are never re-charged.
 //
 // FAILURE (D0-1 semantics): a failed segment is retried once in place; if it
 // still fails, everything read SO FAR is kept in the returned `resume`, and
@@ -273,8 +276,8 @@ export async function readConstitutionFiles(
     let r = await attempt();
     if (r.outcome === "error") {
       // One in-place retry: a transient hiccup should not stop a 30-page
-      // walk at page 17. (The route refunds a fresh request's own charges on
-      // failure, and a continuation charged nothing — retrying is free.)
+      // walk at page 17. (The route refunds a request's OWN charges on
+      // failure — fresh or continuation — so retrying never double-bills.)
       r = await attempt();
     }
     if (r.outcome === "error") {

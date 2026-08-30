@@ -4,9 +4,14 @@
 //     UI and is read in segments (the browser splits it; each segment its own
 //     request) — the segmented progress line ("第 X／6 段") must appear and
 //     the merged result must contain the LAST page's clause;
-//   * ai_usage holds EXACTLY ONE extract_constitution row for the org, not
-//     refunded, with cost accumulated across the segments;
-//   * fence_usage shows pages_uploaded = 5 — the A6 exception: min(21, 5).
+//   * ai_usage holds EXACTLY FIVE extract_constitution rows — D47 (work
+//     order 89 ⑧): actions(21) = ceil(min(21,20)/5) + 1 = 5, charged as the
+//     read progresses — none refunded, with the vendor cost accumulated
+//     onto exactly ONE of them (the seed row; the others are the member's
+//     quota deductions, cost NULL);
+//   * fence_usage shows pages_uploaded = 5 — the A6 exception: min(21, 5),
+//     UNTOUCHED by D47 (a different meter);
+//   * the estimate line prices the read as 扣 5 次 before it starts.
 //
 // Costs a few cents of real vendor credit (about 6 small text-PDF reads).
 // Runs inside a purpose-made ZZZ org + user, both deleted at the end.
@@ -197,6 +202,11 @@ async function run() {
     check("PDF staged, nothing sent yet (D0-1)", staged);
     const priced = await page.evaluate(() => document.body.innerText.includes("共 21 页"));
     check("estimate line prices the 21 pages before the read (④)", priced);
+    // D47 (89 ⑧): the price on the line is the page formula, said up front.
+    const pricedActions = await page.evaluate(() =>
+      document.body.innerText.includes("会扣 5 次 AI 用量"),
+    );
+    check("estimate line says 会扣 5 次 AI 用量 (D47)", pricedActions);
 
     // Press send, then watch the progress line: the browser must split the
     // 21 pages into 6 segments and SAY which one it is on.
@@ -237,20 +247,20 @@ async function run() {
     );
     check("page 21's clause is in the merged book", hasLastPage);
 
-    // --- billing: EXACTLY one action, cost accumulated, nothing refunded ---
+    // --- billing (D47): actions(21) = 5, following the read ----------------
     const usage = await (
       await rest(`/ai_usage?org_id=eq.${orgId}&select=action,cost_micros,input_tokens,output_tokens,refunded_at`)
     ).json();
     console.log("ai_usage rows:", JSON.stringify(usage));
     const constitutionRows = usage.filter((r) => r.action === "extract_constitution");
-    check("exactly ONE extract_constitution action", constitutionRows.length === 1, `${constitutionRows.length}`);
+    check("exactly FIVE extract_constitution actions (D47: 21 pages)", constitutionRows.length === 5, `${constitutionRows.length}`);
     check("no other actions charged", usage.length === constitutionRows.length, `${usage.length}`);
-    check("that one row was not refunded", constitutionRows[0]?.refunded_at == null);
+    check("none of them refunded", constitutionRows.every((r) => r.refunded_at == null));
+    const costed = constitutionRows.filter((r) => (r.cost_micros ?? 0) > 0);
     check(
-      "cost accumulated across segments onto the one row",
-      (constitutionRows[0]?.cost_micros ?? 0) > 0 &&
-        (constitutionRows[0]?.output_tokens ?? 0) > 0,
-      `cost_micros=${constitutionRows[0]?.cost_micros} out=${constitutionRows[0]?.output_tokens}`,
+      "vendor cost accumulated onto exactly ONE row (the seed row)",
+      costed.length === 1 && (costed[0]?.output_tokens ?? 0) > 0,
+      `costed rows=${costed.length} cost_micros=${costed[0]?.cost_micros} out=${costed[0]?.output_tokens}`,
     );
 
     // --- the A6 fence: 21 pages cost the lifetime meter exactly 5 ----------

@@ -29,6 +29,7 @@ import {
   countPdfPages,
 } from "@/lib/pdf-pages";
 import {
+  constitutionActionsDelta,
   constitutionFencePages,
 } from "@/lib/constitution-pages";
 import {
@@ -65,18 +66,28 @@ import { fileFromRelay } from "@/lib/upload-relay-server";
 //
 // SEGMENTED READS (I1, work order 81, 2026-08-30). One request cannot outrun
 // the platform (60s kill / 50s vendor budget / 45s attempt), and a real
-// constitution is the one document that regularly tries to. The BROWSER now
-// splits a long document and sends each piece here as its own request:
-//   * segment 1 declares the document's total pages (`docPages`), pays the
-//     ONE extract action and the ONE A6 fence charge for the whole document,
-//     and receives a signed continuation token;
-//   * segments 2..n present the token (`continuation`) and are charged
-//     NOTHING — their vendor cost accumulates onto the same ai_usage row
-//     (createUsageRecorder's seed), so the member pays one action and the
-//     cost record stays truthful. The token's page budget is what stops a
-//     forged "continuation" from reading the world for free.
-// The old advice telling PEOPLE to split the file retired with this: the app
-// splits it itself, so this route no longer sends `bigDocument` hints.
+// constitution is the one document that regularly tries to. The BROWSER
+// splits a long document and sends each piece here as its own request.
+//
+// BILLING — D47 (work order 89 ⑧, J 8/30 night; REPLACES 81's "one action
+// for the whole document"): actions(N) = ceil(min(N,20)/5) + max(0,N−20),
+// and the charge FOLLOWS the read —
+//   * every request charges only the DELTA its own pages add to the running
+//     total (constitutionActionsDelta) — a segment inside an already-paid
+//     block of five charges nothing;
+//   * segment 1 also pays the ONE A6 fence charge (min(docPages,5) — D45,
+//     a different meter, untouched by D47) and receives a signed
+//     continuation token carrying pagesDone;
+//   * segments 2..n present the token (`continuation`); their vendor cost
+//     still accumulates onto the FIRST charged ai_usage row
+//     (createUsageRecorder's seed) so "what we paid" stays one truthful
+//     number, while their delta rows are the member-side deduction;
+//   * a failed request refunds exactly what IT charged, so a resume on the
+//     same token never pays twice for a delivered page.
+// The token's page budget is what stops a forged "continuation" from
+// reading the world at block-of-five prices. The old advice telling PEOPLE
+// to split the file retired with I1: the app splits it itself, so this
+// route no longer sends `bigDocument` hints.
 //
 // Mirrors /api/extract-minutes: zod-validated, retry ONCE with the validation
 // errors appended, then fail cleanly (CLAUDE.md rule 7). The org name comes
@@ -112,15 +123,21 @@ function continuationSecret(): string {
 /** What both branches below must agree on before the vendor is called. */
 type ChargeContext = {
   org: ActiveOrg;
+  /** The row the vendor COST accumulates onto — the read's first charged
+   *  row (on a continuation that is the token's row, seeded below). */
   charge: UsageCharge;
-  /** null on a continuation — nothing new was charged. */
+  /** D47: what THIS request charged — refunded on ITS failure. A segment
+   *  whose pages fall inside an already-paid block charges nothing. */
+  ownCharges: UsageCharge[];
+  /** null on a continuation — the fence was charged once on segment 1. */
   fenceCharge: FenceCharge | null;
   /** Continuation only: what the charged row already holds. */
   seed?: { inputTokens: number; outputTokens: number; costMicros: number | null };
-  /** True when THIS request charged nothing (so it refunds nothing). */
-  isContinuation: boolean;
   /** Pages the chain may still read after this segment. 0 = last one. */
   pagesLeftAfter: number;
+  /** D47: pages the chain has read INCLUDING this segment — the next
+   *  segment's delta starts here. */
+  pagesDoneAfter: number;
 };
 
 export async function POST(req: Request) {
@@ -254,17 +271,39 @@ export async function POST(req: Request) {
           { status: 409 },
         );
       }
+      // D47: this segment's own price — the delta its pages add to what the
+      // chain has already paid. Often 0 (inside a paid block of five);
+      // charged BEFORE the vendor is called, like every other charge here.
+      const delta = constitutionActionsDelta(
+        token.pagesDone,
+        token.pagesDone + segPages,
+      );
+      let ownCharges: UsageCharge[] = [];
+      if (delta > 0) {
+        const gate = await requireAiQuota(
+          Array<"extract_constitution">(delta).fill("extract_constitution"),
+          { cap: "upload" },
+        );
+        if (!gate.ok) {
+          // Out of quota mid-read: the segments already delivered stay paid
+          // and delivered; the client keeps its resume, and pressing send
+          // again after topping up continues from THIS segment.
+          return NextResponse.json(gate.body, { status: gate.status });
+        }
+        ownCharges = gate.charges;
+      }
       ctx = {
         org,
         charge: { rowId: token.rowId, spentCredit: false },
+        ownCharges,
         fenceCharge: null,
         seed: {
           inputTokens: usageRow.input_tokens ?? 0,
           outputTokens: usageRow.output_tokens ?? 0,
           costMicros: usageRow.cost_micros ?? null,
         },
-        isContinuation: true,
         pagesLeftAfter: token.pagesLeft - segPages,
+        pagesDoneAfter: token.pagesDone + segPages,
       };
     } else {
       // --- classic request, or segment 1 of a split read ------------------
@@ -280,11 +319,16 @@ export async function POST(req: Request) {
         );
       }
 
-      // Charge the quota BEFORE any AI vendor is called. ONE action for the
-      // whole document, however many segments follow (J's ruling, work order
-      // 81 §2 — the MAX_TOOL_ROUNDS precedent: extra vendor calls are our
-      // cost, not the member's). The rule-7 retry is not charged again either.
-      const gate = await requireAiQuota(["extract_constitution"], { cap: "upload" });
+      // Charge the quota BEFORE any AI vendor is called. D47 (work order 89
+      // ⑧): this request pays for ITS OWN pages — actions(segPages), the
+      // delta from zero. On a split read that is the first segment's share;
+      // the token then carries pagesDone so later segments pay only what
+      // their pages add. The rule-7 retry is never charged again.
+      const firstDelta = Math.max(1, constitutionActionsDelta(0, segPages));
+      const gate = await requireAiQuota(
+        Array<"extract_constitution">(firstDelta).fill("extract_constitution"),
+        { cap: "upload" },
+      );
       if (!gate.ok) {
         return NextResponse.json(gate.body, { status: gate.status });
       }
@@ -298,25 +342,25 @@ export async function POST(req: Request) {
         pages: constitutionFencePages(docPages),
       });
       if (!fenceGate.ok) {
-        await refundUsage(gate.org.id, gate.charges[0]);
+        for (const c of gate.charges) await refundUsage(gate.org.id, c);
         return NextResponse.json(fenceGate.body, { status: fenceGate.status });
       }
       ctx = {
         org: gate.org,
         charge: gate.charges[0],
+        ownCharges: gate.charges,
         fenceCharge: fenceGate.charge,
-        isContinuation: false,
         // Only a request that DECLARED a split may mint a continuation.
         pagesLeftAfter: declaredDocPages ? docPages - segPages : 0,
+        pagesDoneAfter: segPages,
       };
     }
 
-    const { org, charge, fenceCharge, isContinuation } = ctx;
-    /** Undo this request's own charges — a continuation charged nothing, so
-     *  it refunds nothing (the earlier segments were delivered and stand). */
+    const { org, charge, fenceCharge } = ctx;
+    /** Undo this request's OWN charges only — earlier segments were
+     *  delivered and stand (D47: the bill follows the delivered pages). */
     const refundThisRequest = async () => {
-      if (isContinuation) return;
-      await refundUsage(org.id, charge);
+      for (const c of ctx.ownCharges) await refundUsage(org.id, c);
       await refundFence(fenceCharge);
     };
 
@@ -432,6 +476,9 @@ ${issues}`;
             rowId: charge.rowId,
             orgId: org.id,
             pagesLeft: ctx.pagesLeftAfter,
+            // D47: what the chain has now paid for — the next segment's
+            // delta starts here.
+            pagesDone: ctx.pagesDoneAfter,
             exp: Date.now() + CONTINUATION_TTL_MS,
           },
           secret,

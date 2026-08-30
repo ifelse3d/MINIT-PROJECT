@@ -60,7 +60,7 @@ describe("receipt verify token", () => {
     // signed with the RAW secret must not verify here (we sign with a
     // derived key).
     const continuation = signContinuation(
-      { rowId: 1, orgId: 15, pagesLeft: 3, exp: Date.now() + 60_000 },
+      { rowId: 1, orgId: 15, pagesLeft: 3, pagesDone: 4, exp: Date.now() + 60_000 },
       SECRET,
     );
     expect(verifyReceiptVerify(continuation, SECRET)).toBeNull();

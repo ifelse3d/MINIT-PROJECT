@@ -414,15 +414,20 @@ export async function requireAiQuota(
     };
   }
 
+  // Outside the try so the catch can refund a PARTIAL charge: with several
+  // actions (intake's classify+extract; D47's per-block constitution
+  // charges) the quota can run out mid-loop, and rows already charged for a
+  // request that is now refused must be given back.
+  const charges: UsageCharge[] = [];
   try {
     // The charges are handed back so the route can attach token counts and
     // cost to the exact row that paid for the call (see recordTokens).
-    const charges: UsageCharge[] = [];
     for (const action of actions) {
       charges.push(await checkAndRecordUsage(org.id, action));
     }
     return { ok: true, org, charges };
   } catch (e) {
+    for (const c of charges) await refundUsage(org.id, c);
     // 429: going too fast, not out of quota. A different status because it is a
     // different fix — wait a moment, rather than buy more.
     if (e instanceof RateLimitedError) {

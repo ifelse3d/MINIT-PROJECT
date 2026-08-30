@@ -2,18 +2,22 @@
 // CONTINUATION TOKEN for a segmented constitution read (work order 81, I1).
 //
 // THE PROBLEM IT SOLVES. A segmented read is several REQUESTS reading ONE
-// document, and J's billing ruling is "one constitution = one extract
-// action" — so segments after the first must not charge again. But "do not
-// charge me, I am a continuation" cannot be a bare client claim: the server
-// must be able to check it. This token is that check.
+// document, and the bill must follow the DOCUMENT, not the request count:
+// under D47 (work order 89 ⑧, replacing 81's flat one-action ruling) each
+// segment pays only the actions its own pages ADD to the running total —
+// which means later segments must prove how much is already paid. "Trust
+// me, I am page 17 of a document that paid for 16" cannot be a bare client
+// claim: the server must be able to check it. This token is that check.
 //
-// WHAT IT IS. An HMAC-signed statement from the first segment's response:
-// "ai_usage row R of org O may read up to P more pages until time T". Each
-// later segment presents it; the route verifies the signature, the org, the
-// row (right action, not refunded) and the remaining page budget, then
-// answers with a NEW token carrying `pagesLeft` minus what was just read.
-// A failed segment gets NO new token, so retrying it re-uses the same one —
-// a retry never shrinks the budget it did not spend.
+// WHAT IT IS. An HMAC-signed statement from the previous segment's response:
+// "org O has read D pages of this document (cost accumulates on ai_usage
+// row R) and may read up to P more until time T". Each later segment
+// presents it; the route verifies the signature, the org, the row (right
+// action, not refunded) and the remaining page budget, charges the D47
+// delta for its own pages, then answers with a NEW token carrying the
+// updated pagesDone/pagesLeft. A failed segment gets NO new token, so
+// retrying it re-uses the same one — a retry never shrinks the budget (or
+// grows the paid count) it did not deliver.
 //
 // WHY pagesLeft IS IN THE TOKEN. It is the abuse bound: the first segment
 // declared (and was fence-charged for) the document's total pages, so the
@@ -28,12 +32,19 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 export type ConstitutionContinuation = {
-  /** The ai_usage row the whole document's ONE action was charged to. */
+  /** The ai_usage row the read's vendor COST accumulates onto (the first
+   *  segment's first charged row — see createUsageRecorder's seed). */
   rowId: number;
   /** The org that row belongs to — must match the active org on use. */
   orgId: number;
   /** How many more pages this chain may read. Always ≥ 1 in a live token. */
   pagesLeft: number;
+  /** D47 (work order 89 ⑧): pages the chain has ALREADY read — the next
+   *  segment's charge is the delta constitutionActionsDelta(pagesDone,
+   *  pagesDone + itsPages), so the bill follows the read page by page and a
+   *  resume never pays for pages already delivered. Always ≥ 1 (segment 1
+   *  read at least one page before any token existed). */
+  pagesDone: number;
   /** Epoch ms after which the token is dead. */
   exp: number;
 };
@@ -94,6 +105,10 @@ export function verifyContinuation(
     !isPositiveInt(r.rowId) ||
     !isPositiveInt(r.orgId) ||
     !isPositiveInt(r.pagesLeft) ||
+    // D47: a token without pagesDone (the pre-89 shape) fails verification —
+    // the client then falls back to a fresh charged read, which is honest.
+    // The old shape only ever lived inside a 30-minute TTL anyway.
+    !isPositiveInt(r.pagesDone) ||
     typeof r.exp !== "number" ||
     !Number.isFinite(r.exp)
   ) {
@@ -104,6 +119,7 @@ export function verifyContinuation(
     rowId: r.rowId,
     orgId: r.orgId,
     pagesLeft: r.pagesLeft,
+    pagesDone: r.pagesDone,
     exp: r.exp,
   };
 }
