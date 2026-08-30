@@ -30,6 +30,9 @@ export function SettingsNav({ showSystem }: { showSystem: boolean }) {
     ...group,
     children: group.children.filter(
       (item) =>
+        // 100 §5: railOnly rows leave this menu too (Members & invites —
+        // the door lives on /members; the page itself is not gated).
+        !item.railOnly &&
         (showSystem || item.href !== "/settings/system") &&
         (einvoisOperator || !item.einvoisOperatorOnly),
     ),

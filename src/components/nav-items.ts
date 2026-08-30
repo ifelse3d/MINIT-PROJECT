@@ -153,7 +153,10 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/settings/display", icon: Palette, bm: "Paparan & bahasa", zh: "显示与语言", en: "Display & language" },
   { href: "/settings/security", icon: Lock, bm: "Kata laluan & keselamatan", zh: "密码与安全", en: "Password & security" },
   { href: "/settings/general", icon: Building2, bm: "Pertubuhan", zh: "机构", en: "Organisation" },
-  { href: "/settings/members", icon: Users, bm: "Ahli & jemputan", zh: "成员与邀请", en: "Members & invites" },
+  // 100 §5 (J 8/31 pointed at the screenshot): tucked away — railOnly, so
+  // menus skip it while the page, its URL and every invite code keep working.
+  // The door is on /members ("invite codes & sign-ins →").
+  { href: "/settings/members", icon: Users, bm: "Ahli & jemputan", zh: "成员与邀请", en: "Members & invites", railOnly: true },
   { href: "/settings/receipts", icon: Receipt, bm: "Nombor resit", zh: "收据字号", en: "Receipt numbers" },
   { href: "/settings/glossary", icon: Languages, bm: "Perkataan kami", zh: "我们的词库", en: "Our words" },
   { href: "/settings/einvois", icon: Banknote, bm: "e-Invois (LHDN)", zh: "e-Invois（LHDN）", en: "e-Invois (LHDN)", einvoisOperatorOnly: true, beta: true },
@@ -164,7 +167,11 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/settings/danger", icon: TriangleAlert, bm: "Zon bahaya", zh: "危险区", en: "Danger zone" },
   // G-4 (8/26): back in the menus — the pack builds from the REAL roster now.
   // Spelled out, no bare abbreviation (G-4).
-  { href: "/agm-pack", icon: Landmark, bm: "Pek Mesyuarat Agung (AGM)", zh: "常年大会文件包", en: "AGM pack" },
+  // 100 §5 (J 8/31): tucked away until the roster has real data and the
+  // agent is live — railOnly, so menus skip it while the page, its URL and
+  // every feature keep working. The door is on /filings/eroses (a quiet
+  // footer row beside the laporan one).
+  { href: "/agm-pack", icon: Landmark, bm: "Pek Mesyuarat Agung (AGM)", zh: "常年大会文件包", en: "AGM pack", railOnly: true },
 ];
 
 export function isActivePath(pathname: string, href: string, exact = false): boolean {

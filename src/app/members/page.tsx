@@ -156,6 +156,21 @@ export default async function MembersPage() {
             en="The committee you file, and your society's own groups."
           />
         </p>
+        {/* 100 §5: "Members & invites" left the settings menu (tucked away) —
+            this row is its door. Invite codes and sign-ins keep working. */}
+        {canEdit && (
+          <p className="text-base text-muted-foreground">
+            🔑{" "}
+            <Link href="/settings/members" className="underline underline-offset-4">
+              <Tri
+                bm="Kod jemputan & siapa boleh log masuk"
+                zh="邀请码与登录成员"
+                en="Invite codes & who can sign in"
+              />{" "}
+              →
+            </Link>
+          </p>
+        )}
       </div>
 
       {!active ? (

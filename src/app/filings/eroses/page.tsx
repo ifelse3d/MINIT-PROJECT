@@ -172,6 +172,21 @@ export default async function ErosesEntryPage({
           <Tri bm="jana Laporan Aktiviti" zh="生成活动报告" en="generate the Laporan Aktiviti" /> →
         </Link>
       </p>
+
+      {/* 100 §5: the AGM pack left the sidebar (tucked away until the roster
+          has real data) — this quiet row is its door, so the feature stays
+          reachable without a menu row. */}
+      <p className="text-sm text-muted-foreground">
+        🏛️{" "}
+        <Tri
+          bm="Perlu notis, agenda dan borang proksi untuk Mesyuarat Agung? —"
+          zh="要开常年大会？通知、议程、委托书都在文件包 ——"
+          en="Need the AGM notice, agenda and proxy forms? —"
+        />{" "}
+        <Link href="/agm-pack" className="underline underline-offset-4">
+          <Tri bm="buka Pek Mesyuarat Agung" zh="打开常年大会文件包" en="open the AGM pack" /> →
+        </Link>
+      </p>
     </div>
   );
 }
