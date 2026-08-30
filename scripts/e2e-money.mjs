@@ -216,10 +216,15 @@ async function run() {
     check("S0-1 receipt number found on page", false);
   }
 
-  // --- S0-1b: the month-end e-Invois file from month alone ------------------
+  // --- S0-1b → D49 (work order 94): the e-Invois export is behind the BETA
+  // gate. The e2e account is NOT the operator, so the CONTRACT here is a
+  // fail-closed 404 — driving the URL directly must not leak the file. The
+  // happy path (200 + xlsx from server data under an operator session) is
+  // covered by the einvois-xlsx unit tests plus J's manual check; the old
+  // 200-assertions come back if the gate is ever lifted.
   {
     const month = new Date().toISOString().slice(0, 7);
-    const ok = await page.evaluate(async (m) => {
+    const gated = await page.evaluate(async (m) => {
       const r = await fetch("/api/einvois-xlsx", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -227,18 +232,24 @@ async function run() {
       });
       return { status: r.status, type: r.headers.get("content-type") ?? "" };
     }, month);
-    check("S0-1 /api/einvois-xlsx 200 + xlsx from month alone (server data)",
-      ok.status === 200 && ok.type.includes("spreadsheet"), `status=${ok.status}`);
-    const empty = await page.evaluate(async () => {
-      const r = await fetch("/api/einvois-xlsx", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ month: "2020-01", fileIndex: 0 }),
-      });
-      return r.status;
+    check("D49 /api/einvois-xlsx → 404 for a non-operator (beta gate, fail-closed)",
+      gated.status === 404 && !gated.type.includes("spreadsheet"),
+      `status=${gated.status}`);
+    // The gated pages show the not-found screen for a non-operator too. Both
+    // routes sit under a loading.tsx boundary, so streaming pins the HTTP
+    // status at 200 — the contract is therefore in the BODY: the 404 UI and
+    // none of the page's own content.
+    const pages = await page.evaluate(async () => {
+      const read = async (u) => (await (await fetch(u)).text());
+      return { money: await read("/money/einvois"), settings: await read("/settings/einvois") };
     });
-    check("S0-1 empty month → 4xx, never an invented tax file",
-      empty >= 400 && empty < 500, `status=${empty}`);
+    const notFoundish = (html) =>
+      /could not be found|NEXT_HTTP_ERROR_FALLBACK;404|NEXT_NOT_FOUND/.test(html);
+    check("D49 /money/einvois renders 404 UI, no pack content, for a non-operator",
+      notFoundish(pages.money) && !pages.money.includes("dari=ai") &&
+        !pages.money.includes("e-Invois hujung bulan"));
+    check("D49 /settings/einvois renders 404 UI, no switch, for a non-operator",
+      notFoundish(pages.settings) && !pages.settings.includes("e-Invois (LHDN)"));
   }
 
   // --- F-4: a hard reload hydrates the register from the DB ----------------
