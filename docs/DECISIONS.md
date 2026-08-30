@@ -839,6 +839,27 @@ D44 的終身 20 頁上限撞上一個事實：章程常常 20–40 頁，免費
 - 其他文件（minutes/ledger/roster）**照舊按實頁數扣**——引流引擎在錢區，
   口子只開給章程。
 
+### D46 — 收據 QR 查證頁的三條鐵線（2026-08-30，87 場落地；24 號單建議② 的賽後項）
+
+每張收據 PDF 印一個 QR，指向公開頁 `/verify/resit?t=<HMAC 簽名 token>`。
+24 號原話「做壞比不做更危險」落成三條鐵線：
+
+1. **只認 QR token，永不開「手動輸入編號查詢」。** 收據編號連號無缺口
+   （Hard Rule 2）——一個純編號查詢框等於讓任何人枚舉全庫收據。有簽名
+   token 才有查詢；沒有 token，查詢面積是零。token 無期限（紙會活七年，
+   過期的 QR 會讓真收據看起來像假的——防冒充功能最壞的失敗方向）。
+2. **頁面只覆述紙上本來就印著的欄位**：org 名、日期、金額（實物收據
+   顯示「實物捐贈」不顯示品項——自由文字欄可能載人名）。verify 路的
+   查詢永遠不 select `donor_name`/`donor_phone`/`purpose`/`item_desc`
+   （Hard Rule 5）。
+3. **絕不能讀起來像「MinitAI 認證這個社團是真的」**：頁上三語明寫
+   「只證明編號出自本系統，不證明社團身份」，PDF 的 QR 旁也印同一句；
+   查無此號＝「本系統沒有開過這個編號」＋檢舉冒用管道；資料庫打嗝＝
+   「現在查不到，稍後再試」，**永不**把打嗝講成「收據是假的」。
+
+零 migration（學 81 場續讀令牌：HMAC 從部署密鑰派生、domain-separated）。
+舊收據沒 QR 照舊有效——沒有 verifyUrl 就不畫 QR，版面一字不變。
+
 ---
 
-*Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C) · D16 appended 2026-08-25 (Stage D) · D17 appended 2026-08-27 (work order 27, the overnight sprint) · D18–D21 appended 2026-08-27 (work order 31 §0, J's post-launch rulings) · D22–D23 appended 2026-08-27 (work order 32 §0, launch-day feedback rulings) · D24–D25 appended 2026-08-27 (the afternoon rulings: violet redesign + BM guard) · D26–D28 appended 2026-08-27 (the launch-evening 20-point list) · D29–D32 appended 2026-08-28 (the two-review session: prompt unfreeze, attendance gate, funds page, record-to-DB) · D33–D35 appended 2026-08-28 (J's §6 answers + the new seven: PdpaNote deleted, per-part AI discussion, minutes named/printable/editable/photo-linked) · D36–D37 appended 2026-08-28 evening (the eight-item round: save lands on the finished document, saved workspaces clear themselves, AI may merge like items under checkMergedFacts) · D38–D40 appended 2026-08-28 (the design pass: one five-step radius scale shifted a notch, the canvas gradient that was being painted and covered, the four rebuilt home cards and the sign-in brand panel) · D41–D42 appended 2026-08-28 (J's review of it: no piggy bank and a standing check on imagery for every community, and one brand mark that both the page and the icon files are generated from) · D43–D44 appended 2026-08-28 night (no black buttons — the primary token is brand purple; and the free fence: lifetime 5 documents · 20 receipts · 20 pages · 3 clean downloads, watermarked previews, clean files only through counted doors) · D45 appended 2026-08-30 (work order 81: the A6 exception — a constitution upload costs the fence min(actual pages, 5), charged once per document even when read in segments)*
+*Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C) · D16 appended 2026-08-25 (Stage D) · D17 appended 2026-08-27 (work order 27, the overnight sprint) · D18–D21 appended 2026-08-27 (work order 31 §0, J's post-launch rulings) · D22–D23 appended 2026-08-27 (work order 32 §0, launch-day feedback rulings) · D24–D25 appended 2026-08-27 (the afternoon rulings: violet redesign + BM guard) · D26–D28 appended 2026-08-27 (the launch-evening 20-point list) · D29–D32 appended 2026-08-28 (the two-review session: prompt unfreeze, attendance gate, funds page, record-to-DB) · D33–D35 appended 2026-08-28 (J's §6 answers + the new seven: PdpaNote deleted, per-part AI discussion, minutes named/printable/editable/photo-linked) · D36–D37 appended 2026-08-28 evening (the eight-item round: save lands on the finished document, saved workspaces clear themselves, AI may merge like items under checkMergedFacts) · D38–D40 appended 2026-08-28 (the design pass: one five-step radius scale shifted a notch, the canvas gradient that was being painted and covered, the four rebuilt home cards and the sign-in brand panel) · D41–D42 appended 2026-08-28 (J's review of it: no piggy bank and a standing check on imagery for every community, and one brand mark that both the page and the icon files are generated from) · D43–D44 appended 2026-08-28 night (no black buttons — the primary token is brand purple; and the free fence: lifetime 5 documents · 20 receipts · 20 pages · 3 clean downloads, watermarked previews, clean files only through counted doors) · D45 appended 2026-08-30 (work order 81: the A6 exception — a constitution upload costs the fence min(actual pages, 5), charged once per document even when read in segments) · D46 appended 2026-08-30 (work order 87: the receipt-verify QR page's three hard lines — token-only lookup, repeat only what the paper prints, never read as certifying the society)*
