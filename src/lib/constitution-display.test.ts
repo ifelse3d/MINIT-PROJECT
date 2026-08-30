@@ -3,6 +3,8 @@ import {
   annotateClauseHierarchy,
   clauseParentNo,
   cleanClauseField,
+  proposeOrphanHomes,
+  reattachedClauseNo,
   shortPageRef,
   sinkOrphanClauses,
   splitClauseText,
@@ -183,6 +185,61 @@ describe("sinkOrphanClauses (org 197's real-book shape)", () => {
     const { main, orphans } = sinkOrphanClauses(FASAL_BOOK);
     expect([...main, ...orphans].length).toBe(FASAL_BOOK.length);
     for (const c of FASAL_BOOK) expect([...main, ...orphans]).toContain(c);
+  });
+});
+
+// §0-6 (work order 100): the agent proposes a home per orphan run, from the
+// STORED reading order — the sorted view has already shuffled orphans away
+// from the Fasal they were read under.
+describe("proposeOrphanHomes + reattachedClauseNo", () => {
+  const FASAL_BOOK: ConfirmedClause[] = [
+    clause("Fasal 7", "KEWANGAN", "Wang pertubuhan diurus oleh Bendahari."),
+    clause("Fasal 8", "PEMERIKSA KIRA-KIRA", "Dua orang pemeriksa dilantik."),
+    clause("(3)", "", "Pemeriksa kira-kira hendaklah memeriksa akaun."),
+    clause("(4)", "", "Laporan pemeriksaan dibentang dalam mesyuarat agung."),
+    clause("Fasal 9", "PENASIHAT", "Pertubuhan boleh melantik penasihat."),
+  ];
+
+  it("groups an orphan run under the Fasal read just before it", () => {
+    const proposals = proposeOrphanHomes(FASAL_BOOK);
+    expect(proposals).toEqual([
+      {
+        parentNo: "Fasal 8",
+        parentHeading: "PEMERIKSA KIRA-KIRA",
+        orphanNos: ["(3)", "(4)"],
+      },
+    ]);
+  });
+
+  it("orphans read BEFORE any Fasal get no proposal (nothing honest to say)", () => {
+    const proposals = proposeOrphanHomes([
+      clause("(2)", "", "Sub-perkara tanpa induk."),
+      clause("Fasal 1", "NAMA", "Pertubuhan ini dikenali sebagai…"),
+    ]);
+    expect(proposals).toEqual([]);
+  });
+
+  it("a non-Fasal book (org 197's bare-number style) proposes nothing", () => {
+    expect(proposeOrphanHomes(ORG197_SHAPE)).toEqual([]);
+  });
+
+  it("a dotted sub-clause WITH its parent present is never proposed anywhere", () => {
+    const proposals = proposeOrphanHomes([
+      clause("Fasal 8", "MESYUARAT AGUNG", "…"),
+      clause("8.1", "Kuorum", "…"),
+    ]);
+    expect(proposals).toEqual([]);
+  });
+
+  it("reattachedClauseNo makes a number that sorts under its Fasal and never re-sinks", () => {
+    expect(reattachedClauseNo("(3)", "Fasal 8")).toBe("Fasal 8(3)");
+    expect(reattachedClauseNo("3", "Fasal 8")).toBe("Fasal 8(3)");
+    // The reattached shape is no longer an orphan to sinkOrphanClauses.
+    const { orphans } = sinkOrphanClauses([
+      clause("Fasal 8", "PEMERIKSA", "…"),
+      clause("Fasal 8(3)", "", "…"),
+    ]);
+    expect(orphans).toEqual([]);
   });
 });
 

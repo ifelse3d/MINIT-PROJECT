@@ -79,6 +79,81 @@ export function clauseParentNo(clauseNo: string): string | null {
   return m ? m[1] : null;
 }
 
+// ---------------------------------------------------------------------------
+// §0-6 (work order 100): the agent PROPOSES a home for each orphan run —
+// "these look like they belong under Fasal X" — instead of leaving
+// re-photographing as the only road. Pure derivation, zero AI: the STORED
+// array keeps the photographs' reading order, so an orphan's most likely
+// parent is simply the last Fasal heading read before it. A proposal is a
+// proposal — the person confirms, the rename is traced (agent_changes), and
+// re-photographing remains the fallback the note still offers.
+// ---------------------------------------------------------------------------
+
+export type OrphanHomeProposal = {
+  /** The proposed parent's clause_no as stored, e.g. "Fasal 8". */
+  parentNo: string;
+  parentHeading: string;
+  /** The orphan clause_nos (in stored order) proposed to slot under it. */
+  orphanNos: string[];
+};
+
+/** The same bare shapes sinkOrphanClauses treats as orphans. */
+function isOrphanShape(no: string): boolean {
+  return /^\(?\d+(\.\d+)?\)?$/.test(no.trim());
+}
+
+/**
+ * Group the book's orphans under the Fasal each most likely belongs to,
+ * from the STORED (reading-order) array — the sorted view has already
+ * shuffled orphans to the top, so it cannot answer this question.
+ * Orphans read before any Fasal heading get no proposal (nothing honest to
+ * propose); a book that is not Fasal-style has no orphans at all.
+ */
+export function proposeOrphanHomes(
+  stored: readonly ConfirmedClause[],
+): OrphanHomeProposal[] {
+  const hasFasal = stored.some((c) => /^\s*fasal\b/i.test(c.clause_no));
+  if (!hasFasal) return [];
+  const numbers = new Set(stored.map((c) => c.clause_no.trim().toLowerCase()));
+  const hasParent = (no: string): boolean => {
+    const parent = clauseParentNo(no.replace(/[()]/g, ""));
+    if (parent === null) return false;
+    return numbers.has(parent) || numbers.has(`fasal ${parent}`);
+  };
+
+  const byParent = new Map<string, OrphanHomeProposal>();
+  let lastFasal: ConfirmedClause | null = null;
+  for (const c of stored) {
+    const no = c.clause_no.trim();
+    if (/^\s*fasal\b/i.test(no)) {
+      lastFasal = c;
+      continue;
+    }
+    if (!isOrphanShape(no) || hasParent(no)) continue;
+    if (!lastFasal) continue;
+    const key = lastFasal.clause_no.trim();
+    const entry = byParent.get(key) ?? {
+      parentNo: key,
+      parentHeading: lastFasal.heading,
+      orphanNos: [],
+    };
+    entry.orphanNos.push(no);
+    byParent.set(key, entry);
+  }
+  return [...byParent.values()];
+}
+
+/**
+ * The clause_no an orphan gets when the person confirms its home:
+ * "(3)" under "Fasal 8" → "Fasal 8(3)". sortClauses tokenises that as
+ * [fasal, 8, 3], so it slots right after Fasal 8 — and it no longer matches
+ * the orphan shape, so it never sinks again.
+ */
+export function reattachedClauseNo(orphanNo: string, parentNo: string): string {
+  const bare = orphanNo.trim().replace(/^\(|\)$/g, "");
+  return `${parentNo.trim()}(${bare})`;
+}
+
 export type DisplayClause = {
   clause: ConfirmedClause;
   /** True = this is a sub-clause whose PARENT is also in the list — the

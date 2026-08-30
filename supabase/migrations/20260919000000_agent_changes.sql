@@ -38,7 +38,9 @@ create table if not exists agent_changes (
   -- Hard Rule 8 idiom: the real signed-in human the agent acted for,
   -- stamped by the server from the session — never from the browser.
   actor_email text not null check (char_length(actor_email) <= 200),
-  target_table text not null check (target_table in ('committee_roster')),
+  -- committee_roster: the tier-1 contact-detail tool. constitutions: the
+  -- §0-6 orphan-clause reattach (clause_no renames, person-confirmed).
+  target_table text not null check (target_table in ('committee_roster', 'constitutions')),
   target_id bigint not null,
   field text not null check (char_length(field) <= 40),
   old_value text,

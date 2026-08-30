@@ -41,6 +41,7 @@ import {
   isConfirmedClauseArray,
   type ConfirmedClause,
 } from "@/lib/constitution";
+import { reattachedClauseNo } from "@/lib/constitution-display";
 
 export type SaveConstitutionState = {
   error: string | null;
@@ -155,6 +156,105 @@ export async function saveConstitutionClauses(input: {
   }
 
   return { error: null, ok: true };
+}
+
+/**
+ * §0-6 (work order 100): slot a run of orphan sub-clauses under the Fasal
+ * the agent proposed and the PERSON confirmed. The rename happens on the
+ * STORED row ("(3)" → "Fasal 8(3)"), and 必留痕 (8/28 家规) applies exactly
+ * as to every agent change: the trace goes to agent_changes FIRST, and
+ * without it (migration 41 not applied) nothing is renamed — the honest
+ * refusal names the fallback (re-photograph the page with the heading).
+ */
+export async function reattachOrphanClauses(input: {
+  orphanNos: string[];
+  parentNo: string;
+}): Promise<
+  { ok: true; clauses: ConfirmedClause[] } | { ok: false; error: string }
+> {
+  const user = await getSessionUser();
+  const active = await getActiveOrg();
+  if (!user || !active) {
+    return { ok: false, error: "Pilih pertubuhan dahulu / 请先选择机构 / Choose an organisation first" };
+  }
+  if (!can(active.role, "minutes_write")) {
+    return { ok: false, error: permissionError("minutes_write") };
+  }
+  const orphanNos = input.orphanNos.map((n) => String(n).trim()).filter(Boolean);
+  const parentNo = String(input.parentNo).trim();
+  if (orphanNos.length === 0 || parentNo === "" || orphanNos.length > 50) {
+    return { ok: false, error: "Tiada fasal untuk dipindahkan / 没有条文可以归位 / Nothing to reattach" };
+  }
+
+  const supabase = await getSupabaseServer();
+  const { data: row, error: readError } = await supabase
+    .from("constitutions")
+    .select("id, clauses_json")
+    .eq("org_id", active.id)
+    .order("id", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (readError || !row || !isConfirmedClauseArray(row.clauses_json)) {
+    return {
+      ok: false,
+      error:
+        "Perlembagaan belum tersimpan — simpan dahulu / 章程还没保存，先保存 / The constitution is not stored yet — save it first",
+    };
+  }
+  const stored: ConfirmedClause[] = row.clauses_json;
+  const wanted = new Set(orphanNos);
+  const parentExists = stored.some((c) => c.clause_no.trim() === parentNo);
+  if (!parentExists) {
+    return { ok: false, error: "Fasal induk tidak dijumpai / 找不到那条 Fasal / That Fasal was not found" };
+  }
+
+  const renamed = stored.map((c) =>
+    wanted.has(c.clause_no.trim())
+      ? { ...c, clause_no: reattachedClauseNo(c.clause_no, parentNo) }
+      : c,
+  );
+  const changedCount = renamed.filter((c, i) => c !== stored[i]).length;
+  if (changedCount === 0) {
+    return { ok: false, error: "Fasal itu sudah berpindah / 这些条已经归位了 / Those clauses are already in place" };
+  }
+
+  // 🔴 TRACE FIRST, fail-closed (必留痕): no trail, no rename.
+  const { data: trace, error: traceError } = await supabase
+    .from("agent_changes")
+    .insert({
+      org_id: active.id,
+      actor_email: user.email ?? "",
+      target_table: "constitutions",
+      target_id: row.id,
+      field: "clause_no",
+      old_value: orphanNos.join(", "),
+      new_value: orphanNos.map((n) => reattachedClauseNo(n, parentNo)).join(", "),
+    })
+    .select("id")
+    .single();
+  if (traceError || !trace) {
+    return {
+      ok: false,
+      error:
+        "Jejak perubahan belum sedia (migration 41) — belum boleh pindah secara automatik. Ambil semula gambar muka surat yang ada tajuk Fasal itu. / 留痕系统还没通电（migration 41），暂时不能自动归位。可以重拍含 Fasal 标题的那一页。 / The change trail is not ready (migration 41), so this cannot be done automatically yet. Re-photographing the page with the Fasal heading still works.",
+    };
+  }
+
+  const { error: writeError } = await supabase
+    .from("constitutions")
+    .update({ clauses_json: renamed })
+    .eq("id", row.id)
+    .eq("org_id", active.id);
+  if (writeError) {
+    // Do not leave a trace claiming a rename that never landed.
+    await supabase
+      .from("agent_changes")
+      .update({ undone_at: new Date().toISOString() })
+      .eq("id", trace.id);
+    return { ok: false, error: "Tidak berjaya disimpan — cuba lagi / 没有保存成功，请再试 / Could not save — try again" };
+  }
+
+  return { ok: true, clauses: renamed };
 }
 
 /**

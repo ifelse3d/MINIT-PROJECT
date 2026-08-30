@@ -30,7 +30,7 @@ import type { ConstitutionExtraction } from "@/lib/extraction";
 import { usePersistentState } from "@/lib/use-persistent-state";
 import { useScopedKey } from "@/lib/storage-scope";
 import { consumeIntake } from "@/lib/intake-handoff";
-import { saveConstitutionClauses } from "./actions";
+import { reattachOrphanClauses, saveConstitutionClauses } from "./actions";
 import { NewOrgBanner } from "./new-org-banner";
 import { OrgIdentityPanel } from "./org-identity-panel";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
@@ -237,6 +237,26 @@ export function ConstitutionReview({
       setSaveWarning(!res.ok);
     } catch {
       setSaveWarning(true);
+    }
+  }
+
+  /**
+   * §0-6 (work order 100): the person confirmed the agent's "these belong
+   * under Fasal X" proposal. The rename + its trace happen SERVER-side
+   * (reattachOrphanClauses — fail-closed without migration 41); on success
+   * this device adopts the server's renamed set so the local copy agrees.
+   */
+  async function reattachOrphans(
+    orphanNos: string[],
+    parentNo: string,
+  ): Promise<{ ok: boolean; error?: string }> {
+    try {
+      const r = await reattachOrphanClauses({ orphanNos, parentNo });
+      if (!r.ok) return { ok: false, error: r.error };
+      setStored((prev) => (prev ? { ...prev, clauses: r.clauses } : prev));
+      return { ok: true };
+    } catch {
+      return { ok: false };
     }
   }
 
@@ -1018,8 +1038,15 @@ export function ConstitutionReview({
           {/* 97 §3(d): ONE shared clause list (search + hierarchy + orphan
               sinking + the "missing"-word scrub) — the same component
               /constitution/clauses renders, in its collapsible skin.
-              clauses_json is untouched. */}
-          <ClauseList book={sortClauses(clauses)} variant="collapsible" />
+              §0-6 (order 100): on the REAL book it also proposes homes for
+              orphan sub-clauses (person confirms, rename traced). The
+              sample never gets the write path. */}
+          <ClauseList
+            book={sortClauses(clauses)}
+            variant="collapsible"
+            storedOrder={hasOwn ? clauses : undefined}
+            onReattach={hasOwn ? reattachOrphans : undefined}
+          />
         </CardContent>
       </Card>
       )}
