@@ -19,6 +19,7 @@ import { DiscussSection } from "./discuss-section";
 import { FieldRow } from "./field-row";
 import { AddRowButton, DeletableRow } from "./row-controls";
 import { useMinutes, type TextLikeField } from "./minutes-store";
+import { signedUrlForOriginal } from "./open-original";
 import type { MeetingNotesExtraction, ResolutionKind } from "@/lib/extraction";
 import { AttachIcon, ChooseFileLabel, UploadLimitNote } from "@/components/attach-icon";
 import { honorificSuggestions } from "@/lib/honorific-match";
@@ -818,8 +819,10 @@ export function NotesReview() {
 
         {/* D-3 (work order 31, J #8): the same look-back the money review has —
             every uploaded page as a tappable thumbnail (shared page-thumbs.tsx),
-            instead of a fold-out stack of full-size images. */}
-        <PageThumbs pages={photoPages} />
+            instead of a fold-out stack of full-size images. 97 §6: a PDF or
+            Office tile now OPENS the stored original (signed URL) instead of
+            dead-ending at "no preview". */}
+        <PageThumbs pages={photoPages} openOriginal={signedUrlForOriginal} />
         {/* Opt-in example. Deliberately quiet and LAST: someone holding their
             own notes should reach for the camera, not this. It exists so a
             first-timer (or a demo) can see what a finished page looks like. */}

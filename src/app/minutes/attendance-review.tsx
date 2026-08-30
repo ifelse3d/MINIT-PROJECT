@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
 import { NextStepLink, PageSection } from "@/components/page-section";
 import { ConfidenceBadge } from "@/components/confidence-badge";
+import { PageThumbs } from "@/components/page-thumbs";
+import { signedUrlForOriginal } from "./open-original";
 import { FieldRow } from "./field-row";
 import { DeletableRow } from "./row-controls";
 import { RosterPicker } from "./roster-picker";
@@ -50,6 +52,7 @@ export function AttendanceReview() {
     groups,
     nothingYet,
     isSample,
+    photoPages,
     updateField,
     confirmField: confirm,
     editField: edit,
@@ -207,6 +210,27 @@ export function AttendanceReview() {
         )
       }
     >
+      {/* 97 §6 (J 8/30, tester typed "ABC/BCD" because this page could not
+          show the page being copied from): the ORIGINAL, one fold away.
+          Photos open the zooming viewer; a PDF or Office original opens the
+          real file via a signed URL. */}
+      {photoPages.length > 0 && (
+        <details className="group rounded-md border-2 border-[color:var(--v2-border)] bg-white/60 dark:bg-white/5">
+          <summary className="flex cursor-pointer list-none items-center gap-2 p-3 text-base font-medium hover:bg-accent">
+            <span className="text-muted-foreground transition-transform group-open:rotate-90">›</span>
+            📷{" "}
+            <Tri
+              bm={`Lihat nota asal (${photoPages.length})`}
+              zh={`看原稿（${photoPages.length}）`}
+              en={`See the original notes (${photoPages.length})`}
+            />
+          </summary>
+          <div className="border-t border-[color:var(--v2-border)] p-3">
+            <PageThumbs pages={photoPages} openOriginal={signedUrlForOriginal} />
+          </div>
+        </details>
+      )}
+
       {/* The one question an empty list has to answer. Not a validation error:
           "the notes do not record who attended" is a perfectly normal thing for
           a page of scribbled notes to be true of, and the person is the only

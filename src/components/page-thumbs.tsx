@@ -21,7 +21,22 @@ import { Tri, useTriText } from "@/components/language-provider";
 // says there is no preview.
 // ---------------------------------------------------------------------------
 
-export type ThumbPage = { name: string; dataUrl: string | null };
+export type ThumbPage = {
+  name: string;
+  dataUrl: string | null;
+  /** 97 §6: where the ORIGINAL landed in the uploads bucket — lets a PDF or
+   *  Office tile open the real file (signed URL) instead of dead-ending at
+   *  "no preview". Optional: typed pages and failed uploads have none. */
+  storagePath?: string | null;
+};
+
+/** 97 §6: what kind of file a page name says it is — decides the tile. */
+export function pageFileKind(name: string): "image" | "pdf" | "office" | "other" {
+  if (/\.pdf$/i.test(name)) return "pdf";
+  if (/\.(docx?|xlsx?|pptx?)$/i.test(name)) return "office";
+  if (/\.(jpe?g|png|webp|heic|heif|gif|bmp)$/i.test(name)) return "image";
+  return "other";
+}
 
 /** One page the lightbox can show — a data: URL or a signed https URL. */
 export type LightboxPage = { name: string; src: string | null };
@@ -251,39 +266,85 @@ export function PhotoLightbox({
   );
 }
 
-export function PageThumbs({ pages }: { pages: ThumbPage[] }) {
+export function PageThumbs({
+  pages,
+  openOriginal,
+}: {
+  pages: ThumbPage[];
+  /**
+   * 97 §6: given a storage path, answer a short-lived signed URL for the
+   * ORIGINAL file (or null when it cannot be signed). When provided, a tile
+   * with no pixel preview but a stored original (a PDF, an Office file)
+   * OPENS the real file in a new tab instead of showing "no preview".
+   */
+  openOriginal?: (storagePath: string) => Promise<string | null>;
+}) {
   const t = useTriText();
   const [viewPage, setViewPage] = useState<number | null>(null);
+  const [opening, setOpening] = useState<number | null>(null);
   if (pages.length === 0) return null;
+
+  async function onTile(i: number) {
+    const p = pages[i];
+    // A pixel preview always wins — the floating zooming viewer.
+    if (p.dataUrl) {
+      setViewPage(i);
+      return;
+    }
+    // No pixels, but the original is stored: open the real file.
+    if (p.storagePath && openOriginal && opening === null) {
+      setOpening(i);
+      try {
+        const url = await openOriginal(p.storagePath);
+        if (url) {
+          window.open(url, "_blank", "noopener");
+          return;
+        }
+      } finally {
+        setOpening(null);
+      }
+    }
+    // Nothing to open — the lightbox says so honestly.
+    setViewPage(i);
+  }
 
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
-        {pages.map((p, i) => (
-          <button
-            key={i}
-            type="button"
-            onClick={() => setViewPage(i)}
-            className="flex w-24 flex-col items-center gap-1 rounded-sm border border-[color:var(--v2-outline-border)] bg-white/60 p-1.5 hover:bg-accent dark:bg-white/5"
-            title={p.name}
-          >
-            {p.dataUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={p.dataUrl}
-                alt={p.name}
-                className="h-16 w-full rounded object-cover"
-              />
-            ) : (
-              <span className="flex h-16 w-full items-center justify-center rounded bg-muted text-2xl">
-                📄
+        {pages.map((p, i) => {
+          const kind = pageFileKind(p.name);
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={() => void onTile(i)}
+              disabled={opening !== null}
+              className="flex w-24 flex-col items-center gap-1 rounded-sm border border-[color:var(--v2-outline-border)] bg-white/60 p-1.5 hover:bg-accent disabled:opacity-60 dark:bg-white/5"
+              title={p.name}
+            >
+              {p.dataUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={p.dataUrl}
+                  alt={p.name}
+                  className="h-16 w-full rounded object-cover"
+                />
+              ) : (
+                <span className="flex h-16 w-full flex-col items-center justify-center rounded bg-muted text-2xl">
+                  {opening === i ? "…" : "📄"}
+                  {/* 97 §6: say what KIND of file this tile is — and that
+                      tapping opens the real thing when we have it. */}
+                  <span className="text-[10px] font-semibold tracking-wide text-muted-foreground">
+                    {kind === "pdf" ? "PDF" : kind === "office" ? "DOC" : ""}
+                  </span>
+                </span>
+              )}
+              <span className="w-full truncate text-xs text-muted-foreground">
+                {t("muka", "第", "p.")} {i + 1} · {p.name}
               </span>
-            )}
-            <span className="w-full truncate text-xs text-muted-foreground">
-              {t("muka", "第", "p.")} {i + 1} · {p.name}
-            </span>
-          </button>
-        ))}
+            </button>
+          );
+        })}
         <span className="text-sm text-muted-foreground">
           <Tri
             bm="Tekan untuk lihat semula"
