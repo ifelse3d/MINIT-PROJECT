@@ -25,9 +25,13 @@ import {
 } from "@/app/settings/maklumat-actions";
 import { addAuditor, type AuditorActionState } from "@/app/members/auditor-actions";
 import {
-  fillCommitteeIcName,
+  fillCommitteeErosesGaps,
   type MemberActionState,
 } from "@/app/members/actions";
+import {
+  EROSES_COMMITTEE_FIELD_LABELS,
+  type ErosesCommitteeField,
+} from "@/lib/eroses-committee";
 
 import { LANGKAH } from "./langkah-meta";
 
@@ -172,6 +176,7 @@ export function ValueRow({
   fix,
   mono = false,
   locked = false,
+  copyBlocked = false,
 }: {
   id: string;
   labelBm: string;
@@ -181,6 +186,11 @@ export function ValueRow({
   fix?: React.ReactNode;
   mono?: boolean;
   locked?: boolean;
+  /** D48 (⑦, work order 89): the HARD gate — true when this value must not
+   *  ship yet (committee rows missing eROSES fields). The value stays
+   *  visible but select-none, and the copy button becomes a refusal; the
+   *  caller renders the gap list + fill-right-here forms beside the row. */
+  copyBlocked?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
   const missing = value === null || value.trim() === "" || value === "—";
@@ -192,7 +202,11 @@ export function ValueRow({
           {labelSub && <div className="text-sm text-muted-foreground">{labelSub}</div>}
         </div>
         {!missing &&
-          (locked ? (
+          (copyBlocked ? (
+            <Button size="sm" variant="outline" disabled data-probe="ajk-copy-blocked">
+              🛑 <Tri bm="Salin dikunci — lengkapkan dahulu" zh="先填齐才能复制" en="Copy locked — complete it first" />
+            </Button>
+          ) : locked ? (
             <Button size="sm" variant="outline" disabled>
               🔒 <Tri bm="Salin (pelan berbayar)" zh="复制（付费版）" en="Copy (paid plan)" />
             </Button>
@@ -223,6 +237,17 @@ export function ValueRow({
       </div>
       {missing ? (
         <div className="text-base text-amber-900 dark:text-amber-100">{fix ?? "—"}</div>
+      ) : copyBlocked ? (
+        // Same REAL lock treatment as the fence (§1-11): a gate whose text
+        // still selects freely is a fake gate.
+        <span
+          className={`whitespace-pre-wrap select-none ${mono ? "font-mono" : ""}`}
+          onCopy={(e) => e.preventDefault()}
+          onCut={(e) => e.preventDefault()}
+          onContextMenu={(e) => e.preventDefault()}
+        >
+          {value}
+        </span>
       ) : locked ? (
         <span
           className={`whitespace-pre-wrap select-none ${mono ? "font-mono" : ""}`}
@@ -512,29 +537,83 @@ export function AuditorInlineForm() {
 
 const MEMBER_INITIAL: MemberActionState = { ok: false, error: null };
 
-/** §1-2 + §1-3: fill ONE missing IC name without leaving the flow. */
-export function IcNameInlineRow({ id, personName }: { id: number; personName: string }) {
-  const [state, formAction, pending] = useActionState(fillCommitteeIcName, MEMBER_INITIAL);
+/**
+ * D48 (⑦, work order 89): H2's "fill one missing IC name" road, widened —
+ * one small form per person, showing an input for EACH eROSES field that
+ * row still lacks (name for a seeded row, IC name, state, appointment
+ * date). Saves through fillCommitteeErosesGaps into the same table the
+ * Members page writes; router.refresh() then re-reads the step, and when
+ * the last gap closes the copy button above unlocks.
+ * data-probe stays "ic-inline": probe-h2-69 walks this row by that name.
+ */
+export function ErosesGapInlineRow({
+  id,
+  personName,
+  position,
+  missing,
+}: {
+  id: number;
+  personName: string;
+  position: string;
+  missing: ErosesCommitteeField[];
+}) {
+  const [state, formAction, pending] = useActionState(fillCommitteeErosesGaps, MEMBER_INITIAL);
   const localizeError = useLocalizedError();
+  const t = useTriText();
   useRefreshOnOk(state.ok);
-  const [nameOfficial, setNameOfficial] = useState("");
+  const [values, setValues] = useState<Record<ErosesCommitteeField, string>>({
+    personName: "",
+    nameOfficial: "",
+    state: "",
+    termStart: "",
+  });
+  const set =
+    (k: ErosesCommitteeField) => (e: React.ChangeEvent<HTMLInputElement>) =>
+      setValues((v) => ({ ...v, [k]: e.target.value }));
+  const filled = missing.every((f) => values[f].trim() !== "");
+
+  const placeholder: Record<ErosesCommitteeField, string> = {
+    personName: t("Nama", "姓名", "Name"),
+    nameOfficial: "TAN TAI BENG",
+    state: "Selangor",
+    termStart: "2026-01-01",
+  };
 
   return (
-    <form action={formAction} className="flex flex-wrap items-center gap-2" data-probe="ic-inline">
+    <form action={formAction} className="flex flex-col gap-2" data-probe="ic-inline">
       <input type="hidden" name="id" value={id} />
-      <span className="min-w-[8rem] font-medium">{personName}</span>
-      <input
-        name="nameOfficial"
-        value={nameOfficial}
-        onChange={(e) => setNameOfficial(e.target.value)}
-        className={inputCls + " max-w-[18rem] flex-1"}
-        maxLength={160}
-        placeholder="TAN TAI BENG"
-      />
-      <Button type="submit" size="sm" disabled={pending || nameOfficial.trim() === ""}>
-        {pending ? <Tri bm="…" zh="…" en="…" /> : <Tri bm="Simpan" zh="保存" en="Save" />}
-      </Button>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="min-w-[8rem] font-medium">
+          {personName.trim() !== "" ? personName : `(${position})`}
+        </span>
+        {missing.map((f) => (
+          <label key={f} className="flex min-w-[10rem] flex-1 flex-col gap-0.5">
+            <span className="text-xs text-muted-foreground">
+              {t(
+                EROSES_COMMITTEE_FIELD_LABELS[f].bm,
+                EROSES_COMMITTEE_FIELD_LABELS[f].zh,
+                EROSES_COMMITTEE_FIELD_LABELS[f].en,
+              )}
+            </span>
+            <input
+              name={f}
+              value={values[f]}
+              onChange={set(f)}
+              className={inputCls}
+              maxLength={160}
+              placeholder={placeholder[f]}
+              inputMode={f === "termStart" ? "numeric" : undefined}
+            />
+          </label>
+        ))}
+        <Button type="submit" size="sm" disabled={pending || !filled}>
+          {pending ? <Tri bm="…" zh="…" en="…" /> : <Tri bm="Simpan" zh="保存" en="Save" />}
+        </Button>
+      </div>
       {state.error && <p className={"w-full " + errorCls}>{localizeError(state.error)}</p>}
     </form>
   );
 }
+
+// (IcNameInlineRow retired with D48 — ErosesGapInlineRow above is the same
+// road widened to every eROSES field, and carries its data-probe name.)

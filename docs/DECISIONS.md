@@ -832,8 +832,9 @@ D44 的終身 20 頁上限撞上一個事實：章程常常 20–40 頁，免費
   一律只扣 `min(實際頁數, 5)` 頁；4 頁收 4、5 頁收 5、30 頁收 5
   （`src/lib/constitution-pages.ts` 的 `constitutionFencePages`，測試釘住）。
 - **分段讀（81 場 I1）之下一份章程只收一次** min(實際,5)——不是每段各收
-  一次；同理整份章程只收會員 1 個 extract action（MAX_TOOL_ROUNDS 先例：
-  多輪呼叫是我們的成本，不轉嫁）。
+  一次。*（本條的 fence 部分照舊有效；「整份章程只收會員 1 個 extract
+  action」那半句 2026-08-30 晚被 **D47** 取代——extract action 改按頁數
+  公式扣、跟著讀進度走。）*
 - 為什麼是 5：等於免費版「一份文件」量級的頁數；章程是一次性的立檔動作，
   不是持續消耗，把它擋在門外只會讓免費版永遠體驗不到「問章程」。
 - 其他文件（minutes/ledger/roster）**照舊按實頁數扣**——引流引擎在錢區，
@@ -860,6 +861,45 @@ D44 的終身 20 頁上限撞上一個事實：章程常常 20–40 頁，免費
 零 migration（學 81 場續讀令牌：HMAC 從部署密鑰派生、domain-separated）。
 舊收據沒 QR 照舊有效——沒有 verifyUrl 就不畫 QR，版面一字不變。
 
+### D47 — 章程讀取扣費公式：頭 20 頁每 5 頁 1 次、第 21 頁起每頁 1 次（2026-08-30 晚，J 拍板；89 場 ⑧ 落地）
+
+**取代 81 場（D45 記載）的「整份章程只收會員 1 個 extract action」**。
+J 原話：「不然他丟 50 張我們就半死，我們也不是做慈善」——一口價 1 次
+讓 50 頁的書跟 4 頁的收一樣，而 vendor 是按頁跟我們收的。
+
+- 扣次數 = `ceil(min(N,20)/5) + max(0, N−20)`。
+  釘住的數：4→1、5→1、8→2、20→4、21→5、50→34
+  （`constitutionReadActions`，constitution-pages.test.ts）。
+- **收費跟著讀進度走**：每個 segment 只扣它自己那幾頁「新增」的次數
+  （`constitutionActionsDelta`；落在已付的五頁塊裡的 segment 扣 0）。
+  讀壞的 segment 退它自己扣的；續讀令牌帶 `pagesDone`——已讀的頁
+  永不重扣。令牌換形狀＝舊令牌（30 分鐘 TTL 內的）驗不過，客戶端
+  自動退回「重新收費的新讀取」，誠實不白扣。
+- vendor 成本照舊全部累計在第一行 ai_usage（seed 機制）＝「我們付了
+  多少」一個數；後續 segment 扣的行是會員側的量表，cost 留空。
+- **A6/D45 的免費圍欄頁數 min(N,5) 一字不動**——那是另一個表；
+  「先講價」那行（86 場 ④）改寫成「會扣 X 次 AI 用量」。demo 路照舊零扣。
+
+### D48 — Members 必填雙硬擋：表單也擋、申報也擋（2026-08-30 晚，J 拍板「都要」；89 場 ⑦ 落地）
+
+**推翻 2026-08-19 的「只在申報咬人、不在加人時擋」**。eROSES 必填欄
+（姓名、IC 名、州屬、任命日期——以 H2 對過的 portal 欄為準；電郵不擋）：
+
+- **表單硬擋**：/members 的新增與編輯，缺任何一格不給存，拒絕句點名
+  缺哪格（`erosesCommitteeRefusal`，三語）。
+- **申報硬擋**：penyata flow 第 3 步（AJK）任何一行有缺，Senarai AJK
+  的 COPY 鎖住（值 select-none，同 §1-11 真鎖），缺誰缺什麼列在原地，
+  就地補（`fillCommitteeErosesGaps`，H2「補一格」的路放寬到四欄）。
+- **舊資料不炸**：歷史行、名冊照片/匯入、種職位骨架照舊可以留缺——
+  只是整行 amber、行內點名缺什麼、必填欄掛 eROSES 徽章、頂部 banner
+  一鍵捲到第一個缺行。migration 37 未貼時 state 欄讀不到＝不擋（D8）。
+- ⚠ **風險註記（工單要求白紙黑字）**：表單硬擋正是 2026-08-19 那條
+  舊拍板要防的局面——秘書手上只有中文名，被表單逼著當場自己音譯
+  亂填（68 場模型音譯前科：En.Loo Sio San 被發明成「吕兆生」；人手
+  音譯是同一種病，而且進的是政府表格）。對策是擋不鬆、警語常駐
+  （「照 IC 抄，不要自己音譯」貼著每個 IC 名輸入框），上線後要盯
+  真名冊有沒有出現可疑的「當場拼出來」的 IC 名。
+
 ---
 
-*Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C) · D16 appended 2026-08-25 (Stage D) · D17 appended 2026-08-27 (work order 27, the overnight sprint) · D18–D21 appended 2026-08-27 (work order 31 §0, J's post-launch rulings) · D22–D23 appended 2026-08-27 (work order 32 §0, launch-day feedback rulings) · D24–D25 appended 2026-08-27 (the afternoon rulings: violet redesign + BM guard) · D26–D28 appended 2026-08-27 (the launch-evening 20-point list) · D29–D32 appended 2026-08-28 (the two-review session: prompt unfreeze, attendance gate, funds page, record-to-DB) · D33–D35 appended 2026-08-28 (J's §6 answers + the new seven: PdpaNote deleted, per-part AI discussion, minutes named/printable/editable/photo-linked) · D36–D37 appended 2026-08-28 evening (the eight-item round: save lands on the finished document, saved workspaces clear themselves, AI may merge like items under checkMergedFacts) · D38–D40 appended 2026-08-28 (the design pass: one five-step radius scale shifted a notch, the canvas gradient that was being painted and covered, the four rebuilt home cards and the sign-in brand panel) · D41–D42 appended 2026-08-28 (J's review of it: no piggy bank and a standing check on imagery for every community, and one brand mark that both the page and the icon files are generated from) · D43–D44 appended 2026-08-28 night (no black buttons — the primary token is brand purple; and the free fence: lifetime 5 documents · 20 receipts · 20 pages · 3 clean downloads, watermarked previews, clean files only through counted doors) · D45 appended 2026-08-30 (work order 81: the A6 exception — a constitution upload costs the fence min(actual pages, 5), charged once per document even when read in segments) · D46 appended 2026-08-30 (work order 87: the receipt-verify QR page's three hard lines — token-only lookup, repeat only what the paper prints, never read as certifying the society)*
+*Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C) · D16 appended 2026-08-25 (Stage D) · D17 appended 2026-08-27 (work order 27, the overnight sprint) · D18–D21 appended 2026-08-27 (work order 31 §0, J's post-launch rulings) · D22–D23 appended 2026-08-27 (work order 32 §0, launch-day feedback rulings) · D24–D25 appended 2026-08-27 (the afternoon rulings: violet redesign + BM guard) · D26–D28 appended 2026-08-27 (the launch-evening 20-point list) · D29–D32 appended 2026-08-28 (the two-review session: prompt unfreeze, attendance gate, funds page, record-to-DB) · D33–D35 appended 2026-08-28 (J's §6 answers + the new seven: PdpaNote deleted, per-part AI discussion, minutes named/printable/editable/photo-linked) · D36–D37 appended 2026-08-28 evening (the eight-item round: save lands on the finished document, saved workspaces clear themselves, AI may merge like items under checkMergedFacts) · D38–D40 appended 2026-08-28 (the design pass: one five-step radius scale shifted a notch, the canvas gradient that was being painted and covered, the four rebuilt home cards and the sign-in brand panel) · D41–D42 appended 2026-08-28 (J's review of it: no piggy bank and a standing check on imagery for every community, and one brand mark that both the page and the icon files are generated from) · D43–D44 appended 2026-08-28 night (no black buttons — the primary token is brand purple; and the free fence: lifetime 5 documents · 20 receipts · 20 pages · 3 clean downloads, watermarked previews, clean files only through counted doors) · D45 appended 2026-08-30 (work order 81: the A6 exception — a constitution upload costs the fence min(actual pages, 5), charged once per document even when read in segments) · D46 appended 2026-08-30 (work order 87: the receipt-verify QR page's three hard lines — token-only lookup, repeat only what the paper prints, never read as certifying the society) · D47–D48 appended 2026-08-30 night (work order 89: the constitution read is priced by pages — blocks of five to page 20, per page after — with the charge following the read; and the committee's eROSES-required fields hard-gate both the form and the filing, with the transliteration risk noted)*

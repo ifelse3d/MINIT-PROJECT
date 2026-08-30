@@ -166,10 +166,13 @@ async function main() {
   );
 
   // B-4 + the plain add: form on top, clears after a successful add.
+  // D48 (work order 89 ⑦a): state is REQUIRED now too — the form refuses an
+  // incomplete eROSES row, so the probe fills the full set.
   await typeInto(page, 'input[name="position"]', "Pengerusi / 主席");
   await typeInto(page, 'input[name="personName"]', "陈小明");
   await typeInto(page, 'input[name="nameOfficial"]', "TAN SIEW MING");
   await typeInto(page, 'input[name="note"]', "（大）");
+  await typeInto(page, 'input[name="state"]', "Selangor");
   await typeInto(page, 'input[name="termStart"]', "20260101");
   await clickButtonWithText(page, "加进名单");
   await page.waitForFunction(
@@ -193,10 +196,15 @@ async function main() {
   check("B-11: badge counts the row — 现任 1 人", body1.includes("现任 1 人"));
   check("B-1: appointed date shows (no arrow-range)", body1.includes("2026-01-01") && !body1.includes("2026-01-01 →"));
 
-  // B-6: SAME name + SAME IC name → refused outright.
+  // B-6: SAME name + SAME IC name → refused outright. (D48: the row must be
+  // COMPLETE to reach the duplicate question — completeness is checked
+  // first, so a confirmed "yes, another person" resubmit can never then
+  // trip over an empty box.)
   await typeInto(page, 'input[name="position"]', "AJK");
   await typeInto(page, 'input[name="personName"]', "陈小明");
   await typeInto(page, 'input[name="nameOfficial"]', "TAN SIEW MING");
+  await typeInto(page, 'input[name="state"]', "Selangor");
+  await typeInto(page, 'input[name="termStart"]', "20260101");
   await clickButtonWithText(page, "加进名单");
   await page.waitForFunction(
     () => (document.body.innerText || "").includes("已经在名单里"),

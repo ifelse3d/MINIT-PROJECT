@@ -382,31 +382,69 @@ async function main() {
     },
     3: async () => {
       check("step 3: sketch present", (await page.$('[data-probe="sketch-3"]')) !== null);
-      const hasIc = (await page.$('[data-probe="ic-inline"]')) !== null;
-      check("step 3: inline IC-name row for the missing member (§1-2/§1-3)", hasIc);
-      if (!hasIc) {
+      // D48 (work order 89 ⑦b): BOTH seeded rows still miss eROSES fields
+      // (陈大明 has no state/date, 林小美 no IC name either) — so the
+      // copy-pack must be LOCKED and each row must offer its own inline
+      // gap form right here.
+      check(
+        "step 3: no live copy while rows are incomplete (D48)",
+        (await page.$('[data-copy-id="s3-ajk"]')) === null &&
+          (await page.$('[data-probe="ajk-gaps"]')) !== null,
+      );
+      let forms = await page.evaluate(
+        () => document.querySelectorAll('[data-probe="ic-inline"]').length,
+      );
+      check("step 3: one inline gap form per incomplete row", forms === 2, `got ${forms}`);
+      if (forms === 0) {
         const rows = await (
-          await rest(`/committee_roster?org_id=eq.${orgId}&select=person_name,name_official`)
+          await rest(`/committee_roster?org_id=eq.${orgId}&select=person_name,name_official,state,term_start`)
         ).json();
         console.log("DBG roster rows:", JSON.stringify(rows));
-        const t = await page.evaluate(() => document.body.innerText.slice(0, 2000));
-        console.log("DBG step3 body:", JSON.stringify(t));
+        console.log("DBG step3 body:", JSON.stringify(await page.evaluate(() => document.body.innerText.slice(0, 2000))));
       }
-      if (hasIc) {
-        await typeScoped(page, "ic-inline", "nameOfficial", "LIM SIEW MEI");
+      // Fill whatever the FIRST form asks for, save, repeat — each save
+      // refreshes the page and the closed row's form disappears.
+      for (let round = 0; round < 3 && forms > 0; round++) {
+        for (const [name, value] of [
+          ["nameOfficial", "LIM SIEW MEI"],
+          ["state", "Selangor"],
+          ["termStart", `${year}-05-20`],
+        ]) {
+          const has = await page.evaluate(
+            (n) => !!document.querySelector(`[data-probe="ic-inline"] input[name="${n}"]`),
+            name,
+          );
+          if (has) await typeScoped(page, "ic-inline", name, value);
+        }
         await page.evaluate(() => {
           const f = document.querySelector('[data-probe="ic-inline"]');
           const b = f && [...f.querySelectorAll('button[type="submit"]')][0];
           if (b) b.click();
         });
         await sleep(3000);
-        const stillMissing = (await page.$('[data-probe="ic-inline"]')) !== null;
-        check("step 3: the gap closed after saving", !stillMissing);
-        const db = await (
-          await rest(`/committee_roster?org_id=eq.${orgId}&person_name=eq.${encodeURIComponent("林小美")}&select=name_official`)
-        ).json();
-        check("step 3: IC name is in the real table", db[0]?.name_official === "LIM SIEW MEI");
+        forms = await page.evaluate(
+          () => document.querySelectorAll('[data-probe="ic-inline"]').length,
+        );
       }
+      check("step 3: every gap closed after filling in place", forms === 0, `left ${forms}`);
+      // The gate opens: the gaps block and the 🛑 button are both gone.
+      // (Whether an ACTIVE copy appears depends on the minutes naming office
+      // bearers — this typed AGM named none, so the value row honestly says
+      // where the list would come from; that path predates D48.)
+      const unlocked =
+        (await page.$('[data-probe="ajk-gaps"]')) === null &&
+        (await page.$('[data-probe="ajk-copy-blocked"]')) === null;
+      check("step 3: the D48 gate opens once the list is complete", unlocked);
+      const db = await (
+        await rest(`/committee_roster?org_id=eq.${orgId}&person_name=eq.${encodeURIComponent("林小美")}&select=name_official,state,term_start`)
+      ).json();
+      check(
+        "step 3: the fills are in the real table",
+        db[0]?.name_official === "LIM SIEW MEI" &&
+          db[0]?.state === "Selangor" &&
+          db[0]?.term_start === `${year}-05-20`,
+        JSON.stringify(db),
+      );
     },
     4: async () => {
       check("step 4: sketch present", (await page.$('[data-probe="sketch-4"]')) !== null);

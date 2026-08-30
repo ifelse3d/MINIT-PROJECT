@@ -21,11 +21,16 @@ import { LANGKAH } from "../../langkah-meta";
 import {
   AuditorInlineForm,
   BankInlineForm,
-  IcNameInlineRow,
+  ErosesGapInlineRow,
   MaklumatInlineForm,
   StepNav,
   ValueRow,
 } from "../../flow-ui";
+import {
+  erosesGapList,
+  missingErosesCommitteeFields,
+  type ErosesCommitteeField,
+} from "@/lib/eroses-committee";
 
 // ---------------------------------------------------------------------------
 // ONE PORTAL STEP PER PAGE (H2, work order 69 — Hard Rule 13; J: 「不是所有
@@ -344,20 +349,93 @@ export default async function LangkahPage({
       ? buildPastePack(base.selected.extraction, filingRoster)
       : null;
     const row = pastePack?.find((r) => r.erosesField === "Senarai Ahli Jawatankuasa") ?? null;
-    // The rows whose IC name is still missing — fillable HERE (§1-2/§1-3).
+    // D48 (⑦, work order 89): the SHIPPING gate. Every roster row is read
+    // with the columns eROSES requires; while any row has a gap the
+    // copy-pack above stays locked and the gaps are fillable RIGHT HERE
+    // (H2's "fill one box" road, widened). Ladder per D8: behind migration
+    // 37 the state column does not exist — then it cannot gate either.
     const supabase = await getSupabaseServer();
-    const rosterRead = await supabase
-      .from("committee_roster")
-      .select("id, person_name, name_official")
-      .eq("org_id", base.active.id)
-      .order("id", { ascending: true })
-      .limit(500);
-    const missingIc = (rosterRead.data ?? []).filter(
-      (r) =>
-        typeof r.person_name === "string" &&
-        r.person_name.trim() !== "" &&
-        ((r.name_official ?? "") as string).trim() === "",
-    ) as { id: number; person_name: string }[];
+    type RosterRow = {
+      id: number;
+      position: string;
+      person_name: string;
+      name_official: string | null;
+      state?: string | null;
+      term_start?: string | null;
+    };
+    let rosterRows: RosterRow[] = [];
+    let checkable: ErosesCommitteeField[] = ["personName", "nameOfficial", "termStart"];
+    {
+      const with37 = await supabase
+        .from("committee_roster")
+        .select("id, position, person_name, name_official, state, term_start")
+        .eq("org_id", base.active.id)
+        .order("id", { ascending: true })
+        .limit(500);
+      if (!with37.error && with37.data) {
+        rosterRows = with37.data as RosterRow[];
+        checkable = ["personName", "nameOfficial", "state", "termStart"];
+      } else {
+        const legacy = await supabase
+          .from("committee_roster")
+          .select("id, position, person_name, name_official, term_start")
+          .eq("org_id", base.active.id)
+          .order("id", { ascending: true })
+          .limit(500);
+        rosterRows = (legacy.data ?? []) as RosterRow[];
+      }
+    }
+    const gapped = rosterRows
+      .map((r) => ({
+        row: r,
+        gaps: missingErosesCommitteeFields(r, checkable),
+      }))
+      .filter((g) => g.gaps.length > 0);
+    const blockedNode =
+      gapped.length > 0 ? (
+        <div
+          className="mt-2 flex flex-col gap-2 rounded-md border-2 border-amber-300 bg-amber-50/80 p-3 dark:border-amber-400/30 dark:bg-amber-400/10"
+          data-probe="ajk-gaps"
+        >
+          <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+            🛑{" "}
+            <Tri
+              bm={`eROSES tidak akan menerima senarai ini lagi: ${gapped.length} baris belum lengkap. Isi DI SINI — salin nama IC daripada kad pengenalan, jangan terjemah sendiri.`}
+              zh={`这份名单现在还交不进 eROSES：${gapped.length} 行没填齐。就在这里补 —— 身份证名字照 IC 抄，不要自己音译。`}
+              en={`eROSES will not take this list yet: ${gapped.length} row(s) incomplete. Fill them RIGHT HERE — copy IC names from the identity card, never transliterate.`}
+            />
+          </p>
+          {gapped.slice(0, 15).map(({ row: r, gaps }) =>
+            canWrite ? (
+              <ErosesGapInlineRow
+                key={r.id}
+                id={r.id}
+                personName={r.person_name}
+                position={r.position}
+                missing={gaps}
+              />
+            ) : (
+              <p key={r.id} className="text-sm text-amber-900 dark:text-amber-100">
+                {r.person_name.trim() !== "" ? r.person_name : "—"} ·{" "}
+                <Tri
+                  bm={`kurang: ${erosesGapList(gaps, "bm")}`}
+                  zh={`缺：${erosesGapList(gaps, "zh")}`}
+                  en={`missing: ${erosesGapList(gaps, "en")}`}
+                />
+              </p>
+            ),
+          )}
+          {!canWrite && (
+            <p className="text-sm text-muted-foreground">
+              <Tri
+                bm="Hanya akaun dengan hak menulis minit boleh mengisinya."
+                zh="要有会议记录编辑权限的帐号才能补。"
+                en="Only an account with minutes-write rights can fill these."
+              />
+            </p>
+          )}
+        </div>
+      ) : undefined;
     return (
       <StepFrame
         n={3}
@@ -381,6 +459,7 @@ export default async function LangkahPage({
           }
           value={row?.value ?? null}
           locked={locked}
+          copyBlocked={gapped.length > 0}
           fix={goFix(
             "/members",
             "Senarai AJK belum ada dalam sistem.",
@@ -388,21 +467,10 @@ export default async function LangkahPage({
             "The committee roster is not in the system yet.",
           )}
         />
-        {missingIc.length > 0 && canWrite && (
-          <div className="flex flex-col gap-2 rounded-md border border-[color:var(--v2-outline-border)] bg-black/[0.02] p-3 dark:bg-white/5">
-            <p className="text-sm font-medium">
-              ✏️{" "}
-              <Tri
-                bm={`${missingIc.length} orang belum ada nama IC — salin daripada kad pengenalan dan isi DI SINI (jangan terjemah sendiri).`}
-                zh={`还有 ${missingIc.length} 位没填身份证名字 —— 照身份证抄，就在这里补（不要自己音译）。`}
-                en={`${missingIc.length} member(s) still have no IC name — copy it from the identity card and fill it RIGHT HERE (never transliterate).`}
-              />
-            </p>
-            {missingIc.slice(0, 15).map((m) => (
-              <IcNameInlineRow key={m.id} id={m.id} personName={m.person_name} />
-            ))}
-          </div>
-        )}
+        {/* D48: rendered BESIDE the value row, not inside it — the gaps must
+            be fillable here even when the paste value itself is missing
+            (a meeting whose minutes named no office bearers). */}
+        {blockedNode}
         <p className="text-sm text-muted-foreground">
           <Tri
             bm="Tarikh perlantikan = tarikh mesyuarat agung yang melantik jawatankuasa ini (biasanya tarikh AGM di langkah 1). Kemas kini AJK sendiri dibuat di AJK & Keahlian, bukan di sini."

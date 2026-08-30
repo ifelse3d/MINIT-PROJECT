@@ -7,7 +7,11 @@ import { getSupabaseServer, getSessionUser } from "@/db/supabase-server";
 import { getActiveOrg } from "@/lib/active-org";
 import { can } from "@/lib/roles";
 import { AddCommitteeRow, ImportCommittee } from "./members-form";
-import { CommitteeTable, type CommitteeRow } from "./committee-table";
+import {
+  CommitteeTable,
+  ErosesGapsBanner,
+  type CommitteeRow,
+} from "./committee-table";
 import { AuditorsCard, type AuditorRow } from "./auditors-card";
 import { PositionsTemplate, type RequirementLine } from "./positions-template";
 import { loadConstitutionClauses } from "@/app/constitution/actions";
@@ -116,18 +120,16 @@ export default async function MembersPage() {
     }
   }
 
-  // How many of the filed committee still have no name as printed on their IC.
-  //
-  // 2026-08-19, J's decision, written down so nobody quietly reverses it:
-  // THE RULE BITES AT THE FILING, NOT AT THE ADDING. A secretary usually has
-  // only the Chinese name to hand and has to ask the person for the IC — if
-  // adding someone were blocked on it, they could not even write the name
-  // down, so they would invent a romanisation, and an invented romanisation on
-  // a government form is a false filing. So: never in the way while the list
-  // is being built, and counted in plain sight because eROSES will ask.
-  const missingOfficial = committee.filter(
-    (m) => (m.name_official ?? "").trim() === "",
-  ).length;
+  // D48 (⑦, work order 89 — J 8/30 night, 「都要」): the 2026-08-19 ruling
+  // "bite at the filing, not at the adding" is REVERSED. The add/edit form
+  // now refuses a row missing what eROSES requires (IC name, state,
+  // appointment date), and the penyata flow's AJK step refuses the copy-pack
+  // over the same gaps. The risk the old ruling guarded — someone inventing
+  // a romanisation on the spot because the form demands an IC name — is
+  // real (the 68-session precedent) and is answered by the standing warning
+  // beside the box, never by loosening the gate. Rows that ALREADY have
+  // gaps (history, roster photos, imports) keep them: painted amber in the
+  // table with the gaps named, jumped to by the banner below.
 
   return (
     <div className="mx-auto w-full max-w-5xl pb-10">
@@ -161,19 +163,9 @@ export default async function MembersPage() {
         </Card>
       ) : (
         <div className="flex flex-col gap-6">
-          {/* Counted, not enforced. Nothing here blocks anything — it is the
-              one number the secretary needs before opening eROSES, and it
-              disappears the moment it reaches zero. */}
-          {missingOfficial > 0 && (
-            <p className="rounded-md border-2 border-amber-300 bg-amber-50/80 p-3 text-base font-medium text-amber-900 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
-              ⚠{" "}
-              <Tri
-                bm={`${missingOfficial} orang belum ada nama seperti dalam kad pengenalan. eROSES memerlukannya — salin daripada IC mereka, jangan terjemah sendiri.`}
-                zh={`${missingOfficial} 人还没填身份证上的名字。eROSES 申报前要补齐 —— 请照他们的身份证抄，不要自己音译。`}
-                en={`${missingOfficial} ${missingOfficial === 1 ? "person has" : "people have"} no name as printed on their identity card. eROSES needs it — copy it from their IC rather than transliterating it yourself.`}
-              />
-            </p>
-          )}
+          {/* D48: every eROSES gap counted, one tap scrolls to the first
+              gapped row. Renders nothing when the list is complete. */}
+          <ErosesGapsBanner rows={committee} />
 
           {/* 1 — the filed committee. Form on top, table below (B-3). */}
           <Card>

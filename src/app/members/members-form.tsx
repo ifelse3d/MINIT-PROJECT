@@ -25,6 +25,16 @@ import { prepareUploadForSend } from "@/lib/upload-relay-client";
 
 const INITIAL: MemberActionState = { error: null, ok: false };
 
+/** D48 (⑦, work order 89): a box turns red when the server named it — either
+ *  as THE field, or as one of the still-empty eROSES boxes. */
+function fieldInvalid(
+  state: MemberActionState,
+  field: NonNullable<MemberActionState["field"]>,
+): boolean {
+  if (state.field === field) return true;
+  return (state.missingEroses ?? []).some((f) => f === field);
+}
+
 const inputCls =
   "w-full rounded-sm border border-[color:var(--v2-outline-border)] bg-[color:var(--v2-card)] px-3 py-2 text-base text-[color:var(--v2-text)] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[color:var(--v2-primary)] focus:shadow-[0_0_0_3px_rgba(91,75,214,0.18)]";
 
@@ -189,6 +199,23 @@ export function AddCommitteeRow() {
   const [askHiddenFor, setAskHiddenFor] = useState<MemberActionState | null>(null);
   const askSameName = state === askHiddenFor ? null : state.askSameName;
 
+  // ⑦(c) (work order 89): arriving from the BM conversion card's "add to the
+  // roster" link — the name as the notes write it and the IC name the person
+  // just typed ride in as ?tambah_nama=…&tambah_ic=…, pre-filled here so the
+  // add is one look and a save. Read once on mount; setTimeout(0) per the
+  // eslint baseline's sanctioned effect-setState shape.
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const nama = p.get("tambah_nama");
+    const ic = p.get("tambah_ic");
+    if (!nama && !ic) return;
+    const timer = setTimeout(() => {
+      if (nama) setPersonName(nama);
+      if (ic) setNameOfficial(ic);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
+
   // B-4 (work order 51): a successful add clears the WHOLE form (date
   // included) so the next person starts on a clean row. setTimeout(0), not a
   // bare setState-in-effect — the repo's eslint baseline forbids the latter.
@@ -218,7 +245,7 @@ export function AddCommitteeRow() {
             name="position"
             value={position}
             onChange={(e) => setPosition(e.currentTarget.value)}
-            className={inputCls + (state.field === "position" ? invalidCls : "")}
+            className={inputCls + (fieldInvalid(state, "position") ? invalidCls : "")}
             required
             maxLength={120}
             list="committee-positions"
@@ -238,7 +265,7 @@ export function AddCommitteeRow() {
             name="personName"
             value={personName}
             onChange={(e) => setPersonName(e.currentTarget.value)}
-            className={inputCls + (state.field === "personName" ? invalidCls : "")}
+            className={inputCls + (fieldInvalid(state, "personName") ? invalidCls : "")}
             required
             maxLength={120}
           />
@@ -250,7 +277,7 @@ export function AddCommitteeRow() {
             grouped by language, interface language's group first. */}
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium text-muted-foreground">
-            <Tri bm="Gelaran (tidak wajib)" zh="称呼/职衔（可不填）" en="Title (optional)" />
+            <Tri bm="Gelaran (pilihan)" zh="称呼/职衔（选填）" en="Title (optional)" />
           </span>
           <input
             name="honorific"
@@ -279,7 +306,7 @@ export function AddCommitteeRow() {
             name="nameOfficial"
             value={nameOfficial}
             onChange={(e) => setNameOfficial(e.currentTarget.value)}
-            className={inputCls}
+            className={inputCls + (fieldInvalid(state, "nameOfficial") ? invalidCls : "")}
             maxLength={160}
           />
         </label>
@@ -298,7 +325,7 @@ export function AddCommitteeRow() {
             type="text"
             value={email}
             onChange={(e) => setEmail(e.currentTarget.value)}
-            className={inputCls + (state.field === "email" ? invalidCls : "")}
+            className={inputCls + (fieldInvalid(state, "email") ? invalidCls : "")}
             maxLength={160}
             inputMode="email"
           />
@@ -312,7 +339,7 @@ export function AddCommitteeRow() {
             name="state"
             value={negeri}
             onChange={(e) => setNegeri(e.currentTarget.value)}
-            className={inputCls}
+            className={inputCls + (fieldInvalid(state, "state") ? invalidCls : "")}
             maxLength={60}
             list="committee-states"
           />
@@ -358,7 +385,7 @@ export function AddCommitteeRow() {
             name="termStart"
             value={termStart}
             onChange={setTermStart}
-            invalid={state.field === "termStart"}
+            invalid={fieldInvalid(state, "termStart")}
           />
         </label>
       </div>
@@ -366,9 +393,9 @@ export function AddCommitteeRow() {
       {/* §1-8 (work order 69, tester): one short sentence, not a paragraph. */}
       <p className="text-sm text-muted-foreground">
         <Tri
-          bm="Nama dalam IC: salin betul-betul daripada kad pengenalan. Biarkan kosong kalau belum tahu."
-          zh="身份证上的名字：照身份证抄。还不知道就留空。"
-          en="Copy the name exactly from the IC. Leave blank if unknown."
+          bm="Nama dalam IC: salin betul-betul daripada kad pengenalan — JANGAN terjemah sendiri. eROSES perlukan nama IC, negeri dan tarikh perlantikan sebelum baris ini boleh disimpan."
+          zh="身份证上的名字：照身份证抄，不要自己音译。eROSES 要的身份证名字、州属、任命日期都填好，这一行才能保存。"
+          en="Copy the name exactly from the IC — NEVER transliterate it yourself. The IC name, state and appointment date eROSES asks for must be filled before this row saves."
         />
       </p>
 
@@ -866,7 +893,7 @@ export function EditCommitteeRow({
             name="position"
             value={position}
             onChange={(e) => setPosition(e.currentTarget.value)}
-            className={inputCls + (state.field === "position" ? invalidCls : "")}
+            className={inputCls + (fieldInvalid(state, "position") ? invalidCls : "")}
             required
             maxLength={120}
             list="committee-positions"
@@ -878,12 +905,12 @@ export function EditCommitteeRow({
             name="personName"
             value={personName}
             onChange={(e) => setPersonName(e.currentTarget.value)}
-            className={inputCls + (state.field === "personName" ? invalidCls : "")}
+            className={inputCls + (fieldInvalid(state, "personName") ? invalidCls : "")}
             maxLength={120}
           />,
         )}
         {field(
-          <Tri bm="Gelaran (tidak wajib)" zh="称呼/职衔（可不填）" en="Title (optional)" />,
+          <Tri bm="Gelaran (pilihan)" zh="称呼/职衔（选填）" en="Title (optional)" />,
           <>
             <input
               name="honorific"
@@ -910,7 +937,7 @@ export function EditCommitteeRow({
             name="nameOfficial"
             value={nameOfficial}
             onChange={(e) => setNameOfficial(e.currentTarget.value)}
-            className={inputCls}
+            className={inputCls + (fieldInvalid(state, "nameOfficial") ? invalidCls : "")}
             maxLength={160}
           />,
         )}
@@ -924,7 +951,7 @@ export function EditCommitteeRow({
             type="text"
             value={email}
             onChange={(e) => setEmail(e.currentTarget.value)}
-            className={inputCls + (state.field === "email" ? invalidCls : "")}
+            className={inputCls + (fieldInvalid(state, "email") ? invalidCls : "")}
             maxLength={160}
             inputMode="email"
           />,
@@ -936,7 +963,7 @@ export function EditCommitteeRow({
               name="state"
               value={negeri}
               onChange={(e) => setNegeri(e.currentTarget.value)}
-              className={inputCls}
+              className={inputCls + (fieldInvalid(state, "state") ? invalidCls : "")}
               maxLength={60}
               list="committee-states-edit"
             />
@@ -971,15 +998,15 @@ export function EditCommitteeRow({
             name="termStart"
             value={termStart}
             onChange={setTermStart}
-            invalid={state.field === "termStart"}
+            invalid={fieldInvalid(state, "termStart")}
           />,
         )}
       </div>
       <p className="text-sm text-muted-foreground">
         <Tri
-          bm="Nama dalam IC: salin betul-betul daripada kad pengenalan. Biarkan kosong kalau belum tahu."
-          zh="身份证上的名字：照身份证抄。还不知道就留空。"
-          en="Copy the name exactly from the IC. Leave blank if unknown."
+          bm="Nama dalam IC: salin betul-betul daripada kad pengenalan — JANGAN terjemah sendiri. eROSES perlukan nama IC, negeri dan tarikh perlantikan sebelum baris ini boleh disimpan."
+          zh="身份证上的名字：照身份证抄，不要自己音译。eROSES 要的身份证名字、州属、任命日期都填好，这一行才能保存。"
+          en="Copy the name exactly from the IC — NEVER transliterate it yourself. The IC name, state and appointment date eROSES asks for must be filled before this row saves."
         />
       </p>
       <div className="flex flex-wrap gap-2">

@@ -28,13 +28,21 @@ import { can, permissionError } from "@/lib/roles";
 import { describeBadLines, parseCommitteePaste } from "@/lib/bulk-paste";
 import { toIsoDate } from "@/lib/date-input";
 import { xlsxToPasteText } from "@/lib/roster-xlsx";
+import {
+  erosesCommitteeRefusal,
+  missingErosesCommitteeFields,
+  type ErosesCommitteeField,
+} from "@/lib/eroses-committee";
 
 export type MemberActionState = {
   error: string | null;
   ok: boolean;
   /** B-2: which form box the error is about — the client turns THAT box red
    *  instead of leaving the person to guess. */
-  field?: "position" | "personName" | "termStart" | "email" | null;
+  field?: "position" | "personName" | "nameOfficial" | "state" | "termStart" | "email" | null;
+  /** D48 (⑦, work order 89): EVERY eROSES box still empty — the client turns
+   *  each of them red, not just the first. */
+  missingEroses?: ErosesCommitteeField[];
   /**
    * B-6 (拍板 6): somebody with the SAME name is already on the roster but
    * with a DIFFERENT IC name — that is probably a second person, so the form
@@ -119,6 +127,29 @@ export async function addCommitteeMember(
   const termStart = termStartRaw === "" ? "" : (toIsoDate(termStartRaw) ?? null);
   if (termStart === null) {
     return { error: ERR.badDate, ok: false, field: "termStart" };
+  }
+
+  // D48 (⑦, work order 89 — J 8/30 night, 「都要」): the FORM is a hard gate
+  // now. A row going into eROSES saves only when every eROSES-required box
+  // is filled; the refusal names the boxes in plain words. (This reverses
+  // the 2026-08-19 "bite at the filing, not the adding" ruling — the risk it
+  // guarded, people inventing a romanisation on the spot, is noted in D48
+  // and answered by the never-transliterate warning beside the box.)
+  // Photo-import / bulk-import / seeded rows are NOT this form — old and
+  // imported gaps survive, flagged amber on the table.
+  const gaps = missingErosesCommitteeFields({
+    person_name: personName,
+    name_official: nameOfficial,
+    state,
+    term_start: termStart,
+  });
+  if (gaps.length > 0) {
+    return {
+      error: erosesCommitteeRefusal(gaps),
+      ok: false,
+      field: gaps[0],
+      missingEroses: gaps,
+    };
   }
 
   const supabase = await getSupabaseServer();
@@ -223,15 +254,31 @@ export async function updateCommitteeMember(
   const termStartRaw = String(formData.get("termStart") ?? "").trim();
 
   if (position === "") return { error: ERR.needPosition, ok: false, field: "position" };
-  // A seeded position row (seedCommonPositions) has an EMPTY name until the
-  // society fills it in — so editing may leave it empty too, and the table
-  // keeps showing "belum diisi" until someone knows the answer.
   if (email !== "" && !EMAIL_SHAPE.test(email)) {
     return { error: ERR.badEmail, ok: false, field: "email" };
   }
   const termStart = termStartRaw === "" ? "" : (toIsoDate(termStartRaw) ?? null);
   if (termStart === null) {
     return { error: ERR.badDate, ok: false, field: "termStart" };
+  }
+
+  // D48 (⑦): editing is the same hard gate as adding — a seeded row's Edit
+  // now completes the row in one sitting (name, IC name, state, date), and
+  // the refusal names whatever is still empty. The gaps themselves are not
+  // deleted from history: a row nobody touches keeps them, flagged amber.
+  const gaps = missingErosesCommitteeFields({
+    person_name: personName,
+    name_official: nameOfficial,
+    state,
+    term_start: termStart,
+  });
+  if (gaps.length > 0) {
+    return {
+      error: erosesCommitteeRefusal(gaps),
+      ok: false,
+      field: gaps[0],
+      missingEroses: gaps,
+    };
   }
 
   const supabase = await getSupabaseServer();
@@ -260,11 +307,15 @@ export async function updateCommitteeMember(
 }
 
 /**
- * Fill ONE missing IC name, from inside the eROSES flow (H2, work order 69
- * §1-2: a gap is filled where it is discovered, not on another page). Only
- * name_official moves; everything else on the row stays untouched.
+ * Fill a row's remaining eROSES gaps from inside the penyata flow (⑦/D48,
+ * work order 89 — H2's "fill ONE missing IC name" road, widened to every
+ * eROSES-required column). Only the fields the little form sent move;
+ * everything else on the row stays untouched. `state` rides the optional-
+ * column ladder — behind migration 37 the value is quietly dropped rather
+ * than failing the whole write (D8), and the flow's gap list will not have
+ * asked for it in the first place.
  */
-export async function fillCommitteeIcName(
+export async function fillCommitteeErosesGaps(
   _prev: MemberActionState,
   formData: FormData,
 ): Promise<MemberActionState> {
@@ -277,17 +328,32 @@ export async function fillCommitteeIcName(
   }
 
   const id = Number(formData.get("id"));
+  if (!Number.isInteger(id)) return { error: ERR.failed, ok: false };
+
+  const personName = String(formData.get("personName") ?? "").trim();
   const nameOfficial = String(formData.get("nameOfficial") ?? "").trim();
-  if (!Number.isInteger(id) || nameOfficial === "") {
-    return { error: ERR.failed, ok: false };
+  const state = String(formData.get("state") ?? "").trim();
+  const termStartRaw = String(formData.get("termStart") ?? "").trim();
+  const termStart = termStartRaw === "" ? "" : (toIsoDate(termStartRaw) ?? null);
+  if (termStart === null) {
+    return { error: ERR.badDate, ok: false, field: "termStart" };
   }
 
+  const row: Record<string, unknown> = {};
+  if (personName !== "") row.person_name = personName.slice(0, 120);
+  if (nameOfficial !== "") row.name_official = nameOfficial.slice(0, 160);
+  if (state !== "") row.state = state.slice(0, 60);
+  if (termStart !== "") row.term_start = termStart;
+  if (Object.keys(row).length === 0) return { error: ERR.failed, ok: false };
+
   const supabase = await getSupabaseServer();
-  const { error } = await supabase
-    .from("committee_roster")
-    .update({ name_official: nameOfficial.slice(0, 160) })
-    .eq("id", id)
-    .eq("org_id", active.id);
+  const error = await writeWithColumnLadder((r) =>
+    supabase
+      .from("committee_roster")
+      .update(r)
+      .eq("id", id)
+      .eq("org_id", active.id),
+  )(row);
   if (error) return { error: ERR.failed, ok: false };
 
   revalidatePath("/members");

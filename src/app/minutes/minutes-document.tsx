@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Tri } from "@/components/language-provider";
+import { Tri, useTriText } from "@/components/language-provider";
 import { NextStepLink, PageSection } from "@/components/page-section";
 import { PhotoLightbox } from "@/components/page-thumbs";
 import { cjkSnippets } from "@/lib/bm-guard";
@@ -74,6 +74,7 @@ export function MinutesDocument() {
   } = useMinutes();
 
   const router = useRouter();
+  const t = useTriText();
 
   // J 28/8 evening item 5: 「在这里也没有得看回照片」 — while correcting the
   // document, one button opens the ORIGINAL handwriting in a popup (zoom
@@ -106,6 +107,22 @@ export function MinutesDocument() {
         : [],
     [bmOffenders.length, shownDocument, filingRoster],
   );
+
+  // ⑦(c) (work order 89, J 8/30): the flagged lines are a MAPPING TABLE now,
+  // not a list to stare at — each row shows the line, an input for what
+  // should stand in its place (pre-filled from the roster when the roster
+  // knows), and ONE button applies every filled row as plain string
+  // replacement. Zero AI, nothing invented: what the person typed is what
+  // lands. A row the roster did not know offers "add them to the roster"
+  // (pre-filled) so next time the swap is automatic.
+  const [nameMap, setNameMap] = useState<Record<string, string>>({});
+  const rosterFor = (snippet: string) =>
+    nameSubs.find((s) => s.from === snippet.trim()) ?? null;
+  const mappedValue = (snippet: string) =>
+    nameMap[snippet] ?? rosterFor(snippet)?.to ?? "";
+  const filledRows = bmOffenders
+    .map((s) => ({ from: s, to: mappedValue(s).trim() }))
+    .filter((r) => r.to !== "" && r.to !== r.from);
 
   // J 28/8 item 2: tap a flagged line to FIND it — the editor scrolls there
   // and selects it, which is the browser's own highlight.
@@ -396,55 +413,82 @@ export function MinutesDocument() {
                     en="Tap any line — the editor scrolls there and highlights it."
                   />
                 </p>
-                <ul className="flex max-h-40 flex-col gap-1 overflow-y-auto text-sm text-red-900/90 dark:text-red-100/90">
-                  {bmOffenders.map((s) => (
-                    <li key={s} className="truncate">
-                      <button
-                        type="button"
-                        onClick={() => locateInDocument(s)}
-                        className="max-w-full truncate text-left underline-offset-4 hover:underline"
-                        title={s}
-                      >
-                        · {s}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-                {/* J 28/8 item 1: the roster's IC names, one tap, no AI. */}
-                {nameSubs.length > 0 && (
-                  <div className="flex flex-col gap-2 rounded-md border-2 border-green-400 bg-green-50 p-3 dark:bg-green-400/10">
-                    <p className="text-base font-medium text-green-900 dark:text-green-100">
-                      <Tri
-                        bm={`${nameSubs.length} nama ini ada dalam senarai AJK — nama rasmi (IC) boleh diganti terus, percuma (bukan AI):`}
-                        zh={`这里有 ${nameSubs.length} 个人名在名册里 —— 可以直接用官方（IC）姓名顶上，免费（不用 AI）：`}
-                        en={`${nameSubs.length} of these names are on the committee roster — the official (IC) names can stand in directly, free (no AI):`}
-                      />
-                    </p>
-                    <ul className="flex flex-col gap-0.5 text-sm text-green-900/90 dark:text-green-100/90">
-                      {nameSubs.map((s) => (
-                        <li key={s.from}>
-                          · {s.from} → <span className="font-semibold">{s.to}</span>
-                          {s.count > 1 ? ` (×${s.count})` : ""}
-                        </li>
-                      ))}
-                    </ul>
-                    <div>
-                      <Button
-                        size="lg"
-                        variant="outline"
-                        className="border-green-500"
-                        onClick={() =>
-                          setEdited(applyNameSubstitutions(shownDocument, nameSubs))
-                        }
-                      >
-                        ✓{" "}
-                        <Tri
-                          bm="Ganti dengan nama rasmi (IC)"
-                          zh="用名册的官方（IC）姓名顶上"
-                          en="Put in the official (IC) names"
+                {/* ⑦(c): line → what stands in — the in-place mapping table. */}
+                <div
+                  className="flex max-h-72 flex-col gap-2 overflow-y-auto"
+                  data-probe="bm-name-map"
+                >
+                  {bmOffenders.map((s) => {
+                    const fromRoster = rosterFor(s);
+                    const value = mappedValue(s);
+                    return (
+                      <div key={s} className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => locateInDocument(s)}
+                          className="max-w-full truncate text-left text-sm text-red-900/90 underline-offset-4 hover:underline dark:text-red-100/90"
+                          title={s}
+                        >
+                          · {s}
+                        </button>
+                        <span aria-hidden className="text-red-900/60 dark:text-red-100/60">→</span>
+                        <input
+                          value={value}
+                          onChange={(e) =>
+                            setNameMap((m) => ({ ...m, [s]: e.target.value }))
+                          }
+                          placeholder={t(
+                            "nama IC / tulisan BM",
+                            "身份证名字／马来文写法",
+                            "IC name / BM wording",
+                          )}
+                          className="min-w-[12rem] flex-1 rounded-sm border border-red-300 bg-white/80 px-2 py-1 text-sm dark:bg-white/10"
                         />
-                      </Button>
-                    </div>
+                        {fromRoster && (
+                          <span className="rounded-xs bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-900 dark:bg-green-400/15 dark:text-green-200">
+                            <Tri bm="dari senarai AJK" zh="名册里有" en="from the roster" />
+                            {fromRoster.count > 1 ? ` ×${fromRoster.count}` : ""}
+                          </span>
+                        )}
+                        {!fromRoster && value.trim() !== "" && (
+                          <Link
+                            href={`/members?tambah_nama=${encodeURIComponent(s)}&tambah_ic=${encodeURIComponent(value.trim())}`}
+                            className="text-xs underline underline-offset-4"
+                          >
+                            ＋{" "}
+                            <Tri
+                              bm="tambah ke senarai AJK"
+                              zh="要不要加进名册？"
+                              en="add to the roster"
+                            />
+                          </Link>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                {filledRows.length > 0 && (
+                  <div>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="border-green-500"
+                      onClick={() =>
+                        setEdited(
+                          applyNameSubstitutions(
+                            shownDocument,
+                            filledRows.map((r) => ({ ...r, count: 0 })),
+                          ),
+                        )
+                      }
+                    >
+                      ✓{" "}
+                      <Tri
+                        bm={`Gantikan ${filledRows.length} baris (bukan AI, percuma)`}
+                        zh={`一键套用这 ${filledRows.length} 行（不用 AI，免费）`}
+                        en={`Apply ${filledRows.length} row${filledRows.length > 1 ? "s" : ""} (no AI, free)`}
+                      />
+                    </Button>
                   </div>
                 )}
                 <div className="flex flex-wrap items-center gap-2">

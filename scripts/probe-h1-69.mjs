@@ -243,6 +243,29 @@ async function main() {
   await setIn("nameOfficial", "TAN TAI BENG");
   await setIn("email", "taitb@contoh.my");
   await setIn("state", "Selangor");
+  // D48 (work order 89 ⑦a): the FORM is a hard gate now — saving with the
+  // appointment date still empty must be REFUSED, and the refusal must name
+  // the box in plain words.
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll("table form button")].find((x) =>
+      (x.textContent ?? "").includes("保存"),
+    );
+    if (b) b.click();
+  });
+  // Wait on the refusal's OWN words — "任命日期" alone is already on screen
+  // as the form label (§6: the wait string must be unique to THIS step).
+  await page.waitForFunction(
+    () => (document.body.innerText || "").includes("这些格要先填好才能保存"),
+    { timeout: 20000 },
+  );
+  const refusal = await page.evaluate(() => document.body.innerText);
+  check(
+    "D48: edit without appointment date is refused, box named",
+    refusal.includes("这些格要先填好才能保存：任命日期") &&
+      refusal.includes("不要自己音译"),
+  );
+  // Fill the named box (the controlled form kept everything typed) and save.
+  await setIn("termStart", "2026-01-01");
   await page.evaluate(() => {
     const b = [...document.querySelectorAll("table form button")].find((x) =>
       (x.textContent ?? "").includes("保存"),
@@ -265,11 +288,24 @@ async function main() {
     console.log("[SKIP] email/state display — migration 37 not applied; the save above proves the strip-retry (D8 fail-open)");
   }
 
-  // --- §1-3: the add form takes email + Negeri --------------------------------
+  // D48: seeded skeleton rows all have gaps → the banner over the list is on
+  // screen and the gapped rows are flagged in place.
+  check(
+    "D48: eROSES-gaps banner shows over an incomplete list",
+    (await page.$('[data-probe="eroses-gaps-banner"]')) !== null,
+  );
+  check(
+    "D48: gapped rows carry the amber flag",
+    (await page.$('[data-eroses-missing="1"]')) !== null,
+  );
+
+  // --- §1-3: the add form takes email + Negeri (D48: full row required) -------
   await typeInto(page, 'input[name="position"]', "Setiausaha / 秘书");
   await typeInto(page, 'input[name="personName"]', "林小美");
+  await typeInto(page, 'input[name="nameOfficial"]', "LIM SIEW MEI");
   await typeInto(page, 'input[name="email"]', "mei@contoh.my");
   await typeInto(page, 'input[name="state"]', "Selangor");
+  await typeInto(page, 'input[name="termStart"]', "2026-01-01");
   await clickButtonWithText(page, "加进名单");
   await page.waitForFunction(
     () => {

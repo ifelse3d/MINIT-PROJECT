@@ -14,6 +14,11 @@ import { Tri, useTriText } from "@/components/language-provider";
 import { EditCommitteeRow, RemoveCommitteeButton } from "./members-form";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
+import {
+  erosesGapList,
+  missingErosesCommitteeFields,
+  type ErosesCommitteeField,
+} from "@/lib/eroses-committee";
 
 export type CommitteeRow = {
   id: number;
@@ -35,6 +40,59 @@ function NotFilled() {
     <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
       <Tri bm="belum diisi" zh="还没填" en="not filled in" />
     </span>
+  );
+}
+
+/** D48 (⑦): the little mark on every column eROSES requires. */
+function ErosesBadge() {
+  return (
+    <span className="ml-1 rounded-xs bg-purple-100 px-1 py-0.5 align-middle text-[10px] font-semibold tracking-wide text-purple-900 dark:bg-purple-400/20 dark:text-purple-200">
+      eROSES
+    </span>
+  );
+}
+
+/**
+ * D8 fail-open: which eROSES columns this load actually carried. Behind
+ * migration 37 the select fell back and `state`/`email` never came — a gap
+ * nobody can read must not paint rows amber or block a filing.
+ */
+function checkableFields(rows: CommitteeRow[]): ErosesCommitteeField[] {
+  const base: ErosesCommitteeField[] = ["personName", "nameOfficial", "termStart"];
+  return rows.length > 0 && "state" in rows[0] ? [...base, "state"] : base;
+}
+
+/**
+ * D48 (⑦, work order 89): the banner over the list — how many rows still
+ * miss something eROSES requires, and one tap scrolls to the first of them.
+ * Counted and flagged, and since 8/30 also ENFORCED at the add/edit form
+ * and at the penyata flow's AJK step; old and imported rows keep their gaps
+ * (old data must not explode) — they are painted amber below instead.
+ */
+export function ErosesGapsBanner({ rows }: { rows: CommitteeRow[] }) {
+  const checkable = checkableFields(rows);
+  const gapped = rows.filter(
+    (m) => missingErosesCommitteeFields(m, checkable).length > 0,
+  );
+  if (gapped.length === 0) return null;
+  return (
+    <button
+      type="button"
+      data-probe="eroses-gaps-banner"
+      onClick={() => {
+        document
+          .querySelector('[data-eroses-missing="1"]')
+          ?.scrollIntoView({ block: "center", behavior: "smooth" });
+      }}
+      className="w-full rounded-md border-2 border-amber-300 bg-amber-50/80 p-3 text-left text-base font-medium text-amber-900 hover:bg-amber-100/80 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100 dark:hover:bg-amber-400/20"
+    >
+      ⚠{" "}
+      <Tri
+        bm={`${gapped.length} baris belum lengkap untuk eROSES (nama IC / negeri / tarikh perlantikan). Tekan untuk lompat ke baris pertama — nama IC disalin daripada kad pengenalan, jangan terjemah sendiri.`}
+        zh={`${gapped.length} 行还没填齐 eROSES 必填栏（身份证名字／州属／任命日期）。点一下跳到第一行 —— 身份证名字请照 IC 抄，不要自己音译。`}
+        en={`${gapped.length} row${gapped.length === 1 ? "" : "s"} still missing what eROSES requires (IC name / state / appointment date). Tap to jump to the first — copy IC names from the identity card, never transliterate.`}
+      />
+    </button>
   );
 }
 
@@ -105,28 +163,53 @@ export function CommitteeTable({
                 </th>
                 <th className="px-2 py-2 font-medium">
                   <Tri
-                    bm="Nama dalam IC (eROSES)"
-                    zh="身份证上的名字（eROSES）"
-                    en="Name on IC (eROSES)"
+                    bm="Nama dalam IC"
+                    zh="身份证上的名字"
+                    en="Name on IC"
                   />
+                  <ErosesBadge />
                 </th>
                 <th className="px-2 py-2 font-medium">
                   <Tri bm="E-mel" zh="电邮" en="Email" />
                 </th>
                 <th className="px-2 py-2 font-medium">
                   <Tri bm="Negeri" zh="州属" en="State" />
+                  <ErosesBadge />
                 </th>
                 <th className="px-2 py-2 font-medium">
                   <Tri bm="Dilantik" zh="任命日期" en="Appointed" />
+                  <ErosesBadge />
                 </th>
                 <th className="px-2 py-2" />
               </tr>
             </thead>
             <tbody>
-              {shown.map((m) => (
+              {shown.map((m) => {
+                // D48 (⑦): the whole row goes amber while anything eROSES
+                // requires is still empty, and the row itself says what.
+                const gaps = missingErosesCommitteeFields(m, checkableFields(rows));
+                return (
                 <Fragment key={m.id}>
-                  <tr className="border-b border-border/60 last:border-0">
-                    <td className="px-2 py-3 align-top">{m.position}</td>
+                  <tr
+                    className={`border-b border-border/60 last:border-0 ${
+                      gaps.length > 0
+                        ? "bg-amber-50/70 dark:bg-amber-400/10"
+                        : ""
+                    }`}
+                    data-eroses-missing={gaps.length > 0 ? "1" : undefined}
+                  >
+                    <td className="px-2 py-3 align-top">
+                      {m.position}
+                      {gaps.length > 0 && (
+                        <div className="mt-1 text-xs font-medium text-amber-800 dark:text-amber-300">
+                          <Tri
+                            bm={`Kurang: ${erosesGapList(gaps, "bm")}`}
+                            zh={`缺：${erosesGapList(gaps, "zh")}`}
+                            en={`Missing: ${erosesGapList(gaps, "en")}`}
+                          />
+                        </div>
+                      )}
+                    </td>
                     <td className="px-2 py-3 align-top">
                       {/* A seeded position row has no name yet — same amber
                           gap treatment as the IC name, never a blank cell. */}
@@ -163,10 +246,24 @@ export function CommitteeTable({
                       {(m.email ?? "").trim() !== "" ? m.email : "—"}
                     </td>
                     <td className="px-2 py-3 align-top text-sm text-muted-foreground">
-                      {(m.state ?? "").trim() !== "" ? m.state : "—"}
+                      {/* D48: an eROSES-required gap reads as a gap, not a
+                          dash — same treatment the IC-name cell always had. */}
+                      {(m.state ?? "").trim() !== "" ? (
+                        m.state
+                      ) : gaps.includes("state") ? (
+                        <NotFilled />
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td className="px-2 py-3 align-top text-sm text-muted-foreground">
-                      {m.term_start ?? "—"}
+                      {(m.term_start ?? "").trim() !== "" ? (
+                        m.term_start
+                      ) : gaps.includes("termStart") ? (
+                        <NotFilled />
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td className="px-2 py-3 text-right align-top">
                       {canEdit && (
@@ -199,7 +296,8 @@ export function CommitteeTable({
                     </tr>
                   )}
                 </Fragment>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
