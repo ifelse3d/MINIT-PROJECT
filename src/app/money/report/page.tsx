@@ -9,8 +9,10 @@ import {
 } from "@/lib/financial-statement";
 import { formatRm } from "@/lib/minutes-draft";
 import { dayIsoMalaysia } from "@/lib/history";
+import { can } from "@/lib/roles";
 import { loadLatestRecordMonth, loadStatementRows } from "./data";
 import { DownloadStatementButton } from "./download-button";
+import { BalanceView } from "../balance/balance-view";
 
 // ---------------------------------------------------------------------------
 // /money/report — the financial statement (Stage F, work order 27; the home
@@ -88,6 +90,25 @@ export default async function MoneyReportPage({
     statement = buildFinancialStatement(rows, period);
   }
 
+  // 97 §4 (J 8/30): the "Current funds" card lives HERE now, at the top of
+  // the statement — /money/balance redirects to this page. All-time, not the
+  // picked period (a balance is not a period figure), same money-role gate
+  // the old page had, amount behind the eye (D31). A DB hiccup on this extra
+  // read hides the card; the statement below still renders.
+  let balance: { incomeTotalCents: number; paymentsTotalCents: number } | null =
+    null;
+  if (can(active.role, "money_write")) {
+    const allTime = { fromIso: "2000-01-01", toIso: todayIso };
+    const allRows = await loadStatementRows(active.id, allTime);
+    if (allRows) {
+      const s = buildFinancialStatement(allRows, allTime);
+      balance = {
+        incomeTotalCents: s.incomeTotalCents,
+        paymentsTotalCents: s.paymentsTotalCents,
+      };
+    }
+  }
+
   // §1-7: an empty period needs a way out, not a wall of zeros. Only looked
   // up when the period actually came back empty.
   const periodIsEmpty =
@@ -122,6 +143,15 @@ export default async function MoneyReportPage({
       }
     >
       <div className="flex flex-col gap-5">
+        {/* 97 §4: current funds first — the one number, behind the eye. */}
+        {balance && (
+          <BalanceView
+            incomeTotalCents={balance.incomeTotalCents}
+            paymentsTotalCents={balance.paymentsTotalCents}
+            asOfIso={todayIso}
+          />
+        )}
+
         {/* Period picker: three quick links + a custom range (plain GET). */}
         <div className="flex flex-wrap items-center gap-2">
           {quick.map((qk) => {

@@ -63,16 +63,16 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
       return g;
     };
     // 錢: 记收入 · 开收据(这一轮, rail-only) · 记开支与报销 · 收据管理 ·
-    // 交现金 · 财报 · 税务 e-Invois(开关) · 收据历史. /money/issue joined as
-    // the round's step 2 (launch feedback #3) — railOnly, so menus skip it.
+    // 财报 · 税务 e-Invois(开关) · 收据历史. /money/issue joined as the
+    // round's step 2 (launch feedback #3) — railOnly, so menus skip it.
+    // 97 §4 (J 8/30): 交现金 hidden (route stays, D50 direction noted);
+    // 现有资金 merged into the statement page (/money/balance redirects).
     expect(byId("money").children.map((c) => c.href)).toEqual([
       "/money",
       "/money/issue",
       "/money/expenses",
       "/money/receipts",
-      "/money/custody",
       "/money/report",
-      "/money/balance",
       "/money/einvois",
       "/money/history",
     ]);
@@ -82,13 +82,12 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
       "/filings",
       "/agm-pack",
     ]);
-    // 组织: 成员 · 章程 · 组织与分会 (词库 → /settings/glossary, §3.2;
-    // 条文全文 merged into /constitution's own book block, 97 §3(d) — the
-    // /constitution/clauses ROUTE stays as the citation anchor).
+    // 组织: 成员 · 章程 (词库 → /settings/glossary, §3.2; 条文全文 merged
+    // into /constitution's own book block, 97 §3(d); 组织与分会 hidden
+    // 97 §4 — the avatar menu and /settings/general are its doors).
     expect(byId("organisation").children.map((c) => c.href)).toEqual([
       "/members",
       "/constitution",
-      "/orgs",
     ]);
     // 记录: 历史 · 原始照片.
     expect(byId("records").children.map((c) => c.href)).toEqual([
@@ -141,9 +140,7 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
       "/money/issue",
       "/money/expenses",
       "/money/receipts",
-      "/money/custody",
       "/money/report",
-      "/money/balance",
       "/money/history",
     ]);
     // The index page must be `exact`, or standing on /money/receipts lights up
@@ -188,7 +185,6 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
       "/settings/glossary",
       "/inbox",
       "/history",
-      "/orgs",
       "/settings",
       "/settings/danger",
     ]) {
@@ -212,9 +208,7 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
       "/money",
       "/money/expenses",
       "/money/receipts",
-      "/money/custody",
       "/money/report",
-      "/money/balance",
       "/money/history",
     ]);
 
@@ -224,9 +218,7 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
     for (const path of ["/minutes/attendance", "/minutes/document"]) {
       expect(groupHasActiveChild(minutes, path)).toBe(true);
     }
-    for (const path of ["/money/receipts", "/money/custody"]) {
-      expect(groupHasActiveChild(money, path)).toBe(true);
-    }
+    expect(groupHasActiveChild(money, "/money/receipts")).toBe(true);
   });
 
   // The desktop sidebar and the /more page draw from the SAME structure and
@@ -302,13 +294,13 @@ describe("groupHasActiveChild", () => {
   });
 
   // The money group must open on EVERY step of the flow, including the deep
-  // ones — otherwise you land on /money/custody from a link and the menu shows
-  // you nothing about where you are.
+  // ones — otherwise you land on /money/receipts from a link and the menu
+  // shows you nothing about where you are. (/money/custody left the menus
+  // in 97 §4, so the group no longer claims it.)
   it("opens the money group anywhere inside the money flow", () => {
     for (const path of [
       "/money",
       "/money/receipts",
-      "/money/custody",
       "/money/history",
     ]) {
       expect(groupHasActiveChild(money, path)).toBe(true);

@@ -4,9 +4,7 @@ import {
   BarChart3,
   Building2,
   CalendarClock,
-  CircleDollarSign,
   ClipboardList,
-  Coins,
   CreditCard,
   FileSignature,
   FileCheck,
@@ -113,20 +111,19 @@ export const NAV_ITEMS: NavItem[] = [
   // Stage E: spending + the claim flow — the row J's 錢-group list reserved.
   { href: "/money/expenses", icon: CreditCard, bm: "Rekod perbelanjaan & tuntutan", zh: "记开支与报销", en: "Spending & claims" },
   { href: "/money/receipts", icon: Receipt, bm: "Urus resit", zh: "开收据 · 管理", en: "Manage receipts" },
-  { href: "/money/custody", icon: Coins, bm: "Serah tunai", zh: "交现金", en: "Hand over cash" },
+  // 97 §4 (J 8/30 拍板): three rows LEFT the sidebar — every route stays.
+  //   * /money/custody (Hand over cash): row hidden; the custody engine,
+  //     tests and page are untouched. Direction in DECISIONS D50: custody
+  //     becomes a hand-over state ON the income records, not its own page.
+  //   * /money/balance (Current funds): merged — the card (eye and all, D31;
+  //     the no-piggy-bank iconography rule lives in that card's file now)
+  //     sits at the top of /money/report, and the route redirects there.
+  //   * /orgs (Organisations & branches): row hidden; its doors are the
+  //     avatar menu's org row, /settings/general's two links, /more's header
+  //     link and every empty state — the create-org guided flow
+  //     (/orgs/new → /constitution → /orgs/welcome) never used the sidebar.
   // Stage F: the financial statement — computed, never typed.
   { href: "/money/report", icon: BarChart3, bm: "Penyata kewangan", zh: "财报", en: "Financial statement" },
-  // D31 (J review 27-evening #24, 2026-08-28): "现在还有多少钱" — the running
-  // cash balance, amount hidden behind an eye by default. Not the statement.
-  // 🔴 NOT a piggy bank (J, 2026-08-28: 「不要用豬圖，因爲有馬來人用」). A pig
-  // is haram imagery for the Muslim majority this product is built for, and a
-  // sidebar icon is not the place to make somebody flinch. The same check
-  // applies to anything added later — read every new glyph against every race
-  // and faith in Malaysia before it ships.
-  // (Vault was tried first and rejected: at rail size its dial reads as an X,
-  // i.e. as "cancel". This is the one round glyph in the sidebar, so it is
-  // also the easiest row to find by shape.)
-  { href: "/money/balance", icon: CircleDollarSign, bm: "Baki semasa", zh: "现有资金", en: "Current funds" },
   { href: "/money/history", icon: ClipboardList, bm: "Sejarah resit", zh: "收据历史", en: "Receipt history" },
   // The calendar: the society's OWN activities (plus statutory deadlines as
   // reminders). J's launch feedback #7 (2026-08-27 evening): it is not a
@@ -144,7 +141,6 @@ export const NAV_ITEMS: NavItem[] = [
   // e-Invois: optional (org switch, default off). The >RM10,000 individual
   // e-invois warning inside the money pages stays regardless of this flag.
   { href: "/money/einvois", icon: Banknote, bm: "Fail cukai (e-Invois)", zh: "税务文件（e-Invois）", en: "Tax file (e-Invois)", einvoisOnly: true, beta: true },
-  { href: "/orgs", icon: Building2, bm: "Pertubuhan & cawangan", zh: "组织与分会", en: "Organisations & branches" },
   // THE SETTINGS FAMILY (violet redesign §7.2, 8/27 下午 — supersedes the
   // morning's four-page split): /settings redirects to /settings/display;
   // thirteen directly-linkable screens behind a sub-sidebar.
@@ -226,9 +222,7 @@ export const PRIMARY_NAV: NavEntry[] = [
       byHref("/money/issue"),
       byHref("/money/expenses"),
       byHref("/money/receipts"),
-      byHref("/money/custody"),
       byHref("/money/report"),
-      byHref("/money/balance"),
       byHref("/money/history"),
     ],
   },
@@ -248,7 +242,6 @@ export const PRIMARY_NAV: NavEntry[] = [
       byHref("/inbox"),
       byHref("/history"),
       byHref("/money/einvois"),
-      byHref("/orgs"),
       // The whole settings family (§7.2) — reached from /more's Settings
       // entry; listed here so the coverage guard knows the phone can reach
       // every one of them.
@@ -312,9 +305,7 @@ export const SIDEBAR_NAV: NavEntry[] = [
       byHref("/money/issue"),
       byHref("/money/expenses"),
       byHref("/money/receipts"),
-      byHref("/money/custody"),
       byHref("/money/report"),
-      byHref("/money/balance"),
       byHref("/money/einvois"),
       byHref("/money/history"),
     ],
@@ -336,11 +327,7 @@ export const SIDEBAR_NAV: NavEntry[] = [
     zh: "组织",
     en: "Organisation",
     // "Our words" moved to /settings/glossary (§3.2 — one route, one entry).
-    children: [
-      byHref("/members"),
-      byHref("/constitution"),
-      byHref("/orgs"),
-    ],
+    children: [byHref("/members"), byHref("/constitution")],
   },
   {
     kind: "group",

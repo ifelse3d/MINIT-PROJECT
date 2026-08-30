@@ -3,15 +3,19 @@
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Tri, useTriText } from "@/components/language-provider";
-import { PageSection } from "@/components/page-section";
 import { formatRm } from "@/lib/minutes-draft";
 
 // ---------------------------------------------------------------------------
-// The balance CARD (client half of /money/balance). The amount starts hidden
-// behind an eye (D31): the page often faces a hall of people, and the
-// society's balance is the treasurer's to reveal, not the screen's. The
-// reveal is per-visit, deliberately not persisted — walking away from the
-// laptop must not leave the number on show next time.
+// The balance CARD. The amount starts hidden behind an eye (D31): the page
+// often faces a hall of people, and the society's balance is the treasurer's
+// to reveal, not the screen's. The reveal is per-visit, deliberately not
+// persisted — walking away from the laptop must not leave the number on show
+// next time.
+//
+// 97 §4 (J 8/30): this card lives at the TOP of the financial statement
+// (/money/report) now — "Current funds" is no longer its own sidebar row or
+// page (the /money/balance route redirects there). The card renders as a
+// plain block inside the statement's own PageSection.
 // ---------------------------------------------------------------------------
 
 export function BalanceView({
@@ -28,19 +32,20 @@ export function BalanceView({
   const balanceCents = incomeTotalCents - paymentsTotalCents;
 
   return (
-    <PageSection
-      titleBm="Baki semasa"
-      titleZh="现有资金"
-      titleEn="Current funds"
-      summary={
-        <Tri
-          bm={`Wang masuk tolak wang keluar, atas SEMUA rekod yang tersimpan — dikira oleh sistem, setakat ${asOfIso}.`}
-          zh={`收入减支出，算的是已保存的全部记录 —— 由系统加总，算到 ${asOfIso}。`}
-          en={`Money in minus money out, over EVERY saved record — summed by the system, as of ${asOfIso}.`}
-        />
-      }
-    >
+    <section aria-label={t("Baki semasa", "现有资金", "Current funds")}>
       <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1">
+          <h3 className="text-lg font-semibold">
+            <Tri bm="Baki semasa" zh="现有资金" en="Current funds" />
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            <Tri
+              bm={`Wang masuk tolak wang keluar, atas SEMUA rekod yang tersimpan — dikira oleh sistem, setakat ${asOfIso}.`}
+              zh={`收入减支出，算的是已保存的全部记录 —— 由系统加总，算到 ${asOfIso}。`}
+              en={`Money in minus money out, over EVERY saved record — summed by the system, as of ${asOfIso}.`}
+            />
+          </p>
+        </div>
         <div className="flex flex-wrap items-center gap-4 rounded-md border-2 border-[color:var(--v2-border)] bg-[color:var(--v2-card)] p-5">
           <div className="flex min-w-48 flex-1 flex-col gap-1">
             <span className="text-sm font-medium text-muted-foreground">
@@ -109,6 +114,6 @@ export function BalanceView({
           />
         </p>
       </div>
-    </PageSection>
+    </section>
   );
 }
