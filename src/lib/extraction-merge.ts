@@ -45,6 +45,27 @@ function mergeScalar<T extends Scalar>(existing: T, incoming: T): T {
   return existing.confidence !== "missing" ? existing : incoming;
 }
 
+/**
+ * The same rule for the OPTIONAL header/closing scalars G1 added (MASA, the
+ * verbatim headcount, the adjournment sentence). Absent on both sides stays
+ * absent — parseMeetingNotesExtraction prunes what a page never had, and a
+ * merge must not resurrect a field as an empty review row.
+ *
+ * 🔴 Regression this guards (found on 真件 A, work order 100 Stage 1): this
+ * file predates G1, and its merge returned an object literal WITHOUT these
+ * keys — so page 2 of any meeting silently deleted the MASA and "AJK yang
+ * hadir : 33 orang" that page 1 had read. The fields were lost between two
+ * correct readings.
+ */
+function mergeOptionalScalar<T extends Scalar>(
+  existing: T | undefined,
+  incoming: T | undefined,
+): T | undefined {
+  if (!existing) return incoming;
+  if (!incoming) return existing;
+  return mergeScalar(existing, incoming);
+}
+
 /** True when there is anything worth protecting from a wholesale replace. */
 export function hasMeetingContent(e: MeetingNotesExtraction): boolean {
   return (
@@ -87,9 +108,29 @@ export function mergeMeetingExtractions(
         : incoming.meeting_type_label,
     meeting_date: mergeScalar(existing.meeting_date, incoming.meeting_date),
     meeting_venue: mergeScalar(existing.meeting_venue, incoming.meeting_venue),
+    // G1's optional header/closing fields (真件 A regression — see
+    // mergeOptionalScalar). The signature block prefers the page that HAS
+    // one; when both do, the existing one may carry human confirmations.
+    meeting_time: mergeOptionalScalar(existing.meeting_time, incoming.meeting_time),
+    attendance_count: mergeOptionalScalar(
+      existing.attendance_count,
+      incoming.attendance_count,
+    ),
+    adjournment: mergeOptionalScalar(existing.adjournment, incoming.adjournment),
+    prepared_by: existing.prepared_by ?? incoming.prepared_by,
+    endorsed_by: existing.endorsed_by ?? incoming.endorsed_by,
     attendees: [...existing.attendees, ...newAttendees],
     resolutions: [...existing.resolutions, ...incoming.resolutions],
     figures: [...existing.figures, ...incoming.figures],
+    // Optional on purpose: absent on both sides stays absent (the e-Invois
+    // panel must not appear over a document that never had one).
+    financial_resolutions:
+      existing.financial_resolutions || incoming.financial_resolutions
+        ? [
+            ...(existing.financial_resolutions ?? []),
+            ...(incoming.financial_resolutions ?? []),
+          ]
+        : undefined,
     office_bearers: [...existing.office_bearers, ...incoming.office_bearers],
   };
 }

@@ -129,6 +129,73 @@ describe("mergeMeetingExtractions", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// The 真件 A regression (work order 100 Stage 1): this merge predates G1 and
+// returned an object literal WITHOUT the optional header/closing keys — so
+// page 2 of a two-page meeting silently deleted the MASA and the "AJK yang
+// hadir : 33 orang" that page 1 had correctly read. These tests pin the fix.
+// ---------------------------------------------------------------------------
+
+describe("mergeMeetingExtractions — G1 optional fields survive a merge", () => {
+  it("keeps page 1's MASA / headcount / adjournment / signers when page 2 has none", () => {
+    const page1 = meeting({
+      meeting_time: check("8.30 PM – 10.30 PM"),
+      attendance_count: check("AJK yang hadir : 33 orang"),
+      adjournment: check("Mesyuarat ditangguhkan pada 10.30 PM"),
+      prepared_by: { position: check("SETIAUSAHA"), person_name: check("LOO SIO SAN") },
+      endorsed_by: { position: check("PENGERUSI"), person_name: check("KHONG YEM TIM") },
+    });
+    const merged = mergeMeetingExtractions(page1, meeting({}));
+    expect(merged.meeting_time?.value).toBe("8.30 PM – 10.30 PM");
+    expect(merged.attendance_count?.value).toBe("AJK yang hadir : 33 orang");
+    expect(merged.adjournment?.value).toBe("Mesyuarat ditangguhkan pada 10.30 PM");
+    expect(merged.prepared_by?.person_name.value).toBe("LOO SIO SAN");
+    expect(merged.endorsed_by?.person_name.value).toBe("KHONG YEM TIM");
+  });
+
+  it("takes page 2's value when page 1 had none", () => {
+    const merged = mergeMeetingExtractions(
+      meeting({}),
+      meeting({ meeting_time: check("8.30 PM") }),
+    );
+    expect(merged.meeting_time?.value).toBe("8.30 PM");
+  });
+
+  it("a CONFIRMED page-1 value is settled — page 2 does not outrank the human", () => {
+    const merged = mergeMeetingExtractions(
+      meeting({ meeting_time: confirmed("8.30 PM") }),
+      meeting({ meeting_time: check("9.00 PM") }),
+    );
+    expect(merged.meeting_time?.value).toBe("8.30 PM");
+  });
+
+  it("absent on both sides STAYS absent (no empty review row is invented)", () => {
+    const merged = mergeMeetingExtractions(meeting({}), meeting({}));
+    expect(merged.meeting_time).toBeUndefined();
+    expect(merged.attendance_count).toBeUndefined();
+    expect(merged.adjournment).toBeUndefined();
+    expect(merged.prepared_by).toBeUndefined();
+    expect(merged.financial_resolutions).toBeUndefined();
+  });
+
+  it("financial_resolutions concatenate when either side has any", () => {
+    const fr = {
+      vendor_name: check("Kedai Cat"),
+      approved_amount_cents: {
+        value: 50000,
+        confidence: "check" as const,
+        source_ref: { location: "photo 1", snippet: "RM500" },
+      },
+      purpose: check("cat dinding"),
+    };
+    const merged = mergeMeetingExtractions(
+      meeting({ financial_resolutions: [fr] }),
+      meeting({}),
+    );
+    expect(merged.financial_resolutions).toHaveLength(1);
+  });
+});
+
 describe("hasMeetingContent", () => {
   it("is false for the empty page and true once anything is typed", () => {
     expect(hasMeetingContent(emptyMeetingNotesExtraction)).toBe(false);

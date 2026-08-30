@@ -41,6 +41,10 @@ export async function runDraftMinutesPlan(opts: {
   allowedRuns?: string[];
   onUsage?: (usage: TokenUsage) => void;
   deadlineAt?: number;
+  /** Per-attempt vendor timeout override. The routes leave it default; the
+   *  model bench passes a longer one so a slower model's output can be seen
+   *  and judged at all (whether it FITS the live walls is reported anyway). */
+  timeoutMs?: number;
 }): Promise<DraftPlanResult> {
   const {
     provider,
@@ -50,6 +54,7 @@ export async function runDraftMinutesPlan(opts: {
     allowedRuns = [],
     onUsage,
     deadlineAt,
+    timeoutMs,
   } = opts;
 
   let repair: Parameters<typeof draftMinutesPrompt>[0]["repair"];
@@ -58,6 +63,7 @@ export async function runDraftMinutesPlan(opts: {
       prompt: draftMinutesPrompt({ resolutionTexts, lang, glossaryBlock, repair }),
       onUsage,
       deadlineAt,
+      timeoutMs,
     });
 
     const parsedPlan = minutesPlanSchema.safeParse(raw);
