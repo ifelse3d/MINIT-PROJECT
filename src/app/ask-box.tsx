@@ -234,6 +234,8 @@ function ProductCard({
   return (
     <button
       type="button"
+      data-probe="product-card"
+      data-kind={parcel.kind}
       disabled={disabled}
       onClick={onOpen}
       className="group flex w-full items-center gap-3 rounded-md border-2 border-[color:var(--v2-primary)]/35 bg-white/85 p-3.5 text-left transition-all hover:-translate-y-0.5 hover:border-[color:var(--v2-primary)]/70 hover:shadow-[var(--v2-shadow-soft)] disabled:opacity-60 dark:bg-white/10"
@@ -866,12 +868,32 @@ export function AskBox({
       // roads say their price on the button.
       if (kind === "meeting_notes" && !opts?.meetingPicked) {
         const m = merged as MeetingNotesExtraction;
+        const seen = new Set<string>();
         const others = (m.other_meetings ?? [])
           .map((o) => ({
             dateText: o.date_text?.value ?? "",
             label: o.label?.value ?? "",
           }))
-          .filter((o) => o.dateText !== "" || o.label !== "");
+          .filter((o) => o.dateText !== "" || o.label !== "")
+          // Two pages often report the SAME other meeting (the merge
+          // concatenates), sometimes written fuller on one page ("18/7" vs
+          // "18/7/26") — keep the fullest writing, one button per meeting.
+          .filter(
+            (o, i, arr) =>
+              o.dateText === "" ||
+              !arr.some(
+                (p, j) =>
+                  j !== i &&
+                  p.dateText.length > o.dateText.length &&
+                  p.dateText.startsWith(o.dateText),
+              ),
+          )
+          .filter((o) => {
+            const key = (o.dateText || o.label).replace(/\s+/g, "").slice(0, 20);
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
         if (others.length > 0) {
           closeSteps(true);
           setMeetingChoice({

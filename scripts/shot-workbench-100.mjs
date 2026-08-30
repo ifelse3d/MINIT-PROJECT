@@ -1,4 +1,4 @@
-// Workbench screenshots (work order 100 §3 acceptance: 桌機＋375 手機寬).
+﻿// Workbench screenshots (work order 100 §3 acceptance: 桌機＋375 手機寬).
 // Seeds a finished conversation with a product card (zero AI), shoots the
 // empty hero and the conversation state at both widths. ZZZ data, swept.
 import { readFileSync } from "node:fs";
@@ -100,14 +100,14 @@ async function run() {
       } catch {}
     });
     await page.setViewport({ width: 1280, height: 950 });
-    await page.goto(`${BASE}/login`, { waitUntil: "networkidle2" });
+    await page.goto(`${BASE}/login`, { waitUntil: "domcontentloaded" });
     await page.type('input[type="email"]', TEST_EMAIL);
     await page.type('input[type="password"]', TEST_PASSWORD);
     await Promise.all([
-      page.waitForNavigation({ waitUntil: "networkidle2", timeout: 60000 }),
+      page.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 60000 }),
       page.click('button[type="submit"]'),
     ]);
-    await page.goto(`${BASE}/orgs/new`, { waitUntil: "networkidle2" });
+    await page.goto(`${BASE}/orgs/new`, { waitUntil: "domcontentloaded" });
     await page.type('input[name="name"]', ORG_NAME);
     const btns = await page.$$("button");
     for (const b of btns) {
@@ -119,11 +119,11 @@ async function run() {
     const orgId = orgRows?.[0]?.id;
 
     // 1 — empty hero, desktop + mobile
-    await page.goto(`${BASE}/`, { waitUntil: "networkidle2" });
+    await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
     await new Promise((r) => setTimeout(r, 900));
     await page.screenshot({ path: path.join(OUT, "workbench-100-desktop-empty.png") });
     await page.setViewport({ width: 375, height: 812, isMobile: true, hasTouch: true });
-    await page.reload({ waitUntil: "networkidle2" });
+    await page.reload({ waitUntil: "domcontentloaded" });
     await new Promise((r) => setTimeout(r, 900));
     await page.screenshot({ path: path.join(OUT, "workbench-100-mobile-empty.png"), fullPage: true });
 
@@ -133,11 +133,11 @@ async function run() {
       { key: `minit:${userId}:${orgId}:chat.home.v1`, t: seededTurns() },
     );
     await page.setViewport({ width: 1280, height: 950 });
-    await page.goto(`${BASE}/`, { waitUntil: "networkidle2" });
+    await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
     await new Promise((r) => setTimeout(r, 900));
     await page.screenshot({ path: path.join(OUT, "workbench-100-desktop-products.png") });
     await page.setViewport({ width: 375, height: 812, isMobile: true, hasTouch: true });
-    await page.reload({ waitUntil: "networkidle2" });
+    await page.reload({ waitUntil: "domcontentloaded" });
     await new Promise((r) => setTimeout(r, 900));
     await page.screenshot({ path: path.join(OUT, "workbench-100-mobile-products.png"), fullPage: true });
 

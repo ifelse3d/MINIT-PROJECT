@@ -223,13 +223,15 @@ async function main() {
     b?.click();
   });
 
-  // The whole chain: classify (PDF!) → extract → hand-off navigation.
+  // The whole chain: classify (PDF!) → extract → PRODUCT CARD in the
+  // conversation (100 S3: the workbench no longer teleports — the finished
+  // piece is a card, and opening it is the navigation).
   const t0 = Date.now();
   await page
     .waitForFunction(
       () => {
-        if (!location.pathname.startsWith("/")) return false;
-        if (location.pathname !== "/" ) return "landed:" + location.pathname;
+        const card = document.querySelector('[data-probe="product-card"]');
+        if (card) return "card:" + (card.getAttribute("data-kind") ?? "?");
         const red = document.querySelector("[class*='border-red']");
         if (red && (red.textContent ?? "").trim().length > 10)
           return "error:" + (red.textContent ?? "").slice(0, 200);
@@ -242,7 +244,23 @@ async function main() {
       const secs = ((Date.now() - t0) / 1000).toFixed(1);
       console.log(`intake finished in ${secs}s → ${outcome}`);
       check(
-        "browser landed on a review page (extract handed off)",
+        "the workbench produced a product card (extract finished)",
+        String(outcome).startsWith("card:"),
+        String(outcome).slice(0, 200),
+      );
+    });
+
+  // Opening the card IS the hand-off: it must land on the review page.
+  await page.click('[data-probe="product-card"]');
+  await page
+    .waitForFunction(
+      () => (location.pathname !== "/" ? "landed:" + location.pathname : false),
+      { timeout: 30000, polling: 500 },
+    )
+    .then((h) => h.jsonValue())
+    .then((outcome) => {
+      check(
+        "opening the card landed on a review page",
         String(outcome).startsWith("landed:"),
         String(outcome).slice(0, 200),
       );
