@@ -37,6 +37,7 @@ import { GlassBadge } from "./surfaces";
 import { AnswerSources, type AnswerSource } from "./answer-sources";
 import { Modal } from "@/components/modal";
 import { ConfirmedAction } from "@/components/confirm-delete";
+import { AiMistakesNote } from "@/components/ai-disclaimer";
 import { tidyReply } from "@/lib/tidy-reply";
 import { ASSISTANT_NAME } from "@/lib/brand";
 import {
@@ -573,6 +574,10 @@ export function AIPanel({
           <ArrowUp className="h-5 w-5" strokeWidth={2.4} />
         </button>
       </div>
+
+      {/* §0-5 (work order 100): the standing three-language "AI can be
+          wrong" line — same one as the workbench. */}
+      <AiMistakesNote className="mt-2" />
     </aside>
   );
 }

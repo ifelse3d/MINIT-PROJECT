@@ -8,23 +8,39 @@ import type { DiscussSectionKind } from "@/prompts/discuss-minutes";
 import { useMinutes, type TextLikeField } from "./minutes-store";
 
 // ---------------------------------------------------------------------------
-// 「每個 PART 跟 AI 討論」 (J review 27-evening #31, approved 2026-08-28 with
-// the billing he chose: 改一次算一次 — ONE AI action per exchange, and the
-// button says so before anything is spent).
+// 「每個 PART 跟 AI 討論」 (J review 27-evening #31; billing 改一次算一次 —
+// ONE AI action per exchange, and the button says so before anything is
+// spent).
 //
-// The model DISCUSSES and PROPOSES; the person APPLIES. Each proposal is a
-// before→after on one row, applied through the same updateField path every
-// hand edit takes — so an applied proposal is a human-accepted fact with an
-// honest source_ref, and nothing the model says can reach the document
-// without a tap. Names/amounts stay off-limits in the prompt AND in which
-// fields this component exposes (descriptions and positions, never numbers,
-// never person names).
+// 🔄 2026-08-31 (work order 100 §0-2) — J overturned the 8/28 "the model only
+// proposes; the person applies each row by hand" posture: because a person
+// always reviews the finished document anyway, the agent now APPLIES its
+// edits itself. Every applied edit shows old → new with an undo button, goes
+// through the same updateField path a hand edit takes, and is marked `check`
+// (amber) — so the review/confirm gates downstream still make a human look
+// at every row the agent touched before the formal document is written. The
+// gate moved from "before each row changes" to "before the document is
+// final", which is where J said it belongs.
+//
+// Names/amounts stay off-limits in the prompt AND in which fields this
+// component exposes (descriptions and positions, never numbers, never person
+// names).
 // ---------------------------------------------------------------------------
 
 type Exchange = {
   instruction: string;
   reply: string;
-  proposals: { index: number; text: string; applied: boolean }[];
+  proposals: {
+    index: number;
+    text: string;
+    /** What the row said before the agent's edit — the undo restores this. */
+    previous: {
+      value: string;
+      confidence: TextLikeField["confidence"];
+      source_ref: TextLikeField["source_ref"];
+    } | null;
+    undone: boolean;
+  }[];
 };
 
 const SECTION_LABEL: Record<
@@ -121,11 +137,39 @@ export function DiscussSection({ section }: { section: DiscussSectionKind }) {
         setError(body?.error ?? joinUserError(USER_ERRORS.aiUnavailable));
         return;
       }
-      setExchange({
-        instruction: ask,
-        reply: body.reply,
-        proposals: (body.proposals ?? []).map((p) => ({ ...p, applied: false })),
+      // §0-2 (2026-08-31): the agent applies its own edits, NOW — old → new
+      // is shown per row with an undo. Marked `check`, never `confirmed`: a
+      // human has not looked yet, and the document gates downstream insist
+      // one does before anything formal is written.
+      const applied = (body.proposals ?? []).map((p) => {
+        const before = fieldAt(extraction, p.index);
+        const previous = before
+          ? {
+              value: before.value,
+              confidence: before.confidence,
+              source_ref: before.source_ref,
+            }
+          : null;
+        if (previous) {
+          updateField((e) => {
+            const f = fieldAt(e, p.index);
+            if (!f) return e;
+            f.source_ref = {
+              location: t(
+                "suntingan AI atas arahan anda",
+                "AI 依您的指示改写",
+                "AI edit on your instruction",
+              ),
+              snippet: previous.value || "—",
+            };
+            f.value = p.text;
+            f.confidence = "check";
+            return e;
+          });
+        }
+        return { index: p.index, text: p.text, previous, undone: previous === null };
       });
+      setExchange({ instruction: ask, reply: body.reply, proposals: applied });
       setInstruction("");
     } catch {
       setError(joinUserError(USER_ERRORS.aiUnavailable));
@@ -134,36 +178,29 @@ export function DiscussSection({ section }: { section: DiscussSectionKind }) {
     }
   }
 
-  function applyProposal(i: number) {
+  /** Put the row back exactly as it was before the agent's edit. */
+  function undoProposal(i: number) {
     if (!exchange) return;
     const p = exchange.proposals[i];
-    if (!p || p.applied) return;
+    if (!p?.previous || p.undone) return;
+    const previous = p.previous;
     updateField((e) => {
       const f = fieldAt(e, p.index);
       if (!f) return e;
-      f.source_ref = {
-        location: t(
-          "cadangan AI, diterima oleh anda",
-          "AI 建议，您采用",
-          "AI suggestion, accepted by you",
-        ),
-        snippet: f.value,
-      };
-      f.value = p.text;
-      // The person read it and tapped Apply — that IS the confirmation.
-      f.confidence = "confirmed";
+      f.value = previous.value;
+      f.confidence = previous.confidence;
+      f.source_ref = previous.source_ref;
       return e;
     });
     setExchange({
       ...exchange,
       proposals: exchange.proposals.map((x, j) =>
-        j === i ? { ...x, applied: true } : x,
+        j === i ? { ...x, undone: true } : x,
       ),
     });
   }
 
   const label = SECTION_LABEL[section];
-  const currentRows = rowsOf();
 
   return (
     <div className="mt-3 border-t pt-3">
@@ -192,40 +229,39 @@ export function DiscussSection({ section }: { section: DiscussSectionKind }) {
           </p>
           <p className="text-sm text-muted-foreground">
             <Tri
-              bm="AI hanya mencadangkan susunan kata — anda yang tekan “Guna” sebelum apa-apa berubah. Nama orang dan jumlah wang tidak akan diubah."
-              zh="AI 只提建议 —— 要您按「采用」才会改。人名和金额它一律不动。"
-              en="The AI only proposes wording — nothing changes until you tap “Apply”. Names and amounts are never touched."
+              bm="AI terus mengubah draf ikut arahan anda — setiap ubahan tunjuk lama → baru, tekan “Asal semula” kalau tak mahu. Nama orang dan jumlah wang tidak akan diubah, dan dokumen rasmi tetap menunggu pengesahan anda."
+              zh="AI 会照您的指示直接改稿 —— 每条亮出旧 → 新，不要就按「还原」。人名和金额它一律不动；正式文件仍要等您确认。"
+              en="The AI edits the draft on your instruction — every change shows old → new, tap “Undo” to put one back. Names and amounts are never touched, and the formal document still waits for your confirmation."
             />
           </p>
           {exchange && (
             <div className="flex flex-col gap-2 rounded-md border bg-[color:var(--v2-card)] p-3">
               <p className="text-sm text-muted-foreground">🧑 {exchange.instruction}</p>
               <p className="whitespace-pre-line text-base">🤖 {exchange.reply}</p>
-              {exchange.proposals.map((p, i) => {
-                const current = currentRows.find((r) => r.index === p.index);
-                return (
-                  <div key={i} className="rounded-sm border p-3">
-                    <p className="text-sm text-muted-foreground line-through">
-                      {current?.text || "—"}
-                    </p>
-                    <p className="text-base font-medium">{p.text}</p>
+              {exchange.proposals.map((p, i) => (
+                <div key={i} className="rounded-sm border p-3">
+                  <p className="text-sm text-muted-foreground">
+                    {p.undone ? (
+                      <Tri bm="↩ Dikembalikan" zh="↩ 已还原" en="↩ Undone" />
+                    ) : (
+                      <Tri bm="✏️ Sudah diubah" zh="✏️ 已改" en="✏️ Changed" />
+                    )}
+                  </p>
+                  <p className="text-sm text-muted-foreground line-through">
+                    {p.previous?.value || "—"}
+                  </p>
+                  <p className={`text-base font-medium ${p.undone ? "opacity-50" : ""}`}>
+                    {p.text}
+                  </p>
+                  {!p.undone && p.previous && (
                     <div className="mt-2">
-                      <Button
-                        size="sm"
-                        variant={p.applied ? "ghost" : "default"}
-                        disabled={p.applied || !current}
-                        onClick={() => applyProposal(i)}
-                      >
-                        {p.applied ? (
-                          <Tri bm="✓ Digunakan" zh="✓ 已采用" en="✓ Applied" />
-                        ) : (
-                          <Tri bm="Guna" zh="采用" en="Apply" />
-                        )}
+                      <Button size="sm" variant="outline" onClick={() => undoProposal(i)}>
+                        <Tri bm="Asal semula" zh="还原" en="Undo" />
                       </Button>
                     </div>
-                  </div>
-                );
-              })}
+                  )}
+                </div>
+              ))}
             </div>
           )}
           {error && (
