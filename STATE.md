@@ -5,8 +5,35 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-30（MYT）· Fable 5（89 号场：J＋tester 第二轮反馈八件事）**
-**🔴 本场（89 号场）状态一句话（92 号报告）：八件全做完全验收。
+**最后更新：2026-08-30 深夜（MYT）· Fable 5（94 号场：partner 包合并＋e-Invois BETA 闸）**
+**🔴 本场（94 号场）状态一句话（96 号报告）：partner 的 e-invois-governance
+包 5 档逐行审过合进 main（纯新增零删改，撞号 90→94、两句坏 BM 修正）；
+D49 落地＝整个 e-Invois 表面 operator-only BETA 闸（EinvoisProvider 一处
+AND、/money/einvois·/settings/einvois·/api/einvois-xlsx 对非 operator
+fail-closed 404、日历/tarikh 截止日、预备问答两条＋chip、chat 深连结按钮
+全跟闸走、operator 入口挂同一颗 BETA 徽章、org needs_einvois 数据一字
+不动）；**eval 掉了走了回退路**——92.1%/invented=1 对基准 95.2%/0，根因
+是 partner prompt 段「同一决议刻意记两次」弱化 G1 一实一记（case-02 钱
+进决议文字 figures 清空、case-04 把捐款收入发明成决议），schema＋lib＋
+UI 照留、prompt 段整段回退＝financial_resolutions 永远空、面板自然不出，
+调 prompt 留给品质场二轮。probe-einvois-94（零 AI）14 项全 PASS 还顺手
+抓出三个漏网（日历旁栏/tarikh 页/顶栏页名）当场补掉。
+**测过：tsc 0 · eslint 20（基准逐字同，动过的 22 档单独 lint 0）· vitest
+1219（+27：partner 22＋闸 5）· build ✓ · 三条 e2e 全绿（money 的 S0-1b
+按 D49 新契约改；roles W-2 既有偶发瞬断改为 15s 上限轮询后连三绿）·
+probe-einvois-94 14 项 PASS（零 AI）· check:migrations 39 支全 APPLIED
+exit 0 · 零 migration 零 env。真钱：eval $0.033（硬条件）＋三支花钱探针
+全重跑全 PASS（i1-81 $0.042 D47 真链路正式验收补上 89 场欠账、d0-56
+$0.044、createorg-68 $0.029）＋D37 真 vendor 合并写作实测走 eval:quality
+3/3 PASS $0.003＝探针侧 $0.118 ≤ 0.15 授权，合计 ≈$0.15。**
+**🔴 J 的三件事（96 号报告开头一分钟版）：①双击 push-cabang.bat（本场
+8 支 commit）；②用自己帐号 confirm 一份带批款的 minutes 看新面板（今天
+prompt 回退后 AI 不会吐 financial_resolutions，面板要等品质场把 prompt
+调好才有真数据——现在能看的是 e-Invois 各入口的 BETA 徽章），再用 tester
+帐号确认 e-Invois 全部看不到；③转告 partner：合了、谢谢、eval 掉的是
+prompt 段不是他的 lib（22 支测试原样全绿），下次请走 GitHub branch 不要
+zip（93 号 §3 三条规矩一并转）。**
+**（89 号场旧账原文照录：）八件全做完全验收。
 ① 章程显示梳头（只动显示层，clauses_json 一字不动）：子条缩进挂父条、
 无 heading 不再印「—」、内文 1.2 句分段（保守判定：只认本条编号＋
 句首＋后接大写/中文，RM 2.50 与 cross-ref 永不误切）、页码缩「m/s X」
@@ -40,25 +67,80 @@ members-51/h2-69 照 D48 新契约重跑全 PASS（零 AI）· 零 migration ·
 **🎉 两件 J 已办：86/87 场 commit 已 push ✓；migration 39 已贴 ✓——
 本场替 J 跑了验收 probe-rls-87 --expect=after＝264 项 0 mismatch 全绿，
 role RLS 正式通电；check:migrations 39 支全 APPLIED 零 NOT YET。**
-**🔴 J 的事：双击 push-cabang.bat（本场 5 支 commit）；看 92 号报告
-（一分钟版在开头）；上线后开 /constitution 看真章程显示、手机点一天
-看日面板；（不急）下次授权 ≈US$0.15 重跑三支花钱探针（i1-81 验 D47
-真链路）。旧账照旧：侧栏「系统」入口一句话、模型拍板（LONG_DOC 建议
-不换）、tester 清单（73/77 号）、54 号 GUIDE 设 Supabase 邮件、
-MyInvois 模板下载、真 undang-undang 重传、竞赛 8/31 23:59（不催）。**
+**（89 号场的 J 清单，94 号场处理后剩这些）：89 场 5 支已在 origin/main
+（开场实测 main==origin/main）＝已推上 ✓；94 场 8 支等 push-cabang.bat；
+看 92/96 号报告；上线后开 /constitution
+看真章程显示、手机点一天看日面板；~~授权 $0.15 重跑三支花钱探针~~
+✅ 94 号场已跑全 PASS（i1-81 的 D47 真链路验收结清）。旧账照旧：侧栏
+「系统」入口一句话、模型拍板（LONG_DOC 建议不换）、tester 清单
+（73/77 号）、54 号 GUIDE 设 Supabase 邮件、MyInvois 模板下载、
+真 undang-undang 重传、竞赛 8/31 23:59（不催）。**
 
 ---
 
-## 🌙 现在在哪里（2026-08-30，89 号场收工）
+## 🌙 现在在哪里（2026-08-30 深夜，94 号场收工）
 
-> **已上线**：https://minit-project.vercel.app —— 86/87 场的 commit
-> J 已全部 push ✓；**89 号场 5 支 commit 等 J push-cabang.bat**。
+> **已上线**：https://minit-project.vercel.app —— 89 场收工时 local
+> main==origin/main（89 场 5 支看来已推上）；**94 号场 8 支 commit 等 J
+> push-cabang.bat**。
 > **migration 1–39 全 APPLIED**（39 role RLS 已贴且本场验收：
 > probe-rls-87 --expect=after 264 项 0 mismatch）。
 > 线上 org：15「J」、58「avocado」、91「TESTING1」、197「TESTING2」
 > （91/197 quota 15＝仍在免费围栏内；J 要拿来测付费面见 83 号 §7 的 SQL）。
 
-### 这一场做了什么（89 号场 ✅，92 号报告——J＋tester 第二轮反馈八件事）
+### 这一场做了什么（94 号场 ✅，96 号报告——partner 包合并＋e-Invois BETA 闸）
+
+- **①partner 包合并（逐行审过才收）**：zip 解到 temp 对 origin/main 复核
+  ——真差异恰好＝约定的 5 档（其余全是行尾/档名编码假差异；package-lock
+  与 tsbuildinfo 按单不收）。einvois-governance.ts（303 行纯逻辑：批款→
+  审计状态＋findings，零 vendor 呼叫、零写入、门槛引 einvois.ts 既有
+  常数、章程上限只认自家条文读不到不出、无任何「LHDN 已验证」状态）＋
+  22 支测试；extraction schema 加 financial_resolutions（optional+catch
+  旧档不炸，coerceMissingFieldsEmpty 是通用递归走访自动盖到）；
+  minutes-document 加「批款与 e-Invois 状态」面板（跟 einvoisVisible 走）。
+  三档 diff 纯新增零删改＝89⑥ 多页排队与五条管线不可能被碰。
+  修正：注解撞号 90→94；BM 两句（perlukan→memerlukan e-invois
+  tersendiri；「Bendahari rekod sudah dimuat naik」→「Bendahari telah
+  merekodkan muat naik」）；图示复核只有中性 ⚠️。
+- **②D49 BETA 闸（93 号 §1-4 拍板落地）**：EinvoisProvider 多 operator
+  bit（root layout 传 isOperatorEmail，与 /admin 同名单），visible =
+  operator && org 开关＝所有 useEinvoisVisible 消费点一处全闸；
+  /money/einvois、/settings/einvois（开关页本身）、/api/einvois-xlsx
+  对非 operator fail-closed 404（取代旧「route 永远能走」注解）；
+  nav 新旗标 einvoisOperatorOnly（settings 行只看 operator 不看开关，
+  不然 operator 关着时进不去开关页）；预备问答两条＋e-Invois chip 跟闸
+  （chip 永不扣费是 K1 铁律）；/api/chat 的 money_einvois 深连结按钮对
+  非 operator 不回；EinvoisBetaBadge 一颗（violet 家族、tooltip 三语）
+  挂 rail/more/settings 行/settings 页标题/partner 面板 summary。
+  probe-einvois-94 首跑抓出三个漏网当场补：/calendar 旁栏与
+  /filings/eroses/tarikh 的月底截止日（预设 einvoisCount=3 没跟闸）、
+  顶栏在 404 画面上还印被藏页面的名字（pageWords 滤 beta 项）。
+- **③eval 回退路（§4-3 照走）**：92.1%（116/126）invented=1 对基准
+  95.2%（119/125）0——case-02 钱进决议文字＋figures 清空（−3）、case-04
+  「Kutipan derma RM830」发明成决议，根因＝prompt 段明文「同一决议也留
+  在 resolutions＝刻意记两次」弱化 G1 一实一记。prompt 段整段回退
+  （git checkout 基准版，byte 同 8/29 立基准那份）；schema/lib/UI 照留
+  ＝financial_resolutions 永远 undefined、面板不出、零害。**没重跑 eval
+  确认**（回退后 prompt 与基准逐字同，重跑只是花钱量采样方差）。
+- **④花钱项全收**：三支探针重跑全 PASS（i1-81：D47 真链路 5 次扣费/
+  seed 行累计/fence 5 页/21 页 6 段 55.1s 全对，86 场起的欠账结清；
+  d0-56：45s 修与 Office 直传全绿；createorg-68：33.1s 一次落地）；
+  D37 真 vendor 合并写作＝eval:quality 3/3 PASS 0 findings（真管线含
+  checkMergedFacts）。
+- **测过**：tsc 0 · eslint 20（基准逐字同）· vitest **1219（+27）** ·
+  build ✓ · 三条 e2e 全绿（money S0-1b 改 D49 契约：非 operator 404＋
+  404 画面无内容；roles W-2 偶发瞬断 6 跑 4 断后改 15s 上限轮询，
+  连三绿——真回归 15s 也救不了，只吸时序噪音）· probe-einvois-94
+  14 项 PASS · check:migrations 39 全 APPLIED · 零 migration 零 env。
+- ⚠ 没能验证的：operator 正向半边（面板可见、BETA 徽章观感、RM10,000
+  门槛三语文案在真 UI）——probe 进不了 ADMIN_EMAILS 帐号，22 支单元
+  测试钉住逻辑，可见半边＝J §6 ② 自己帐号一看；面板有真数据要等
+  prompt 二轮（现在 AI 不吐 financial_resolutions）；assistant 的
+  tarikh_akhir 工具与 chat prompt 能力清单仍会在**文字**里提 e-Invois
+  截止日（工具 ctx 没有 operator 位，动它要碰 chat 契约——留给 J 拍板
+  要不要下一场收）；Vercel 线上闸的真行为（本机 next start 已证）。
+
+### 上一场做了什么（89 号场 ✅，92 号报告——J＋tester 第二轮反馈八件事）
 
 - **①–⑤ 小件**：章程显示梳头（constitution-display.ts 纯档＋org197
   三形态测试；两处清单接上；数据零改动）· portal 家族收尾
