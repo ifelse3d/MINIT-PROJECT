@@ -93,7 +93,7 @@ const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * column — so each named column is stripped and the write retried.
  * Migration 32 gave note/honorific; migration 37 gives email/state.
  */
-const OPTIONAL_COLUMNS = ["note", "honorific", "email", "state"] as const;
+const OPTIONAL_COLUMNS = ["note", "honorific", "email", "state", "phone"] as const;
 
 export async function addCommitteeMember(
   _prev: MemberActionState,
@@ -251,6 +251,8 @@ export async function updateCommitteeMember(
   const note = String(formData.get("note") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
   const state = String(formData.get("state") ?? "").trim();
+  // Migration 41 (100 §0-4): contact phone — optional, rides the ladder.
+  const phone = String(formData.get("phone") ?? "").trim();
   const termStartRaw = String(formData.get("termStart") ?? "").trim();
 
   if (position === "") return { error: ERR.needPosition, ok: false, field: "position" };
@@ -291,6 +293,7 @@ export async function updateCommitteeMember(
     honorific: honorific === "" ? null : honorific.slice(0, 60),
     email: email === "" ? null : email.slice(0, 160),
     state: state === "" ? null : state.slice(0, 60),
+    phone: phone === "" ? null : phone.slice(0, 40),
   };
 
   const error = await writeWithColumnLadder((r) =>

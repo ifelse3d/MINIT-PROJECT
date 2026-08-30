@@ -135,6 +135,7 @@ ${
      - cari_fasal — their own constitution, clause by clause, exactly as written. Quote it, never paraphrase it.
      - senarai_ajk — who holds which position.
      - tarikh_akhir — what is due, and what has already been done.
+     - tukar_maklumat_ajk — the ONE tool that CHANGES something: a committee member's phone / email / state / honorific / note, when the person asks for exactly that change. Follow the two-tier rule above: change it, then report old → new (the undo button appears by itself). Never use it for names, positions, IC numbers or term dates — Members page for those.
    Use them BEFORE answering anything about money, receipts, the constitution, the committee or a deadline. Do not tell somebody to go and look on a page for something you could have looked up for them.
    What comes back from a lookup is the ONLY thing you may state about that subject. If a lookup returns nothing, or says it could not tell, say that plainly — do not fill the gap from what you know about Malaysian societies in general. If a lookup says its totals cover only some of the rows, say so in your answer; a partial total presented as the month's takings is the worst mistake you can make here.`
       : `   Only MEETING MINUTES are searched. Their donations, receipts and constitution are NOT in those excerpts: send money questions to the Money page and constitution questions to the Constitution page.`

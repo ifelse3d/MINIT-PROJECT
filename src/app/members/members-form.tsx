@@ -850,6 +850,7 @@ export function EditCommitteeRow({
     honorific?: string | null;
     email?: string | null;
     state?: string | null;
+    phone?: string | null;
   };
   onDone: () => void;
   onCancel: () => void;
@@ -864,6 +865,7 @@ export function EditCommitteeRow({
   const [note, setNote] = useState(row.note ?? "");
   const [email, setEmail] = useState(row.email ?? "");
   const [negeri, setNegeri] = useState(row.state ?? "");
+  const [phone, setPhone] = useState(row.phone ?? "");
   const [termStart, setTermStart] = useState(row.term_start ?? "");
 
   useEffect(() => {
@@ -986,6 +988,18 @@ export function EditCommitteeRow({
             onChange={(e) => setNote(e.currentTarget.value)}
             className={inputCls}
             maxLength={120}
+          />,
+        )}
+        {field(
+          <Tri bm="Telefon (pilihan)" zh="电话（选填）" en="Phone (optional)" />,
+          <input
+            name="phone"
+            type="text"
+            value={phone}
+            onChange={(e) => setPhone(e.currentTarget.value)}
+            className={inputCls}
+            maxLength={40}
+            inputMode="tel"
           />,
         )}
         {field(

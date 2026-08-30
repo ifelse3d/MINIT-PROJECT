@@ -38,6 +38,10 @@ import { AnswerSources, type AnswerSource } from "./answer-sources";
 import { Modal } from "@/components/modal";
 import { ConfirmedAction } from "@/components/confirm-delete";
 import { AiMistakesNote } from "@/components/ai-disclaimer";
+import {
+  AgentChangeCard,
+  type AgentChangeInfo,
+} from "@/components/agent-change-card";
 import { tidyReply } from "@/lib/tidy-reply";
 import { ASSISTANT_NAME } from "@/lib/brand";
 import {
@@ -61,6 +65,8 @@ type Turn = {
    *  Free turns are also excluded from the history sent to /api/chat, so a
    *  free exchange never eats the per-conversation turn cap. */
   free?: boolean;
+  /** §0-4 (work order 100): record changes the agent made this turn. */
+  changes?: AgentChangeInfo[];
 };
 
 /** Shape guard for a stored transcript (usePersistentState contract). */
@@ -87,6 +93,8 @@ type ChatOk = {
   sources: AnswerSource[] | null;
   /** Which record lookups ran for this answer (tool names). */
   lookups: string[] | null;
+  /** §0-4: record changes the agent made this turn. */
+  changes?: AgentChangeInfo[] | null;
   remaining: number | null;
   /** Share of the monthly free quota spent, 0–100 (2026-08-22). */
   usedPct: number | null;
@@ -224,6 +232,7 @@ export function AIPanel({
           button: body.button,
           sources: body.sources ?? null,
           lookups: body.lookups ?? null,
+          changes: body.changes && body.changes.length > 0 ? body.changes : undefined,
         },
       ]);
       if (typeof body.remaining === "number") setRemaining(body.remaining);
@@ -491,6 +500,27 @@ export function AIPanel({
                 </p>
               )}
               <AnswerSources sources={turn.sources ?? []} lookups={turn.lookups ?? []} />
+              {/* §0-4: record changes this turn made — old → new + undo. */}
+              {turn.changes?.map((c, j) => (
+                <AgentChangeCard
+                  key={c.changeId}
+                  change={c}
+                  onUndone={() =>
+                    setTurns((prev) =>
+                      prev.map((x, xi) =>
+                        xi === i
+                          ? {
+                              ...x,
+                              changes: x.changes?.map((y, yj) =>
+                                yj === j ? { ...y, undone: true } : y,
+                              ),
+                            }
+                          : x,
+                      ),
+                    )
+                  }
+                />
+              ))}
             </div>
           ),
         )}

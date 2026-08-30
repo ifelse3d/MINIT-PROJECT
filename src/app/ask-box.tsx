@@ -39,6 +39,10 @@ import {
   X,
 } from "lucide-react";
 import { AiMistakesNote } from "@/components/ai-disclaimer";
+import {
+  AgentChangeCard,
+  type AgentChangeInfo,
+} from "@/components/agent-change-card";
 import { ConfirmedAction } from "@/components/confirm-delete";
 import {
   matchPreparedAnswer,
@@ -118,6 +122,8 @@ type Turn = {
   free?: boolean;
   /** The finished pieces this agent turn produced, as clickable cards. */
   products?: ProductParcel[];
+  /** §0-4: record changes the agent made this turn — old → new + undo. */
+  changes?: AgentChangeInfo[];
 };
 
 /** One visible step of the agent's work (§3 — wow 的來源: 邊做邊亮步驟). */
@@ -131,6 +137,8 @@ type ChatOk = {
   sources: AnswerSource[] | null;
   /** Which record lookups ran for this answer (tool names). */
   lookups: string[] | null;
+  /** §0-4: record changes the agent made this turn. */
+  changes?: AgentChangeInfo[] | null;
   remaining: number | null;
   /** Share of the monthly free quota spent, 0–100 (2026-08-22). */
   usedPct: number | null;
@@ -429,6 +437,7 @@ export function AskBox({
           button: body.button,
           sources: body.sources ?? null,
           lookups: body.lookups ?? null,
+          changes: body.changes && body.changes.length > 0 ? body.changes : undefined,
         },
       ]);
       if (typeof body.remaining === "number") setRemaining(body.remaining);
@@ -1368,6 +1377,27 @@ export function AskBox({
                       ))}
                     </div>
                   )}
+                  {/* §0-4: record changes this turn made — old → new + undo. */}
+                  {turn.changes?.map((c, j) => (
+                    <AgentChangeCard
+                      key={c.changeId}
+                      change={c}
+                      onUndone={() =>
+                        setTurns((prev) =>
+                          prev.map((x, xi) =>
+                            xi === i
+                              ? {
+                                  ...x,
+                                  changes: x.changes?.map((y, yj) =>
+                                    yj === j ? { ...y, undone: true } : y,
+                                  ),
+                                }
+                              : x,
+                          ),
+                        )
+                      }
+                    />
+                  ))}
                 </div>
               ),
             )}

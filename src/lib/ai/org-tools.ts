@@ -51,6 +51,30 @@ export type ToolContext = {
   orgId: number;
   /** Today in Malaysia, so "this year" means the same thing everywhere. */
   todayIso: string;
+  /**
+   * The signed-in human the agent acts FOR (Hard Rule 8: from the session,
+   * never the browser). Required by the ONE tool that writes
+   * (tukar_maklumat_ajk) — absent, that tool refuses and the read tools are
+   * unaffected.
+   */
+  actorEmail?: string;
+  /**
+   * Fires once per record change the agent actually made, so the route can
+   * hand the old → new + undo id to the UI (work order 100 §0-4). Optional:
+   * a caller that does not listen still gets the change described in the
+   * tool result the model sees.
+   */
+  onRecordChange?: (change: AgentRecordChange) => void;
+};
+
+/** What one tier-1 agent change looks like to the UI (§0-4). */
+export type AgentRecordChange = {
+  changeId: number;
+  memberName: string;
+  position: string;
+  field: string;
+  oldValue: string;
+  newValue: string;
 };
 
 export type ToolHandler = (
@@ -440,6 +464,176 @@ const tarikhHandler: ToolHandler = async (_args, ctx) => {
 };
 
 // ===========================================================================
+// 6. The ONE tool that writes: tier-1 committee contact changes (§0-4).
+// ===========================================================================
+
+/**
+ * The fields the agent may change directly. CONTACT details only — all
+ * reversible, none of them what the government filing is about. person_name,
+ * position, IC and term dates are deliberately NOT here: those are the
+ * filing itself (D48 territory), and the agent sends people to the Members
+ * page for them. Donor data is not in this table at all (Hard Rule 5).
+ */
+const TIER1_FIELDS = ["phone", "email", "state", "honorific", "note"] as const;
+
+const tukarSpec: ToolSpec = {
+  name: "tukar_maklumat_ajk",
+  description:
+    "CHANGE one committee member's contact detail — phone, email, state, " +
+    "honorific (Encik/Puan/Dr...), or the tell-apart note. Use this when the " +
+    "person ASKS for such a change ('TESTER3 换了电话 012...，帮我改'). The " +
+    "change is recorded with who asked and the old value, and can be undone. " +
+    "It only changes what the person explicitly told you; NEVER use it for " +
+    "names, positions, IC numbers or term dates — for those, send them to " +
+    "the Members page. After it succeeds, tell the person: changed, old → " +
+    "new, and that an undo button is right there in this conversation.",
+  parameters: {
+    name: {
+      type: "string",
+      description:
+        "The member's name as the person said it. Matched against the roster; " +
+        "if several match, the tool lists them so you can ask which one.",
+    },
+    field: {
+      type: "string",
+      description: "Which detail to change.",
+      enum: TIER1_FIELDS,
+    },
+    new_value: {
+      type: "string",
+      description: "The new value, exactly as the person gave it.",
+    },
+  },
+  required: ["name", "field", "new_value"],
+};
+
+const tukarHandler: ToolHandler = async (args, ctx) => {
+  const name = String(args.name ?? "").trim();
+  const field = String(args.field ?? "");
+  const newValue = String(args.new_value ?? "").trim();
+  if (!TIER1_FIELDS.includes(field as (typeof TIER1_FIELDS)[number])) {
+    return { error: `"${field}" is not a detail this tool may change.` };
+  }
+  if (newValue.length === 0 || newValue.length > 120) {
+    return { error: "new_value must be 1–120 characters." };
+  }
+  if (!ctx.actorEmail) {
+    // No session identity = no trace = no change (必留痕).
+    return { error: "Cannot record who asked — the change was NOT made." };
+  }
+
+  const supabase = await getSupabaseServer();
+  // Find the member. USER-SCOPED client: RLS is the boundary (rule 1 above).
+  const { data: rows, error: findError } = await supabase
+    .from("committee_roster")
+    .select("id, person_name, name_official, position")
+    .eq("org_id", ctx.orgId)
+    .limit(200);
+  if (findError || !rows) {
+    return { error: "Could not read the committee roster. The change was NOT made." };
+  }
+  const needle = name.toLowerCase();
+  const matches = rows.filter(
+    (r) =>
+      (r.person_name ?? "").toLowerCase().includes(needle) ||
+      (r.name_official ?? "").toLowerCase().includes(needle),
+  );
+  if (matches.length === 0) {
+    return {
+      error: `No committee member matches "${name}". The change was NOT made. Ask the person to check the name, or send them to the Members page.`,
+    };
+  }
+  if (matches.length > 1) {
+    return {
+      error: `Several members match "${name}" — ask which one they mean.`,
+      candidates: matches.map((m) => ({
+        name: m.person_name,
+        position: m.position,
+      })),
+    };
+  }
+  const member = matches[0];
+
+  // Old value — read it BEFORE anything is written, for the trace + undo.
+  const { data: fullRow, error: rowError } = await supabase
+    .from("committee_roster")
+    .select("*")
+    .eq("id", member.id)
+    .single();
+  if (rowError || !fullRow) {
+    return { error: "Could not read that member's row. The change was NOT made." };
+  }
+  const oldValue = String((fullRow as Record<string, unknown>)[field] ?? "");
+  if (oldValue === newValue) {
+    return { ok: true, unchanged: true, member: member.person_name, field, value: newValue };
+  }
+
+  // 🔴 TRACE FIRST, fail-closed (§0-4 + the fence's direction: 記不了帳＝
+  // 不動手). While migration 41 is not applied this insert fails, the change
+  // is refused, and the person is told the honest reason.
+  const { data: trace, error: traceError } = await supabase
+    .from("agent_changes")
+    .insert({
+      org_id: ctx.orgId,
+      actor_email: ctx.actorEmail,
+      target_table: "committee_roster",
+      target_id: member.id,
+      field,
+      old_value: oldValue,
+      new_value: newValue,
+    })
+    .select("id")
+    .single();
+  if (traceError || !trace) {
+    return {
+      error:
+        "The audit trail is not ready (migration 41 has not been applied), so the " +
+        "change was NOT made — a change must leave a trace. Tell the person it " +
+        "can be done by hand on the Members page for now.",
+    };
+  }
+
+  const { error: updateError } = await supabase
+    .from("committee_roster")
+    .update({ [field]: newValue })
+    .eq("id", member.id)
+    .eq("org_id", ctx.orgId);
+  if (updateError) {
+    // Do not leave a trace claiming a change that never happened.
+    await supabase
+      .from("agent_changes")
+      .update({ undone_at: new Date().toISOString() })
+      .eq("id", trace.id);
+    const columnMissing = /column|schema cache/i.test(updateError.message ?? "");
+    return {
+      error: columnMissing
+        ? `The roster has no "${field}" column yet (migration 41 not applied). The change was NOT made — it can be done by hand on the Members page once it is.`
+        : "The update failed. The change was NOT made.",
+    };
+  }
+
+  const change: AgentRecordChange = {
+    changeId: trace.id as number,
+    memberName: member.person_name ?? name,
+    position: member.position ?? "",
+    field,
+    oldValue,
+    newValue,
+  };
+  ctx.onRecordChange?.(change);
+  return {
+    ok: true,
+    member: change.memberName,
+    position: change.position,
+    field,
+    old_value: oldValue,
+    new_value: newValue,
+    recorded: true,
+    undo: "An undo button is shown in the conversation.",
+  };
+};
+
+// ===========================================================================
 // The registry
 // ===========================================================================
 
@@ -451,6 +645,7 @@ const REGISTRY: RegisteredTool[] = [
   { spec: fasalSpec, handler: fasalHandler },
   { spec: ajkSpec, handler: ajkHandler },
   { spec: tarikhSpec, handler: tarikhHandler },
+  { spec: tukarSpec, handler: tukarHandler },
 ];
 
 /** Every tool the assistant may be handed, for the vendor declaration. */

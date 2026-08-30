@@ -32,6 +32,8 @@ export type CommitteeRow = {
   /** Migration 37 (69 H1) — absent while the DB is behind. */
   email?: string | null;
   state?: string | null;
+  /** Migration 41 (100 §0-4) — absent while the DB is behind. */
+  phone?: string | null;
 };
 
 /** Amber "belum diisi" — the same gap the banner counts. */
@@ -111,7 +113,7 @@ export function CommitteeTable({
     needle === ""
       ? rows
       : rows.filter((m) =>
-          [m.position, m.person_name, m.name_official, m.note, m.honorific, m.email, m.state]
+          [m.position, m.person_name, m.name_official, m.note, m.honorific, m.email, m.state, m.phone]
             .filter((v): v is string => typeof v === "string")
             .some((v) => v.toLowerCase().includes(needle)),
         );
@@ -244,6 +246,11 @@ export function CommitteeTable({
                     </td>
                     <td className="px-2 py-3 align-top text-sm text-muted-foreground">
                       {(m.email ?? "").trim() !== "" ? m.email : "—"}
+                      {/* Migration 41: contact phone, under the email in the
+                          same cell — no eighth column on a 375 screen. */}
+                      {(m.phone ?? "").trim() !== "" && (
+                        <span className="block">📞 {m.phone}</span>
+                      )}
                     </td>
                     <td className="px-2 py-3 align-top text-sm text-muted-foreground">
                       {/* D48: an eROSES-required gap reads as a gap, not a

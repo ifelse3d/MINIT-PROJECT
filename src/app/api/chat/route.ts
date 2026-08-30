@@ -23,7 +23,11 @@ import { getSessionUser } from "@/db/supabase-server";
 import { isOperatorEmail } from "@/lib/admin-gate";
 import { cariMinit, formatHitsForPrompt, type MinutesHit } from "@/lib/ai/cari-minit";
 import { getToolProvider, parseModelJson } from "@/lib/ai/provider";
-import { ORG_TOOL_SPECS, runOrgTool } from "@/lib/ai/org-tools";
+import {
+  ORG_TOOL_SPECS,
+  runOrgTool,
+  type AgentRecordChange,
+} from "@/lib/ai/org-tools";
 import { runToolConversation } from "@/lib/ai/tool-runner";
 import {
   ASK_ACTION_ROUTES,
@@ -285,6 +289,13 @@ export async function POST(req: Request) {
     // vendorCalls per chat answer; if it sits near 4, the ceiling is too loose.
     const toolProvider = getToolProvider("chat");
 
+    // §0-4 (work order 100): the ONE writing tool needs the real signed-in
+    // human for its audit trail (Hard Rule 8), and its changes travel back so
+    // the UI can show old → new with an undo. Also reused by the e-Invois
+    // button gate below (one session read, not two).
+    const sessionUser = await getSessionUser().catch(() => null);
+    const recordChanges: AgentRecordChange[] = [];
+
     // --- cari_minit: what does this society's own record say? --------------
     //
     // 2026-08-20, J: the assistant has to answer "我記得有一次開會說了什麼".
@@ -342,7 +353,13 @@ export async function POST(req: Request) {
           system: prompt,
           messages: [{ role: "user", text: question }],
           tools: ORG_TOOL_SPECS,
-          run: (name, args) => runOrgTool(name, args, { orgId: org.id, todayIso }),
+          run: (name, args) =>
+            runOrgTool(name, args, {
+              orgId: org.id,
+              todayIso,
+              actorEmail: sessionUser?.email ?? undefined,
+              onRecordChange: (c) => recordChanges.push(c),
+            }),
           onUsage,
           deadlineAt,
         });
@@ -433,14 +450,16 @@ YOUR PREVIOUS ATTEMPT WAS NOT VALID JSON in the required shape. Respond with ONL
     // dead button. The reply text is untouched; only the button is withheld.
     const button = routeFor(parsed.data.suggested_page);
     const gatedButton =
-      button?.href.startsWith("/money/einvois") &&
-      !isOperatorEmail((await getSessionUser().catch(() => null))?.email)
+      button?.href.startsWith("/money/einvois") && !isOperatorEmail(sessionUser?.email)
         ? null
         : button;
     return NextResponse.json({
       reply: parsed.data.reply,
       inScope: parsed.data.in_scope,
       button: gatedButton,
+      // §0-4: record changes the agent made this turn — old → new + the undo
+      // id. The UI renders each as a change card with its undo button.
+      changes: recordChanges,
       // Where the assistant looked, by tool name. Provenance for the facts that
       // did NOT come from a meeting document: a total out of the donations
       // table has no meeting to link to, but "I looked in your donation
