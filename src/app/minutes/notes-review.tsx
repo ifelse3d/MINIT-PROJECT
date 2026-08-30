@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ConfirmingDeleteButton } from "@/components/confirm-delete";
@@ -10,7 +10,7 @@ import { NextStepLink, PageSection } from "@/components/page-section";
 import { PageThumbs } from "@/components/page-thumbs";
 import { HowItWorksButton } from "@/app/how-it-works";
 import { formatDateLong, isIsoDate } from "@/lib/date-input";
-import type { KnownMeetingFacts } from "@/lib/meeting-facts";
+import { EMPTY_MEETING_FACTS, type KnownMeetingFacts } from "@/lib/meeting-facts";
 import { MEETING_TYPES, meetingTypeUiLabelTri } from "@/lib/meeting-types";
 import { formatRm } from "@/lib/minutes-draft";
 import { parseRmToCents } from "@/lib/receipts";
@@ -151,15 +151,21 @@ export function NotesReview() {
   const t = useTriText();
   const localizeError = useLocalizedError();
   /**
-   * The file somebody has chosen but not yet sent.
+   * The file(s) somebody has chosen but not yet sent.
    *
    * There is now a step between choosing and reading — three optional boxes for
    * what the person already knows (see before-reading.tsx). Two reasons, both
    * J's own: 「想 type 跟他说这是什么会议没办法」, and the one no prompt can fix —
    * a whiteboard carries the meeting's date AND the date of the event it agreed
    * to hold, and on the board they look identical.
+   *
+   * ⑥ (work order 89, tester: 「為什麼要放一張讀一張才能下一張」): the picker
+   * takes SEVERAL files now. They queue and read one by one through the same
+   * onPhotoPicked the single-page path uses — each page is still its own
+   * /api/extract-minutes request charged its own action (J's 8/30 ruling:
+   * the queue is UX only, the money is untouched).
    */
-  const [pending, setPending] = useState<File | null>(null);
+  const [pending, setPending] = useState<File[] | null>(null);
   // §1-15a: the cloud-drafts block folds to one line by default.
   const [draftsOpen, setDraftsOpen] = useState(false);
   /**
@@ -172,7 +178,7 @@ export function NotesReview() {
    * person answers "same meeting, or a new one?".
    */
   const [askWhichMeeting, setAskWhichMeeting] = useState<{
-    file: File;
+    files: File[];
     facts: KnownMeetingFacts;
   } | null>(null);
   const {
@@ -214,6 +220,76 @@ export function NotesReview() {
     resumeDraft,
     deleteCloudDraft,
   } = useMinutes();
+
+  // -------------------------------------------------------------------------
+  // ⑥ THE PAGE QUEUE (work order 89). Pick N files → they read one after
+  // another, progress in plain words ("第 X／N 页"), a failed page stops the
+  // queue THERE (everything already read is kept), "再试一次" continues from
+  // that page, and more pages can join the queue while it runs. Money is
+  // untouched: every page is the same single onPhotoPicked call it always
+  // was — one request, one charge, per page.
+  // -------------------------------------------------------------------------
+  const [queue, setQueue] = useState<{
+    files: File[];
+    /** 0-based page being read right now (or the one that failed). */
+    index: number;
+    failed: boolean;
+  } | null>(null);
+  /** The queue's files — a ref so pages ADDED while reading are seen by the
+   *  loop already in flight. `queue` above mirrors it for rendering. */
+  const queueFilesRef = useRef<File[]>([]);
+  /** The BeforeReading answers + the fresh/继续 choice, kept for page 1 and
+   *  for a retry that restarts at page 1. Later pages read without facts —
+   *  the person answered about the MEETING once, not per page. */
+  const queueMetaRef = useRef<{ facts: KnownMeetingFacts; mode: "auto" | "fresh" }>({
+    facts: EMPTY_MEETING_FACTS,
+    mode: "auto",
+  });
+  /** Always the LATEST onPhotoPicked: its useCallback identity changes as
+   *  pages land, and calling a stale one would re-evaluate "is this another
+   *  page of the same meeting?" against a pre-read snapshot — page 2 would
+   *  then REPLACE page 1 instead of merging (the functional-update merge
+   *  inside is safe; the `continuing` decision is what must stay fresh). */
+  const onPhotoPickedRef = useRef(onPhotoPicked);
+  useEffect(() => {
+    onPhotoPickedRef.current = onPhotoPicked;
+  });
+
+  async function drainQueue(from: number) {
+    for (let i = from; i < queueFilesRef.current.length; i++) {
+      setQueue({ files: [...queueFilesRef.current], index: i, failed: false });
+      const first = i === 0;
+      const ok = await onPhotoPickedRef.current(
+        queueFilesRef.current[i],
+        first ? queueMetaRef.current.facts : EMPTY_MEETING_FACTS,
+        first ? queueMetaRef.current.mode : "auto",
+      );
+      if (!ok) {
+        // Stop AT this page. Already-read pages are merged and kept; the
+        // error itself is on screen (aiError). Retry continues from here.
+        setQueue({ files: [...queueFilesRef.current], index: i, failed: true });
+        return;
+      }
+    }
+    queueFilesRef.current = [];
+    setQueue(null);
+  }
+
+  function startQueue(files: File[], facts: KnownMeetingFacts, mode: "auto" | "fresh") {
+    queueFilesRef.current = files;
+    queueMetaRef.current = { facts, mode };
+    void drainQueue(0);
+  }
+
+  /** More pages join the END of the queue — mid-read or after a failure. */
+  function appendToQueue(list: FileList | null) {
+    const files = [...(list ?? [])];
+    if (files.length === 0) return;
+    queueFilesRef.current = [...queueFilesRef.current, ...files];
+    setQueue((q) =>
+      q ? { ...q, files: [...queueFilesRef.current] } : q,
+    );
+  }
 
   // D-4: has the typist actually entered anything yet? Decides when the
   // document preview earns its place in typing mode — a preview of an empty
@@ -401,10 +477,16 @@ export function NotesReview() {
               // A-3 (拍板 3): last year's minutes live in Word, the briefing
               // deck in PowerPoint — /api/extract-minutes reads both now.
               accept="image/*,application/pdf,.docx,.pptx"
+              // ⑥: several pages at once — they queue and read one by one.
+              multiple
               className="hidden"
               disabled={aiBusy}
               onChange={(e) => {
-                setPending(e.target.files?.[0] ?? null);
+                const files = [...(e.target.files ?? [])];
+                // A pick made while a queue exists JOINS it (a fresh
+                // BeforeReading mid-queue would orphan the pages waiting).
+                if (queue) appendToQueue(e.target.files);
+                else setPending(files.length > 0 ? files : null);
                 e.target.value = "";
               }}
             />
@@ -475,20 +557,27 @@ export function NotesReview() {
         {/* The step between choosing a file and spending a credit on it. */}
         {pending && (
           <BeforeReading
-            fileName={pending.name}
+            fileName={
+              pending.length === 1
+                ? pending[0].name
+                : `${pending[0].name} (+${pending.length - 1})`
+            }
             busy={aiBusy}
             onCancel={() => setPending(null)}
             onRead={(facts) => {
-              const file = pending;
+              const files = pending;
               setPending(null);
               // 0-1: the workspace still shows a meeting that is already in
-              // History — ask which meeting this photo belongs to BEFORE
+              // History — ask which meeting these pages belong to BEFORE
               // reading, or last month's saved fields merge over this one's.
               if (alreadySaved) {
-                setAskWhichMeeting({ file, facts });
+                setAskWhichMeeting({ files, facts });
                 return;
               }
-              void onPhotoPicked(file, facts);
+              // ⑥: one page or many, the same queue — the answers above
+              // ride with page 1 only (they describe the meeting, not the
+              // individual pages).
+              startQueue(files, facts, "auto");
             }}
           />
         )}
@@ -510,7 +599,7 @@ export function NotesReview() {
                   setAskWhichMeeting(null);
                   // A new meeting: the workspace is replaced wholesale and the
                   // old meeting stays safe in History.
-                  void onPhotoPicked(a.file, a.facts, "fresh");
+                  startQueue(a.files, a.facts, "fresh");
                 }}
               >
                 <Tri
@@ -528,7 +617,7 @@ export function NotesReview() {
                   // Another page of the SAME meeting: the usual page-by-page
                   // merge. Editing re-opens saving, so the person can save the
                   // grown document again afterwards.
-                  void onPhotoPicked(a.file, a.facts);
+                  startQueue(a.files, a.facts, "auto");
                 }}
               >
                 <Tri
@@ -546,6 +635,74 @@ export function NotesReview() {
               </button>
             </div>
           </div>
+        )}
+        {/* ⑥ the queue, in plain words. Progress while it reads (I1's "第
+            X／N" family); a failure stops AT that page with everything read
+            so far kept; retry continues from that page; and more pages can
+            join the queue at any moment through the small picker below. */}
+        {queue && queue.files.length > 1 && !queue.failed && (
+          <p
+            className="rounded-md border-2 border-[#a855f7]/40 bg-white/70 p-3 text-base font-medium dark:bg-white/10"
+            data-probe="queue-progress"
+          >
+            ⏳{" "}
+            <Tri
+              bm={`Membaca muka surat ${queue.index + 1} daripada ${queue.files.length} — "${queue.files[queue.index]?.name ?? ""}". Muka surat yang siap dibaca semuanya kekal.`}
+              zh={`正在读第 ${queue.index + 1}／${queue.files.length} 页 ——「${queue.files[queue.index]?.name ?? ""}」。读好的页都会保留。`}
+              en={`Reading page ${queue.index + 1} of ${queue.files.length} — "${queue.files[queue.index]?.name ?? ""}". Every page already read is kept.`}
+            />
+          </p>
+        )}
+        {queue?.failed && (
+          <div
+            className="flex flex-col gap-2 rounded-md border-2 border-amber-300 bg-amber-50 p-4 dark:bg-amber-400/10"
+            data-probe="queue-failed"
+          >
+            <p className="text-base font-medium text-amber-900 dark:text-amber-100">
+              <Tri
+                bm={`Muka surat ${queue.index + 1} daripada ${queue.files.length} tidak berjaya dibaca — yang sudah dibaca sebelum itu semuanya kekal.`}
+                zh={`第 ${queue.index + 1}／${queue.files.length} 页没读成功 —— 在它之前读好的页都还在。`}
+                en={`Page ${queue.index + 1} of ${queue.files.length} did not read — everything read before it is kept.`}
+              />
+            </p>
+            <div>
+              <Button
+                size="lg"
+                disabled={aiBusy}
+                onClick={() => void drainQueue(queue.index)}
+              >
+                🔁{" "}
+                <Tri
+                  bm={`Cuba lagi — sambung dari muka surat ${queue.index + 1}`}
+                  zh={`再试一次 —— 从第 ${queue.index + 1} 页继续`}
+                  en={`Try again — continue from page ${queue.index + 1}`}
+                />
+              </Button>
+            </div>
+          </div>
+        )}
+        {queue && (
+          <label
+            className="inline-flex cursor-pointer items-center gap-2 self-start text-base text-muted-foreground underline underline-offset-4"
+            data-probe="queue-append"
+          >
+            ＋{" "}
+            <Tri
+              bm="Tambah muka surat lagi ke barisan"
+              zh="再加几页进队列"
+              en="Add more pages to the queue"
+            />
+            <input
+              type="file"
+              accept="image/*,application/pdf,.docx,.pptx"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                appendToQueue(e.target.files);
+                e.target.value = "";
+              }}
+            />
+          </label>
         )}
         {aiError && (
           <div className="rounded-md border border-red-300 bg-red-50 p-4 text-base text-red-900">

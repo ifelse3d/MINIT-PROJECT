@@ -134,7 +134,10 @@ export type MinutesStore = {
     facts?: KnownMeetingFacts,
     /** 0-1: "fresh" = the person said this photo starts a NEW meeting. */
     mode?: "auto" | "fresh",
-  ) => Promise<void>;
+    /** ⑥ (work order 89): resolves true when the page landed, false when the
+     *  read failed (the error is already in aiError) — the multi-page queue
+     *  needs the answer to know whether to continue or stop at this page. */
+  ) => Promise<boolean>;
   /**
    * Start a set of minutes with no photo at all.
    *
@@ -714,8 +717,8 @@ export function MinutesProvider({
     // month's confirmed fields over this month's page. "auto" keeps the G-2
     // behaviour: an unsaved workspace with content means "another page".
     mode: "auto" | "fresh" = "auto",
-  ) => {
-    if (!file) return;
+  ): Promise<boolean> => {
+    if (!file) return false;
     setAiError(null);
     setAiBusy(true);
     try {
@@ -810,8 +813,10 @@ export function MinutesProvider({
         (prev) => (continuing ? prev && read.attendees.length === 0 : false),
       );
       setEvRows(null);
+      return true;
     } catch (e) {
       setAiError(e instanceof Error ? e.message : String(e));
+      return false;
     } finally {
       setAiBusy(false);
     }
