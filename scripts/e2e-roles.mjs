@@ -271,16 +271,26 @@ async function run() {
     // The other half — the treasurer DECIDING — only exists once the claim
     // row exists (post-migration): admin sees the pending list and approves.
     if (claimOk) {
-      await a.goto(`${BASE}/money/expenses`, { waitUntil: "networkidle2" });
-      const adminSees = (await bodyText(a)).includes("等您处理");
+      // 94 场: both halves were single-shot sleeps and flaked under machine
+      // load (the 73-report "偶发瞬断" family) — the claim IS in the DB (the
+      // submit action confirmed), the admin's server render just needs a
+      // moment. Poll with a hard ceiling instead: a real regression still
+      // fails after 15s, only the timing noise is absorbed.
+      let adminSees = false;
+      for (let i = 0; i < 5 && !adminSees; i++) {
+        await a.goto(`${BASE}/money/expenses`, { waitUntil: "networkidle2" });
+        adminSees = (await bodyText(a)).includes("等您处理");
+        if (!adminSees) await sleep(3000);
+      }
       check("W-2 the admin sees the pending claim", adminSees);
       if (adminSees) {
         await clickByText(a, "button", "批准");
-        await sleep(2500);
-        check(
-          "W-2 approving moves the claim to approved-unpaid",
-          (await bodyText(a)).includes("已批准"),
-        );
+        let approved = false;
+        for (let i = 0; i < 6 && !approved; i++) {
+          await sleep(2500);
+          approved = (await bodyText(a)).includes("已批准");
+        }
+        check("W-2 approving moves the claim to approved-unpaid", approved);
       }
     }
 
