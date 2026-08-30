@@ -42,6 +42,38 @@ describe("minutesPdfLines", () => {
     expect(minutesPdfLines("---")).toEqual([{ kind: "rule" }]);
     expect(minutesPdfLines("--")).toEqual([{ kind: "body", text: "--" }]);
   });
+
+  // §4-⑤ (work order 100, 真件 B): the particulars block prints aligned.
+  it("promotes a RUN of Label: value lines to an aligned kv block", () => {
+    const md = [
+      "Nama: Teh Kim Hoo",
+      "No. Kad Pengenalan: 661102-09-5089",
+      "Alamat: 19, Lorong 2, Taman Perlis, Perlis",
+      "Pekerjaan: Operator Jentera (Backhoe)",
+    ].join("\n");
+    expect(minutesPdfLines(md)).toEqual([
+      { kind: "kv", label: "Nama", value: "Teh Kim Hoo" },
+      { kind: "kv", label: "No. Kad Pengenalan", value: "661102-09-5089" },
+      { kind: "kv", label: "Alamat", value: "19, Lorong 2, Taman Perlis, Perlis" },
+      { kind: "kv", label: "Pekerjaan", value: "Operator Jentera (Backhoe)" },
+    ]);
+  });
+
+  it("a LONE colon line stays prose, and enumerated lines never become kv", () => {
+    // One matching line with prose neighbours: not a run, stays body.
+    expect(minutesPdfLines("Perkara: satu sahaja\nayat biasa tanpa titik dua")).toEqual([
+      { kind: "body", text: "Perkara: satu sahaja" },
+      { kind: "body", text: "ayat biasa tanpa titik dua" },
+    ]);
+    // "2.1 Perbincangan: …" starts with a digit — never a kv label, even in
+    // a consecutive pair (these are the composed minit's own content lines).
+    expect(
+      minutesPdfLines("2.1 Perbincangan: perkara A\n2.2 Keputusan: perkara B"),
+    ).toEqual([
+      { kind: "body", text: "2.1 Perbincangan: perkara A" },
+      { kind: "body", text: "2.2 Keputusan: perkara B" },
+    ]);
+  });
 });
 
 describe("buildMinutesPdf", () => {

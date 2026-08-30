@@ -71,6 +71,12 @@ export async function POST(req: Request) {
     // document produced before this option existed was written in.
     const rawLang = String((body as { language?: unknown } | null)?.language ?? "bm");
     const lang: MinutesLang = isMinutesLang(rawLang) ? rawLang : "bm";
+    // §4-① (work order 100) "整理成標準版式": phrase EVERY paragraph of a
+    // structured document — shorthand expanded to full minutes prose, guards
+    // (coverage / names / merged facts / latin names) unchanged. One charged
+    // action (D34: 改一次算一次). Without the flag, behaviour is exactly as
+    // before: structured same-language documents assemble for free.
+    const polish = (body as { polish?: unknown } | null)?.polish === true;
 
     // Hard Rule 8: org name and signer come from the session, never the
     // browser. Same reasoning as saveConfirmedMinutes (2026-07-28 audit fix).
@@ -126,7 +132,7 @@ export async function POST(req: Request) {
     // ------------------------------------------------------------------
     const structure = minutesStructure(extraction);
     if (structure) {
-      const work = buildPhraseWork(extraction, lang);
+      const work = buildPhraseWork(extraction, lang, { polish });
       if (work.items.length === 0) {
         const markdown = finishMd(composeStructuredMinutesMd(extraction, composeOpts));
         return NextResponse.json({ markdown, provider: "structure" });

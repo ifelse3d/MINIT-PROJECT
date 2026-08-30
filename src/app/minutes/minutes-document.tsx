@@ -15,6 +15,7 @@ import {
   type EInvoisAuditStatus,
 } from "@/lib/einvois-governance";
 import { formatRm } from "@/lib/minit-format";
+import { minutesStructure } from "@/lib/minutes-compose";
 import { MINUTES_LANGUAGES, type MinutesLang } from "@/lib/minutes-lang";
 import {
   applyNameSubstitutions,
@@ -135,6 +136,12 @@ export function MinutesDocument() {
   const router = useRouter();
   const t = useTriText();
   const [einvoisVisible] = useEinvoisVisible();
+  // §4-①: the "tidy into standard format" pass only makes sense on a document
+  // that HAS a structure to keep (a printed/typed minit read by G1).
+  const hasStructure = useMemo(
+    () => minutesStructure(extraction) !== null,
+    [extraction],
+  );
 
   // e-INVOIS AUDIT TRAIL (work order 94). Every judgement here is arithmetic
   // over values a human already confirmed — no vendor call, nothing invented.
@@ -345,7 +352,7 @@ export function MinutesDocument() {
                 <Button
                   size="lg"
                   variant={aiDraft ? "outline" : "default"}
-                  onClick={writeWithAi}
+                  onClick={() => writeWithAi()}
                   disabled={draftBusy}
                 >
                   {draftBusy ? (
@@ -364,6 +371,25 @@ export function MinutesDocument() {
                     />
                   )}
                 </Button>
+                {/* §4-① (work order 100): a structured document assembles
+                    free — this button is the PAID pass that expands
+                    shorthand into standard minit prose (速記展開), guards
+                    unchanged. The price is on the button (house rule). */}
+                {hasStructure && (
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    onClick={() => writeWithAi(true)}
+                    disabled={draftBusy}
+                  >
+                    ✨{" "}
+                    <Tri
+                      bm="Kemas ke format standard (1 tindakan AI)"
+                      zh="整理成标准版式（用 1 次 AI 额度）"
+                      en="Tidy into the standard format (1 AI action)"
+                    />
+                  </Button>
+                )}
                 <span className="text-sm text-muted-foreground">
                   {/* 0-2: path marker only — no "about X%" promise. */}
                   <Tri
@@ -595,7 +621,7 @@ export function MinutesDocument() {
                   </div>
                 )}
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button size="lg" onClick={writeWithAi} disabled={draftBusy}>
+                  <Button size="lg" onClick={() => writeWithAi()} disabled={draftBusy}>
                     {draftBusy ? (
                       <Tri bm="MinitAI sedang menulis…" zh="MinitAI 正在写…" en="MinitAI is writing…" />
                     ) : (

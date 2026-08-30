@@ -48,7 +48,6 @@ import {
   EXTRACT_OUTPUT_CEILING,
   type TokenUsage,
 } from "../src/lib/ai/provider";
-import { EXTRACT_ATTEMPT_TIMEOUT_MS } from "../src/lib/ai/http";
 import {
   parseMeetingNotesExtraction,
   type MeetingNotesExtraction,

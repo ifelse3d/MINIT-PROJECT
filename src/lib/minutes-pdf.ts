@@ -26,7 +26,23 @@ export type MinutesPdfLine =
   | { kind: "strong"; text: string }
   | { kind: "rule" }
   | { kind: "blank" }
+  /**
+   * §4-⑤ (work order 100, 真件 B): a run of "Label: value" particulars lines
+   * (Nama / No. Kad Pengenalan / Alamat / Pekerjaan — or the TARIKH/MASA
+   * header block) prints as an ALIGNED two-column block, the way the typeset
+   * original looks, instead of ragged prose. Only RUNS of two or more
+   * consecutive matching lines qualify — a lone sentence with a colon in it
+   * stays prose.
+   */
+  | { kind: "kv"; label: string; value: string }
   | { kind: "body"; text: string };
+
+/**
+ * "Label: value" where the label is short, starts with a letter (an
+ * enumerated line like "2.1 Perbincangan: …" must stay prose), and holds no
+ * second colon. Both ASCII and fullwidth colons count — the documents mix.
+ */
+const KV_LINE = /^([A-Za-z一-鿿][^:：]{0,27}?)\s*[:：]\s*(\S.*)$/;
 
 /**
  * The saved Markdown, read as PRINT LINES. Deliberately tiny: the documents
@@ -55,6 +71,32 @@ export function minutesPdfLines(finalMd: string): MinutesPdfLine[] {
   }
   // Trailing blanks only add empty paper.
   while (out.length > 0 && out[out.length - 1].kind === "blank") out.pop();
+
+  // §4-⑤: promote RUNS (≥2 consecutive) of "Label: value" body lines to kv,
+  // so the particulars blocks print aligned. Done as a second pass so the
+  // run rule is easy to see and to test.
+  for (let i = 0; i < out.length; ) {
+    const m = out[i].kind === "body" ? KV_LINE.exec((out[i] as { text: string }).text) : null;
+    if (!m) {
+      i++;
+      continue;
+    }
+    let end = i + 1;
+    while (
+      end < out.length &&
+      out[end].kind === "body" &&
+      KV_LINE.test((out[end] as { text: string }).text)
+    ) {
+      end++;
+    }
+    if (end - i >= 2) {
+      for (let j = i; j < end; j++) {
+        const mm = KV_LINE.exec((out[j] as { text: string }).text)!;
+        out[j] = { kind: "kv", label: mm[1].trim(), value: mm[2].trim() };
+      }
+    }
+    i = end;
+  }
   return out;
 }
 
@@ -152,7 +194,19 @@ export async function buildMinutesPdf(params: MinutesPdfParams): Promise<Uint8Ar
   const subtitle = (params.title ?? "").trim();
   let firstH1Seen = false;
 
-  for (const item of lines) {
+  /** §4-⑤: the label-column width of the kv RUN starting at index i. */
+  const kvRunLabelWidth = (start: number): number => {
+    let w = 0;
+    for (let j = start; j < lines.length && lines[j].kind === "kv"; j++) {
+      const kv = lines[j] as { label: string };
+      w = Math.max(w, widthOf(kv.label, 11));
+    }
+    return w;
+  };
+  let kvLabelW = 0;
+
+  for (let li = 0; li < lines.length; li++) {
+    const item = lines[li];
     switch (item.kind) {
       case "blank": {
         y -= 8;
@@ -229,6 +283,27 @@ export async function buildMinutesPdf(params: MinutesPdfParams): Promise<Uint8Ar
         for (const l of wrap(item.text, 11, false, width)) {
           ensureRoom(18);
           drawAt(l, margin, y, 11);
+          y -= 16;
+        }
+        break;
+      }
+      case "kv": {
+        // §4-⑤ (真件 B): particulars print as an aligned two-column block.
+        // Column width is the RUN's widest label, measured with the fonts
+        // that will draw it; the value wraps in the remaining width, with
+        // continuation lines indented under the value column.
+        if (li === 0 || lines[li - 1].kind !== "kv") kvLabelW = kvRunLabelWidth(li);
+        const valueX = margin + 18 + kvLabelW + 14;
+        const valueW = pageW - margin - valueX;
+        const valueLines = wrap(item.value, 11, false, Math.max(80, valueW));
+        ensureRoom(18);
+        drawAt(item.label, margin + 18, y, 11);
+        drawAt(":", margin + 18 + kvLabelW + 5, y, 11);
+        drawAt(valueLines[0] ?? "", valueX, y, 11);
+        y -= 16;
+        for (const l of valueLines.slice(1)) {
+          ensureRoom(18);
+          drawAt(l, valueX, y, 11);
           y -= 16;
         }
         break;

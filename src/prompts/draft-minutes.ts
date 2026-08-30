@@ -148,6 +148,18 @@ Write it as a COMPLETE SENTENCE of formal minutes prose, not as a note
 fragment or point-form entry: state the duty or decision, then the person or
 detail, in formal ${language}, ending with a full stop.
 
+SHORTHAND IS EXPANDED; FACTS ARE NEVER ADDED. A telegraphic note is written
+out as the full formal sentence it abbreviates. Worked example: the item
+"5 lanti AJK baru. Tan Mei Lee 800101-07-1234 - 8, Lrg 3 Tmn Aman" becomes
+"Mesyuarat bersetuju melantik Tan Mei Lee (No. K/P: 800101-07-1234),
+beralamat di 8, Lorong 3, Taman Aman, sebagai Ahli Jawatankuasa baharu." —
+the abbreviations written in full (lanti → melantik, mes. agung → mesyuarat
+agung, Lrg → Lorong, Tmn → Taman), every digit copied exactly, nothing new.
+Expanding an abbreviation is WORDING, which is your job; adding anything the
+note does not carry (a date, a reason, an honorific, a second person) is
+INVENTION — never do that. A shorthand word you cannot confidently expand
+stays exactly as written.
+
 The notes mix Bahasa Malaysia, Chinese and English on one page. THE ORDINARY
 WORDS COME OUT IN ${language.toUpperCase()}; ONLY THE NAMES KEEP THEIR OWN
 FORM. For example: ${ORDINARY_WORD_EXAMPLES[lang]}. A line still carrying a
@@ -278,6 +290,15 @@ this does not hold.
 - Keep every number, date, time, quantity and duration exactly as given.
 - A line's leading list number (like "3." in "3. 同行 10位") stays at the
   start of the rewritten line, unchanged.
+- SHORTHAND IS EXPANDED; FACTS ARE NEVER ADDED. A telegraphic paragraph
+  ("5 lanti AJK baru. Tan Mei Lee 800101-07-1234 - 8, Lrg 3 Tmn Aman") is
+  written out as the full formal sentence it abbreviates ("Mesyuarat
+  bersetuju melantik Tan Mei Lee (No. K/P: 800101-07-1234), beralamat di
+  8, Lorong 3, Taman Aman, sebagai Ahli Jawatankuasa baharu.") — common
+  abbreviations in full (lanti → melantik, mes. agung → mesyuarat agung,
+  Lrg → Lorong, Tmn → Taman), every digit exact, and NOTHING the paragraph
+  does not carry (no date, no reason, no honorific, no second person). A
+  shorthand word you cannot confidently expand stays exactly as written.
 - Do not add anything that is not in the paragraph you were given.${glossaryBlock}`;
 
   if (!repair) return base;

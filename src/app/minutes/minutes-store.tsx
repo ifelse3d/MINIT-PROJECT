@@ -259,7 +259,10 @@ export type MinutesStore = {
   aiDraft: string | null;
   draftError: string | null;
   draftBusy: boolean;
-  writeWithAi: () => Promise<void>;
+  /** §4-① (work order 100): `polish` phrases EVERY paragraph of a structured
+   *  document — shorthand expanded into standard minit prose, one charged
+   *  action. Without it, a structured same-language document assembles free. */
+  writeWithAi: (polish?: boolean) => Promise<void>;
   edited: string | null;
   setEdited: (text: string | null) => void;
   saveBusy: boolean;
@@ -1424,7 +1427,7 @@ export function MinutesProvider({
   const edited = manualEdit && manualEdit.for === extraction ? manualEdit.text : null;
   const shownDocument = edited ?? aiDraft ?? minutesDraft;
 
-  const writeWithAi = useCallback(async () => {
+  const writeWithAi = useCallback(async (polish?: boolean) => {
     const writtenFor = extraction;
     const writtenIn = docLang;
     setDraftBusy(true);
@@ -1433,7 +1436,7 @@ export function MinutesProvider({
       const res = await fetch("/api/draft-minutes", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ extraction, language: docLang }),
+        body: JSON.stringify({ extraction, language: docLang, polish: polish === true }),
       });
       const data = (await res.json().catch(() => null)) as
         | { markdown?: string; error?: string }
