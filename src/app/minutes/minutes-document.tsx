@@ -8,6 +8,12 @@ import { Tri, useTriText } from "@/components/language-provider";
 import { NextStepLink, PageSection } from "@/components/page-section";
 import { PhotoLightbox } from "@/components/page-thumbs";
 import { cjkSnippets } from "@/lib/bm-guard";
+import { useEinvoisVisible } from "@/lib/einvois-pref";
+import {
+  checkFinancialResolution,
+  type EInvoisAuditStatus,
+} from "@/lib/einvois-governance";
+import { formatRm } from "@/lib/minit-format";
 import { MINUTES_LANGUAGES, type MinutesLang } from "@/lib/minutes-lang";
 import {
   applyNameSubstitutions,
@@ -32,6 +38,58 @@ const LANGUAGE_CHOICE: Record<MinutesLang, string> = {
   // C-10 (work order 51, J): ONE word — "华语 / 中文" read as two options.
   zh: "中文",
   en: "English",
+};
+
+// ---------------------------------------------------------------------------
+// e-INVOIS AUDIT BADGE (work order 90).
+//
+// One badge per status, and NOT ONE OF THEM says the government validated
+// anything — there is no MyInvois API in v1 (src/lib/einvois.ts header), so a
+// "LHDN Validated" badge would assert a reply we never received. Green here
+// means "our side of the trail is finished": the row reached a batch file, or
+// a named human recorded uploading it. What LHDN did with it afterwards is a
+// fact this app cannot observe and therefore must not display.
+// ---------------------------------------------------------------------------
+const AUDIT_BADGE: Record<
+  EInvoisAuditStatus,
+  { cls: string; bm: string; zh: string; en: string }
+> = {
+  not_applicable: {
+    cls: "border-neutral-300 bg-neutral-100 text-neutral-700 dark:bg-neutral-400/10 dark:text-neutral-200",
+    bm: "Tiada e-Invois diperlukan",
+    zh: "不需要 e-Invois",
+    en: "No e-Invois needed",
+  },
+  unknown: {
+    cls: "border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-400/10 dark:text-amber-100",
+    bm: "Belum dapat ditentukan",
+    zh: "还无法判断",
+    en: "Cannot tell yet",
+  },
+  consolidated_pack: {
+    cls: "border-sky-300 bg-sky-50 text-sky-900 dark:bg-sky-400/10 dark:text-sky-100",
+    bm: "Untuk pakej gabungan bulanan",
+    zh: "进月结合并单",
+    en: "For the monthly consolidated pack",
+  },
+  individual_required: {
+    cls: "border-orange-300 bg-orange-50 text-orange-900 dark:bg-orange-400/10 dark:text-orange-100",
+    bm: "Perlu e-invois individu",
+    zh: "需要单张 e-invois",
+    en: "Needs its own e-invoice",
+  },
+  exported: {
+    cls: "border-green-300 bg-green-50 text-green-900 dark:bg-green-400/10 dark:text-green-100",
+    bm: "Dalam fail MyInvois yang dijana",
+    zh: "已进生成的 MyInvois 档",
+    en: "In a generated MyInvois file",
+  },
+  submitted: {
+    cls: "border-green-400 bg-green-100 text-green-900 dark:bg-green-400/15 dark:text-green-100",
+    bm: "Bendahari rekod sudah dimuat naik",
+    zh: "财政已记录上传",
+    en: "Treasurer recorded the upload",
+  },
 };
 
 export function MinutesDocument() {
@@ -75,6 +133,36 @@ export function MinutesDocument() {
 
   const router = useRouter();
   const t = useTriText();
+  const [einvoisVisible] = useEinvoisVisible();
+
+  // e-INVOIS AUDIT TRAIL (work order 90). Every judgement here is arithmetic
+  // over values a human already confirmed — no vendor call, nothing invented.
+  //
+  // 🔴 committeeApprovalLimitCents is null ON PURPOSE. The society's spending
+  // ceiling lives in its OWN constitution, and this store does not carry the
+  // confirmed clauses, so no approval-limit finding can be raised from this
+  // screen yet. null means the check is SKIPPED — never that the limit is
+  // zero, and never a made-up national figure (there is no such number).
+  // To switch the check on, load the org's clauses, run
+  // findCommitteeSpendingLimit() from @/lib/einvois-governance, and pass
+  // { limitCents, clause.clause_no } through here.
+  const financialRows = useMemo(() => {
+    const rows = extraction.financial_resolutions ?? [];
+    return rows.map((row) => {
+      const vendorName = row.vendor_name.value;
+      const amountCents = row.approved_amount_cents.value;
+      const { status, findings } = checkFinancialResolution({
+        resolution: {
+          vendorName,
+          approvedAmountCents: amountCents,
+          purpose: row.purpose.value,
+        },
+        committeeApprovalLimitCents: null,
+        einvoisEnabled: einvoisVisible,
+      });
+      return { vendorName, amountCents, purpose: row.purpose.value, status, findings };
+    });
+  }, [extraction.financial_resolutions, einvoisVisible]);
 
   // J 28/8 evening item 5: 「在这里也没有得看回照片」 — while correcting the
   // document, one button opens the ORIGINAL handwriting in a popup (zoom
@@ -716,6 +804,83 @@ export function MinutesDocument() {
         </div>
         )}
       </PageSection>
+
+      {/* --- e-INVOIS AUDIT TRAIL (work order 90) ---------------------------
+          Money this meeting approved, and where each approval stands on the
+          way to the treasurer's MyInvois upload. Hidden entirely when the
+          organisation has not switched e-Invois on, and when the meeting
+          approved no money — an empty compliance panel on a page about a
+          social gathering is noise. */}
+      {einvoisVisible && financialRows.length > 0 && (
+        <PageSection
+          titleBm="Kelulusan wang & status e-Invois"
+          titleZh="批款与 e-Invois 状态"
+          titleEn="Money approved & e-Invois status"
+          summary={
+            <Tri
+              bm="Setiap kelulusan wang dalam minit ini, dan di mana ia berada dalam laluan audit. MinitAI mengira status ini daripada jumlah yang anda sahkan — ia tidak menghantar apa-apa kepada LHDN."
+              zh="这份记录里每一笔批款，以及它走到审计链的哪一步。状态是 MinitAI 根据您确认的金额算出来的 —— 我们不会替您送去 LHDN。"
+              en="Every money approval in these minutes, and where it sits on the audit trail. MinitAI works these out from the amounts you confirmed — it does not send anything to LHDN."
+            />
+          }
+        >
+          <div className="flex flex-col gap-3">
+            {financialRows.map((row, i) => {
+              const badge = AUDIT_BADGE[row.status];
+              return (
+                <div key={i} className="rounded-sm border bg-background p-3">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-40 flex-1">
+                      <div className="font-medium">
+                        {row.vendorName || (
+                          <em className="text-muted-foreground">
+                            <Tri bm="penerima tidak dinyatakan" zh="没写收款方" en="no payee named" />
+                          </em>
+                        )}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {row.amountCents === null ? (
+                          <Tri bm="jumlah tidak terbaca" zh="金额读不出" en="amount unreadable" />
+                        ) : (
+                          formatRm(row.amountCents)
+                        )}
+                        {row.purpose && ` · ${row.purpose}`}
+                      </div>
+                    </div>
+                    <span
+                      className={`shrink-0 rounded-full border px-3 py-1 text-sm font-medium ${badge.cls}`}
+                    >
+                      {t(badge.bm, badge.zh, badge.en)}
+                    </span>
+                  </div>
+                  {row.findings.length > 0 && (
+                    <ul className="mt-2 flex flex-col gap-2 border-t pt-2">
+                      {row.findings.map((f) => (
+                        <li key={f.code} className="text-sm">
+                          <span className="mr-1">⚠️</span>
+                          {t(f.message.bm, f.message.zh, f.message.en)}
+                          {f.basis && (
+                            <span className="block text-muted-foreground">
+                              {t(f.basis.bm, f.basis.zh, f.basis.en)}
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              );
+            })}
+            <p className="text-sm text-muted-foreground">
+              <Tri
+                bm="MinitAI menyediakan fail untuk dimuat naik ke Portal MyInvois oleh bendahari. Ia tidak berhubung terus dengan LHDN, jadi ia tidak boleh mengesahkan apa yang LHDN terima."
+                zh="MinitAI 只准备档案给财政上传到 MyInvois Portal。我们没有直连 LHDN，所以无法确认 LHDN 那边收到什么。"
+                en="MinitAI prepares the file for the treasurer to upload to the MyInvois Portal. It has no direct link to LHDN, so it cannot confirm what LHDN received."
+              />
+            </p>
+          </div>
+        </PageSection>
+      )}
 
       {/* D3 (work order 56, 拍板 9): the "values to paste into eROSES" block
           that used to live HERE moved to /filings/eroses — the step-by-step

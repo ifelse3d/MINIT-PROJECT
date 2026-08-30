@@ -203,6 +203,33 @@ export const figureSchema = z.object({
   amount_cents: amountCentsFieldSchema,
 });
 
+/**
+ * A resolution that APPROVES MONEY TO BE PAID OUT — the start of the e-Invois
+ * trail (work order 90, T5 governance slice).
+ *
+ * Deliberately three plain extracted facts and nothing more. The model copies
+ * what is written on the page: who is being paid, how much, what for. It is
+ * NOT asked whether the payee is a registered business, whether SST applies,
+ * or whether an e-invoice is required — those are legal determinations that
+ * are not visible in a photograph, and asking a vision model for them would
+ * break Hard Rule 1 as surely as asking it to add up a column would break
+ * Hard Rule 2. Every such judgement is made afterwards, deterministically, in
+ * `src/lib/einvois-governance.ts`, from values a human has confirmed.
+ *
+ * Distinct from `figures`: a figure is any amount SEEN on the page (a balance,
+ * a collection, a budget line). A financial resolution is an amount the
+ * meeting DECIDED TO SPEND, with a payee.
+ */
+export const financialResolutionSchema = z.object({
+  /** The payee exactly as written; "" + missing when the page does not say. */
+  vendor_name: textFieldSchema,
+  /** Integer sen. The LLM only copies the number it sees (Hard Rule 2). */
+  approved_amount_cents: amountCentsFieldSchema,
+  /** What the money is for, in the original language. */
+  purpose: textFieldSchema,
+});
+export type FinancialResolution = z.infer<typeof financialResolutionSchema>;
+
 export const officeBearerSchema = z.object({
   /** e.g. "Pengerusi", "Setiausaha", "Bendahari" */
   position: textFieldSchema,
@@ -243,6 +270,17 @@ export const meetingNotesExtractionSchema = z.object({
   attendees: z.array(attendeeSchema),
   resolutions: z.array(resolutionSchema),
   figures: z.array(figureSchema),
+  /**
+   * Money the meeting approved TO BE PAID OUT (work order 90). Optional, and
+   * `.catch(undefined)` for the same reason `kind` carries it: every document
+   * and fixture saved before this field existed must still parse unchanged,
+   * and a malformed array must cost only the e-Invois panel — never the whole
+   * document (rule 7: never crash a batch).
+   */
+  financial_resolutions: z
+    .array(financialResolutionSchema)
+    .optional()
+    .catch(undefined),
   office_bearers: z.array(officeBearerSchema),
 });
 export type MeetingNotesExtraction = z.infer<
