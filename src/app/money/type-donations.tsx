@@ -397,9 +397,9 @@ export function TypeDonations({
               )
             : p === "estValue"
               ? t(
-                  "Nilai anggaran tidak sah. Contoh yang betul: 100, 100.50 — atau kosongkan.",
-                  "估值无效。正确的写法：100、100.50 —— 也可以留空。",
-                  "The estimated value is not valid. Correct examples: 100, 100.50 — or leave it empty.",
+                  "Nilai anggaran tidak sah. Contoh yang betul: 100, 100.50 (ruangan ini pilihan).",
+                  "估值无效。正确的写法：100、100.50（这格是选填）。",
+                  "The estimated value is not valid. Correct examples: 100, 100.50 (this box is optional).",
                 )
               : p === "note"
                 ? t(

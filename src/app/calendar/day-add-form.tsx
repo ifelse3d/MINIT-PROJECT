@@ -124,9 +124,9 @@ export function DayAddForm({
       <label className="flex flex-col gap-1.5">
         <span className="text-base font-semibold">
           <Tri
-            bm="Pukul berapa? (boleh tinggal kosong)"
-            zh="几点？（可以不填）"
-            en="What time? (can be left empty)"
+            bm="Pukul berapa? (pilihan)"
+            zh="几点？（选填）"
+            en="What time? (optional)"
           />
         </span>
         <input
@@ -141,9 +141,9 @@ export function DayAddForm({
       <label className="flex flex-col gap-1.5">
         <span className="text-base font-semibold">
           <Tri
-            bm="Nota untuk diri sendiri (boleh tinggal kosong)"
-            zh="给自己的笔记（可以不填）"
-            en="A note to yourself (can be left empty)"
+            bm="Nota untuk diri sendiri (pilihan)"
+            zh="给自己的笔记（选填）"
+            en="A note to yourself (optional)"
           />
         </span>
         <textarea

@@ -65,9 +65,9 @@ export function BeforeReading({
 
       <p className="text-base text-muted-foreground">
         <Tri
-          bm="Semua ini boleh dibiarkan kosong — MinitAI akan cuba membacanya sendiri. Isi yang anda pasti sahaja: apa yang anda tulis di sini menang, jadi MinitAI tidak perlu meneka."
-          zh="全部都可以留空 —— MinitAI 会自己去读。只填您确定的：您在这里写的会盖过 MinitAI 读到的，它就不用猜。"
-          en="You can leave all of this blank — MinitAI will try to read it. Fill in only what you are sure of: what you put here wins, so MinitAI does not have to guess."
+          bm="Setiap ruangan di sini pilihan — MinitAI akan cuba membacanya sendiri. Isi yang anda pasti sahaja: apa yang anda tulis di sini menang, jadi MinitAI tidak perlu meneka."
+          zh="这里每一格都是选填 —— MinitAI 会自己去读。只填您确定的：您在这里写的会盖过 MinitAI 读到的，它就不用猜。"
+          en="Every box here is optional — MinitAI will try to read it. Fill in only what you are sure of: what you put here wins, so MinitAI does not have to guess."
         />
       </p>
 

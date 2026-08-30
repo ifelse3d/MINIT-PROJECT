@@ -19,6 +19,7 @@ import {
   filterClauses,
   findNoticePeriodDays,
   mergeClauses,
+  sortClauses,
   QA_DISCLAIMER_BM,
   QA_DISCLAIMER_EN,
   QA_DISCLAIMER_ZH,
@@ -40,6 +41,11 @@ import {
   type ConstitutionReadResume,
 } from "@/lib/constitution-read-client";
 import { ConstitutionReadEstimate } from "@/components/constitution-read-estimate";
+import {
+  annotateClauseHierarchy,
+  shortPageRef,
+  splitClauseText,
+} from "@/lib/constitution-display";
 import { canStageTogether, isPhotoType } from "@/lib/multi-page-staging";
 import { compressPhoto } from "@/app/minutes/minutes-storage";
 import { X } from "lucide-react";
@@ -421,9 +427,9 @@ export function ConstitutionReview({
         // it; the files stay staged for exactly that.
         const continueLine = r.resume
           ? t(
-              `Bahagian ${r.failedSegment}/${r.totalSegments} gagal. Yang sudah dibaca disimpan — tekan hantar sekali lagi untuk sambung dari bahagian itu (tidak dicaj sekali lagi).`,
-              `第 ${r.failedSegment}／${r.totalSegments} 段没读成功。已读的部分都留着 —— 再按一次送出，会从那一段接着读，不会再扣一次。`,
-              `Part ${r.failedSegment} of ${r.totalSegments} failed. What was read is kept — press send again to continue from that part (not charged again).`,
+              `Bahagian ${r.failedSegment}/${r.totalSegments} gagal. Yang sudah dibaca disimpan — tekan hantar sekali lagi untuk sambung dari bahagian itu (muka surat yang sudah dibaca tidak dicaj semula).`,
+              `第 ${r.failedSegment}／${r.totalSegments} 段没读成功。已读的部分都留着 —— 再按一次送出，会从那一段接着读；已经读好的页不会重扣。`,
+              `Part ${r.failedSegment} of ${r.totalSegments} failed. What was read is kept — press send again to continue from that part (pages already read are never charged again).`,
             )
           : null;
         setAiError(continueLine ? `${r.message}\n\n${continueLine}` : r.message);
@@ -1004,21 +1010,46 @@ export function ConstitutionReview({
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
-          {clauses.map((c) => (
-            <details key={c.clause_no} className="group rounded-sm border">
+          {/* ① (work order 89): display-only combing. Sub-clauses with their
+              own card (8.1, 13.2…) indent under their parent; an untitled
+              clause shows NO "—" placeholder (the missing heading is the
+              book's own fact); the page line shortens to "m/s X" with the
+              verbatim ref in the tooltip. clauses_json is untouched. */}
+          {annotateClauseHierarchy(sortClauses(clauses)).map(({ clause: c, child }) => (
+            <details
+              key={c.clause_no}
+              className={`group rounded-sm border ${
+                child ? "ml-5 border-l-4 border-l-purple-300 @xl:ml-8" : ""
+              }`}
+            >
               <summary className="flex cursor-pointer list-none items-center gap-3 rounded-sm p-4 hover:bg-accent">
                 <Badge variant="outline" className="shrink-0 border-purple-300 bg-purple-50 text-purple-900">
                   {c.clause_no}
                 </Badge>
-                <span className="flex-1 font-medium">{c.heading || "—"}</span>
-                <span className="text-sm text-muted-foreground">{c.page_ref}</span>
+                <span className="flex-1 font-medium">{c.heading}</span>
+                <span className="text-sm text-muted-foreground" title={c.page_ref}>
+                  {shortPageRef(c.page_ref)}
+                </span>
                 <span className="text-muted-foreground transition-transform group-open:rotate-90">
                   ›
                 </span>
               </summary>
               {/* Was text-muted-foreground: the entire body of the constitution
-                  rendered at ~4:1 contrast. (2026-07-28 audit.) */}
-              <p className="border-t p-4 text-base leading-relaxed">{c.text}</p>
+                  rendered at ~4:1 contrast. (2026-07-28 audit.)
+                  ① inline "N.M" sentences break into indented paragraphs —
+                  the text itself stays verbatim (Hard Rule 1). */}
+              <div className="border-t p-4">
+                {splitClauseText(c.clause_no, c.text).map((part, i) => (
+                  <p
+                    key={i}
+                    className={`text-base leading-relaxed ${i > 0 ? "mt-2" : ""} ${
+                      part.label !== null ? "pl-4" : ""
+                    }`}
+                  >
+                    {part.text}
+                  </p>
+                ))}
+              </div>
             </details>
           ))}
         </CardContent>

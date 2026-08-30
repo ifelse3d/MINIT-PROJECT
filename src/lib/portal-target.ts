@@ -24,3 +24,15 @@
 export function portalTarget(): HTMLElement {
   return (document.querySelector(".v2-root") as HTMLElement | null) ?? document.body;
 }
+
+/**
+ * Render-safe variant for Radix `container` props (② work order 89 — the
+ * calendar day Sheet was the THIRD portal found escaping to <body>, serif
+ * fonts and all; Tooltip and HoverCard were the same family). Radix portals
+ * default to document.body, so every shadcn portal passes this instead.
+ * `undefined` during SSR keeps the default until the client renders — the
+ * portalled content only ever mounts on interaction, after hydration.
+ */
+export function portalContainer(): HTMLElement | undefined {
+  return typeof document === "undefined" ? undefined : portalTarget();
+}

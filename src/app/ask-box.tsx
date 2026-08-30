@@ -479,9 +479,9 @@ export function AskBox({
       // I1 (work order 81): a LONG PDF cannot be read in one request — that
       // is the read "The AI took too long" kept killing. Ask what it is
       // first (first segment only, classify action only), then: a
-      // constitution goes to the segmented reader — one extract action for
-      // the whole document, each segment its own request — and anything else
-      // is read whole below with the answer as its forced kind.
+      // constitution goes to the segmented reader — priced by D47's page
+      // formula, the charge following the read segment by segment — and
+      // anything else is read whole below with the answer as its forced kind.
       if (files.length === 1 && files[0].type === "application/pdf") {
         const plan = await planUploadSegments(files);
         if (plan.segments.length > 1) {
@@ -531,9 +531,9 @@ export function AskBox({
               constitutionResumeRef.current = r.resume;
               const continueLine = r.resume
                 ? t(
-                    `Bahagian ${r.failedSegment}/${r.totalSegments} gagal. Yang sudah dibaca disimpan — tekan Hantar sekali lagi untuk sambung dari situ (tidak dicaj sekali lagi).`,
-                    `第 ${r.failedSegment}／${r.totalSegments} 段没读成功。已读的部分都留着 —— 再按一次送出，会从那一段接着读，不会再扣一次。`,
-                    `Part ${r.failedSegment} of ${r.totalSegments} failed. What was read is kept — press Send again to continue from there (not charged again).`,
+                    `Bahagian ${r.failedSegment}/${r.totalSegments} gagal. Yang sudah dibaca disimpan — tekan Hantar sekali lagi untuk sambung dari situ (muka surat yang sudah dibaca tidak dicaj semula).`,
+                    `第 ${r.failedSegment}／${r.totalSegments} 段没读成功。已读的部分都留着 —— 再按一次送出，会从那一段接着读；已经读好的页不会重扣。`,
+                    `Part ${r.failedSegment} of ${r.totalSegments} failed. What was read is kept — press Send again to continue from there (pages already read are never charged again).`,
                   )
                 : null;
               setError(continueLine ? `${r.message}\n\n${continueLine}` : r.message);
@@ -1069,9 +1069,9 @@ export function AskBox({
               placeholder={
                 staged.length > 0
                   ? t(
-                      "Apa-apa yang membantu bacaan — ejaan nama, singkatan, tarikh. Boleh kosong.",
-                      "写点帮助读取的话 —— 名字的写法、缩写、日期。可以留空。",
-                      "Anything that helps the reading — name spellings, abbreviations, dates. Can be empty.",
+                      "Apa-apa yang membantu bacaan — ejaan nama, singkatan, tarikh (pilihan).",
+                      "写点帮助读取的话 —— 名字的写法、缩写、日期（选填）。",
+                      "Anything that helps the reading — name spellings, abbreviations, dates (optional).",
                     )
                   : t(
                       "cth: Bila saya kena hantar Penyata Tahunan?",

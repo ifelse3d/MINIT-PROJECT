@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Tooltip as TooltipPrimitive } from "radix-ui";
+import { portalContainer } from "@/lib/portal-target";
 
 // ---------------------------------------------------------------------------
 // THE tooltip primitive (violet redesign spec §4) — ONE app-wide.
@@ -40,7 +41,9 @@ export function IconTip({
   return (
     <TooltipPrimitive.Root>
       <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
-      <TooltipPrimitive.Portal>
+      {/* Into .v2-root, never <body> — the shadow token below needs the
+          .v2-root custom properties (C-1, work order 51 / ② work order 89). */}
+      <TooltipPrimitive.Portal container={portalContainer()}>
         <TooltipPrimitive.Content
           side={side}
           sideOffset={8}

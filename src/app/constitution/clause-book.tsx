@@ -15,6 +15,11 @@ import {
   QA_DISCLAIMER_ZH,
   type ConfirmedClause,
 } from "@/lib/constitution";
+import {
+  annotateClauseHierarchy,
+  shortPageRef,
+  splitClauseText,
+} from "@/lib/constitution-display";
 import { usePersistentState } from "@/lib/use-persistent-state";
 import { useScopedKey } from "@/lib/storage-scope";
 
@@ -85,7 +90,13 @@ export function ClauseBook({
     () => sortClauses(mergeClauses(orgClauses, stored?.clauses ?? [])),
     [orgClauses, stored],
   );
-  const shown = useMemo(() => searchClauses(book, query), [book, query]);
+  const shown = useMemo(
+    // ① (work order 89): display-only combing — sub-clauses that have their
+    // own card (8.1, 13.2…) indent under their parent when the parent is in
+    // the shown list. The data itself is untouched (Hard Rule 1).
+    () => annotateClauseHierarchy(searchClauses(book, query)),
+    [book, query],
+  );
   const title = stored?.title ?? "";
 
   if (book.length === 0) {
@@ -171,24 +182,43 @@ export function ClauseBook({
         </p>
       ) : (
         <ol className="flex flex-col gap-3">
-          {shown.map((c) => (
+          {shown.map(({ clause: c, child }) => (
             <li
               key={c.clause_no}
               // Anchored so an answer elsewhere can link straight to the clause
               // it cited, which is the whole point of citing it.
               id={`clause-${encodeURIComponent(c.clause_no)}`}
-              className="scroll-mt-24 rounded-md border-2 border-[color:var(--v2-border)] bg-white/60 p-4 target:border-amber-400 dark:bg-white/5"
+              // ① child = a sub-clause whose parent card is right above it —
+              // indented with a spine so 8.1 reads as part of Fasal 8.
+              className={`scroll-mt-24 rounded-md border-2 border-[color:var(--v2-border)] bg-white/60 p-4 target:border-amber-400 dark:bg-white/5 ${
+                child ? "ml-5 border-l-4 border-l-[#a855f7]/35 @xl:ml-8" : ""
+              }`}
             >
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                 <span className="font-mono text-base font-bold">{c.clause_no}</span>
+                {/* ① an untitled clause (13.2 in org 197's book) shows no
+                    placeholder — the missing heading is the book's own fact. */}
                 {c.heading && <span className="text-lg font-semibold">{c.heading}</span>}
                 {c.page_ref && (
-                  <span className="text-sm text-muted-foreground">{c.page_ref}</span>
+                  <span className="text-sm text-muted-foreground" title={c.page_ref}>
+                    {shortPageRef(c.page_ref)}
+                  </span>
                 )}
               </div>
               {/* whitespace-pre-line: the clause is stored exactly as printed,
-                  and a constitution's line breaks are part of how it reads. */}
-              <p className="mt-2 whitespace-pre-line text-base">{c.text}</p>
+                  and a constitution's line breaks are part of how it reads.
+                  ① inline "N.M" sentences (printed that way in the original)
+                  break into their own indented paragraphs — text verbatim. */}
+              {splitClauseText(c.clause_no, c.text).map((part, i) => (
+                <p
+                  key={i}
+                  className={`mt-2 whitespace-pre-line text-base ${
+                    part.label !== null ? "pl-4" : ""
+                  }`}
+                >
+                  {part.text}
+                </p>
+              ))}
             </li>
           ))}
         </ol>

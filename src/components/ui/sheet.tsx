@@ -4,6 +4,7 @@ import * as React from "react"
 import { Dialog as SheetPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
+import { portalContainer } from "@/lib/portal-target"
 import { Button } from "@/components/ui/button"
 import { XIcon } from "lucide-react"
 
@@ -26,7 +27,16 @@ function SheetClose({
 function SheetPortal({
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Portal>) {
-  return <SheetPrimitive.Portal data-slot="sheet-portal" {...props} />
+  // Into .v2-root, never <body> (C-1, work order 51; ② work order 89 — the
+  // calendar day sheet rendered serif + tokenless from <body>). See
+  // src/lib/portal-target.ts; an explicit `container` in props still wins.
+  return (
+    <SheetPrimitive.Portal
+      data-slot="sheet-portal"
+      container={portalContainer()}
+      {...props}
+    />
+  )
 }
 
 function SheetOverlay({

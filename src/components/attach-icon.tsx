@@ -59,28 +59,27 @@ export function ChooseFileLabel({
 
 /**
  * D0-3 (work order 56, 拍板 4): the REMAINING size limit, in writing, at the
- * door — "不准讓人白歡喜". Photos shrink in the browser so they have no
- * number to state; a PDF (and, where the door takes them, a Word/PowerPoint
- * file) rides the Storage relay up to RELAY_MAX_BYTES. The number is
- * computed from the constant so this sentence cannot go stale.
+ * door — "不准讓人白歡喜". The number is computed from the constant so this
+ * sentence cannot go stale.
+ *
+ * ④ (work order 89, J 8/30: 「photo shrink 那些字太長很亂」): ONE short
+ * sentence on screen; the format list moved into the hover/title. The door's
+ * own button label (and its `accept`) already says what kinds of file it
+ * takes, so repeating the list next to it was noise.
  */
 export function UploadLimitNote({ office = false }: { office?: boolean }) {
   const mb = Math.round(RELAY_MAX_BYTES / (1024 * 1024));
+  const formats = office ? "PDF / Word / PowerPoint" : "PDF";
   return (
-    <span className="text-sm text-[color:var(--v2-text-soft)]">
-      {office ? (
-        <Tri
-          bm={`Gambar dikecilkan secara automatik · PDF / Word / PowerPoint sehingga ${mb}MB`}
-          zh={`照片会自动缩小 · PDF / Word / PowerPoint 最大 ${mb}MB`}
-          en={`Photos shrink automatically · PDF / Word / PowerPoint up to ${mb}MB`}
-        />
-      ) : (
-        <Tri
-          bm={`Gambar dikecilkan secara automatik · PDF sehingga ${mb}MB`}
-          zh={`照片会自动缩小 · PDF 最大 ${mb}MB`}
-          en={`Photos shrink automatically · PDF up to ${mb}MB`}
-        />
-      )}
+    <span
+      className="text-sm text-[color:var(--v2-text-soft)]"
+      title={`${formats} ≤ ${mb}MB`}
+    >
+      <Tri
+        bm={`Gambar dikecilkan automatik · maks ${mb}MB`}
+        zh={`照片会自动缩小 · 最大 ${mb}MB`}
+        en={`Photos shrink automatically · up to ${mb}MB`}
+      />
     </span>
   );
 }
