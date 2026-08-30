@@ -5,61 +5,93 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-30（MYT）· Fable 5（87 号场：⑨ 上线后第一批——收据 QR 查证页＋RLS 深化半成品＋三支探针重跑）**
-**🔴 本场（87 号场）状态一句话（88 号报告）：
-① 收据 QR 查证页做完可验收（D46）：每张新收据 PDF 右下印 QR →
-公开页 /verify/resit?t=<HMAC token>（无登入；proxy PUBLIC_PATHS＋
-shell BARE_ROUTES）。三条铁线：只认 token 不开手动编号查询（连号
-可枚举）；只覆述纸上栏位 org 名/日期/金额（verify 路永不 select
-donor_name/donor_phone，purpose/item_desc 也刻意不带）；纸上＋页上
-三语明写「只证明编号出自本系统，不证明社团身份」。查无此号＝
-「本系统没开过这个编号」＋检举管道（NEXT_PUBLIC_CONTACT_EMAIL，
-本机没设该行自动藏）；DB 打嗝＝「稍后再试」永不讲成假收据。
-零 migration 零 env（token 密钥从部署密钥派生、domain-separated，
-学 81 场续读令牌）。旧收据没 QR 照旧有效（无 verifyUrl＝版面一字不变，
-测试钉住）。新依赖：qrcode-generator（运行时）＋jsqr/pngjs（仅 dev）。
-probe-qr-87.ts 16 项全 PASS：真按钮点击下载的 PDF bytes 还原 QR→jsQR
-真解码→无登入开页→org/日期/金额对版→捐款人名字不在页上→窜改 token
-诚实拒绝；截图 eval/reports/proof-87-qr-*.png（含可用手机扫的 QR PNG）。
-② RLS 深化＝半成品等通电（照实，不是完工）：migration 39
-（20260917000000_role_rls.sql）只写档等 J 贴——新函数
-accessible_orgs_with_roles(text[])＋14 张表写入收紧（会议桌=hq+secretary；
-donations/org_templates/remittance=hq+treasurer+collector；receipts/
-einvois=hq+treasurer；org_bank_accounts=hq）；读取全部不动；uploads/
-expenses/calendar 系/suggestion_marks 刻意不收（对齐 app 真实门，档头
-写明）；档尾完整 ROLLBACK（receipts 的 delete 连 rollback 也不复活——
-20260726 就拆了）。salin-migration.bat 第 39 项＋check:migrations RPC
-探针已挂。probe-rls-87.mjs（六角色×11 表×SIUD，贴前贴后都能跑）本场
-基线 --expect=before 264 项 0 mismatch＝今天 DB 层的洞白纸黑字；
-J 贴完跑 --expect=after 就是验收。
-③ 三支探针重跑全 PASS：probe-d0-56（$0.0424）、probe-createorg-68
-（$0.0318）、probe-i1-81（$0.0409）＝合计 US$0.115 ≤ 授权 0.15。
-测过：tsc 0 · eslint 20（基准逐字同）· vitest **1154（+12）** · build ✓ ·
-三条 e2e 全绿（＝39 未贴线上一丝不变的证据）· check:migrations
-**恰好一支 NOT YET＝39（预期例外不是事故）** · 零 env 改动。
-SMTP 这场没做（要 J 网域）；侧栏「系统」入口照旧等 J。
-**🔴 J 的事：双击 push-cabang.bat（本场 3 支 commit）；看 88 号报告
-（一分钟版在开头）；有 10 分钟在场时贴 migration 39（salin 选 39）＋
-立刻跑 node scripts/probe-rls-87.mjs --expect=after；上线后开一张新收据
-用真手机扫 QR；看 Vercel 有没有 NEXT_PUBLIC_CONTACT_EMAIL。**
-J 的旧账照旧：侧栏「系统」入口开不开放一句话（86 号 §4）、模型拍板
-（bench 表在 83 号，LONG_DOC 建议不换）、tester 清单（73/77 号）、
-54 号 GUIDE 设 Supabase 邮件、MyInvois 模板下载（81 号 §1-4 有路径）、
-真 undang-undang 重传一次、手机坏页截图（85 号 §4）、竞赛 8/31 23:59
-截止（J 自定，不催）。**
+**最后更新：2026-08-30（MYT）· Fable 5（89 号场：J＋tester 第二轮反馈八件事）**
+**🔴 本场（89 号场）状态一句话（92 号报告）：八件全做完全验收。
+① 章程显示梳头（只动显示层，clauses_json 一字不动）：子条缩进挂父条、
+无 heading 不再印「—」、内文 1.2 句分段（保守判定：只认本条编号＋
+句首＋后接大写/中文，RM 2.50 与 cross-ref 永不误切）、页码缩「m/s X」
+（全文在 tooltip）——新纯档 constitution-display.ts，org197 三形态钉住。
+② 日历日面板裸样式根治＝C-1 同族第 3/4 个 portal：Sheet/Tooltip/
+HoverCard 全部经新 portalContainer() 进 .v2-root；probe 实测面板字体
+＝全站、Save 鈕 rgb(112,41,229)。③「可以不填」全站→（选填），
+六档（含 grep 扫出的 members 称呼栏）。④ UploadLimitNote 缩一行
+「照片会自动缩小 · 最大 12MB」，格式清单进 title。⑤「⬇️ .ics」→
+「📱 加入手机日历」（title 注明 iPhone/Outlook；href/download byte 同）。
+⑥ minutes 多页排队（钱一 byte 没动——路由零 diff，probe-queue-89
+拦截路由钉死 4 页+1 重试=5 个 POST、ai_usage 0 行）：multiple 选档、
+BeforeReading 只问一次、「第 X／N 页」进度、坏页停在原地已读全留、
+再试一次续读、随时加页进队列。⑦ D48 双硬挡（J 拍板「都要」，推翻
+8/19「只在申报咬人」）：表单缺 eROSES 必填（姓名/IC 名/州属/任命日期）
+不给存＋拒绝句点名；penyata 第 3 步有缺锁 copy＋原地补四栏
+（fillCommitteeErosesGaps，IcNameInlineRow 退役）；旧数据不炸＝amber 行
+＋行内点名＋eROSES 徽章＋banner 跳转；BM 转换卡改原地对照表（预填→
+可改→一键套用零 AI→没在名册的行一键带参数去 /members 加人）；
+音译风险白纸黑字在 D48。⑧ D47 章程新收费（取代 81 场整本 1 次）：
+actions(N)=ceil(min(N,20)/5)+max(0,N−20)，钉住 4→1/5→1/8→2/20→4/
+21→5/50→34；收费跟读进度走（每段只扣增量、令牌带 pagesDone、已读
+永不重扣、坏段退自己的）；成本照旧累计在 seed 行；requireAiQuota
+部分扣款失败自动退（顺手补洞）；三门预估行改「会扣 X 次 AI 用量」；
+A6 fence min(N,5) 与 demo 路不动。
+**测过：tsc 0 · eslint 20（基准逐字同）· vitest 1192（+38）· build ✓ ·
+三条 e2e 全绿 · probe-ui-89/queue-89 全 PASS（零 AI）· probe-h1-69/
+members-51/h2-69 照 D48 新契约重跑全 PASS（零 AI）· 零 migration ·
+零 env · 零 AI 费。probe-i1-81 断言已对 D47 版但没重跑（烧真钱，
+本场无授权——86 场先例）。**
+**🎉 两件 J 已办：86/87 场 commit 已 push ✓；migration 39 已贴 ✓——
+本场替 J 跑了验收 probe-rls-87 --expect=after＝264 项 0 mismatch 全绿，
+role RLS 正式通电；check:migrations 39 支全 APPLIED 零 NOT YET。**
+**🔴 J 的事：双击 push-cabang.bat（本场 5 支 commit）；看 92 号报告
+（一分钟版在开头）；上线后开 /constitution 看真章程显示、手机点一天
+看日面板；（不急）下次授权 ≈US$0.15 重跑三支花钱探针（i1-81 验 D47
+真链路）。旧账照旧：侧栏「系统」入口一句话、模型拍板（LONG_DOC 建议
+不换）、tester 清单（73/77 号）、54 号 GUIDE 设 Supabase 邮件、
+MyInvois 模板下载、真 undang-undang 重传、竞赛 8/31 23:59（不催）。**
 
 ---
 
-## 🌙 现在在哪里（2026-08-30，87 号场收工）
+## 🌙 现在在哪里（2026-08-30，89 号场收工）
 
-> **已上线**：https://minit-project.vercel.app —— 85 号讨论场实测 81＋82
-> 两场 J 已 push（main==origin 当时）；**86 号 1 支＋87 号 3 支 commit
-> 等 J push-cabang.bat**。migration 1–38 全 APPLIED；**39（role RLS）
-> 只写档等 J 贴**（check:migrations 恰好一支 NOT YET＝39，预期例外）。
+> **已上线**：https://minit-project.vercel.app —— 86/87 场的 commit
+> J 已全部 push ✓；**89 号场 5 支 commit 等 J push-cabang.bat**。
+> **migration 1–39 全 APPLIED**（39 role RLS 已贴且本场验收：
+> probe-rls-87 --expect=after 264 项 0 mismatch）。
 > 线上 org：15「J」、58「avocado」、91「TESTING1」、197「TESTING2」
 > （91/197 quota 15＝仍在免费围栏内；J 要拿来测付费面见 83 号 §7 的 SQL）。
 
-### 这一场做了什么（87 号场 ✅，88 号报告——⑨ 上线后第一批）
+### 这一场做了什么（89 号场 ✅，92 号报告——J＋tester 第二轮反馈八件事）
+
+- **①–⑤ 小件**：章程显示梳头（constitution-display.ts 纯档＋org197
+  三形态测试；两处清单接上；数据零改动）· portal 家族收尾
+  （portalContainer()——Sheet/Tooltip/HoverCard 进 .v2-root，全站扫过
+  再无逃兵）·「可以不填」→（选填）六档 · UploadLimitNote 缩一行
+  格式进 title · .ics 改「加入手机日历」（下载行为 byte 同）。
+  probe-ui-89 逐项验＋4 张截图（eval/reports/proof-89-*.png）。
+- **⑥ minutes 多页排队（UX only）**：onPhotoPicked 学会回报成败
+  （Promise<boolean>），notes-review 排队机（ref 拿最新 callback——
+  stale closure 会让第 2 页覆盖第 1 页，档内写明）；BeforeReading
+  一次、进度人话、坏页停、续读、随时加页。**钱零改动**：路由零 diff，
+  probe-queue-89 拦截钉死请求数与 ai_usage 0 行。
+- **⑦ D48 双硬挡**：eroses-committee.ts 一份清单管表单挡/表格
+  amber+banner/申报挡三处；fillCommitteeErosesGaps 原地补四栏；
+  minutes-document BM 卡原地对照表＋?tambah_nama 带参加人；
+  members/page 的 8/19 旧拍板注释改写指向 D48（音译风险留档）。
+  probe-h1-69（+负路径）/probe-members-51/probe-h2-69 全改全重跑全绿。
+- **⑧ D47 章程收费**：constitutionReadActions/Delta（任意切法加总
+  =整本价，测试证明）；续读令牌加 pagesDone（旧令牌 30min 内失效＝
+  诚实退回重新收费读）；route 每请求只扣自己页数的增量、退款只退
+  自己的；requireAiQuota 部分扣款失败自动退（intake 旧潜洞一并补）；
+  估价行/续读文案三门跟上；A6 与 demo 不动。probe-i1-81 断言对版
+  **未重跑**（无 AI 授权）。
+- **测过**：tsc 0 · eslint 20（基准逐字同）· vitest **1192（+38）** ·
+  build ✓ · 三条 e2e 全绿 · 新旧六支探针全 PASS（全零 AI）·
+  probe-rls-87 --expect=after 264 项 0 mismatch（J 贴的 39 验收）·
+  check:migrations 39 支全 APPLIED exit 0 · 零 migration 零 env 零 AI 费。
+- ⚠ 没能验证的：⑧ 真厂商整链路（probe-i1-81 ≈US$0.04 等授权）；
+  ⑦ 表单硬挡在真名册上的体感（会不会逼出当场音译，D48 有风险注记）；
+  手机真机三处观感；首页门多张章程照片仍是每张各扣（89 前旧行为，
+  与 D47 公式不一致——见未决 #16）。
+
+### 上一场做了什么（87 号场 ✅，88 号报告——⑨ 上线后第一批）
 
 - **① 收据 QR 查证页（D46，完整验收）**：receipt-verify.ts（HMAC token，
   无期限、domain-separated、零 migration）＋receipt-qr.ts（qrcode-generator
@@ -843,20 +875,18 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
   真 HEIC 大图在真手机浏览器上的行为（helper 的 HEIC 退路只有单元测试）；
   围栏真挡下（未决 #1 照旧）；真 vendor 合并写作（D37 旧项）。
 
-### 🔴 J 的事（2026-08-30，87 场收工版）
+### 🔴 J 的事（2026-08-30，89 场收工版）
 
-1. **双击 push-cabang.bat（最要紧）**——86 号 1 支＋87 号 3 支 commit 等推。
-   86 场：章程名字/地址读取＋系统检查门＋先讲价；87 场：收据 QR 查证页＋
-   RLS migration 39（只写档）＋探针。
-2. **看 88 号报告**（一分钟版在开头）。
-3. **有 10 分钟在场时贴 migration 39**：双击 salin-migration.bat 选 39 →
-   Supabase SQL Editor Run → 立刻在 C:\dev\minit-v2 终端跑
-   `node scripts/probe-rls-87.mjs --expect=after`（全绿＝验收；红字整段
-   贴给 Claude；要退回跑档尾 ROLLBACK 区）。顺手重跑 e2e:roles 更好。
-4. **上线后开一张新收据、用你手机扫 QR**——真机真相机的最后一验
-   （现在也可以先扫 eval/reports/proof-87-qr-from-pdf.png 试手感）。
-5. 看一眼 Vercel 环境变数有没有 `NEXT_PUBLIC_CONTACT_EMAIL`（查证页
-   「检举冒用」行要它才显示；没设不坏页、只是行藏起来）。
+1. **双击 push-cabang.bat（最要紧）**——89 号场 5 支 commit 等推
+   （八件事＋STATE/报告）。~~86/87 场的~~ 已推 ✓；~~贴 migration 39~~
+   已贴 ✓ 且验收全绿（--expect=after 264 项 0 mismatch）。
+2. **看 92 号报告**（一分钟版在开头）。
+3. 上线后开 /constitution 看你真章程（org 197）的新显示顺不顺眼；
+   手机开日历点一天，看面板字体与紫色 Save 钮。
+4. **上线后开一张新收据、用你手机扫 QR**（87 场欠的真机一验）；
+   顺便看 Vercel 有没有 `NEXT_PUBLIC_CONTACT_EMAIL`。
+5. （不急）下次授权 ≈US$0.15 重跑三支花钱探针：probe-i1-81（验 D47
+   真链路 21 页→5 行）＋probe-d0-56＋probe-createorg-68。
 6. 旧账照旧：侧栏「系统」入口开不开放（86 号 §4）＝一句话；模型拍板
    （bench 表在 83 号，LONG_DOC 建议不换）；MyInvois 模板下载（81 号
    §1-4 路径，未决 #12 等它）；真 undang-undang 重传一次；tester 清单
@@ -889,26 +919,56 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
     删除，类型/转账截图/拍单据门全进打字表格，旧资料一笔不丢）
 15. ~~云端草稿的跨装置照片预览~~ **已做完**（8/29 G3：signPhotoPaths 签名
     URL 载回原图＋按真类型标示，73 号报告）
+16. 首页门（intake）一次多张章程照片仍是**每张各扣 1 次**——89 前旧
+    行为，⑧/D47 没动它；正路是 /constitution 门（分段读、按公式）。
+    要不要把首页多照片也并进 readConstitutionFiles，等 J 一句话。
+17. D48 表单硬挡的音译风险（D48 有注记）——上线后盯真名册有没有
+    「当场拼出来」形状的 IC 名；tester 反馈进来再定要不要软化。
 
 ### ⏭ 下一个 session 从哪开始
 
-**87 号 ⑨ 上线后第一批（QR 查证页 ✅＋RLS 深化半成品＋探针重跑）做完**
-（88 号报告；之前：86 号=86 号报告、82 号=84 号、81 号=83 号）。
-migration 1–38 全 APPLIED；**39 只写档等 J 贴**（贴完 probe-rls-87
---expect=after 验收）；**86 号 1 支＋87 号 3 支 commit 等 J push**。
-⑨ 剩的两件都卡在 J：SMTP（要网域）；RLS 通电（贴 39）。下一步候选：
-62 号竞赛材料场待命（8/31 23:59 锁定，J 说开才开，不催）；RLS 下一阶段
-（donations 加 ownership 欄→collector「只看自己交款」的读取收紧）；
-AI 代办 agent（付费限定，D18/31 号 #43）J 三次点名要专门开一单，别夹带。
+**89 号场（J＋tester 第二轮八件事 ✅，D47/D48 落档）做完**（92 号报告；
+之前：87 号=88 号报告、86 号=86 号、82 号=84 号）。
+**migration 1–39 全 APPLIED（39 已验收）**；**89 场 5 支 commit 等 J
+push**。下一步已排队：**90 号单「聊天真上传」**（89 号 §3 Q1 拍板
+「做」，单已写好，J 开口或下一场直接贴）。其他候选：62 号竞赛材料场
+（8/31 23:59 锁定，J 说开才开，不催）；RLS 下一阶段（donations 加
+ownership 欄→collector「只看自己交款」）；AI 代办 agent（付费限定，
+D18/31 号 #43）专门开一单。
 **等 J 反馈的**：侧栏「系统」入口；模型拍板（LONG_DOC 建议不换）；
 真 undang-undang 重传；tester 清单（73/77 号）；道教会样本重走
-（68 号 §6-5）；MyInvois 模板原档（未决 #12）。
+（68 号 §6-5）；MyInvois 模板原档（未决 #12）；花钱探针授权（J 的事 5）。
 竞赛 8/31 截止，材料 J 自己定，**不催**。
 RESPONSIVE：J 若再圈破版，贴 46 号单同段 PROMPT 继续。
 
 ---
 
 ## 6. 已知陷阱（踩过的，别再踩）
+
+### 2026-08-30 深夜新增（89 号八件事场）
+
+- 🔴 **shadcn/Radix 组件的 Portal 预设挂 `<body>`＝逃出 .v2-root，token
+  与字体全落空**——55 场修了 Modal/CommandPalette，这场又抓到 Sheet/
+  Tooltip/HoverCard 三个。**规矩：新装任何 shadcn 组件先 grep 它有没有
+  `.Portal`，有就给 `container={portalContainer()}`（src/lib/
+  portal-target.ts）。判断方法：截图出现 serif 字体/白钮＝先想这条。**
+- 🔴 **把「硬挡/补格」内容挂在「值存在」的分支下＝值缺席时挡也消失。**
+  D48 第一版把缺格表单塞进 ValueRow 的 blocked prop，而 AJK 的 paste
+  值来自 minutes 的 office_bearers——打字 AGM 没写理事＝值 missing＝
+  整个硬挡区不渲染，探针当场抓到。**修法：门禁与就地修补渲染成
+  sibling，值的有无只决定复制钮的形态。**
+- 🔴 **async 迴圈里呼叫「身份随渲染变」的 useCallback，要经 ref 拿最新
+  版**——minutes 队列若捉住旧 onPhotoPicked，`continuing` 用读前快照
+  判定，第 2 页会整份**取代**第 1 页（merge 本身是 functional update
+  救不了这个判定）。模式：`ref.current = cb`（useEffect 每渲染更新），
+  迴圈里 `await ref.current(...)`。
+- ⚠ **日历格线第一周带上月残日：按日号找格子，第一个匹配可能是上个月
+  的那天**（八月格线第一行有 Jul 31；probe 点「31」点到过去日，未来日
+  才有的匯出鈕全 FAIL）。**修法：取最后一个匹配；判断方法：「加了东西
+  面板有、future 区没有」先想选错月。**
+- 💡 **旧拒绝句的关键词常常同时是表单 label**（「任命日期」就在标签上）
+  ——D48 探针等拒绝句要等它**独有**的整句（§6 旧条目「wait 的字串会
+  出现在上一步画面」的表单版）。
 
 ### 2026-08-30 晚新增（87 号 ⑨ 上线后第一批场）
 
@@ -1531,14 +1591,14 @@ J 手贴 migration 的步骤：记事本开档 → `Ctrl+A` `Ctrl+C` → Supabas
 | 位置 | 放什么 |
 |---|---|
 | 根目录 | `CLAUDE.md`（规则）· `STATE.md`（这份）· `BUILD_PLAN.md` · `PROMPTS.md` · `DEPLOY.md`（⚠ 过期，上线照 `docs/上线与截图-给J的步骤.md`）· `README.md` · `AGENTS.md` |
-| `docs/` | `DECISIONS.md`（D1–**D46**）· `功能盤點-計劃vs實作.md` · `产品缺口盘点.md` · `上线与截图-给J的步骤.md` · `换模型手册.md` · `AI-API-选型与成本.md` · 其余照旧 |
+| `docs/` | `DECISIONS.md`（D1–**D48**；D47=章程按页计费、D48=Members 双硬挡）· `功能盤點-計劃vs實作.md` · `产品缺口盘点.md` · `上线与截图-给J的步骤.md` · `换模型手册.md` · `AI-API-选型与成本.md` · 其余照旧 |
 | 品牌 | `src/lib/brand.ts`（BRAND_NAME="MinitAI"，D23）· **紫色**（D24）：logo 原图 `scripts/assets/minit-logo.png`、向量版 `src/components/brand-logo.tsx` · 重生图标：`node scripts/brand-icons.mjs` · tokens 都在 `globals.css` 的 `.v2-root` |
 | 定价／毛利 | `src/lib/unit-economics.ts` + `npm run economics`（价目表查证日 `PRICES_CHECKED_ON`） |
 | AI 分流设定 | `.env.example` 的 AI 段 + `npm run check:ai` |
 | 模型对比 | `npm run bench`（--dry-run / --mock）· `bench-models.bat` · 报告在 `eval/reports/model-bench-<日期>.md` |
 | 「到底做了没有」 | `npm run status` / `status.bat` |
 | 示范章程（CONTOH） | `public/contoh/undang-undang-tubuh-contoh.pdf`（8 页 BM 完整章程，虚构社团）· 文字版 `docs/contoh-undang-undang-tubuh.md` · 重生 `npm run contoh:constitution`。十条条文与 `src/lib/sample-constitution.ts` **逐字相同**、印出来的页码对得上 `page_ref`，所以拿它测 `/constitution` 上传时**答案是已知的** |
-| migration | `supabase/migrations/`（**39 支：1–38 已套用，39=role RLS 只写档等 J 贴**——2026-08-30 check:migrations 实测恰好一支 NOT YET）· `salin-migration.bat`（39 项）· `npm run check:migrations` |
+| migration | `supabase/migrations/`（**39 支全部已套用**——2026-08-30 晚 check:migrations 零 NOT YET，39 role RLS 已由 probe-rls-87 --expect=after 验收 264 项 0 mismatch）· `salin-migration.bat`（39 项）· `npm run check:migrations` |
 | 给 J 双击的 `.bat` | `status.bat` · `salin-migration.bat` · `salin-env-vercel.bat` · `push-cabang.bat` · `bench-models.bat`。🔴 `push-to-github.bat` 不能用；⚠ `check-ai.bat` 还指旧资料夹 |
 | `competition/` | 顶层＝当前版（**[YOU] 两处还空着**）；`screenshots/` 60 张旧配色（拍板 0-9：只重拍首页主图，未拍——未决 7） |
 | `eval/reports/` | 整夹 gitignore；只有 `SUMMARY.md` 例外 |
