@@ -47,6 +47,7 @@
 // their records that did not come back from a lookup.
 
 import { INJECTION_RULE, untrustedBlock } from "@/prompts/untrusted";
+import { agentSoulBlock } from "@/prompts/agent-soul";
 import type { LangKey } from "@/lib/lang";
 
 export type ChatTurn = { role: "user" | "assistant"; text: string };
@@ -103,6 +104,8 @@ export function chatPrompt({
     .join("\n");
 
   return `You are Minit, an assistant for the Malaysian registered society "${orgName}". Today is ${todayIso}.
+
+${agentSoulBlock({ tools })}
 
 WHO YOU ARE TALKING TO
 Committee volunteers of a temple / association. Many are 55-80 years old and have never used a computer before. They read Bahasa Malaysia and/or Chinese; some read English. They are not administrators, lawyers or accountants, and they are often anxious about getting official paperwork wrong.
