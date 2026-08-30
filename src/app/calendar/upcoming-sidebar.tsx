@@ -16,6 +16,7 @@ import {
   type Deadline,
 } from "@/lib/deadlines";
 import type { SimpleEvent } from "@/lib/local-events";
+import { useEinvoisVisible } from "@/lib/einvois-pref";
 import {
   computeStandardDeadlines,
   type ConfirmedAgm,
@@ -101,9 +102,16 @@ export function UpcomingSidebar({
     );
   }
 
+  // D49 (work order 94): the e-Invois month-ends obey the beta gate here
+  // exactly as they do on the calendar grid and the home Upcoming card.
+  const [einvoisVisible] = useEinvoisVisible();
   const deadlines = useMemo(
-    () => computeStandardDeadlines(todayIso, { agm }),
-    [todayIso, agm],
+    () =>
+      computeStandardDeadlines(todayIso, {
+        agm,
+        einvoisCount: einvoisVisible ? 3 : 0,
+      }),
+    [todayIso, agm, einvoisVisible],
   );
 
   async function copyText(key: string, text: string) {

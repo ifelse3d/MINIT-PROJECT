@@ -12,6 +12,9 @@ import {
   type Urgency,
 } from "@/lib/deadlines";
 import { computeStandardDeadlines } from "@/lib/standard-deadlines";
+import { getSessionUser } from "@/db/supabase-server";
+import { isOperatorEmail } from "@/lib/admin-gate";
+import { readNeedsEinvois } from "@/lib/einvois-server";
 
 // /filings/eroses/tarikh — the deadlines, on their own address (H2, work
 // order 69: the entry page's third card). Same computation every other
@@ -48,11 +51,22 @@ export default async function TarikhAkhirPage() {
   }
 
   const todayIso = dayIsoMalaysia(new Date().toISOString())!;
-  const [agm, { orgType }] = await Promise.all([
+  // D49 (work order 94): the e-Invois month-ends appear here only for the
+  // operator with the org switch on — the same two bits every other e-Invois
+  // surface answers to, resolved server-side because this page is a server
+  // component.
+  const [agm, { orgType }, user, needsEinvois] = await Promise.all([
     getLatestConfirmedAgm(),
     readOrgTypeFlags(active.id),
+    getSessionUser().catch(() => null),
+    readNeedsEinvois(active.id),
   ]);
-  const deadlines = computeStandardDeadlines(todayIso, { agm, orgType });
+  const einvoisOn = isOperatorEmail(user?.email) && needsEinvois === true;
+  const deadlines = computeStandardDeadlines(todayIso, {
+    agm,
+    orgType,
+    einvoisCount: einvoisOn ? 3 : 0,
+  });
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 pb-10">

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Menu, Search } from "lucide-react";
 import { LanguageSwitcher, Tri, useTriText } from "@/components/language-provider";
+import { useEinvoisOperator } from "@/lib/einvois-pref";
 import { IconTip } from "@/components/ui/tooltip";
 import { BRAND_NAME } from "@/lib/brand";
 import { NAV_ITEMS, SETTINGS_NAV, type NavItem } from "@/components/nav-items";
@@ -27,7 +28,10 @@ import { CommandPalette } from "./command-palette";
 // ---------------------------------------------------------------------------
 
 /** The three words for the current page — longest matching nav href wins. */
-function pageWords(pathname: string): { bm: string; zh: string; en: string } {
+function pageWords(
+  pathname: string,
+  einvoisOperator: boolean,
+): { bm: string; zh: string; en: string } {
   if (pathname === "/") return { bm: "Utama", zh: "主页", en: "Home" };
   if (pathname === "/more") return { bm: "Lagi", zh: "更多", en: "More" };
   if (pathname.startsWith("/admin"))
@@ -36,6 +40,10 @@ function pageWords(pathname: string): { bm: string; zh: string; en: string } {
     return { bm: "Carian", zh: "搜索", en: "Search" };
   const all: NavItem[] = [...NAV_ITEMS, ...SETTINGS_NAV.filter((s) => !NAV_ITEMS.includes(s))];
   const match = all
+    // D49: a non-operator landing on a gated e-Invois URL gets the 404
+    // screen — the top bar must not caption that screen with the hidden
+    // page's name (the label would be the one thing the gate leaked).
+    .filter((i) => !(i.beta && !einvoisOperator))
     .filter((i) => pathname === i.href || pathname.startsWith(`${i.href}/`))
     .sort((a, b) => b.href.length - a.href.length)[0];
   return match
@@ -55,7 +63,8 @@ export function TopBar({
   const [q, setQ] = useState("");
   const [paletteOpen, setPaletteOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const words = pageWords(pathname);
+  const einvoisOperator = useEinvoisOperator();
+  const words = pageWords(pathname, einvoisOperator);
 
   // `/` focuses the search (or opens the palette when the input is hidden);
   // Ctrl/Cmd+K opens the palette at any width (§5.5).
