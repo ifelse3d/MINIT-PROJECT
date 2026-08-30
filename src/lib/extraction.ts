@@ -234,7 +234,34 @@ export const officeBearerSchema = z.object({
   /** e.g. "Pengerusi", "Setiausaha", "Bendahari" */
   position: textFieldSchema,
   person_name: textFieldSchema,
+  /**
+   * §4-④ (work order 100): when a printed appointment carries the person's
+   * particulars (真件 B prints No. Kad Pengenalan / Alamat / Pekerjaan under
+   * each new appointment), they are copied verbatim so the add-member card
+   * can pre-fill instead of making the secretary re-type what the document
+   * already says. All OPTIONAL + .catch(undefined): every document saved
+   * before today parses unchanged, and a malformed extra only costs itself.
+   * The model is told to copy exactly or omit — Hard Rule 1 as ever.
+   */
+  ic_no: textFieldSchema.optional().catch(undefined),
+  address: textFieldSchema.optional().catch(undefined),
+  occupation: textFieldSchema.optional().catch(undefined),
 });
+
+/**
+ * §4-② (work order 100): ANOTHER meeting spotted on the same paper — 真件 A
+ * is a printed 20 May minit whose margins carry handwritten notes about an
+ * 8 July meeting. The extraction still describes the MAIN document; these
+ * markers are what lets the workbench stop and ask "which meeting do you
+ * want?" instead of quietly stirring two meetings into one document.
+ */
+export const otherMeetingSchema = z.object({
+  /** That meeting's date exactly as written, e.g. "8/7/26". */
+  date_text: textFieldSchema,
+  /** The words that mark it as another meeting, e.g. "开会议 8/7/26". */
+  label: textFieldSchema.optional().catch(undefined),
+});
+export type OtherMeeting = z.infer<typeof otherMeetingSchema>;
 
 export const meetingNotesExtractionSchema = z.object({
   meeting_type: meetingTypeFieldSchema,
@@ -281,6 +308,12 @@ export const meetingNotesExtractionSchema = z.object({
     .array(financialResolutionSchema)
     .optional()
     .catch(undefined),
+  /**
+   * §4-② (work order 100): other meetings spotted on the same paper. Same
+   * failure posture as financial_resolutions — optional, .catch(undefined),
+   * a malformed array only costs the "which meeting?" card.
+   */
+  other_meetings: z.array(otherMeetingSchema).optional().catch(undefined),
   office_bearers: z.array(officeBearerSchema),
 });
 export type MeetingNotesExtraction = z.infer<

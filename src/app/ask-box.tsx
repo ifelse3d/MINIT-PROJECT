@@ -338,6 +338,25 @@ export function AskBox({
    * paid action instead of charging a fresh read.
    */
   const constitutionResumeRef = useRef<ConstitutionReadResume | null>(null);
+  /**
+   * §4-② (work order 100): the paper carried MORE THAN ONE meeting (真件 A —
+   * a printed minit annotated with notes about another meeting). The agent
+   * stops and asks which one; `resume` holds everything already read so the
+   * free "use it as it is" road costs nothing further.
+   */
+  const [meetingChoice, setMeetingChoice] = useState<{
+    context: string;
+    mainDate: string;
+    options: { dateText: string; label: string }[];
+    resume: {
+      kind: IntakeKind;
+      page: string;
+      merged: unknown;
+      label: string;
+      pages: { fileName: string; storagePath: string | null; photoDataUrl: string | null }[];
+      actionsUsed: number;
+    };
+  } | null>(null);
 
   // K5 (work order 82): after a send, bring the newest bubble AND the input
   // (they are adjacent now) into view. A ref, not state: nothing re-renders,
@@ -659,11 +678,15 @@ export function AskBox({
     forcedKind?: IntakeKind,
     /** ④: true only from the gate's own "start reading" button. */
     constitutionConfirmed?: boolean,
+    /** §4-②: true on a re-read from the which-meeting card — the person has
+     *  already picked, so the card must not open again. */
+    opts?: { meetingPicked?: boolean },
   ) {
     if (busy || files.length === 0) return;
     setError(null);
     setAskKind(null);
     setConstitutionGate(null);
+    setMeetingChoice(null);
     setSteps([]);
     setBusy("file");
     try {
@@ -815,103 +838,67 @@ export function AskBox({
       }
       if (!kind || !page || merged === null) return;
 
-      const mainParcel: ProductParcel = {
-        kind,
-        page,
-        fileName: label ?? files[0].name,
-        extraction: merged,
-        storagePath: pages[0]?.storagePath ?? null,
-        photoDataUrl: pages[0]?.photoDataUrl ?? null,
-        pages,
-      };
-
       // A constitution is a whole-book read with its own review flow — it
       // still goes straight to /constitution (same contract as the long-PDF
       // segmented path above).
       if (kind === "constitution") {
-        writeIntake(mainParcel);
+        writeIntake({
+          kind,
+          fileName: label ?? files[0].name,
+          extraction: merged,
+          storagePath: pages[0]?.storagePath ?? null,
+          photoDataUrl: pages[0]?.photoDataUrl ?? null,
+          pages,
+        });
         setStaged([]);
         setQuestion("");
         router.push(page);
         return;
       }
 
-      // §3: the work stays HERE, as cards — the person opens each finished
-      // piece when they are ready, instead of being teleported mid-thought.
-      pushStep(
-        t("Susun hasilnya…", "整理成品…", "Putting the pieces together…"),
-      );
+      // The classify (when it ran) and each page's read are the metered
+      // actions — the self-report and the "read it again" buttons quote this.
+      const actionsUsed = (forcedKind ? 0 : 1) + files.length;
 
-      // The primary piece is ALSO handed to its page right away: if the tab
-      // reloads before the card is tapped, the paid-for reading is waiting
-      // on the destination page instead of gone (one-shot courier, 30 min).
-      writeIntake(mainParcel);
-
-      const products: ProductParcel[] = [mainParcel];
-      let moneyRows = 0;
-      if (kind === "meeting_notes") {
-        // §4-⑧: money mentioned inside the meeting — offer to record it,
-        // never silently drop it and never silently book it either. The
-        // conversion is a straight copy (amount/description); donor and
-        // date stay honestly missing for the treasurer to complete. Zero
-        // extra AI — the rows were already read.
+      // §4-② (work order 100): TWO MEETINGS ON ONE PAPER — stop and ask
+      // which one, instead of quietly stirring both into one document
+      // (真件 A). The free road keeps what was already read; the re-read
+      // roads say their price on the button.
+      if (kind === "meeting_notes" && !opts?.meetingPicked) {
         const m = merged as MeetingNotesExtraction;
-        const rows = (m.figures ?? []).filter(
-          (f) => f.amount_cents.value !== null || f.description.value !== "",
-        );
-        moneyRows = rows.length;
-        if (rows.length > 0) {
-          const missingField = { value: "", confidence: "missing", source_ref: null };
-          products.push({
-            kind: "ledger_page",
-            page: "/money",
-            fileName: mainParcel.fileName,
-            offer: true,
-            extraction: {
-              page_title: {
-                value: "",
-                confidence: "missing",
-                source_ref: null,
-              },
-              rows: rows.map((f) => ({
-                donor_name: { ...missingField },
-                donor_phone: { ...missingField },
-                amount_cents: f.amount_cents,
-                purpose: f.description,
-                donated_at: { ...missingField },
-              })),
+        const others = (m.other_meetings ?? [])
+          .map((o) => ({
+            dateText: o.date_text?.value ?? "",
+            label: o.label?.value ?? "",
+          }))
+          .filter((o) => o.dateText !== "" || o.label !== "");
+        if (others.length > 0) {
+          closeSteps(true);
+          setMeetingChoice({
+            context,
+            mainDate: m.meeting_date.value,
+            options: others,
+            resume: {
+              kind,
+              page,
+              merged,
+              label: label ?? files[0].name,
+              pages,
+              actionsUsed,
             },
           });
+          return; // staged stays — the card's buttons are the next move.
         }
       }
 
-      // §4-⑨: the agent reports what it did, in plain words — what came
-      // out, what to look at, and roughly what it cost. The classify (when
-      // it ran) and each page's read are the metered actions.
-      const actionsUsed = (forcedKind ? 0 : 1) + files.length;
-      const m = kind === "meeting_notes" ? (merged as MeetingNotesExtraction) : null;
-      const dateBit = m?.meeting_date.value ? ` (${m.meeting_date.value})` : "";
-      const reportText =
-        kind === "meeting_notes"
-          ? t(
-              `Siap. Saya baca nota itu dan sediakan minit mesyuarat${dateBit} — ${m!.resolutions.length} perkara.${moneyRows > 0 ? ` Saya juga ternampak ${moneyRows} baris wang — kad kedua di bawah kalau mahu rekod sekali.` : ""} Guna ${actionsUsed} tindakan AI. Buka kad untuk semak; apa-apa nak ubah, beritahu saya di halaman itu.`,
-              `做好了。笔记读完，会议记录${dateBit ? `（${m!.meeting_date.value}）` : ""}整理出 ${m!.resolutions.length} 条内容。${moneyRows > 0 ? `我还看到 ${moneyRows} 笔钱 —— 想一起记账就点第二张卡。` : ""}这次用了 ${actionsUsed} 个 AI 动作。点卡片进去核对；要改哪里，进去后直接跟我说。`,
-              `Done. I read the notes and prepared the meeting minutes${dateBit} — ${m!.resolutions.length} items.${moneyRows > 0 ? ` I also spotted ${moneyRows} money line(s) — the second card records them if you want.` : ""} Used ${actionsUsed} AI action(s). Open the card to check; tell me there if anything needs changing.`,
-            )
-          : t(
-              `Siap. Halaman lejar itu sudah dibaca — buka kad di bawah untuk semak setiap baris. Guna ${actionsUsed} tindakan AI.`,
-              `做好了。账页读完了 —— 点下面的卡片逐行核对。这次用了 ${actionsUsed} 个 AI 动作。`,
-              `Done. The ledger page is read — open the card below to check each row. Used ${actionsUsed} AI action(s).`,
-            );
-
-      scrollPending.current = true;
-      setTurns((prev) => [
-        ...prev,
-        { role: "assistant", text: reportText, products, free: false },
-      ]);
-      setSteps([]);
-      setStaged([]);
-      setQuestion("");
+      deliverProducts({
+        kind,
+        page,
+        merged,
+        label: label ?? files[0].name,
+        pages,
+        actionsUsed,
+      });
     } catch {
       closeSteps(false);
       setError(
@@ -925,6 +912,97 @@ export function AskBox({
       setBusy(null);
       setReading(null);
     }
+  }
+
+  /**
+   * §3: the finished pieces land HERE, as cards — the person opens each when
+   * ready, instead of being teleported mid-thought. Shared by the normal
+   * read road and the "use it as it is" road of the which-meeting card.
+   */
+  function deliverProducts(a: {
+    kind: IntakeKind;
+    page: string;
+    merged: unknown;
+    label: string;
+    pages: { fileName: string; storagePath: string | null; photoDataUrl: string | null }[];
+    actionsUsed: number;
+  }) {
+    const { kind, page, merged, label, pages, actionsUsed } = a;
+    const mainParcel: ProductParcel = {
+      kind,
+      page,
+      fileName: label,
+      extraction: merged,
+      storagePath: pages[0]?.storagePath ?? null,
+      photoDataUrl: pages[0]?.photoDataUrl ?? null,
+      pages,
+    };
+
+    // The primary piece is ALSO handed to its page right away: if the tab
+    // reloads before the card is tapped, the paid-for reading is waiting
+    // on the destination page instead of gone (one-shot courier, 30 min).
+    writeIntake(mainParcel);
+
+    const products: ProductParcel[] = [mainParcel];
+    let moneyRows = 0;
+    if (kind === "meeting_notes") {
+      // §4-⑧: money mentioned inside the meeting — offer to record it,
+      // never silently drop it and never silently book it either. The
+      // conversion is a straight copy (amount/description); donor and
+      // date stay honestly missing for the treasurer to complete. Zero
+      // extra AI — the rows were already read.
+      const m = merged as MeetingNotesExtraction;
+      const rows = (m.figures ?? []).filter(
+        (f) => f.amount_cents.value !== null || f.description.value !== "",
+      );
+      moneyRows = rows.length;
+      if (rows.length > 0) {
+        const missingField = { value: "", confidence: "missing", source_ref: null };
+        products.push({
+          kind: "ledger_page",
+          page: "/money",
+          fileName: mainParcel.fileName,
+          offer: true,
+          extraction: {
+            page_title: { value: "", confidence: "missing", source_ref: null },
+            rows: rows.map((f) => ({
+              donor_name: { ...missingField },
+              donor_phone: { ...missingField },
+              amount_cents: f.amount_cents,
+              purpose: f.description,
+              donated_at: { ...missingField },
+            })),
+          },
+        });
+      }
+    }
+
+    // §4-⑨: the agent reports what it did, in plain words — what came out,
+    // what to look at, and what it cost.
+    const m = kind === "meeting_notes" ? (merged as MeetingNotesExtraction) : null;
+    const dateBit = m?.meeting_date.value ? ` (${m.meeting_date.value})` : "";
+    const reportText =
+      kind === "meeting_notes"
+        ? t(
+            `Siap. Saya baca nota itu dan sediakan minit mesyuarat${dateBit} — ${m!.resolutions.length} perkara.${moneyRows > 0 ? ` Saya juga ternampak ${moneyRows} baris wang — kad kedua di bawah kalau mahu rekod sekali.` : ""} Guna ${actionsUsed} tindakan AI. Buka kad untuk semak; apa-apa nak ubah, beritahu saya di halaman itu.`,
+            `做好了。笔记读完，会议记录${dateBit ? `（${m!.meeting_date.value}）` : ""}整理出 ${m!.resolutions.length} 条内容。${moneyRows > 0 ? `我还看到 ${moneyRows} 笔钱 —— 想一起记账就点第二张卡。` : ""}这次用了 ${actionsUsed} 个 AI 动作。点卡片进去核对；要改哪里，进去后直接跟我说。`,
+            `Done. I read the notes and prepared the meeting minutes${dateBit} — ${m!.resolutions.length} items.${moneyRows > 0 ? ` I also spotted ${moneyRows} money line(s) — the second card records them if you want.` : ""} Used ${actionsUsed} AI action(s). Open the card to check; tell me there if anything needs changing.`,
+          )
+        : t(
+            `Siap. Halaman lejar itu sudah dibaca — buka kad di bawah untuk semak setiap baris. Guna ${actionsUsed} tindakan AI.`,
+            `做好了。账页读完了 —— 点下面的卡片逐行核对。这次用了 ${actionsUsed} 个 AI 动作。`,
+            `Done. The ledger page is read — open the card below to check each row. Used ${actionsUsed} AI action(s).`,
+          );
+
+    scrollPending.current = true;
+    setTurns((prev) => [
+      ...prev,
+      { role: "assistant", text: reportText, products, free: false },
+    ]);
+    setSteps([]);
+    setStaged([]);
+    setQuestion("");
+    setMeetingChoice(null);
   }
 
   return (
@@ -1257,6 +1335,77 @@ export function AskBox({
                 onClick={() => setConstitutionGate(null)}
               >
                 <Tri bm="Belum lagi" zh="先不读" en="Not yet" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* §4-② (work order 100): TWO MEETINGS ON ONE PAPER — the agent
+            stops and asks which one (真件 A). The paid roads carry their
+            price on the button; the free road uses what was already read. */}
+        {meetingChoice && staged.length > 0 && (
+          <div className="flex flex-col gap-3 rounded-md border-2 border-[color:var(--v2-primary)]/40 bg-white/80 p-4 dark:bg-white/10">
+            <p className="text-lg font-medium">
+              📅{" "}
+              <Tri
+                bm="Kertas ini ada catatan LEBIH DARIPADA SATU mesyuarat. Yang mana satu mahu dibuat?"
+                zh="这张纸上看到不止一场会议的记录。要做哪一场？"
+                en="This paper carries notes from MORE THAN ONE meeting. Which one do you want?"
+              />
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {[
+                ...(meetingChoice.mainDate
+                  ? [{ dateText: meetingChoice.mainDate, label: "" }]
+                  : []),
+                ...meetingChoice.options,
+              ].map((o, i) => (
+                <Button
+                  key={`${o.dateText}-${i}`}
+                  size="lg"
+                  variant={i === 0 ? "default" : "outline"}
+                  disabled={busy !== null}
+                  onClick={() =>
+                    void sendFiles(
+                      staged.map((s) => s.file),
+                      `Only extract the meeting dated "${o.dateText || o.label}". The paper also carries notes from other meetings — leave every item that belongs to another meeting out of every field. ${meetingChoice.context}`.trim(),
+                      "meeting_notes",
+                      undefined,
+                      { meetingPicked: true },
+                    )
+                  }
+                >
+                  {o.dateText || o.label}
+                  {" · "}
+                  {t(
+                    `baca semula (${staged.length} tindakan AI)`,
+                    `重读一次（${staged.length} 个 AI 动作）`,
+                    `re-read (${staged.length} AI action${staged.length === 1 ? "" : "s"})`,
+                  )}
+                </Button>
+              ))}
+              <Button
+                size="lg"
+                variant="outline"
+                disabled={busy !== null}
+                onClick={() => {
+                  const r = meetingChoice.resume;
+                  setMeetingChoice(null);
+                  deliverProducts({
+                    kind: r.kind,
+                    page: r.page,
+                    merged: r.merged,
+                    label: r.label,
+                    pages: r.pages,
+                    actionsUsed: r.actionsUsed,
+                  });
+                }}
+              >
+                <Tri
+                  bm="Semua dalam satu — guna apa yang sudah dibaca (0 tindakan)"
+                  zh="不用分，全部放一份 —— 用刚才读好的（0 动作）"
+                  en="Keep it all in one — use what was read (0 actions)"
+                />
               </Button>
             </div>
           </div>

@@ -47,7 +47,9 @@ Respond with ONLY JSON in exactly this shape:
   "attendees": [ { "name": { ...field } } ],
   "resolutions": [ { "text": { "value": "...", "confidence": "...", "source_ref": ... }, "kind": "decision" | "task" | "duty" | "info", "section_no": "1", "section_title": "as printed", "own_no": "2.1" } ],
   "figures": [ { "description": { ...field }, "amount_cents": { "value": <integer sen> | null, ...field } } ],
-  "office_bearers": [ { "position": { ...field }, "person_name": { ...field } } ]
+  "financial_resolutions": [ { "vendor_name": { ...field }, "approved_amount_cents": { "value": <integer sen> | null, ...field }, "purpose": { ...field } } ],
+  "other_meetings": [ { "date_text": { ...field }, "label": { ...field } } ],
+  "office_bearers": [ { "position": { ...field }, "person_name": { ...field }, "ic_no": { ...field }, "address": { ...field }, "occupation": { ...field } } ]
 }
 
 Every "text" is a FIELD OBJECT ({ "value", "confidence", "source_ref" }) like
@@ -79,6 +81,7 @@ OFFICE BEARERS — ⚠ THIS FIELD BECOMES A GOVERNMENT FILING. "office_bearers" 
 - NEVER put a one-off duty here. Who hosts a class this Saturday, who leads a procession, who stands in which part of a formation, who handles transport for one event, who runs one session — these are task assignments for a SINGLE ACTIVITY, not changes to the society's committee. They do not belong here, however clearly the page pairs a duty with a name.
 - If you cannot tell whether a pairing is a standing society position or a one-off duty, treat it as a one-off duty.
 - A group label and a person's name are DIFFERENT things. In "青：嘉益" the person_name is 嘉益 and 青 is a group label. Never glue them into "青嘉益".
+- When a printed appointment lists the person's particulars beside it (No. Kad Pengenalan / No. K/P, Alamat, Pekerjaan), copy each EXACTLY as printed into that entry's "ic_no" / "address" / "occupation", each with its own source_ref. When the page does not print one, OMIT that key entirely — never leave a placeholder and never copy another person's particulars.
 
 DOCUMENT STRUCTURE — when the input is a PRINTED or TYPED formal minutes
 document (a letterhead, an agenda list, numbered sections like "Agenda 1:
@@ -95,11 +98,42 @@ is a fact about the page and you preserve it:
   document also has a matching section per row — the sections already carry
   those titles, and the table is rebuilt from them. If a table row has NO
   matching section, emit it as its own entry so it is not lost.
+- A printed SUB-HEADING with its own number AND its own title (e.g.
+  "Agenda 2.1: Kekosongan jawatan Ahli Jawatankuasa") is a SECTION of its
+  own: its paragraphs carry section_no "2.1" and section_title the printed
+  title. Losing a sub-heading's title flattens the document — the title is
+  part of the page. A line that merely STARTS with a sub-number inside a
+  paragraph (no title of its own) keeps that number in "own_no" instead.
 - A line printed with its own sub-number keeps it in "own_no" (e.g. "2.1").
   Handwritten annotations in the margins of a printed page are entries too —
   put each in the section it is written beside, mark it "check" if smudged.
 - Handwritten note pages and whiteboards usually have NO sections: omit the
   structure markers entirely there.
+
+TWO MEETINGS ON ONE PAPER — a page sometimes carries notes from MORE THAN
+ONE meeting: a printed minit of one meeting with handwritten notes arranging
+ANOTHER (a second date, a second agenda), or two meetings' notes sharing a
+page. Extract the MAIN document's meeting as usual — every rule above
+unchanged — and ALSO list each OTHER meeting you can see in
+"other_meetings": "date_text" = that meeting's date exactly as written
+(e.g. "8/7/26"), "label" = the words that mark it as another meeting (e.g.
+"开会议 8/7/26"). A page that is clearly one single meeting has an empty
+"other_meetings" array. Never silently stir two meetings into one document —
+the reader will be ASKED which meeting they want.
+
+MONEY THE MEETING APPROVED TO PAY OUT — "financial_resolutions" is a
+COPY-INDEX and it must never change what the other fields contain. Fill it
+ONLY when the meeting DECIDED money will be PAID OUT to a named party (a
+vendor, a contractor, a supplier): "vendor_name" exactly as written,
+"approved_amount_cents", "purpose". Two rules stay EXACTLY as they were:
+1. Every fact still lives in EXACTLY ONE of "resolutions"/"figures" under
+   the earlier rules — this index only COPIES the triple. It NEVER adds an
+   entry to "resolutions", NEVER changes an entry's wording, and NEVER
+   moves an amount out of "figures".
+2. Money RECEIVED (kutipan, derma, 收到/筹到 collections, balances) is
+   NEVER a financial_resolution — money coming in is not money paid out.
+   It stays in "figures" and only there, same as always.
+Most meetings decide no payout: an empty array is the normal answer.
 
 NUMBERED LISTS — a page that is a numbered list (a whiteboard of targets, a
 name list, an agenda) is read row by row, EVERY row, in order. Never skip a
