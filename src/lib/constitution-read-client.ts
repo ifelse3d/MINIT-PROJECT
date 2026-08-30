@@ -84,6 +84,33 @@ export function fingerprintFiles(files: File[]): string {
 }
 
 /**
+ * ④ (work order 85): how many pages is this pick? For the price-and-time line
+ * shown BEFORE a read starts. A single PDF is counted with pdf-lib (same as
+ * planUploadSegments, without the splitting work); anything else is one page
+ * per file. null = could not count (encrypted / odd scanner output) — the
+ * door then shows no estimate rather than a wrong one.
+ */
+export async function countConstitutionPages(
+  files: File[],
+): Promise<number | null> {
+  if (files.length === 0) return null;
+  if (files.length === 1 && files[0].type === "application/pdf") {
+    try {
+      const { PDFDocument } = await import("pdf-lib");
+      const doc = await PDFDocument.load(await files[0].arrayBuffer(), {
+        updateMetadata: false,
+        ignoreEncryption: true,
+      });
+      const total = doc.getPageCount();
+      return Number.isInteger(total) && total > 0 ? total : null;
+    } catch {
+      return null;
+    }
+  }
+  return files.length;
+}
+
+/**
  * Cut what was picked into segments. Photos are natural one-page segments;
  * a single long PDF is split with pdf-lib. A PDF whose pages cannot be
  * counted (or split) travels whole — the server then treats it exactly as it

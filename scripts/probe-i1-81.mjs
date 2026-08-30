@@ -191,14 +191,18 @@ async function run() {
     check("file input present", input !== null);
     await input.uploadFile(pdfPath);
     await new Promise((r) => setTimeout(r, 1200));
-    const staged = await page.evaluate(() => document.body.innerText.includes("读这 1 页"));
+    // Work order 85 ④: the send button now counts real pages ("开始读 ——
+    // 共 21 页") and an estimate line prices the read before it starts.
+    const staged = await page.evaluate(() => document.body.innerText.includes("开始读"));
     check("PDF staged, nothing sent yet (D0-1)", staged);
+    const priced = await page.evaluate(() => document.body.innerText.includes("共 21 页"));
+    check("estimate line prices the 21 pages before the read (④)", priced);
 
     // Press send, then watch the progress line: the browser must split the
     // 21 pages into 6 segments and SAY which one it is on.
     const segmentsSeen = new Set();
     const started = Date.now();
-    await clickByText(page, "button", "读这 1 页");
+    await clickByText(page, "button", "开始读");
     let doneText = "";
     while (Date.now() - started < 5 * 60_000) {
       const txt = await page.evaluate(() => document.body.innerText);

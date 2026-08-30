@@ -42,6 +42,37 @@ export function constitutionFencePages(pageCount: number): number {
   return Math.min(pages, CONSTITUTION_FENCE_PAGE_CAP);
 }
 
+/**
+ * ④ (work order 85, J 2026-08-30: 「寫預估（看文件大小）」): measured reading
+ * speed, for the price-and-time line the doors show BEFORE a read starts.
+ * Benchmark: CONTOH 8 pages read in 24.8s (probe-constitution-speed,
+ * 2026-08-30) ⇒ ~3.1 s/page. An estimate, not a promise — the UI says "about".
+ */
+export const CONSTITUTION_SECONDS_PER_PAGE = 3.1;
+
+export type ConstitutionReadEstimate = {
+  pages: number;
+  /** What the free fence will deduct: min(pages, cap). */
+  fencePages: number;
+  /** How many requests the read is cut into (a photo set overrides this). */
+  segments: number;
+  /** Rough wall-clock seconds for the whole read. */
+  seconds: number;
+};
+
+/** What reading a document of `pageCount` pages will cost and take. */
+export function estimateConstitutionRead(
+  pageCount: number,
+): ConstitutionReadEstimate {
+  const pages = Math.max(1, Math.floor(pageCount));
+  return {
+    pages,
+    fencePages: constitutionFencePages(pages),
+    segments: Math.max(1, planConstitutionSegments(pages).length),
+    seconds: Math.ceil(pages * CONSTITUTION_SECONDS_PER_PAGE),
+  };
+}
+
 /** 1-based inclusive page range of one segment. */
 export type ConstitutionSegmentRange = { from: number; to: number };
 

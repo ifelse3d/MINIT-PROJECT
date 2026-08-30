@@ -4,6 +4,7 @@ import {
   CONSTITUTION_FENCE_PAGE_CAP,
   CONSTITUTION_SEGMENT_PAGES,
   constitutionFencePages,
+  estimateConstitutionRead,
   needsSegmenting,
   planConstitutionSegments,
 } from "./constitution-pages";
@@ -67,5 +68,32 @@ describe("planConstitutionSegments", () => {
     expect(planConstitutionSegments(0)).toEqual([]);
     expect(planConstitutionSegments(-1)).toEqual([]);
     expect(planConstitutionSegments(Number.NaN)).toEqual([]);
+  });
+});
+
+describe("estimateConstitutionRead (④, work order 85)", () => {
+  it("prices CONTOH's 8 pages: 1 action, 5 fence pages, 2 segments, ~25s", () => {
+    expect(estimateConstitutionRead(8)).toEqual({
+      pages: 8,
+      fencePages: 5,
+      segments: 2,
+      seconds: 25,
+    });
+  });
+  it("a single photo is one page, one segment, a few seconds", () => {
+    const e = estimateConstitutionRead(1);
+    expect(e.pages).toBe(1);
+    expect(e.fencePages).toBe(1);
+    expect(e.segments).toBe(1);
+    expect(e.seconds).toBeGreaterThan(0);
+  });
+  it("a 40-page book estimates 5 fence pages and 10 segments", () => {
+    const e = estimateConstitutionRead(40);
+    expect(e.fencePages).toBe(5);
+    expect(e.segments).toBe(10);
+    expect(e.seconds).toBe(124);
+  });
+  it("never estimates below one page", () => {
+    expect(estimateConstitutionRead(0).pages).toBe(1);
   });
 });

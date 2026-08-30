@@ -45,6 +45,7 @@ import {
   type ConstitutionReadResume,
 } from "@/lib/constitution-read-client";
 import { canStageTogether } from "@/lib/multi-page-staging";
+import { ConstitutionReadEstimate } from "@/components/constitution-read-estimate";
 import {
   mergeConstitutionExtractions,
   mergeLedgerExtractions,
@@ -158,6 +159,17 @@ export function AskBox({
   // Set when Minit could not place the page: it ASKS instead of giving up.
   // Holds the text that accompanied the failed attempt so the retry carries it.
   const [askKind, setAskKind] = useState<{ context: string } | null>(null);
+  /**
+   * ④ (work order 85): a long PDF just classified as a CONSTITUTION waits
+   * here for the person's own "start reading" tap — with the price-and-time
+   * line shown first. The classify is already paid at this point (that is the
+   * cost of answering "what is this?"); the EXTRACT action is what this gate
+   * prices before it starts.
+   */
+  const [constitutionGate, setConstitutionGate] = useState<{
+    pages: number;
+    context: string;
+  } | null>(null);
   /**
    * I1 (work order 81): where a partly-read LONG constitution PDF can pick up
    * again — a failed segment keeps everything read so far here, and pressing
@@ -295,6 +307,7 @@ export function AskBox({
     if (!list || list.length === 0 || busy) return;
     setError(null);
     setAskKind(null);
+    setConstitutionGate(null);
     const picked = Array.from(list);
     // Several files at once only makes sense for PHOTOS of pages. A PDF or
     // Office file is already a whole document — one of those at a time.
@@ -452,10 +465,13 @@ export function AskBox({
     files: File[],
     context: string,
     forcedKind?: IntakeKind,
+    /** ④: true only from the gate's own "start reading" button. */
+    constitutionConfirmed?: boolean,
   ) {
     if (busy || files.length === 0) return;
     setError(null);
     setAskKind(null);
+    setConstitutionGate(null);
     setBusy("file");
     try {
       let kind: IntakeKind | null = forcedKind ?? null;
@@ -489,6 +505,17 @@ export function AskBox({
               constitutionResumeRef.current?.fingerprint === fingerprint
                 ? constitutionResumeRef.current
                 : null;
+            // ④ (work order 85): price first, read on the person's own
+            // "start reading" tap. A matching resume means this document is
+            // already paid for and half-read — pricing it again would be a
+            // false statement, so a continuation never re-gates.
+            if (!constitutionConfirmed && !resume) {
+              setConstitutionGate({
+                pages: plan.totalPages ?? plan.segments.length,
+                context,
+              });
+              return;
+            }
             const r = await readConstitutionFiles(files, {
               resume,
               onProgress: (p) =>
@@ -701,6 +728,7 @@ export function AskBox({
                     onClick={() => {
                       setStaged((prev) => prev.filter((_, j) => j !== i));
                       setAskKind(null);
+                      setConstitutionGate(null);
                     }}
                     className="absolute -top-2 -right-2 inline-flex h-7 w-7 items-center justify-center rounded-full border-2 border-[color:var(--v2-border)] bg-white text-muted-foreground hover:bg-red-50 hover:text-red-700 dark:bg-neutral-800 dark:hover:bg-red-400/10"
                     aria-label={t(
@@ -813,6 +841,47 @@ export function AskBox({
                 }}
               >
                 <Tri bm="Bukan satu pun — batal" zh="都不是，取消" en="None of these — cancel" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* ④ (work order 85): the long PDF turned out to be a CONSTITUTION —
+            say what reading it will cost and take, and read only on the
+            person's own tap. Informative, not a wall: one button starts it. */}
+        {constitutionGate && staged.length > 0 && (
+          <div className="flex flex-col gap-3 rounded-md border-2 border-[color:var(--v2-border)] bg-white/80 p-4 dark:bg-white/10">
+            <p className="text-lg">
+              📜{" "}
+              <Tri
+                bm={`"${staged[0].file.name}" ialah perlembagaan. Sebelum MinitAI membacanya:`}
+                zh={`「${staged[0].file.name}」是一份章程。开始读之前，先说清楚：`}
+                en={`"${staged[0].file.name}" is a constitution. Before MinitAI reads it:`}
+              />
+            </p>
+            <ConstitutionReadEstimate pages={constitutionGate.pages} />
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="lg"
+                disabled={busy !== null}
+                onClick={() =>
+                  void sendFiles(
+                    staged.map((s) => s.file),
+                    question.trim() || constitutionGate.context,
+                    "constitution",
+                    true,
+                  )
+                }
+              >
+                📖 <Tri bm="Mula baca" zh="开始读" en="Start reading" />
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                disabled={busy !== null}
+                onClick={() => setConstitutionGate(null)}
+              >
+                <Tri bm="Belum lagi" zh="先不读" en="Not yet" />
               </Button>
             </div>
           </div>
@@ -962,9 +1031,19 @@ export function AskBox({
           className="flex flex-col gap-3 sm:flex-row sm:items-end"
           onSubmit={(e) => {
             e.preventDefault();
-            if (staged.length > 0)
-              void sendFiles(staged.map((s) => s.file), question);
-            else void send(question);
+            if (staged.length > 0) {
+              // ④: with the price gate open, Send IS consent — going through
+              // the classifier again would charge a second classify for a
+              // question already answered.
+              if (constitutionGate)
+                void sendFiles(
+                  staged.map((s) => s.file),
+                  question.trim() || constitutionGate.context,
+                  "constitution",
+                  true,
+                );
+              else void sendFiles(staged.map((s) => s.file), question);
+            } else void send(question);
           }}
         >
           <label className="flex-1">

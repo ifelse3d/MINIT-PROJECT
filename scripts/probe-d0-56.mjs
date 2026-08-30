@@ -301,10 +301,16 @@ async function main() {
   const thumbs = await page.$$eval("img[alt$='.png']", (els) => els.length);
   check("both pages show thumbnails", thumbs >= 2, `thumbnails: ${thumbs}`);
 
-  // Press "读这 2 页" — now (and only now) the reads run and merge.
+  // Press "开始读 —— 共 2 页" (work order 85 ④ relabelled the send button;
+  // the estimate line above it is informative only) — now (and only now) the
+  // reads run and merge.
+  await page.waitForFunction(
+    () => (document.body.innerText || "").includes("共 2 页"),
+    { timeout: 15000 },
+  );
   await page.evaluate(() => {
     const b = [...document.querySelectorAll("button")].find((x) =>
-      (x.textContent ?? "").includes("读这 2 页"),
+      (x.textContent ?? "").includes("开始读"),
     );
     b?.click();
   });
@@ -338,14 +344,16 @@ async function main() {
   // === D0-2 ================================================================
   // The CONTOH 8-page constitution — the exact "AI took too long" shape.
   await (await pickInput()).uploadFile(CONTOH_PDF);
+  // ④: the door now counts the PDF's real pages and prices the read up front
+  // — "共 8 页" proves both the count and the estimate line are in place.
   await page.waitForFunction(
-    () => (document.body.innerText || "").includes("读这 1 页"),
+    () => (document.body.innerText || "").includes("共 8 页"),
     { timeout: 15000 },
   );
   const t0 = Date.now();
   await page.evaluate(() => {
     const b = [...document.querySelectorAll("button")].find((x) =>
-      (x.textContent ?? "").includes("读这 1 页"),
+      (x.textContent ?? "").includes("开始读"),
     );
     b?.click();
   });

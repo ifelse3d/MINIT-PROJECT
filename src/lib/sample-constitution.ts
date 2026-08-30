@@ -16,6 +16,16 @@ export const sampleConstitutionTitle =
 
 export const sampleClauses: ConfirmedClause[] = [
   {
+    clause_no: "Fasal 1",
+    heading: "Nama",
+    // Word for word the contoh generator's Fasal 1 (both paragraphs) —
+    // scripts/make-contoh-constitution.mjs. This is the sentence shape
+    // ("dikenali sebagai …") that findRegisteredName must keep reading, and
+    // the 1.2 sentence is what findRegisteredAddress reads (work order 85 ①⑥).
+    text: "Pertubuhan ini dikenali sebagai Persatuan Penganut Dewa Guan Di Selangor - Cawangan Klang, dan selepas ini disebut sebagai Persatuan. 1.2 Tempat urusan berdaftar Persatuan ialah No. 12, Jalan Tepi Sungai, 41100 Klang, Selangor Darul Ehsan, atau di mana-mana tempat lain yang ditetapkan oleh Jawatankuasa dari semasa ke semasa dan diberitahu kepada Pendaftar Pertubuhan.",
+    page_ref: "muka surat 1",
+  },
+  {
     clause_no: "Fasal 3",
     heading: "Keahlian",
     text: "Keahlian terbuka kepada semua warganegara Malaysia yang berumur 18 tahun ke atas yang menganut kepercayaan persatuan ini. Permohonan menjadi ahli hendaklah dibuat secara bertulis kepada Setiausaha dan diluluskan oleh Jawatankuasa.",

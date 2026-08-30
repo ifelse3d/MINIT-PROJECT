@@ -6,7 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Tri } from "@/components/language-provider";
 import {
   constitutionCoverage,
+  findAddressClause,
   findAmendmentRule,
+  findNameClause,
+  findRegisteredAddress,
   findRegisteredName,
   type ClauseCoverage,
 } from "@/lib/constitution-identity";
@@ -88,10 +91,12 @@ export function OrgIdentityPanel({
 
       <NameRow
         registered={registered}
+        nameClause={findNameClause(clauses)}
         orgName={orgName}
         orgId={orgId}
         coverage={coverage}
       />
+      <AlamatRow clauses={clauses} />
       <AmendmentRow amendment={amendment} coverage={coverage} />
     </div>
   );
@@ -101,11 +106,15 @@ export function OrgIdentityPanel({
 
 function NameRow({
   registered,
+  nameClause,
   orgName,
   orgId,
   coverage,
 }: {
   registered: ReturnType<typeof findRegisteredName>;
+  /** The NAMA clause itself, when one was read — even if the name inside it
+   *  could not be parsed. */
+  nameClause: ReturnType<typeof findNameClause>;
   orgName: string | null;
   orgId: number | null;
   coverage: ClauseCoverage;
@@ -114,6 +123,40 @@ function NameRow({
   const [dismissed, setDismissed] = useState(false);
 
   if (!registered) {
+    // 🔴 Three different truths, three different sentences (work order 85 ①;
+    // J caught the panel claiming "There is no NAMA clause" about a document
+    // whose Fasal 1 WAS the NAMA clause — Minit just could not parse the name
+    // out of it. A false statement about their own document):
+    //   (a) the NAMA clause is here, the name is not parseable → quote the
+    //       clause verbatim and ask the person to check it (eROSES test: they
+    //       read and confirm; they are not sent to fill in a form);
+    //   (b) clauses are missing → NotFound names the missing numbers;
+    //   (c) everything is here and there genuinely is no NAMA clause → say so.
+    if (nameClause) {
+      return (
+        <Field
+          label={<Tri bm="Nama berdaftar" zh="注册名称" en="Registered name" />}
+        >
+          <div className="flex flex-col gap-2">
+            <p className="text-base">
+              <Tri
+                bm="Fasal NAMA ada dalam perlembagaan anda, tetapi MinitAI tidak pasti bahagian mana ialah nama berdaftar. Sila baca fasal itu sendiri:"
+                zh="您的章程里有「名称」那一条，但 MinitAI 没办法确定哪一段才是注册名称。请您自己看这一条："
+                en="Your constitution does have a NAMA clause, but MinitAI could not tell which part is the registered name. Please read the clause yourself:"
+              />
+            </p>
+            <Source clause={nameClause} showText />
+            <p className="text-sm text-muted-foreground">
+              <Tri
+                bm={`Nama yang MinitAI guna sekarang: ${orgName ?? "—"}. Kalau nama dalam fasal berbeza, betulkannya di Tetapan → Pertubuhan.`}
+                zh={`MinitAI 现在用的名字是：${orgName ?? "—"}。如果条文里写的不一样，请到 设置 → 机构 改过来。`}
+                en={`The name MinitAI is using now: ${orgName ?? "—"}. If the clause says otherwise, correct it in Settings → Organisation.`}
+              />
+            </p>
+          </div>
+        </Field>
+      );
+    }
     return (
       <Field
         label={<Tri bm="Nama berdaftar" zh="注册名称" en="Registered name" />}
@@ -222,6 +265,51 @@ function NameRow({
   );
 }
 
+// --- the registered address ----------------------------------------------------
+
+/**
+ * ⑥ (work order 85, J 2026-08-30: 「我是要讓系統知道社團的資訊，名字地址
+ * 等等」). Same shape and same rules as NameRow: what was read, with its
+ * clause; a clause that is about the address but would not parse is QUOTED
+ * for the person to read (① rule); a constitution that never mentions an
+ * address gets silence — where the clause is silent, the panel is silent.
+ *
+ * Display-only for now: the orgs table has no address column, so there is
+ * deliberately no "use this address" button (and no migration for it — this
+ * panel records what the document says, and its source).
+ */
+function AlamatRow({ clauses }: { clauses: ConfirmedClause[] }) {
+  const found = findRegisteredAddress(clauses);
+  const addressClause = found ? null : findAddressClause(clauses);
+  if (!found && !addressClause) return null;
+
+  return (
+    <Field
+      label={
+        <Tri bm="Alamat berdaftar" zh="注册地址" en="Registered address" />
+      }
+    >
+      {found ? (
+        <>
+          <p className="text-base font-semibold">{found.address}</p>
+          <Source clause={found.clause} />
+        </>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <p className="text-base">
+            <Tri
+              bm="Perlembagaan anda ada fasal tentang alamat, tetapi MinitAI tidak pasti bahagian mana ialah alamatnya. Sila baca fasal itu sendiri:"
+              zh="您的章程里有讲地址的条文，但 MinitAI 没办法确定哪一段才是地址。请您自己看这一条："
+              en="Your constitution has a clause about the address, but MinitAI could not tell which part is the address. Please read the clause yourself:"
+            />
+          </p>
+          <Source clause={addressClause!} showText />
+        </div>
+      )}
+    </Field>
+  );
+}
+
 // --- how it may be changed ---------------------------------------------------
 
 function AmendmentRow({
@@ -233,15 +321,7 @@ function AmendmentRow({
 }) {
   if (!amendment) {
     return (
-      <Field
-        label={
-          <Tri
-            bm="Kalau anda mahu menukar perlembagaan"
-            zh="如果要修改章程"
-            en="If you want to change the constitution"
-          />
-        }
-      >
+      <AmendmentDisclosure>
         <NotFound
           coverage={coverage}
           absent={
@@ -252,7 +332,7 @@ function AmendmentRow({
             />
           }
         />
-      </Field>
+      </AmendmentDisclosure>
     );
   }
 
@@ -260,15 +340,7 @@ function AmendmentRow({
     amendment;
 
   return (
-    <Field
-      label={
-        <Tri
-          bm="Kalau anda mahu menukar perlembagaan"
-          zh="如果要修改章程"
-          en="If you want to change the constitution"
-        />
-      }
-    >
+    <AmendmentDisclosure>
       <div className="flex flex-col gap-3 rounded-md border-2 border-amber-300 bg-amber-50 p-3 dark:border-amber-400/40 dark:bg-amber-400/10">
         <p className="text-base font-medium text-amber-900 dark:text-amber-100">
           ⚠{" "}
@@ -375,7 +447,47 @@ function AmendmentRow({
           </p>
         </div>
       </div>
-    </Field>
+    </AmendmentDisclosure>
+  );
+}
+
+/**
+ * ⑤ (work order 85, J 2026-08-30: 「現在不是 pindaan 為什麼這樣」). The
+ * amendment block is a STANDING explainer J asked for on 8/22 ("remind the
+ * user that changing the constitution needs a general meeting") — but as a
+ * permanently open amber card it read as "the system thinks I am amending my
+ * constitution right now", and it was the loudest thing on the page. Nothing
+ * inside it is removed; it now opens on demand, collapsed by default.
+ *
+ * Probe note: a closed <details>' body is NOT in innerText (§6 trap) — assert
+ * on the summary, or open it first.
+ */
+function AmendmentDisclosure({ children }: { children: React.ReactNode }) {
+  return (
+    <details className="group rounded-md border-2 border-[color:var(--v2-border)] bg-white/50 dark:bg-white/5">
+      <summary className="flex cursor-pointer list-none items-center gap-3 rounded-md p-3 hover:bg-accent/50">
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            <Tri
+              bm="Kalau anda mahu menukar perlembagaan"
+              zh="如果要修改章程"
+              en="If you want to change the constitution"
+            />
+          </span>
+          <span className="block text-sm text-muted-foreground">
+            <Tri
+              bm="Tekan untuk lihat apa yang perlembagaan anda sendiri kata"
+              zh="点开看您自己的章程是怎么写的"
+              en="Tap to see what your own constitution says"
+            />
+          </span>
+        </span>
+        <span className="text-muted-foreground transition-transform group-open:rotate-90">
+          ›
+        </span>
+      </summary>
+      <div className="flex flex-col gap-1 px-3 pb-3">{children}</div>
+    </details>
   );
 }
 

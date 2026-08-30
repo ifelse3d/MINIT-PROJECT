@@ -8,7 +8,8 @@ import {
 } from "@/components/ui/card";
 import { Tri } from "@/components/language-provider";
 import { getSupabase } from "@/db/supabase";
-import { getMemberships } from "@/lib/active-org";
+import { getSessionUser } from "@/db/supabase-server";
+import { isOperatorEmail } from "@/lib/admin-gate";
 import { requiredAiKeyEnvVars } from "@/lib/ai/provider";
 
 // Re-check on every page load — never serve a cached health status.
@@ -156,28 +157,31 @@ async function runChecks(): Promise<CheckResult[]> {
 }
 
 /**
- * WHO MAY SEE THIS PAGE (D2, decided 2026-08-20).
+ * WHO MAY SEE THIS PAGE (re-ruled by J, 2026-08-30: 「只有我可以看」).
  *
- * 2026-07-28 closed half of it: /health used to be reachable with no login at
- * all. The other half stayed open — ANY signed-in member could read it, and
- * what it prints is the NAMES of the environment variables this deployment
- * runs on (`SUPABASE_SERVICE_ROLE_KEY`, the AI key for whichever vendor is
- * configured, …). The values are never shown, but the list of names is a map
- * of the architecture, and a treasurer has no reason to hold that map.
+ * The old gate (D2, 2026-08-20) was "hq_admin somewhere" — written when the
+ * imagined deployment was SELF-HOSTED, where the hq_admin was whoever
+ * installed the thing. On the multi-tenant deployment that assumption is
+ * simply false: whoever CREATES an org becomes its hq_admin
+ * (orgs/actions.ts), so every signed-up user could open this page — and what
+ * it prints is the NAMES of the environment variables the deployment runs on
+ * (`SUPABASE_SERVICE_ROLE_KEY`, the AI key, …). Values hidden, but the list
+ * of names is a map of the architecture, and a tenant has no reason to hold
+ * the platform's map.
  *
- * Now: you must be `hq_admin` somewhere. Not "an admin of the org you happen
- * to be looking at" — this page is about the deployment, not about one org.
+ * Now: the ADMIN_EMAILS gate — the same one /admin has always used
+ * (src/lib/admin-gate.ts). This page is about the DEPLOYMENT, and only the
+ * platform operator runs the deployment.
  *
- * FAILS CLOSED. If we cannot establish the role — no memberships yet, Supabase
- * unreachable, env half-configured — the answer is no. That is precisely the
- * moment the page is most tempting and least safe: a broken deployment is when
- * its shape leaks most easily. Whoever looks after the server can read the
- * environment on the server.
+ * FAILS CLOSED, as before: no session, Supabase unreachable, no ADMIN_EMAILS
+ * set — the answer is no. A broken deployment is exactly when its shape leaks
+ * most easily; whoever looks after the server can read the environment on the
+ * server.
  */
 async function callerMayReadHealth(): Promise<boolean> {
   try {
-    const memberships = await getMemberships();
-    return memberships.some((m) => m.role === "hq_admin");
+    const user = await getSessionUser();
+    return isOperatorEmail(user?.email);
   } catch {
     return false;
   }
@@ -203,9 +207,9 @@ export default async function HealthPage() {
             </CardTitle>
             <CardDescription>
               <Tri
-                bm="Tiada apa-apa yang salah dengan akaun anda. Halaman ini hanya menunjukkan keadaan pemasangan MinitAI, dan hanya pentadbir pertubuhan boleh membukanya. Kalau ada sesuatu yang tidak berfungsi, beritahu orang yang menguruskan sistem anda."
-                zh="您的帐号没有任何问题。这一页只是显示 MinitAI 这套系统本身的状态，只有机构管理员打得开。如果有东西不能用，请告诉负责管理系统的人。"
-                en="There is nothing wrong with your account. This page only shows the state of the MinitAI installation itself, and only an organisation administrator can open it. If something is not working, tell whoever looks after your system."
+                bm="Tiada apa-apa yang salah dengan akaun anda. Halaman ini hanya menunjukkan keadaan sistem MinitAI itu sendiri, dan hanya pentadbir platform MinitAI boleh membukanya. Kalau ada sesuatu yang tidak berfungsi, hubungi pihak MinitAI."
+                zh="您的帐号没有任何问题。这一页只是显示 MinitAI 这套系统本身的状态，只有 MinitAI 平台管理员打得开。如果有东西不能用，请联络 MinitAI。"
+                en="There is nothing wrong with your account. This page only shows the state of the MinitAI system itself, and only the MinitAI platform administrator can open it. If something is not working, contact MinitAI."
               />
             </CardDescription>
           </CardHeader>

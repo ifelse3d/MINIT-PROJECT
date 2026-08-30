@@ -34,10 +34,12 @@ import { NewOrgBanner } from "./new-org-banner";
 import { OrgIdentityPanel } from "./org-identity-panel";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
 import {
+  countConstitutionPages,
   fingerprintFiles,
   readConstitutionFiles,
   type ConstitutionReadResume,
 } from "@/lib/constitution-read-client";
+import { ConstitutionReadEstimate } from "@/components/constitution-read-estimate";
 import { canStageTogether, isPhotoType } from "@/lib/multi-page-staging";
 import { compressPhoto } from "@/app/minutes/minutes-storage";
 import { X } from "lucide-react";
@@ -181,6 +183,22 @@ export function ConstitutionReview({
    * one of those at a time (our design, not a platform limit).
    */
   const [staged, setStaged] = useState<{ file: File; preview: string | null }[]>([]);
+  /**
+   * ④ (work order 85): the REAL page count of what is staged — a PDF's pages
+   * via pdf-lib, photos one each — for the price-and-time line and an honest
+   * send-button label. null = nothing staged or uncountable (then no estimate
+   * is shown rather than a wrong one).
+   */
+  const [stagedPages, setStagedPages] = useState<number | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void countConstitutionPages(staged.map((s) => s.file)).then((n) => {
+      if (!cancelled) setStagedPages(n);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [staged]);
   /** Which page is being read right now, e.g. "page2.jpg · 第 2／3 段". */
   const [reading, setReading] = useState<string | null>(null);
   /**
@@ -677,15 +695,26 @@ export function ConstitutionReview({
                   </button>
                 )}
               </div>
+              {/* ④ (work order 85): the price before the read — pages, the
+                  one action, the free-fence deduction, the parts, the rough
+                  time. Informative only; the button below is the consent. */}
+              {stagedPages !== null && (
+                <ConstitutionReadEstimate
+                  pages={stagedPages}
+                  segments={staged.length > 1 ? staged.length : undefined}
+                />
+              )}
               <div className="flex flex-wrap items-center gap-3">
                 <Button size="lg" disabled={aiBusy} onClick={() => void sendStaged()}>
                   {aiBusy ? (
                     <Tri bm="Sebentar…" zh="请稍等…" en="One moment…" />
                   ) : (
+                    /* The label counts REAL pages when they are known — a
+                       one-file 8-page PDF used to read "读这 1 页". */
                     <Tri
-                      bm={`Baca ${staged.length} halaman ini`}
-                      zh={`读这 ${staged.length} 页`}
-                      en={`Read ${staged.length === 1 ? "this page" : `these ${staged.length} pages`}`}
+                      bm={`Mula baca — ${stagedPages ?? staged.length} muka surat`}
+                      zh={`开始读 —— 共 ${stagedPages ?? staged.length} 页`}
+                      en={`Start reading — ${stagedPages ?? staged.length} page${(stagedPages ?? staged.length) === 1 ? "" : "s"}`}
                     />
                   )}
                 </Button>

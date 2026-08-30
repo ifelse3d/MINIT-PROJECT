@@ -8,10 +8,12 @@ import { Tri, useLocalizedError, useTriText } from "@/components/language-provid
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
 import { RELAY_MAX_BYTES } from "@/lib/upload-relay";
 import {
+  countConstitutionPages,
   fingerprintFiles,
   readConstitutionFiles,
   type ConstitutionReadResume,
 } from "@/lib/constitution-read-client";
+import { ConstitutionReadEstimate } from "@/components/constitution-read-estimate";
 import { writeIntake } from "@/lib/intake-handoff";
 import { createOrg, type OrgActionState } from "./actions";
 
@@ -76,6 +78,23 @@ export function CreateOrgForm({
   // ---------------------------------------------------------------------
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  /**
+   * ④ (work order 85): the attached file's REAL page count, for the
+   * price-and-time line. On THIS door the read runs right after "Create
+   * organisation", so the estimate shows the price BEFORE that one tap — a
+   * second "start reading" button after create would strand the person
+   * mid-flow for a confirmation they already gave.
+   */
+  const [filePages, setFilePages] = useState<number | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void countConstitutionPages(file ? [file] : []).then((n) => {
+      if (!cancelled) setFilePages(n);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [file]);
   // B-5: which kind of organisation — decides whether the PPM field shows.
   const [orgType, setOrgType] = useState<"registered" | "committee">("registered");
   // C-1 (work order 27, 拍板⑤): which plan. Trial is the default and the only
@@ -575,6 +594,11 @@ export function CreateOrgForm({
             <p className="text-base font-medium text-red-800 dark:text-red-300">
               {fileError}
             </p>
+          )}
+          {/* ④: what reading THIS file will cost and roughly how long it
+              takes — shown before the one tap that starts it. */}
+          {file && filePages !== null && (
+            <ConstitutionReadEstimate pages={filePages} />
           )}
           <p className="text-sm text-muted-foreground">
             {/* 0-2: AI-path marker stays, the "about 1%" promise is gone. */}

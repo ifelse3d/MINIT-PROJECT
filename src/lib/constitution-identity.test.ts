@@ -2,10 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   clauseNumberOf,
   constitutionCoverage,
+  findAddressClause,
   findAmendmentRule,
+  findNameClause,
+  findRegisteredAddress,
   findRegisteredName,
 } from "./constitution-identity";
 import type { ConfirmedClause } from "./constitution";
+import { sampleClauses } from "./sample-constitution";
 
 // These fixtures are written the way real ROS-approved constitutions are
 // written — including the photocopied Chinese ones and the typewritten ones
@@ -82,6 +86,91 @@ describe("findRegisteredName", () => {
       findRegisteredName([clause("Fasal 1", "NAMA", 'Dikenali dengan nama "—— ///".')]),
     ).toBeNull();
   });
+
+  // 🔴 IRON TEST (work order 85 ①): the app's OWN sample document. contoh's
+  // Fasal 1 says "dikenali sebagai …" with no quotes — the old introducer
+  // list missed it, and J watched Minit fail its own demo file on 2026-08-30.
+  it("reads the contoh fixture's registered name (dikenali sebagai, unquoted)", () => {
+    const found = findRegisteredName(sampleClauses);
+    expect(found?.name).toBe(
+      "Persatuan Penganut Dewa Guan Di Selangor - Cawangan Klang",
+    );
+    expect(found?.clause.clause_no).toBe("Fasal 1");
+  });
+
+  it("reads the 'hendaklah dikenali sebagai' variant too", () => {
+    const found = findRegisteredName([
+      clause(
+        "Fasal 1",
+        "NAMA",
+        "Pertubuhan ini hendaklah dikenali sebagai Persatuan Bola Sepak Harmoni, selepas ini disebut Persatuan.",
+      ),
+    ]);
+    expect(found?.name).toBe("Persatuan Bola Sepak Harmoni");
+  });
+});
+
+describe("findNameClause", () => {
+  // ① needs the UI to tell "no NAMA clause" from "NAMA clause present, name
+  // unparseable" — this is the detector for the second case.
+  it("finds the NAMA clause even when the name inside cannot be parsed", () => {
+    const nama = clause(
+      "Fasal 1",
+      "Nama",
+      "Pertubuhan ini memakai gelaran yang tercatat dalam sijil pendaftaran.",
+    );
+    expect(findRegisteredName([nama])).toBeNull();
+    expect(findNameClause([nama])?.clause_no).toBe("Fasal 1");
+  });
+
+  it("returns null when no clause is headed Nama", () => {
+    expect(
+      findNameClause([clause("Fasal 1", "TAFSIRAN", "Dalam undang-undang ini.")]),
+    ).toBeNull();
+  });
+});
+
+describe("findRegisteredAddress", () => {
+  // 🔴 IRON TEST (work order 85 ⑥): contoh's address lives in Fasal 1's 1.2
+  // sentence — and "No. 12"'s own full stop must not cut it short, while the
+  // "atau di mana-mana tempat lain…" tail must not ride along.
+  it("reads the contoh fixture's registered address", () => {
+    const found = findRegisteredAddress(sampleClauses);
+    expect(found?.address).toBe(
+      "No. 12, Jalan Tepi Sungai, 41100 Klang, Selangor Darul Ehsan",
+    );
+    expect(found?.clause.clause_no).toBe("Fasal 1");
+  });
+
+  it("reads an address from a clause headed Alamat", () => {
+    const found = findRegisteredAddress([
+      clause(
+        "Fasal 2",
+        "Alamat",
+        "Alamat berdaftar persatuan ini ialah 88, Jalan Mawar 3, 81100 Johor Bahru, Johor.",
+      ),
+    ]);
+    expect(found?.address).toBe("88, Jalan Mawar 3, 81100 Johor Bahru, Johor");
+  });
+
+  // Hard Rule 1: a clause ABOUT the address whose address cannot be parsed →
+  // null from the reader, but findAddressClause still surfaces the clause so
+  // the UI can quote it verbatim instead of claiming there is none.
+  it("returns null rather than guessing, while findAddressClause still points at the clause", () => {
+    const vague = clause(
+      "Fasal 2",
+      "Tempat Urusan",
+      "Tempat urusan Persatuan ditetapkan oleh Jawatankuasa dari semasa ke semasa.",
+    );
+    expect(findRegisteredAddress([vague])).toBeNull();
+    expect(findAddressClause([vague])?.clause_no).toBe("Fasal 2");
+  });
+
+  it("finds nothing at all in clauses that never mention an address", () => {
+    const other = [clause("Fasal 3", "Keahlian", "Keahlian terbuka kepada semua.")];
+    expect(findRegisteredAddress(other)).toBeNull();
+    expect(findAddressClause(other)).toBeNull();
+  });
 });
 
 describe("findAmendmentRule", () => {
@@ -113,6 +202,28 @@ describe("findAmendmentRule", () => {
     expect(rule?.requiresGeneralMeeting).toBe(false);
     expect(rule?.noticeDays).toBeNull();
     expect(rule?.majority).toBeNull();
+  });
+
+  // 🔴 IRON TEST (work order 85 ②): contoh Fasal 14's "60 hari" is the
+  // deadline for FILING a passed amendment with the Registrar — not a notice
+  // period to members. Showing it as "60 days' notice before the meeting"
+  // invented a legal requirement the document never stated.
+  it("does not read a filing deadline as a notice period (contoh Fasal 14)", () => {
+    const fasal14 = sampleClauses.find((c) => c.clause_no === "Fasal 14")!;
+    const rule = findAmendmentRule([fasal14]);
+    expect(rule).not.toBeNull();
+    expect(rule?.noticeDays).toBeNull();
+    // The rest of the clause still reads exactly as before.
+    expect(rule?.requiresGeneralMeeting).toBe(true);
+    expect(rule?.majority).toBe("dua pertiga");
+    expect(rule?.needsRegistrarApproval).toBe(true);
+  });
+
+  it("still reads a notice period written next to 通知 in Chinese", () => {
+    const rule = findAmendmentRule([
+      clause("第十四条", "修改章程", "本章程之修改，开会前 21 天要通知会员，须经会员大会三分之二通过。"),
+    ]);
+    expect(rule?.noticeDays).toBe(21);
   });
 
   it("finds the clause from its text when no heading was printed", () => {

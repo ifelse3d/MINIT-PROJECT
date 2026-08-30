@@ -5,58 +5,101 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-30（MYT）· Fable 5（82 号场：⑧ 助手场——免 AI 预备问答层＋聊天面板重整）**
-**🔴 本场（82 号场）状态一句话（84 号报告）：
-① K1 免 AI 预备问答层（主菜）——`src/lib/prepared-answers.ts` 纯逻辑：
-常见导航/固定知识题（在哪开收据、什么是 e-Invois、年度呈报在哪交、
-怎么上传文件…8 条入口）命中就系统直答＋白名单深连结按钮，**零 AI 呼叫
-零扣额度**，答案下标「系统直接回答，不扣 AI 用量」三语。「Try asking」
-chips 由预备层拥有（面板与首页同一份），保守匹配（词界防 cek/kecekapan
-误中、trouble 词/超长题一律照旧送模型）。probe-k1-82 实测：两面 × 三语
-chips 逐颗点过，**ai_usage 0 行**。
-② K0 先验证——对话其实**有留**（scoped localStorage）：关掉再开、点外面
-关、整页重载，桌面 rail 与手机 sheet 全 PASS（probe-k0-82）。J 看到
-「不见了」最可能是首页框与浮动面板本是两个对话（两把 key，设计使然）。
-→ K2 拍板：Clear 保留但缩成标题列小 ↺ 图标（按了先确认，§1-10 规矩）。
-③ K2 收纳——「本月已用 X%」徽章旁 ? 图标弹窗讲解（Modal/portal-target
-惯例）；「这轮还能问 N 题」缩成徽章行一行小字（Hard Rule 10 两个数照旧
-可见）；答案区上下再无说明块可盖。
-④ K3 手机面板——sheet 改 `h-[calc(100dvh-4.5rem)]`（吃满顶栏以下，dvh
-跟键盘缩）；probe-k3-82：375 无横向溢出、答案 ≥200px 可见无遮挡、
-深连结可点真导航、? 弹窗进出视口。真键盘行为 headless 验不了（照实记）。
-⑤ K4 语言跟提问走——chat prompt 换 ANSWER LANGUAGE 条（跟问题语言，判不
-出退回介面语言=minit-lang cookie，route 传入）；契约测试钉住；真 vendor
-验收：介面 BM 之下 BM→BM、**EN→EN（J 8/29 抱怨案）**、ZH→ZH，3 笔
-chat_turn 共 **US$0.0025**（授权 ≤0.10）。
-⑥ K5 首页问答改对话式——讯息流在上、输入框在下（与浮动面板同逻辑），
-送出后自动滚到最新答案＋输入框；How it works 原位不动。
-⑦ K6 档案意图指路不开门——预备层 upload_file 条目（按钮回首页那道门）＋
-chat prompt 两处（能力清单＋FILES 段：不许答「这里不能上传」就完）。
-⑧ 死按钮全名单——probe-deadbuttons-82.ts 从真 ask-routes.ts 导入全部
-15 颗 key（11 区＋4 action），逐颗渲染＋点击＋断言真到页，**15/15 全活**
-（/filings 落 /filings/eroses、/settings 落 /settings/display 皆按现门牌）。
-测过：tsc 0 · eslint 20（基准逐字同）· vitest **1128（+19）** · build ✓ ·
-三条 e2e 全绿 · probe-k0/k1/k3/k4/deadbuttons-82 全 PASS · probe-i3-81
-回归全 PASS · check:migrations 38 支全 APPLIED · 零 migration ·
-真额度 US$0.0025。
-**🔴 J 的事：双击 push-cabang.bat（81＋82 两场 commit 都还没上线）；
-看 84 号报告（一分钟版在开头）。**
-J 的旧账照旧：模型拍板（bench 表在 83 号）、tester 清单（73/77 号）、
-54 号 GUIDE 设 Supabase 邮件、MyInvois 模板下载（81 号 §1-4 有路径）、
-真 undang-undang 重传一次、竞赛 8/31 23:59 截止（J 自定，不催）。**
+**最后更新：2026-08-30（MYT）· Fable 5（86 号场：85 号小单六件事——章程名字/地址读取＋60 hari 误标＋系统检查门＋先讲价）**
+**🔴 本场（86 号场）状态一句话（86 号报告）：
+① NAMA 句式补洞——constitution-identity.ts 认得「(hendaklah) dikenali
+sebagai」＋同句「selepas ini disebut…」尾巴切除；鐵線測試：contoh fixture
+（sampleClauses 补了 Fasal 1，与生成器逐字同源）必回「Persatuan Penganut
+Dewa Guan Di Selangor - Cawangan Klang」。訊息假話修正：面板分三種話——
+条文真没有／条文在但名字抓不准（引 verbatim 请 user 核对，新 findNameClause
+判定）／页没拍全（NotFound 点名缺条照旧）。
+② 60 hari 误标——readNoticeDays 只认「N hari」30 字内贴着 notis/notice/
+通知（不跨句）；contoh Fasal 14 的呈报期限不再被讲成开会通知期（钉死）。
+③ /health 门改 ADMIN_EMAILS（admin-gate 的 isOperatorEmail，/admin 同款，
+fail-closed 照旧）；settings/system「系统检查」行同步、只 operator 可见，
+自架时代文案改掉；检举冒用行照旧给所有人。侧栏「系统」入口没动
+（manage_org），要不要全开放等 J 一句话（86 号 §4）。零 env 改动。
+④ 读章程先讲价——estimateConstitutionRead（3.1 秒/页＝CONTOH 8 页 24.8s）
+＋共用 ConstitutionReadEstimate 一行三语。/constitution：预估行＋按钮改
+「开始读 —— 共 N 页」（真页数）；create-org：选档即显示预估（读取跟着
+创建那一下跑，价在按创建前看得到，不加第二颗钮——照意图不照字面）；
+首页长 PDF：classify 认出章程后停下，预估＋「开始读/先不读」，resume
+不再重新讲价、闸开时主送出=同意（不会重扣 classify）。demo 零 AI 照旧。
+⑤ pindaan 卡预设收合（details+summary，内容一项没删，8/22 常设提醒照在；
+探针注意：收合内文不在 innerText）。
+⑥ 地址读出来——findRegisteredAddress/findAddressClause（候选含 Fasal 1/2
+带地址关键词的条文；No./Lot 的句点不切地址；atau di mana-mana 尾巴不进）；
+AlamatRow 读得出=地址+出处、抓不准=引原文、没讲=整行沉默；orgs 无地址栏
+（查证过）→ 只显示不存，零 migration。
+测过：tsc 0 · eslint 20（基准逐字同）· vitest **1142（+14）** · build ✓ ·
+三条 e2e 全绿 · check:migrations exit 0 零 NOT YET · 零 migration ·
+零 env 改动 · 零 AI 费。⚠ probe-d0-56/probe-i1-81 断言按新按钮文案改了
+但**没重跑**（要烧真 vendor 钱，本场无 AI 授权）；probe-createorg-68 同。
+**🔴 J 的事：双击 push-cabang.bat（本场 1 支 commit）；看 86 号报告
+（一分钟版在开头）；侧栏「系统」入口开不开放给所有人＝一句话。**
+J 的旧账照旧：模型拍板（bench 表在 83 号，LONG_DOC 建议不换）、tester
+清单（73/77 号）、54 号 GUIDE 设 Supabase 邮件、MyInvois 模板下载（81 号
+§1-4 有路径）、真 undang-undang 重传一次（现在连名字带地址一起验）、
+手机坏页截图（85 号 §4）、竞赛 8/31 23:59 截止（J 自定，不催）。**
 
 ---
 
-## 🌙 现在在哪里（2026-08-30，82 号 ⑧ 助手场收工）
+## 🌙 现在在哪里（2026-08-30，86 号场收工）
 
-> **已上线**：https://minit-project.vercel.app —— **至 78 号场 J 已全部
-> push**（82 场开工实测 ahead 5＝81 场那 5 支还没上）；**81＋82 两场的
-> commit 都等 J push-cabang.bat**。migration 1–38 全 APPLIED（82 场收尾
-> 实测，本场零 migration）。
+> **已上线**：https://minit-project.vercel.app —— 85 号讨论场实测 81＋82
+> 两场 J 已 push（main==origin）；**本场（86 号）1 支 commit 等 J
+> push-cabang.bat**。migration 全 APPLIED（本场收尾 check:migrations
+> exit 0 零 NOT YET，本场零 migration）。
 > 线上 org：15「J」、58「avocado」、91「TESTING1」、197「TESTING2」
 > （91/197 quota 15＝仍在免费围栏内；J 要拿来测付费面见 83 号 §7 的 SQL）。
 
-### 这一场做了什么（82 号 ⑧ 助手场 ✅，84 号报告——免 AI 预备问答层＋面板重整）
+### 这一场做了什么（86 号场 ✅，86 号报告——85 号小单六件事）
+
+- **① NAMA 补洞＋讯息三分**：constitution-identity.ts 认「(hendaklah)
+  dikenali sebagai」＋切「selepas ini disebut…」同句尾巴（三语版本）；
+  新 findNameClause() 把「条文在不在」与「名字读不读得出」分开；
+  org-identity-panel 三种话：(a) 真没有照旧 (b) 条文在抓不准→引 verbatim
+  ＋「MinitAI 现在用的名字是 X，不一样就到设置改」 (c) 页没拍全→NotFound
+  点名缺条照旧。sampleClauses 补 Fasal 1（与 contoh 生成器逐字同源，
+  生成器与 PDF 都没动）；铁线测试钉住名字与两个变体。
+- **② 60 hari 误标**：readNoticeDays 只认 30 字内（不跨句）贴着 notis/
+  notice/通知 的「N hari」；contoh Fasal 14（呈报 Pendaftar 的期限）铁线
+  测试 noticeDays=null、majority/GM/ROS 照旧读出；中文「开会前 21 天要
+  通知会员」照读（钉住）。
+- **③ 系统检查门改平台管理员**：/health callerMayReadHealth 改
+  isOperatorEmail(getSessionUser().email)（admin-gate，/admin 同款，
+  fail-closed 照旧——85 号坐实旧门在多租户下人人可看 env 名单，是自架
+  时代假设过期）；settings/system 的「系统检查」行同 operator 门＋文案
+  去自架化；检举冒用行照旧全员；拒绝卡沿用、「机构管理员」改「MinitAI
+  平台管理员」三语。侧栏入口没动（manage_org）＝等 J 拍板要不要全开。
+- **④ 读章程先讲价**：constitution-pages.ts 新 estimateConstitutionRead
+  （+4 测试，3.1 s/页基准）＋components/constitution-read-estimate.tsx
+  一行三语（≥90s 讲分钟）；constitution-read-client 新
+  countConstitutionPages（pdf-lib 数真页数）。/constitution staging 条
+  显示预估、送出钮改「开始读 —— 共 N 页」；create-org 选档即显示预估
+  （不加第二颗钮，读取跟创建那一下跑——照意图不照字面，报告记明）；
+  ask-box 长 PDF classify 认出章程→停：预估＋开始读/先不读；resume 免
+  重讲价；闸开时主送出=同意不重扣 classify。demo 路零 AI 未碰。
+- **⑤ pindaan 卡收敛**：AmendmentDisclosure（details/summary 预设收合，
+  标题行＋「点开看您自己的章程是怎么写的」＋箭头）；内容一项没删。
+- **⑥ 地址读出来**：findRegisteredAddress/findAddressClause（heading 以
+  alamat/tempat urusan/address/地址/会址开头＋第 1/2 条带地址关键词——
+  contoh 地址在 Fasal 1 的 1.2 句，只看 Fasal 2 会漏；「No./Lot」句点
+  lookbehind 不切地址；atau di mana-mana 尾巴切除）；AlamatRow 三态
+  （读出/引原文/沉默）；orgs 无地址栏（查证）→ 只显示＋出处，零 migration。
+  铁线测试：contoh 必回「No. 12, Jalan Tepi Sungai, 41100 Klang,
+  Selangor Darul Ehsan」。
+- **探针同步**：probe-d0-56、probe-i1-81 钉旧按钮「读这 N 页」的断言改
+  「共 N 页」＋点「开始读」，i1 加「21 页预估行在场」一条。⚠ 两支都
+  **没重跑**（烧真 vendor 钱，本场无 AI 授权）；probe-createorg-68 同。
+- **测过**：tsc 0 · eslint 20（基准逐字同）· vitest **1142（+14）** ·
+  build ✓ · 三条 e2e 全绿（本机真 DB＋next start，page errors 0）·
+  check:migrations exit 0 零 NOT YET · 零 migration · 零 env · 零 AI 费。
+- ⚠ 没能验证的：③ 用 J 真帐号开 /health 的放行路（e2e 帐号不在
+  ADMIN_EMAILS，只能证被拒方向）；三支花钱探针的真跑；手机真机上
+  disclosure 与预估行的观感。
+
+### 上一场做了什么（82 号 ⑧ 助手场 ✅，84 号报告——免 AI 预备问答层＋面板重整）
 
 - **K0 先验证（动刀前）**：probe-k0-82 证实面板对话**有留**（scoped
   localStorage `minit:<user>:<org>:chat.panel.v1`）——X 关、点外面关、
