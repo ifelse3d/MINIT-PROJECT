@@ -1,52 +1,108 @@
-# STATE.md — Minit 的当前状态
+﻿# STATE.md — Minit 的当前状态
 
 > **这是唯一的「现在在哪里」。**
 > 每个 session 结束前**覆盖更新这一份**，不要新增带日期的交接档案。
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-31 凌晨（MYT）· Fable 5（97 号场：九条快修＋收纳场）**
-**🔴 本场（97 号场）状态一句话（99 号报告）：97 号施工单九个 Stage 全部
-做完。①首页门 PDF 必死修好＝openai.ts 对 PDF 改包 input_file（案 A 真
-vendor 一次成立，probe-intake-pdf-97 全链路 PASS，US$0.0059/轮，此后进
-常备清单）；②BM 闸只认汉字＋normalizeFullwidth() 在 BM 文件产生/保存四
-个掛点自动套用（中文版不套、注册名 NUL 哨兵逐字保留）＋警告框汉字标红；
-③章程三修（"missing" 字串 flatten+显示双防、prompt 句改对、Fasal 书的
-"(3)" 孤儿条沉底带诚实说明）＋「条文全文」并入 /constitution（共用件
-clause-list.tsx 一份代码两张皮，/constitution/clauses 路由保留当引用锚
-点）；④侧栏收纳三条（交现金藏·D50 落档，现有资金卡搬财报页顶＋
-/money/balance redirect，组织与分会藏——门在头像选单/settings/more）；
-⑤收支流程尾都见收据＝支出最后一步「这一笔的单据」（掛照片或诚实记没有，
-migration 40 只写档 fail-open）＋Manage receipts 改 railOnly、门在
-Receipt history 页顶（功能零删）；⑥看得回原稿（出席页新收合区、
-notes-review 缩图条、成品页 strip 按类型分流开真原档——Office「显示读出
-文字」没照字面做＝client 没存文字，改开原档，报告写明）；⑦System check
-侧栏行 operator-only＋检举冒用搬 Feedback＋members 375 email 撑爆修好；
-⑧AI_MODEL_WRITE 通道只铺管（未设＝退回 long_doc 整套解析，.env 零动）。**
-**测过：tsc 0 · eslint 20（基准逐字同）· vitest 1240（+21）· build ✓ ·
-三条 e2e 全绿（契约零改动——三支全走 URL 直达）· probe-ui-97 新探针
-27 项 PASS · probe-deadbuttons-82/k1-82(按 D49 改契约)/ui-89/einvois-94/
-members-51/h4-69 全重跑全 PASS · check:migrations 40 两条是唯一 NOT YET
-其余全 APPLIED · 真钱 ≈US$0.015（intake-pdf 两轮 $0.0118 授权内＋k1 旧
-探针误烧 $0.003 照实报——D49 后 chip 从闸后漏到模型，94 场没重跑它）。**
-**🔴 J 的三件事（99 号报告开头一分钟版）：①双击 push-cabang.bat（本场
-10 支 commit）；②salin-migration.bat 选 40 贴进 Supabase（开支掛单据两
-欄；没贴前 fail-open 诚实提示）；③上线后逛四个新位置：首页门丢 PDF、
-财报页顶现有资金卡、记开支看最后一步单据卡、/constitution 整本章程区的
-搜索框；顺手看 Vercel 的 NEXT_PUBLIC_CONTACT_EMAIL 设了没（87 场旧欠）。**
+**最后更新：2026-08-31 凌晨（MYT）· Fable 5（100 号场：AGENT 工作台）**
+**🔴 本场（100 号场）状态一句话（101 号报告）：100 号施工单七个 Stage
+全部做完（④后半卡片预填照实留残）。①Home 四张卡删除＝整页 agent 工作台
+（拖放丢纸→步骤逐步亮→多成品卡片→人话自我报告；真 vendor 全链路
+probe-intake-pdf-97 按新成品卡契约 PASS，11.0s/US$0.0062）；②SOUL 档
+（src/prompts/agent-soul.ts＋docs/agent-soul.md，放松/锁死线逐字＋测试
+钉住，chat prompt 接上）；③两级改动制＝tukar_maklumat_ajk 写入工具＋
+agent_changes 留痕表＋/api/agent-undo 复原（migration 41 只写档等 J 贴；
+留不了痕＝不改 fail-closed）；④真件 A 两场侦测（other_meetings schema+
+prompt+工作台「要做哪一场」卡，真 vendor 读出 8/7/26 与 18/7）＋新人
+IC/地址/职业照抄（读取半边）；⑤速记展开＋一键「整理成标准版式」
+（draft polish 旗标）＋PDF Nama/K.P 对齐表＋子标题独立小节；⑥章程孤儿
+条提议归位（读取顺序推父条、一键确认、留痕 fail-closed）；⑦AGM pack
+与 Settings Members & invites 收纳（railOnly＋两扇门）；⑧三语「AI 会
+犯错」小字常驻工作台＋浮动面板；⑨discuss 面板改「直接套用＋旧→新＋
+还原键」（§0-2）。顺手修掉真 bug：extraction-merge 丢 G1 栏位（两页
+会议合并无声删 MASA/出席人数——真件 A 病历抓到，测试钉住）。**
+**测过：tsc 0 · eslint 20（基准逐字同）· vitest 1251（+11）· build ✓ ·
+三条 e2e 全绿（契约零改动）· probe-intake-pdf-97 按新契约真 vendor
+PASS · probe-ui-97/ui-89/k1-82/deadbuttons-82/members-51/h1-69 全重跑
+全 PASS · check:migrations 40 已 APPLIED（J 贴的验收坐实：「没有单据」
+从 db_behind 变 recorded）、41 两条是唯一 NOT YET · bench-98 四模型双轨
+$0.4085 · eval 五轮（🔴 大发现：8/29 基准 95.2%/0 在 vendor 端已不可
+重现——同字节对照只有 92.9%/invented=1；新 prompt 连两轮 93.6%/0 优于
+同日基准，照收）· 品质 eval 3/3 PASS 0 findings · 全场真钱 ≈US$0.49
+（授权 ≤1.50）。**
+**🔴 J 的三件事（101 号报告开头一分钟版）：①双击 push-cabang.bat
+（本场 10 支 commit）；②salin-migration.bat 选 41 贴进 Supabase（agent
+留痕表＋理事电话欄）——贴完对 agent 说「TESTER3 换了电话」＋去 org197
+章程点孤儿条归位，两个验收案就活了；③上线开首页丢一张会议照片看工作台
+表演；顺手拍板两件：bench 模型（建议都不换，表在 101 §3）、eval 对外
+口径要不要改 93.6–95.2% 区间（101 §5）。**
 
 ---
 
-## 🌙 现在在哪里（2026-08-31 凌晨，97 号场收工）
+## 🌙 现在在哪里（2026-08-31 凌晨，100 号场收工）
 
 > **已上线**：https://minit-project.vercel.app —— 开工实测 main==origin/main
-> （94 场 8 支 J 已推上 ✓）；**97 号场 10 支 commit 等 J push-cabang.bat**。
-> **migration 1–39 全 APPLIED；40（开支掛单据）只写档等 J 贴**
-> （check:migrations 实测 40 的两条是唯一 NOT YET）。
+> （97 场 10 支 J 已推上 ✓）；**100 号场 10 支 commit 等 J push-cabang.bat**。
+> **migration 1–40 全 APPLIED；41（agent_changes 留痕表＋roster.phone）
+> 只写档等 J 贴**（check:migrations 实测 41 的两条是唯一 NOT YET）。
 > 线上 org：15「J」、58「avocado」、91「TESTING1」、197「TESTING2」
 > （91/197 quota 15＝仍在免费围栏内；J 要拿来测付费面见 83 号 §7 的 SQL）。
 
-### 这一场做了什么（97 号场 ✅，99 号报告——九条快修＋收纳场）
+### 这一场做了什么（100 号场 ✅，101 号报告——AGENT 工作台主菜）
+
+- **①Home＝工作台（D51）**：四张卡删除（task-cards/home-card-lines 连测试
+  一并退役，home-stats 只留侧栏徽章那支计数）；AskBox 升级：空状态大拖放
+  英雄区、读档步骤卡逐步亮（失败停在哪一步看得见）、多成品卡片（minit 卡
+  ＋「笔记里还读到 N 笔钱要一起记吗」offer 卡＝figures 直译 ledger 行、
+  donor/日期诚实 missing、零额外 AI）、⑨人话自我报告（做了什么/几个动作/
+  去哪核对）。主成品同时写进 intake 快递（重载不丢已付费读取）；章程照旧
+  直达 /constitution。额度页脚加「还剩 N 次」。
+- **②SOUL**：agent-soul.ts（身份=整理员；放松=形式自由/主动问/多成品/
+  改稿；锁死六条逐字=钱系统算/收据编号不可改/donor 不进模型/不代确认
+  不代交/不给法税会意见/成本上限；两级改动制）——参数化（无工具 vendor
+  不被许诺 update tool），agent-soul.test 逐条钉；chat prompt 开头挂上。
+- **③两级改动制**：migration 41（agent_changes 审计表·无 delete policy＋
+  committee_roster.phone）；org-tools 新 tukar_maklumat_ajk（联系欄白名单
+  phone/email/state/honorific/note；名字找人 0/多匹配都回问；🔴 trace
+  first fail-closed＝41 没贴就拒绝并指路 Members 页）；/api/chat 回传
+  changes；两个聊天面 AgentChangeCard（旧划线→新粗体＋还原键→
+  /api/agent-undo 零 AI 复原）；members 页 phone 进 select 阶梯/表格/
+  Edit 行/OPTIONAL_COLUMNS 阶梯。
+- **④两场侦测＋新人整包（读取半边）**：extraction 新 other_meetings
+  （optional+catch）＋officeBearer 可选 ic_no/address/occupation；prompt
+  批次落地后真件 A 实测读出 8/7/26 与 18/7 两场（带出处）＋速记页 IC 号
+  照抄；工作台「要做哪一场？」卡（重读按钮标价 N 动作、免费「照原样」
+  出口、跨页同日期去重）。**卡片预填（④后半）留残下一场。**
+- **⑤写路三件**：速记展开规则进两支写作 prompt（虚构人名示例，A3；
+  「展开是措辞、添加是发明」）；/api/draft-minutes 新 polish 旗标＝结构化
+  文件全段就地措辞（D34 一次一动作，按钮标价，minutes-document 有结构才
+  显示）；minutes-pdf 新 kv 行别（连续 ≥2 行「标签: 值」对齐印、数字开头
+  行永不误判，测试钉住；bench-98 的 current-A/B.pdf 已用新代码重生成）。
+- **⑥孤儿条归位（§0-6）**：proposeOrphanHomes（存档顺序推「上一条
+  Fasal」为父，纯逻辑零 AI）＋reattachedClauseNo（"(3)"→"Fasal 8(3)"，
+  排序即归位不再沉底）＋reattachOrphanClauses server action（trace-first
+  fail-closed，41 没贴回诚实拒绝＋重拍备选句）；clause-list 提案卡只挂
+  真书（sample 与只读皮不给写路）。org197 实测形状（只查形状）：24 Fasal
+  ＋8 条「(N)」型＝卡会出。
+- **⑦收纳**：/agm-pack 与 /settings/members railOnly（SettingsNav 补
+  railOnly 过滤）；门＝/filings/eroses 页脚一行＋/members 标题下一行。
+- **⑧⑨**：三语「AI 会犯错」小字（ai-disclaimer.tsx）常驻工作台＋浮动
+  面板；discuss-section 改「直接套用＋旧→新＋还原键」（标 check，保存前
+  仍须人过目＝确认闸没动）。
+- **🔴 顺手修的真 bug**：extraction-merge 的合并字面量没跟上 G1——
+  meeting_time/attendance_count/adjournment/prepared_by/endorsed_by/
+  financial_resolutions 全被丢（两页会议合并无声删 MASA）；修＋测试钉住。
+- **bench-98（Stage 1）**：真件 A/B 双轨 4 模型，成品逐份在
+  eval/reports/bench-98/（含 README 对比表＋COSTS 逐笔）；建议读写都
+  不换（3.6-flash 读写全超墙、luna 少收条目、terra 贵 7 倍）；.env 零动。
+- **测过**：见上方一句话块。⚠ 没能验证的：41 贴上后的换电话/孤儿条真路
+  （探针式验收步骤在 101 §4）；真件 A 选场重读与真件 B 重读的真 vendor
+  全链路（真钱，留 J 上线丢一次）；工作台真手机观感（headless 量的）；
+  Vercel 线上行为；写路 polish 的真 vendor 一轮（品质 eval 3/3 过的是
+  既有三案）。
+
+### 上一场做了什么（97 号场 ✅，99 号报告——九条快修＋收纳场）
 
 - **①首页门 PDF（P0）**：openai.ts extractJson 对 `application/pdf` 改包
   `input_file`（其余 mime 照旧 input_image），classify/classifyOnly 一处
@@ -971,29 +1027,40 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
   真 HEIC 大图在真手机浏览器上的行为（helper 的 HEIC 退路只有单元测试）；
   围栏真挡下（未决 #1 照旧）；真 vendor 合并写作（D37 旧项）。
 
-### 🔴 J 的事（2026-08-31，97 场收工版）
+### 🔴 J 的事（2026-08-31，100 场收工版）
 
-1. **双击 push-cabang.bat（最要紧）**——97 号场 10 支 commit 等推。
-   ~~94 场 8 支~~ 已推 ✓（开工实测 main==origin/main）。
-2. **salin-migration.bat 选 40** 贴进 Supabase 按 Run（开支掛单据两欄；
-   验收＝重跑 `node scripts/probe-ui-97.mjs`，「没有单据」那条会从
-   db_behind 变 recorded）。
-3. **看 99 号报告**（一分钟版在开头）。上线后逛四个新位置：首页门丢 PDF、
-   财报页顶现有资金卡、记开支的最后一步单据卡、/constitution 的搜索框。
-4. **上线后开一张新收据、用你手机扫 QR**（87 场欠的真机一验）；
-   顺便看 Vercel 有没有 `NEXT_PUBLIC_CONTACT_EMAIL`（检举冒用块要它）。
-5. 旧账照旧：模型拍板（bench 表在 83 号，LONG_DOC 建议不换；写作通道
-   AI_MODEL_WRITE 已铺管等 98 场 bench）；MyInvois 模板下载（未决 #12）；
-   真 undang-undang 重传一次；tester 清单（73/77 号）；54 号 GUIDE 设
-   Supabase 邮件；TESTING1/2 抬 quota 的 SQL（83 号 §7）。
-   ~~侧栏「系统」入口开不开放~~ 97 场按 93 拍板收成 operator-only ✓。
+1. **双击 push-cabang.bat（最要紧）**——100 号场 10 支 commit 等推。
+   ~~97 场 10 支~~ 已推 ✓（开工实测 main==origin/main）。
+2. **salin-migration.bat 选 41** 贴进 Supabase 按 Run（agent 留痕表＋
+   理事电话欄）。贴完两个验收案就活：①对 agent 说「TESTER3 换了电话
+   012-XXXXXXX，帮我改」→ 应看到「已改：旧→新」＋还原键；②org197 的
+   /constitution 点孤儿条「挂进 Fasal X」→ 应归位。没贴前两者都会
+   **诚实拒绝**（刻意 fail-closed：留不了痕＝不改）。
+3. **看 101 号报告**（一分钟版在开头）＋上线开首页丢一张会议照片，看
+   工作台表演（步骤卡→成品卡→自我报告）。
+4. **两个一句话拍板**：①bench 模型（101 §3——建议读写都不换，成品在
+   `eval\reports\bench-98\` 逐份翻）；②eval 对外口径要不要改
+   93.6–95.2% 区间＋vendor 漂移注记（101 §5，SUMMARY.md 红字已备）。
+5. 旧账照旧：~~40 贴＋验收~~ 100 场实测 recorded ✓；收据 QR 真机一扫
+   （87 场欠）；Vercel 的 `NEXT_PUBLIC_CONTACT_EMAIL`；MyInvois 模板
+   （未决 #12）；真 undang-undang 重传；tester 清单（73/77 号）；
+   54 号 GUIDE 设 Supabase 邮件；TESTING1/2 抬 quota 的 SQL（83 号 §7）。
 
 ### ❓ 未决问题
 
 1. ~~围栏真挡下未实测~~ **大头已结案**（8/29 probe-fence-51 实测：文件第 6 份、
    收据第 21 张、干净下载第 4 次全被挡、讯息对版）。只剩**第 21 页**没撞
    ——要烧 20 页真 AI 读取，不值得脚本烧；等真用户自然撞到或 J 授权。
-2. 助手用哪个模型 —— prompt 已解冻（D29），等 J 重跑 bench 后定（J：系统先稳）
+2. ~~助手/读写用哪个模型~~ **bench-98 已跑**（100 场，真件双轨 4 模型）：
+   建议 EXTRACT 与 WRITE 都不换（3.6-flash 读写全超时间墙、luna 少收
+   条目、terra 贵 7 倍）——等 J 一句话拍板，.env 零动
+2b. 🔴 **eval 基准 vendor 漂移**（100 场发现）：8/29 的 95.2%/invented=0
+   在 08-31 同字节对照只剩 92.9%/invented=1（错格稳定、大半在没动过的
+   管线）。对外口径要不要改成 93.6–95.2% 区间＋注记，等 J 拍板；
+   以后「回退」必须配同日对照轮才算数（§6 有新陷阱条目）
+2c. 写路单呼叫墙 20s：若 J 拍板换慢的写作模型（3.6-flash/terra），得
+   先把 draft 路的 per-attempt timeout 加大——现行墙只装得下 flash-lite
+   与 luna（bench-98 README 有数）
 3. 法律实体（金流前置，D12），试点前要答
 4. 真实手写 eval：对外数字（95.2%，2026-08-29 重立）量的仍是印刷体——
    真手写批量等 J 授权/收样；迭代组三张的结构形状已实测（71 号报告）
@@ -1022,25 +1089,51 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
 
 ### ⏭ 下一个 session 从哪开始
 
-**97 号场（九条快修＋收纳 ✅，D50 落档、migration 40 只写档）做完**
-（99 号报告；之前：94 号=96 号、89 号=92 号、87 号=88 号）。
-**migration 1–39 全 APPLIED；40 等 J 贴**；**97 场 10 支 commit 等 J
-push**。下一步已排队：**98 号单「品质二轮＋AGENT 场」**（单已写好在
-_J-要做的事，J 贴就开——prompt 二轮调 financial_resolutions、写作模型
-bench 给 AI_MODEL_WRITE 拍板都在那里）。其他候选：90 号单「聊天真上传」
-（单已写好）；62 号竞赛材料场（8/31 23:59 今天截止，J 说开才开，不催）；
-RLS 下一阶段（donations ownership 欄）；AI 代办 agent（D18/31 号 #43）。
-**等 J 反馈的**：模型拍板（LONG_DOC 建议不换）；真 undang-undang 重传；
-tester 清单（73/77 号）；道教会样本重走（68 号 §6-5）；MyInvois 模板
-原档（未决 #12）；Office 原文显示要不要真做（99 号 §6 报了没照字面做）。
-竞赛 8/31 截止，材料 J 自己定，**不催**。
+**100 号场（AGENT 工作台 ✅，D51 落档、migration 41 只写档）做完**
+（101 号报告；之前：97 号=99 号、94 号=96 号、89 号=92 号）。
+**migration 1–40 全 APPLIED；41 等 J 贴**；**100 场 10 支 commit 等 J
+push**。下一步候选：**④后半小包**（加人卡预填 ic/地址/职业＋州属从
+地址带出，extraction 已备好数据）；**90 号单「聊天真上传」**（单现成，
+工作台落地后正好接）；真件 A 选场重读＋真件 B 重读的真 vendor 验收
+（J 上线自己丢最省）；控制台包（/admin bench 面板＋org 方案管理）；
+agent 对话额度/定价重设计（讨论场议题）；RLS 下一阶段。
+**等 J 反馈的**：41 贴＋两个验收案；bench 模型拍板；eval 口径拍板；
+真 undang-undang 重传；tester 清单（73/77 号）；MyInvois 模板原档
+（未决 #12）。竞赛 8/31 截止已过内部 cutoff，材料 J 自己定，**不催**。
 RESPONSIVE：J 若再圈破版，贴 46 号单同段 PROMPT 继续。
 
 ---
 
 ## 6. 已知陷阱（踩过的，别再踩）
 
-### 2026-08-31 凌晨新增（97 号九条快修场）
+### 2026-08-31 凌晨新增（100 号 AGENT 工作台场）
+
+- 🔴 **temperature 0 挡不住 vendor 端行为漂移——「回退后与基准逐字同＝
+  不用重跑」是错的。** 100 场把 8/29 基准 prompt 一字不动重跑，只剩
+  92.9%/invented=1（基准 95.2%/0），错格逐轮稳定、大半在没动过的管线
+  （账簿电话截断、章程吃字、events 缩写）。94 场的「回退」从没验证过，
+  很可能当时量到的一部分就是漂移。**规矩：动 prompt 的 eval 结论必须配
+  一轮「同日基准对照」才能归因；比较只在同日轮之间做，跨日比较先声明
+  漂移风险。判断方法：错格出现在你没动的管线＝先怀疑 vendor。**
+- 🔴 **Glob 工具用反斜线路径会静默查无（No files found）——「不存在」
+  可能只是问错了。** 100 场差点因此把已有 12 支测试的
+  extraction-merge.test.ts 当新档整个 Write 盖掉（git status 的 M 标记
+  抓回来的）。**规矩：Glob 一律正斜杠；「新建」测试档后看一眼
+  git status 是 ?? 还是 M。**
+- 🔴 **给 schema 加可选栏位时，每个「手拼整个物件」的字面量都要跟上——
+  tsc 抓不到可选栏位的遗漏。** extraction-merge 的合并字面量停在 G1 前，
+  meeting_time/attendance_count 等六栏被无声丢了两天（两页会议一合并
+  MASA 就没了），单元测试全绿因为没人测过。**判断方法：schema 加栏后
+  `grep` 该型别的物件字面量逐个过；修法照 mergeOptionalScalar。**
+- ⚠ **长驻服务器的输出管过 `head`/截断管道＝管道断后整个服务器卡死**
+  （`next start | head -50`：head 收满退出→「destination stream closed
+  early」刷屏→:3000 挂着但不回应）。**规矩：背景服务器输出导档案或
+  不接管道；判断方法：端口在听但 curl 超时＋log 里 stream closed。**
+- ⚠ **`next start` 的页面对 puppeteer 的 `networkidle2` 可能永不安定**
+  （长轮询/流式）——goto/reload 用 `domcontentloaded`＋等唯一内容，
+  与「wait 独有深层内容」旧条目同族。
+- 💡 **onClick={fn} 的 MouseEvent 参数陷阱又来一次**（writeWithAi 加
+  polish 参数）：除了包箭头函数，服务器端用 `=== true` 收窄能兜底。
 
 - 🔴 **旧探针的「chip 找不到就打字」后备，在收费 UI 上会花真钱。**
   probe-k1-82 的 chip 清单没跟上 D49：e-Invois chip 进了闸，非 operator
@@ -1712,14 +1805,14 @@ J 手贴 migration 的步骤：记事本开档 → `Ctrl+A` `Ctrl+C` → Supabas
 | 位置 | 放什么 |
 |---|---|
 | 根目录 | `CLAUDE.md`（规则）· `STATE.md`（这份）· `BUILD_PLAN.md` · `PROMPTS.md` · `DEPLOY.md`（⚠ 过期，上线照 `docs/上线与截图-给J的步骤.md`）· `README.md` · `AGENTS.md` |
-| `docs/` | `DECISIONS.md`（D1–**D50**；D49=e-Invois BETA 闸、D50=交接状态长在收入记录上）· `功能盤點-計劃vs實作.md` · `产品缺口盘点.md` · `上线与截图-给J的步骤.md` · `换模型手册.md` · `AI-API-选型与成本.md` · 其余照旧 |
+| `docs/` | `DECISIONS.md`（D1–**D51**；D50=交接状态长在收入记录上、D51=Home＝agent 工作台＋两级改动制）· `agent-soul.md`（SOUL 人话版，与 src/prompts/agent-soul.ts 同改）· `功能盤點-計劃vs實作.md` · `产品缺口盘点.md` · `上线与截图-给J的步骤.md` · `换模型手册.md` · `AI-API-选型与成本.md` · 其余照旧 |
 | 品牌 | `src/lib/brand.ts`（BRAND_NAME="MinitAI"，D23）· **紫色**（D24）：logo 原图 `scripts/assets/minit-logo.png`、向量版 `src/components/brand-logo.tsx` · 重生图标：`node scripts/brand-icons.mjs` · tokens 都在 `globals.css` 的 `.v2-root` |
 | 定价／毛利 | `src/lib/unit-economics.ts` + `npm run economics`（价目表查证日 `PRICES_CHECKED_ON`） |
 | AI 分流设定 | `.env.example` 的 AI 段 + `npm run check:ai` |
 | 模型对比 | `npm run bench`（--dry-run / --mock）· `bench-models.bat` · 报告在 `eval/reports/model-bench-<日期>.md` |
 | 「到底做了没有」 | `npm run status` / `status.bat` |
 | 示范章程（CONTOH） | `public/contoh/undang-undang-tubuh-contoh.pdf`（8 页 BM 完整章程，虚构社团）· 文字版 `docs/contoh-undang-undang-tubuh.md` · 重生 `npm run contoh:constitution`。十条条文与 `src/lib/sample-constitution.ts` **逐字相同**、印出来的页码对得上 `page_ref`，所以拿它测 `/constitution` 上传时**答案是已知的** |
-| migration | `supabase/migrations/`（**1–39 已套用；40「开支掛单据」只写档等 J 贴**——2026-08-31 check:migrations 实测 40 的两条是唯一 NOT YET）· `salin-migration.bat`（40 项）· `npm run check:migrations` |
+| migration | `supabase/migrations/`（**1–40 已套用；41「agent 留痕表＋roster 电话」只写档等 J 贴**——2026-08-31 check:migrations 实测 41 的两条是唯一 NOT YET）· `salin-migration.bat`（41 项）· `npm run check:migrations` |
 | 给 J 双击的 `.bat` | `status.bat` · `salin-migration.bat` · `salin-env-vercel.bat` · `push-cabang.bat` · `bench-models.bat`。🔴 `push-to-github.bat` 不能用；⚠ `check-ai.bat` 还指旧资料夹 |
 | `competition/` | 顶层＝当前版（**[YOU] 两处还空着**）；`screenshots/` 60 张旧配色（拍板 0-9：只重拍首页主图，未拍——未决 7） |
 | `eval/reports/` | 整夹 gitignore；只有 `SUMMARY.md` 例外 |
