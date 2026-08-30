@@ -41,7 +41,7 @@ const LANGUAGE_CHOICE: Record<MinutesLang, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// e-INVOIS AUDIT BADGE (work order 90).
+// e-INVOIS AUDIT BADGE (work order 94).
 //
 // One badge per status, and NOT ONE OF THEM says the government validated
 // anything — there is no MyInvois API in v1 (src/lib/einvois.ts header), so a
@@ -86,7 +86,7 @@ const AUDIT_BADGE: Record<
   },
   submitted: {
     cls: "border-green-400 bg-green-100 text-green-900 dark:bg-green-400/15 dark:text-green-100",
-    bm: "Bendahari rekod sudah dimuat naik",
+    bm: "Bendahari telah merekodkan muat naik",
     zh: "财政已记录上传",
     en: "Treasurer recorded the upload",
   },
@@ -135,7 +135,7 @@ export function MinutesDocument() {
   const t = useTriText();
   const [einvoisVisible] = useEinvoisVisible();
 
-  // e-INVOIS AUDIT TRAIL (work order 90). Every judgement here is arithmetic
+  // e-INVOIS AUDIT TRAIL (work order 94). Every judgement here is arithmetic
   // over values a human already confirmed — no vendor call, nothing invented.
   //
   // 🔴 committeeApprovalLimitCents is null ON PURPOSE. The society's spending
@@ -805,7 +805,7 @@ export function MinutesDocument() {
         )}
       </PageSection>
 
-      {/* --- e-INVOIS AUDIT TRAIL (work order 90) ---------------------------
+      {/* --- e-INVOIS AUDIT TRAIL (work order 94) ---------------------------
           Money this meeting approved, and where each approval stands on the
           way to the treasurer's MyInvois upload. Hidden entirely when the
           organisation has not switched e-Invois on, and when the meeting

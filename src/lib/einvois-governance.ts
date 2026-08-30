@@ -222,7 +222,7 @@ export function governanceFindings(input: GovernanceInput): GovernanceFinding[] 
       code: "individual_einvoice_required",
       severity: "check",
       message: {
-        bm: `${formatRm(approvedAmountCents)} mencapai ambang e-Invois individu — transaksi ini tidak boleh digabungkan dalam pakej bulanan dan perlukan e-invois sendiri.`,
+        bm: `${formatRm(approvedAmountCents)} mencapai ambang e-Invois individu — transaksi ini tidak boleh digabungkan dalam pakej bulanan dan memerlukan e-invois tersendiri.`,
         zh: `${formatRm(approvedAmountCents)} 达到 e-Invois 单笔门槛 —— 这笔不能并进月结合并单，需要自己一张 e-invois。`,
         en: `${formatRm(approvedAmountCents)} reaches the individual e-Invois threshold — this transaction cannot go in the monthly consolidated pack and needs its own e-invoice.`,
       },

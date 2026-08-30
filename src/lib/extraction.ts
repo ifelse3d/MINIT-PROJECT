@@ -205,7 +205,7 @@ export const figureSchema = z.object({
 
 /**
  * A resolution that APPROVES MONEY TO BE PAID OUT — the start of the e-Invois
- * trail (work order 90, T5 governance slice).
+ * trail (work order 94, T5 governance slice).
  *
  * Deliberately three plain extracted facts and nothing more. The model copies
  * what is written on the page: who is being paid, how much, what for. It is
@@ -271,7 +271,7 @@ export const meetingNotesExtractionSchema = z.object({
   resolutions: z.array(resolutionSchema),
   figures: z.array(figureSchema),
   /**
-   * Money the meeting approved TO BE PAID OUT (work order 90). Optional, and
+   * Money the meeting approved TO BE PAID OUT (work order 94). Optional, and
    * `.catch(undefined)` for the same reason `kind` carries it: every document
    * and fixture saved before this field existed must still parse unchanged,
    * and a malformed array must cost only the e-Invois panel — never the whole
