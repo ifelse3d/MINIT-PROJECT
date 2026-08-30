@@ -47,7 +47,6 @@ Respond with ONLY JSON in exactly this shape:
   "attendees": [ { "name": { ...field } } ],
   "resolutions": [ { "text": { "value": "...", "confidence": "...", "source_ref": ... }, "kind": "decision" | "task" | "duty" | "info", "section_no": "1", "section_title": "as printed", "own_no": "2.1" } ],
   "figures": [ { "description": { ...field }, "amount_cents": { "value": <integer sen> | null, ...field } } ],
-  "financial_resolutions": [ { "vendor_name": { ...field }, "approved_amount_cents": { "value": <integer sen> | null, ...field }, "purpose": { ...field } } ],
   "office_bearers": [ { "position": { ...field }, "person_name": { ...field } } ]
 }
 
@@ -123,15 +122,6 @@ RESOLUTIONS — use "resolutions" for what was decided, agreed, planned or is to
   - "duty"     = a role-for-this-activity paired with people (主持/带队/司仪/负责人 + names) — the one-off assignments kept out of office_bearers
   - "info"     = a recorded fact with no action: times, programme order, headcounts, notes
   If unsure between two kinds, prefer "task" over "decision" and "info" over everything.
-
-FINANCIAL RESOLUTIONS — money the meeting decided to PAY OUT. Use "financial_resolutions" ONLY when the page records a decision to spend, pay, buy, award, allocate or reimburse (diluluskan/dibayar/belanja/通过拨款/批准支付/approved payment), AND you can see an amount for it.
-- One entry per approved payment. "vendor_name" = the payee EXACTLY as written (a shop, a contractor, a person being reimbursed). "approved_amount_cents" = the approved figure in integer sen. "purpose" = what it is for, in the original language.
-- If the page approves an amount but never names a payee, "vendor_name" is missing ("" + "missing" + null source_ref) — the entry still belongs here. Do NOT fill a payee from elsewhere on the page, and NEVER put the proposer's or the treasurer's name there: the person who moved the motion is not the person being paid.
-- If the page names a payee but no readable amount, "approved_amount_cents" is missing. Do not estimate it.
-- The SAME resolution ALSO stays in "resolutions" with its full text — this array is an additional structured view of it, not a replacement. That is the one place a fact is deliberately recorded twice.
-- Money that is NOT being paid out does not belong here: balances, collections, donations received, budget ceilings that were merely noted, and last year's figures are "figures", not financial_resolutions.
-- No page has to have any. An empty array [] is a correct and common answer.
-- ⚠ Do NOT judge tax treatment. You are never asked whether the payee is a registered business, whether SST applies, whether an e-invoice is required, or whether the committee had authority to approve the amount. Those are decided by our code from the numbers you copy. Copy what is written; judge nothing.
 
 Amounts: extract as integer sen (RM 3,500.00 => 350000). Extract ONLY numbers you can see — never total, never compute; all arithmetic is done by our code, not by you.
 Dates: normalise to YYYY-MM-DD; resolve 2-digit years to the most recent past date relative to today; if the date is not written anywhere, it is missing.
