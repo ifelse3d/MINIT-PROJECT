@@ -14,6 +14,11 @@ import {
 } from "./nav-items";
 import { CATEGORY_STYLE } from "@/lib/activity-labels";
 
+// D49: the two-bit e-Invois gate the menus filter on. ALL_ON = the operator
+// with the org switch on; ALL_OFF = an ordinary member (or the switch off).
+const ALL_ON = { visible: true, operator: true };
+const ALL_OFF = { visible: false, operator: false };
+
 // NAV_ITEMS stays the single source of truth for which pages exist; PRIMARY_NAV
 // decides where each one is reached from. These tests keep them in sync so a
 // page can never silently drop out of every menu, or appear twice.
@@ -199,11 +204,11 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
     const minutes = PRIMARY_NAV.find((e) => e.kind === "group" && e.id === "minutes")!;
     const money = PRIMARY_NAV.find((e) => e.kind === "group" && e.id === "money")!;
 
-    expect(visibleGroupChildren(minutes, true).map((c) => c.href)).toEqual([
+    expect(visibleGroupChildren(minutes, ALL_ON).map((c) => c.href)).toEqual([
       "/minutes",
       "/minutes/history",
     ]);
-    expect(visibleGroupChildren(money, true).map((c) => c.href)).toEqual([
+    expect(visibleGroupChildren(money, ALL_ON).map((c) => c.href)).toEqual([
       "/money",
       "/money/expenses",
       "/money/receipts",
@@ -228,10 +233,10 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
   // the SAME visibility filter, so the two can never disagree (B-2).
   it("filters the sidebar groups through the shared helper too", () => {
     const money = SIDEBAR_NAV.find((e) => e.kind === "group" && e.id === "money")!;
-    expect(visibleGroupChildren(money, false).map((c) => c.href)).not.toContain(
+    expect(visibleGroupChildren(money, ALL_OFF).map((c) => c.href)).not.toContain(
       "/money/einvois",
     );
-    expect(visibleGroupChildren(money, true).map((c) => c.href)).toContain(
+    expect(visibleGroupChildren(money, ALL_ON).map((c) => c.href)).toContain(
       "/money/einvois",
     );
     expect(sidebarPages().map((i) => i.href)).toContain("/settings/plan");
@@ -239,12 +244,36 @@ describe("menu structure (Stage R 2026-08-25, regrouped B-1 2026-08-26)", () => 
 
   it("still filters e-Invois by the org switch through the shared helper", () => {
     const more = PRIMARY_NAV.find((e) => e.kind === "group" && e.id === "more")!;
-    expect(visibleGroupChildren(more, false).map((c) => c.href)).not.toContain(
+    expect(visibleGroupChildren(more, ALL_OFF).map((c) => c.href)).not.toContain(
       "/money/einvois",
     );
-    expect(visibleGroupChildren(more, true).map((c) => c.href)).toContain(
+    expect(visibleGroupChildren(more, ALL_ON).map((c) => c.href)).toContain(
       "/money/einvois",
     );
+  });
+
+  // D49 (work order 94): the e-Invois BETA gate. `visible` already arrives
+  // ANDed with the operator bit from the provider; `operator` alone controls
+  // the Settings row that holds the switch, so the operator can reach the
+  // switch while it is still off — and nobody else ever sees it.
+  it("shows the e-Invois settings row to the operator only, org switch or not", () => {
+    const more = PRIMARY_NAV.find((e) => e.kind === "group" && e.id === "more")!;
+    const operatorSwitchOff = { visible: false, operator: true };
+    expect(
+      visibleGroupChildren(more, operatorSwitchOff).map((c) => c.href),
+    ).toContain("/settings/einvois");
+    expect(
+      visibleGroupChildren(more, ALL_OFF).map((c) => c.href),
+    ).not.toContain("/settings/einvois");
+    // The working page still needs BOTH bits.
+    expect(
+      visibleGroupChildren(more, operatorSwitchOff).map((c) => c.href),
+    ).not.toContain("/money/einvois");
+  });
+
+  it("marks every e-Invois entry with the BETA pill flag", () => {
+    const flagged = NAV_ITEMS.filter((i) => i.beta).map((i) => i.href).sort();
+    expect(flagged).toEqual(["/money/einvois", "/settings/einvois"]);
   });
 
   it("resolves every entry to a real NavItem with all three languages", () => {

@@ -6,6 +6,8 @@ import { ArrowLeft } from "lucide-react";
 import { Tri } from "@/components/language-provider";
 import { BRAND_NAME } from "@/lib/brand";
 import { SETTINGS_SUBNAV, isActivePath } from "@/components/nav-items";
+import { EinvoisBetaBadge } from "@/components/einvois-beta-badge";
+import { useEinvoisOperator } from "@/lib/einvois-pref";
 import { cn } from "@/components/v3/surfaces";
 
 // ---------------------------------------------------------------------------
@@ -21,10 +23,15 @@ import { cn } from "@/components/v3/surfaces";
 
 export function SettingsNav({ showSystem }: { showSystem: boolean }) {
   const pathname = usePathname() ?? "/settings";
+  // D49: the e-Invois switch row is operator-only while the beta gate stands
+  // — same idea as #11's showSystem; the page keeps its own server gate.
+  const einvoisOperator = useEinvoisOperator();
   const groups = SETTINGS_SUBNAV.map((group) => ({
     ...group,
     children: group.children.filter(
-      (item) => showSystem || item.href !== "/settings/system",
+      (item) =>
+        (showSystem || item.href !== "/settings/system") &&
+        (einvoisOperator || !item.einvoisOperatorOnly),
     ),
   })).filter((group) => group.children.length > 0);
 
@@ -79,6 +86,7 @@ export function SettingsNav({ showSystem }: { showSystem: boolean }) {
                     >
                       <Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} />
                       <Tri bm={item.bm} zh={item.zh} en={item.en} />
+                      {item.beta && <EinvoisBetaBadge />}
                     </Link>
                   </li>
                 );
@@ -112,6 +120,11 @@ export function SettingsNav({ showSystem }: { showSystem: boolean }) {
               )}
             >
               <Tri bm={item.bm} zh={item.zh} en={item.en} />
+              {item.beta && (
+                <span className="ml-1.5 inline-flex align-middle">
+                  <EinvoisBetaBadge />
+                </span>
+              )}
             </Link>
           );
         })}

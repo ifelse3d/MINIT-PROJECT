@@ -32,8 +32,9 @@ import {
   matchPreparedAnswer,
   preparedButtonFor,
   PREPARED_FREE_NOTE,
-  SUGGESTED_QUESTIONS,
+  suggestedQuestionsFor,
 } from "@/lib/prepared-answers";
+import { useEinvoisVisible } from "@/lib/einvois-pref";
 import { AttachIcon, ChooseFileLabel, UploadLimitNote } from "@/components/attach-icon";
 import { Button } from "@/components/ui/button";
 import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
@@ -110,7 +111,8 @@ type IntakeOk = {
 // prepared layer — every one is answered for free (tests pin each language).
 // The old home wordings ("Macam mana nak buat resit derma?" etc.) still hit
 // the matcher, so nobody's muscle memory breaks.
-const EXAMPLES = SUGGESTED_QUESTIONS;
+// D49 (work order 94): chips obey the e-Invois beta gate — see the render
+// site, which filters via suggestedQuestionsFor(einvoisVisible).
 
 export function AskBox({
   hasOrg,
@@ -130,6 +132,10 @@ export function AskBox({
   const t = useTriText();
   const localizeError = useLocalizedError();
   const router = useRouter();
+  // D49: the prepared e-Invois answers and their chip follow the beta gate —
+  // behind it, those questions go to the model like any other (the pages the
+  // prepared buttons point at 404 for non-operators).
+  const [einvoisVisible] = useEinvoisVisible();
   const fileInput = useRef<HTMLInputElement | null>(null);
   /** Ticket for the question currently in flight — see send(). */
   const sendSeq = useRef(0);
@@ -195,7 +201,7 @@ export function AskBox({
     const q = text.trim();
     if (!q || busy || outOfQuota) return;
     // K1 (work order 82): the free layer answers first — zero AI, zero quota.
-    const hit = matchPreparedAnswer(q);
+    const hit = matchPreparedAnswer(q, { einvois: einvoisVisible });
     if (hit) {
       setError(null);
       setQuestion("");
@@ -1123,7 +1129,7 @@ export function AskBox({
 
         {turns.length === 0 && hasOrg && (
           <div className="flex flex-wrap gap-2">
-            {EXAMPLES.map((ex) => (
+            {suggestedQuestionsFor(einvoisVisible).map((ex) => (
               <button
                 key={ex.en}
                 type="button"

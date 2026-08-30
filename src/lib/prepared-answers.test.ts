@@ -5,6 +5,7 @@ import {
   preparedButtonFor,
   PREPARED_ANSWERS,
   SUGGESTED_QUESTIONS,
+  suggestedQuestionsFor,
 } from "./prepared-answers";
 import { ASK_ACTION_ROUTES, ASK_ROUTES, isAskActionKey } from "./ask-routes";
 
@@ -134,6 +135,42 @@ describe("prepared answers — the free layer (work order 82 K1)", () => {
     for (const entry of PREPARED_ANSWERS) {
       for (const lang of ["bm", "zh", "en"] as const) {
         expect(entry.answer[lang].trim().length, `${entry.id}.${lang}`).toBeGreaterThan(20);
+      }
+    }
+  });
+});
+
+// D49 (work order 94): the e-Invois BETA gate reaches the free layer too —
+// behind it, the e-Invois entries must not answer (their buttons point at
+// pages that 404 for non-operators) and the e-Invois chip must not show
+// (a chip must never cost quota, and an unanswerable chip would).
+describe("prepared answers — e-Invois beta gate (D49)", () => {
+  it("skips the e-Invois entries when the gate is closed, keeps the rest", () => {
+    expect(matchPreparedAnswer("什么是 e-Invois", { einvois: false })).toBeNull();
+    expect(matchPreparedAnswer("macam mana jana e-invois", { einvois: false })).toBeNull();
+    // A non-e-Invois question is untouched by the gate.
+    expect(
+      matchPreparedAnswer("where is the calendar", { einvois: false })?.entry.id,
+    ).toBe("where_calendar");
+  });
+
+  it("answers the e-Invois questions when the gate is open (and by default)", () => {
+    expect(matchPreparedAnswer("什么是 e-Invois", { einvois: true })?.entry.id).toBe(
+      "what_is_einvois",
+    );
+    expect(matchPreparedAnswer("什么是 e-Invois")?.entry.id).toBe("what_is_einvois");
+  });
+
+  it("drops exactly the e-Invois chip behind the gate", () => {
+    const closed = suggestedQuestionsFor(false);
+    const open = suggestedQuestionsFor(true);
+    expect(open).toEqual(SUGGESTED_QUESTIONS);
+    expect(closed.length).toBe(SUGGESTED_QUESTIONS.length - 1);
+    expect(closed.some((c) => c.en.includes("e-Invois"))).toBe(false);
+    // Every chip still shown behind the gate still answers for free.
+    for (const chip of closed) {
+      for (const lang of ["bm", "zh", "en"] as const) {
+        expect(matchPreparedAnswer(chip[lang], { einvois: false })).not.toBeNull();
       }
     }
   });

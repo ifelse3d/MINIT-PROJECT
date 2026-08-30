@@ -8,6 +8,7 @@ import { Tri, useTriText } from "@/components/language-provider";
 import { NextStepLink, PageSection } from "@/components/page-section";
 import { PhotoLightbox } from "@/components/page-thumbs";
 import { cjkSnippets } from "@/lib/bm-guard";
+import { EinvoisBetaBadge } from "@/components/einvois-beta-badge";
 import { useEinvoisVisible } from "@/lib/einvois-pref";
 import {
   checkFinancialResolution,
@@ -817,11 +818,18 @@ export function MinutesDocument() {
           titleZh="批款与 e-Invois 状态"
           titleEn="Money approved & e-Invois status"
           summary={
-            <Tri
-              bm="Setiap kelulusan wang dalam minit ini, dan di mana ia berada dalam laluan audit. MinitAI mengira status ini daripada jumlah yang anda sahkan — ia tidak menghantar apa-apa kepada LHDN."
-              zh="这份记录里每一笔批款，以及它走到审计链的哪一步。状态是 MinitAI 根据您确认的金额算出来的 —— 我们不会替您送去 LHDN。"
-              en="Every money approval in these minutes, and where it sits on the audit trail. MinitAI works these out from the amounts you confirmed — it does not send anything to LHDN."
-            />
+            <>
+              {/* D49: this panel is part of the e-Invois beta — only the
+                  operator ever sees it, and it says so. */}
+              <span className="mr-2 inline-flex align-middle">
+                <EinvoisBetaBadge />
+              </span>
+              <Tri
+                bm="Setiap kelulusan wang dalam minit ini, dan di mana ia berada dalam laluan audit. MinitAI mengira status ini daripada jumlah yang anda sahkan — ia tidak menghantar apa-apa kepada LHDN."
+                zh="这份记录里每一笔批款，以及它走到审计链的哪一步。状态是 MinitAI 根据您确认的金额算出来的 —— 我们不会替您送去 LHDN。"
+                en="Every money approval in these minutes, and where it sits on the audit trail. MinitAI works these out from the amounts you confirmed — it does not send anything to LHDN."
+              />
+            </>
           }
         >
           <div className="flex flex-col gap-3">

@@ -13,12 +13,14 @@ import { useState } from "react";
 import { LogOut, Settings as SettingsIcon } from "lucide-react";
 import { LanguageSwitcher, Tri } from "@/components/language-provider";
 import { SIDEBAR_NAV, visibleGroupChildren } from "@/components/nav-items";
+import { EinvoisBetaBadge } from "@/components/einvois-beta-badge";
 import { useActiveOrg } from "@/components/v3/org-chip";
 import { SignOutConfirm } from "@/components/sign-out-confirm";
-import { useEinvoisVisible } from "@/lib/einvois-pref";
+import { useEinvoisOperator, useEinvoisVisible } from "@/lib/einvois-pref";
 
 export default function MorePage() {
   const [einvoisVisible] = useEinvoisVisible();
+  const einvoisOperator = useEinvoisOperator();
   const { email, org } = useActiveOrg();
   // B-1 (work order 32): sign-out asks first — it clears local data.
   const [confirmSignOut, setConfirmSignOut] = useState(false);
@@ -73,7 +75,10 @@ export default function MorePage() {
             </ul>
           );
         }
-        const items = visibleGroupChildren(group, einvoisVisible);
+        const items = visibleGroupChildren(group, {
+          visible: einvoisVisible,
+          operator: einvoisOperator,
+        });
         if (items.length === 0) return null;
         const GroupIcon = group.icon;
         return (
@@ -93,6 +98,8 @@ export default function MorePage() {
                     >
                       <Icon className="h-5 w-5 shrink-0 text-[color:var(--v2-primary)]" strokeWidth={1.8} />
                       <Tri bm={item.bm} zh={item.zh} en={item.en} />
+                      {/* D49: e-Invois beta entries wear the pill here too. */}
+                      {item.beta && <EinvoisBetaBadge />}
                     </Link>
                   </li>
                 );

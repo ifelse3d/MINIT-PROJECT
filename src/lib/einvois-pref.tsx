@@ -30,9 +30,19 @@ import { saveNeedsEinvois } from "@/app/settings/einvois-actions";
 //
 // The nav rail, the money tab rail, the More page and the Settings toggle all
 // read this one provider, so flipping the toggle moves all of them at once.
-// The /money/einvois ROUTE always works either way — hiding a menu entry must
-// never break a saved link — and the >RM10,000 individual e-invois warning
-// inside the money pages ignores this flag entirely.
+// The >RM10,000 individual e-invois warning inside the money pages ignores
+// this flag entirely.
+//
+// 🔒 BETA GATE (D49, work order 94; J 8/30 拍板 via 93 号 §1-4): MyInvois
+// alignment is paused, so the WHOLE e-Invois surface is operator-only until
+// it is trustworthy — every entry, every page, the Settings switch itself.
+// `operator` arrives from the server (isOperatorEmail, the same ADMIN_EMAILS
+// door as /admin and /health) and is ANDed into `visible`, so every consumer
+// of useEinvoisVisible() is gated in one place. Non-operators keep their org
+// value untouched in the database — the gate hides, it never rewrites.
+// This SUPERSEDES the old "the /money/einvois ROUTE always works either way"
+// note: while the gate stands, the route 404s for non-operators (fail-closed,
+// same as /admin), because a hidden beta must not be reachable by saved link.
 // ---------------------------------------------------------------------------
 
 const KEY = "minit.einvois-visible";
@@ -64,6 +74,8 @@ function writeDevicePref(v: boolean): void {
 type EinvoisState = {
   visible: boolean;
   set: (v: boolean) => void;
+  /** D49: may this session see the e-Invois beta at all? */
+  operator: boolean;
   /** True when the value shown is the organisation's (from the database). */
   orgBacked: boolean;
   /** Set when the last save to the organisation failed — the choice is live
@@ -75,11 +87,15 @@ const EinvoisContext = createContext<EinvoisState | null>(null);
 
 export function EinvoisProvider({
   orgValue,
+  operator = false,
   children,
 }: {
   /** The organisation's needs_einvois, or null = unknown (no org / column
    *  missing / fetch failed) → fall back to the device preference. */
   orgValue: boolean | null;
+  /** D49 beta gate: isOperatorEmail(session email), resolved server-side in
+   *  the root layout. Defaults to false — fail closed. */
+  operator?: boolean;
   children: ReactNode;
 }) {
   const orgBacked = orgValue !== null;
@@ -92,7 +108,9 @@ export function EinvoisProvider({
     readDevicePref,
     () => false, // server snapshot: hidden, matching the default
   );
-  const visible = orgBacked ? orgVisible : deviceVisible;
+  // D49: the beta gate wins over both halves. The underlying values are left
+  // alone so lifting the gate later restores everyone's own choice.
+  const visible = operator && (orgBacked ? orgVisible : deviceVisible);
 
   const set = useCallback(
     (v: boolean) => {
@@ -127,10 +145,21 @@ export function EinvoisProvider({
   );
 
   return (
-    <EinvoisContext.Provider value={{ visible, set, orgBacked, saveError }}>
+    <EinvoisContext.Provider value={{ visible, set, operator, orgBacked, saveError }}>
       {children}
     </EinvoisContext.Provider>
   );
+}
+
+/** D49 beta gate: whether THIS session may see the e-Invois beta at all —
+ *  independent of the organisation switch, so the Settings row can show the
+ *  switch to the operator even while it is off. */
+export function useEinvoisOperator(): boolean {
+  const ctx = useContext(EinvoisContext);
+  if (!ctx) {
+    throw new Error("useEinvoisOperator() outside <EinvoisProvider> (root layout)");
+  }
+  return ctx.operator;
 }
 
 /** Same [value, setter] shape as before 0-4, so read-only consumers (nav

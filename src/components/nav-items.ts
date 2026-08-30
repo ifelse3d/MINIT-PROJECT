@@ -70,10 +70,19 @@ export type NavItem = {
   exact?: true;
   /**
    * Only shown when the organisation has switched e-Invois on (J 2026-08-24:
-   * optional, default off). The shell filters on this flag; the ROUTE always
-   * exists, so a saved link still works.
+   * optional, default off) — AND, since D49, only to the operator: the
+   * provider ANDs the beta gate into `einvoisVisible` before it gets here.
+   * The route itself 404s for non-operators while the gate stands.
    */
   einvoisOnly?: true;
+  /**
+   * D49 (work order 94): shown only to the e-Invois beta operator, but
+   * REGARDLESS of the org switch — the Settings row that holds the switch
+   * itself, which the operator must reach while it is still off.
+   */
+  einvoisOperatorOnly?: true;
+  /** D49: entry belongs to the e-Invois beta — menus hang a BETA pill on it. */
+  beta?: true;
   /**
    * E-2 (2026-08-25): a mid-flow step whose navigation is the section's own
    * tab rail, not the menus. It STAYS a group child — so the group still
@@ -133,7 +142,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/history", icon: History, bm: "Sejarah", zh: "历史", en: "History" },
   // e-Invois: optional (org switch, default off). The >RM10,000 individual
   // e-invois warning inside the money pages stays regardless of this flag.
-  { href: "/money/einvois", icon: Banknote, bm: "Fail cukai (e-Invois)", zh: "税务文件（e-Invois）", en: "Tax file (e-Invois)", einvoisOnly: true },
+  { href: "/money/einvois", icon: Banknote, bm: "Fail cukai (e-Invois)", zh: "税务文件（e-Invois）", en: "Tax file (e-Invois)", einvoisOnly: true, beta: true },
   { href: "/orgs", icon: Building2, bm: "Pertubuhan & cawangan", zh: "组织与分会", en: "Organisations & branches" },
   // THE SETTINGS FAMILY (violet redesign §7.2, 8/27 下午 — supersedes the
   // morning's four-page split): /settings redirects to /settings/display;
@@ -146,7 +155,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/settings/members", icon: Users, bm: "Ahli & jemputan", zh: "成员与邀请", en: "Members & invites" },
   { href: "/settings/receipts", icon: Receipt, bm: "Nombor resit", zh: "收据字号", en: "Receipt numbers" },
   { href: "/settings/glossary", icon: Languages, bm: "Perkataan kami", zh: "我们的词库", en: "Our words" },
-  { href: "/settings/einvois", icon: Banknote, bm: "e-Invois (LHDN)", zh: "e-Invois（LHDN）", en: "e-Invois (LHDN)" },
+  { href: "/settings/einvois", icon: Banknote, bm: "e-Invois (LHDN)", zh: "e-Invois（LHDN）", en: "e-Invois (LHDN)", einvoisOperatorOnly: true, beta: true },
   { href: "/settings/ai", icon: Sparkles, bm: "Penggunaan AI", zh: "AI 用量", en: "AI usage" },
   { href: "/settings/plan", icon: Gauge, bm: "Pelan & langganan", zh: "方案与订阅", en: "Plan & subscription" },
   { href: "/settings/system", icon: Activity, bm: "Semakan sistem", zh: "系统检查", en: "System check" },
@@ -431,19 +440,30 @@ export function sidebarPages(): NavItem[] {
   ];
 }
 
+/** D49: the two e-Invois predicates a menu needs, resolved by the provider. */
+export type EinvoisGate = {
+  /** operator AND the org switch — gates the working e-Invois pages. */
+  visible: boolean;
+  /** operator alone — gates the Settings row that holds the switch. */
+  operator: boolean;
+};
+
 /**
  * What a MENU actually renders for a group: rail-only steps are skipped
  * (their navigation is the section's tab rail), and e-Invois obeys the org
- * switch. One function, used by the desktop sidebar and the /more page, so
- * the two menus cannot disagree about what exists.
+ * switch AND the D49 beta gate. One function, used by the desktop sidebar and
+ * the /more page, so the two menus cannot disagree about what exists.
  */
 export function visibleGroupChildren(
   entry: NavEntry,
-  einvoisVisible: boolean,
+  einvois: EinvoisGate,
 ): NavItem[] {
   if (entry.kind !== "group") return [];
   return entry.children.filter(
-    (c) => !c.railOnly && (!c.einvoisOnly || einvoisVisible),
+    (c) =>
+      !c.railOnly &&
+      (!c.einvoisOnly || einvois.visible) &&
+      (!c.einvoisOperatorOnly || einvois.operator),
   );
 }
 

@@ -155,7 +155,9 @@ export default async function RootLayout({
             {/* Only a REAL cookie counts as "already chosen" — passing the
                 zh fallback would silently suppress the first-run picker. */}
             <LanguageProvider initialMode={isLangMode(cookieLang) ? cookieLang : undefined}>
-              <EinvoisProvider orgValue={needsEinvois}>
+              {/* D49: the e-Invois beta gate rides the SAME operator boolean
+                  as the Ops-console row — one answer to "who is the operator". */}
+              <EinvoisProvider orgValue={needsEinvois} operator={showAdmin}>
                 {/* AppShell picks the chrome for the route: full shell everywhere,
                     bare (language switcher only) on /login. */}
                 <AppShell

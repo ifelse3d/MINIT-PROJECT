@@ -74,8 +74,17 @@ export const SUGGESTED_QUESTIONS = [
     zh: "在哪里做收据？",
     en: "Where do I make receipts?",
   },
-  { bm: "Apa itu e-Invois?", zh: "e-Invois 是什么？", en: "What is e-Invois?" },
+  // D49: the e-Invois chip belongs to the beta — marked so the two chat
+  // surfaces can drop it behind the gate (a chip must NEVER cost quota, and
+  // with the entry gated off this one would go to the model).
+  { bm: "Apa itu e-Invois?", zh: "e-Invois 是什么？", en: "What is e-Invois?", einvois: true },
 ];
+
+/** D49: the chips a given session may see. Chips and the prepared layer obey
+ *  the SAME gate — every chip shown must still be answered for free. */
+export function suggestedQuestionsFor(einvois: boolean) {
+  return SUGGESTED_QUESTIONS.filter((q) => einvois || !("einvois" in q));
+}
 
 // --- matching ---------------------------------------------------------------
 
@@ -299,7 +308,20 @@ export const PREPARED_ANSWERS: PreparedAnswer[] = [
  * The free layer's one question: can THIS be answered without the model?
  * Null means "not sure" — and not sure goes to the model, always.
  */
-export function matchPreparedAnswer(question: string): PreparedHit | null {
+export function matchPreparedAnswer(
+  question: string,
+  opts?: {
+    /**
+     * D49 (work order 94): may THIS session see e-Invois? Defaults to true so
+     * the pure matcher stays policy-free; the two chat surfaces pass the real
+     * gate. When false the e-Invois entries are skipped — their answers point
+     * at pages that 404 behind the beta gate, and a prepared answer with a
+     * dead button is worse than letting the model answer generically.
+     */
+    einvois?: boolean;
+  },
+): PreparedHit | null {
+  const einvoisOk = opts?.einvois ?? true;
   const trimmed = question.trim();
   if (trimmed.length === 0 || trimmed.length > MAX_PREPARED_QUESTION_CHARS) {
     return null;
@@ -310,6 +332,7 @@ export function matchPreparedAnswer(question: string): PreparedHit | null {
     if (hasPhrase(normalized, w)) return null;
   }
   for (const entry of PREPARED_ANSWERS) {
+    if (!einvoisOk && entry.route === "money_einvois") continue;
     const matched: LangKey[] = [];
     for (const lang of ["bm", "zh", "en"] as const) {
       if (entry.patterns[lang].some((p) => patternMatches(normalized, p))) {

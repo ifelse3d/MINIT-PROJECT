@@ -900,6 +900,37 @@ J 原話：「不然他丟 50 張我們就半死，我們也不是做慈善」�
   （「照 IC 抄，不要自己音譯」貼著每個 IC 名輸入框），上線後要盯
   真名冊有沒有出現可疑的「當場拼出來」的 IC 名。
 
+### D49 — e-Invois 整區進 BETA 閘（operator-only）＋ financial_resolutions 欄位（2026-08-30 深夜，J 拍板；94 場落地）
+
+背景兩條：①93 號 §1-4 拍板「MyInvois 對齊暫停；正式版把 e-Invois 藏起來」
+——LHDN 官方欄位對齊沒做完之前，一個看起來像稅務工具的半成品比沒有更危險；
+②partner 交來 e-invois-governance 包（批款→e-Invois 審計狀態的純邏輯＋
+成品頁面板＋extraction 新欄 `financial_resolutions`），J 8/30 拍板
+「既然有了，就直接做」＝包照收、閘同場落地。
+
+- **閘的形狀**：`EinvoisProvider` 多一個 server 算好的 `operator` bit
+  （`isOperatorEmail`，與 /admin、/health 同一份 ADMIN_EMAILS 名單），
+  `visible = operator && (org 開關)`——所有 `useEinvoisVisible()` 消費點
+  （側欄、/more、home-upcoming、日曆截止日、成品頁新面板）一處全閘。
+- **頁面與 API fail-closed**：/money/einvois、/settings/einvois（開關頁
+  本身也是藏的對象）對非 operator 一律 404；`/api/einvois-xlsx` 伺服器端
+  同擋——**取代**舊註解「route 永遠能走、藏選單不斷書籤」：BETA 藏起來
+  就要藏得住，被存的連結打得開就不叫藏。
+- **免費層跟閘走**：兩條 e-Invois 預備問答＋「Apa itu e-Invois?」chip
+  在閘後不出（chip 永不扣費是 K1 鐵律，閘後那顆會漏到模型去）；
+  /api/chat 的 money_einvois 深連結按鈕對非 operator 不回（答案文字照舊）。
+- **operator 看到的每個 e-Invois 入口掛同一顆 BETA 徽章**
+  （`EinvoisBetaBadge`，tooltip 三語講明只有平台管理員看得到）。
+- **org 的 `needs_einvois` 值一字不動**：閘是蓋布，不改資料——解閘＝
+  拿掉 operator bit 的 AND，各 org 自己的開關原樣回來。
+- **financial_resolutions**（partner 包）：extraction schema 新可選欄
+  （optional+catch，舊檔不炸）＝會議「批款」的結構化視圖（收款方/金額/
+  用途，逐字照抄）；判斷全在 `einvois-governance.ts` 確定性代碼（門檻
+  RM10,000 引 einvois.ts 既有常數；章程上限只認貴會自己的條文，讀不到
+  ＝不出 finding，絕不發明全國上限；無任何狀態聲稱 LHDN 已驗證）。
+  prompt 明文允許同一決議在 resolutions 與此欄各記一次＝「一實一記」的
+  唯一例外，白紙黑字。
+
 ---
 
-*Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C) · D16 appended 2026-08-25 (Stage D) · D17 appended 2026-08-27 (work order 27, the overnight sprint) · D18–D21 appended 2026-08-27 (work order 31 §0, J's post-launch rulings) · D22–D23 appended 2026-08-27 (work order 32 §0, launch-day feedback rulings) · D24–D25 appended 2026-08-27 (the afternoon rulings: violet redesign + BM guard) · D26–D28 appended 2026-08-27 (the launch-evening 20-point list) · D29–D32 appended 2026-08-28 (the two-review session: prompt unfreeze, attendance gate, funds page, record-to-DB) · D33–D35 appended 2026-08-28 (J's §6 answers + the new seven: PdpaNote deleted, per-part AI discussion, minutes named/printable/editable/photo-linked) · D36–D37 appended 2026-08-28 evening (the eight-item round: save lands on the finished document, saved workspaces clear themselves, AI may merge like items under checkMergedFacts) · D38–D40 appended 2026-08-28 (the design pass: one five-step radius scale shifted a notch, the canvas gradient that was being painted and covered, the four rebuilt home cards and the sign-in brand panel) · D41–D42 appended 2026-08-28 (J's review of it: no piggy bank and a standing check on imagery for every community, and one brand mark that both the page and the icon files are generated from) · D43–D44 appended 2026-08-28 night (no black buttons — the primary token is brand purple; and the free fence: lifetime 5 documents · 20 receipts · 20 pages · 3 clean downloads, watermarked previews, clean files only through counted doors) · D45 appended 2026-08-30 (work order 81: the A6 exception — a constitution upload costs the fence min(actual pages, 5), charged once per document even when read in segments) · D46 appended 2026-08-30 (work order 87: the receipt-verify QR page's three hard lines — token-only lookup, repeat only what the paper prints, never read as certifying the society) · D47–D48 appended 2026-08-30 night (work order 89: the constitution read is priced by pages — blocks of five to page 20, per page after — with the charge following the read; and the committee's eROSES-required fields hard-gate both the form and the filing, with the transliteration risk noted)*
+*Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C) · D16 appended 2026-08-25 (Stage D) · D17 appended 2026-08-27 (work order 27, the overnight sprint) · D18–D21 appended 2026-08-27 (work order 31 §0, J's post-launch rulings) · D22–D23 appended 2026-08-27 (work order 32 §0, launch-day feedback rulings) · D24–D25 appended 2026-08-27 (the afternoon rulings: violet redesign + BM guard) · D26–D28 appended 2026-08-27 (the launch-evening 20-point list) · D29–D32 appended 2026-08-28 (the two-review session: prompt unfreeze, attendance gate, funds page, record-to-DB) · D33–D35 appended 2026-08-28 (J's §6 answers + the new seven: PdpaNote deleted, per-part AI discussion, minutes named/printable/editable/photo-linked) · D36–D37 appended 2026-08-28 evening (the eight-item round: save lands on the finished document, saved workspaces clear themselves, AI may merge like items under checkMergedFacts) · D38–D40 appended 2026-08-28 (the design pass: one five-step radius scale shifted a notch, the canvas gradient that was being painted and covered, the four rebuilt home cards and the sign-in brand panel) · D41–D42 appended 2026-08-28 (J's review of it: no piggy bank and a standing check on imagery for every community, and one brand mark that both the page and the icon files are generated from) · D43–D44 appended 2026-08-28 night (no black buttons — the primary token is brand purple; and the free fence: lifetime 5 documents · 20 receipts · 20 pages · 3 clean downloads, watermarked previews, clean files only through counted doors) · D45 appended 2026-08-30 (work order 81: the A6 exception — a constitution upload costs the fence min(actual pages, 5), charged once per document even when read in segments) · D46 appended 2026-08-30 (work order 87: the receipt-verify QR page's three hard lines — token-only lookup, repeat only what the paper prints, never read as certifying the society) · D47–D48 appended 2026-08-30 night (work order 89: the constitution read is priced by pages — blocks of five to page 20, per page after — with the charge following the read; and the committee's eROSES-required fields hard-gate both the form and the filing, with the transliteration risk noted) · D49 appended 2026-08-30 late night (work order 94: the whole e-Invois surface goes operator-only BETA — one gate in the provider, fail-closed pages and API, the free layer follows, one BETA pill — and the partner pack's financial_resolutions field lands with every judgement in deterministic code)*

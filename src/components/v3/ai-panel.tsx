@@ -43,8 +43,9 @@ import {
   matchPreparedAnswer,
   preparedButtonFor,
   PREPARED_FREE_NOTE,
-  SUGGESTED_QUESTIONS,
+  suggestedQuestionsFor,
 } from "@/lib/prepared-answers";
+import { useEinvoisVisible } from "@/lib/einvois-pref";
 import { usePersistentState } from "@/lib/use-persistent-state";
 import { useScopedKey } from "@/lib/storage-scope";
 
@@ -95,8 +96,8 @@ type ChatOk = {
 // Chips only PREFILL the input — the member presses Ask themselves. Since K1
 // (work order 82) every chip is a question the PREPARED layer answers for
 // free (prepared-answers.ts owns the list and its tests pin each one), so a
-// chip can never spend the quota at all.
-const SUGGESTIONS = SUGGESTED_QUESTIONS;
+// chip can never spend the quota at all. D49: which chips exist follows the
+// e-Invois beta gate — see suggestedQuestionsFor at the render site.
 
 export function AIPanel({
   initialRemaining,
@@ -120,6 +121,8 @@ export function AIPanel({
   const t = useTriText();
   const router = useRouter();
   const pathname = usePathname();
+  // D49: prepared e-Invois answers and their chip follow the beta gate.
+  const [einvoisVisible] = useEinvoisVisible();
   const [question, setQuestion] = useState("");
   // F-4: the transcript survives page changes and browser restarts, per
   // user+org scope. See the header comment for the PDPA reasoning.
@@ -171,7 +174,7 @@ export function AIPanel({
     // K1 (work order 82): the free layer answers first. A hit costs nothing —
     // no vendor, no quota, no server round-trip — and the deep-link button
     // comes from the same whitelist the model's buttons do.
-    const hit = matchPreparedAnswer(q);
+    const hit = matchPreparedAnswer(q, { einvois: einvoisVisible });
     if (hit) {
       setError(null);
       setQuestion("");
@@ -518,7 +521,7 @@ export function AIPanel({
             <p className="mt-2 text-base font-semibold text-[color:var(--v2-text-soft)]">
               <Tri bm="Cuba tanya" zh="试试问" en="Try asking" />
             </p>
-            {SUGGESTIONS.map((s, i) => (
+            {suggestedQuestionsFor(einvoisVisible).map((s, i) => (
               <button
                 key={i}
                 type="button"

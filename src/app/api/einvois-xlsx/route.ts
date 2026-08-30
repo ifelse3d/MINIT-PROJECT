@@ -3,7 +3,8 @@ import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
 import { einvoisXlsxBodySchema } from "@/lib/document-request";
 import { buildMonthEndPack, EInvoisError } from "@/lib/einvois";
 import { buildEInvoisXlsxFiles } from "@/lib/einvois-xlsx";
-import { getSupabaseServer } from "@/db/supabase-server";
+import { getSessionUser, getSupabaseServer } from "@/db/supabase-server";
+import { isOperatorEmail } from "@/lib/admin-gate";
 import { getActiveOrg } from "@/lib/active-org";
 import { chargeFence, getFenceLimits } from "@/lib/fence";
 import { getDocumentIdentity, NOT_SIGNED_IN } from "@/lib/doc-identity";
@@ -48,6 +49,15 @@ function lastDayOfMonth(month: string): string {
 export async function POST(request: Request): Promise<Response> {
   const identity = await getDocumentIdentity();
   if (!identity) return NextResponse.json(NOT_SIGNED_IN, { status: 401 });
+
+  // D49 (work order 94): the whole e-Invois surface is operator-only while
+  // the beta gate stands — including this export, so a non-operator cannot
+  // reach the file by driving the URL directly. Fail-closed 404 (the same
+  // shape /money/einvois shows them), never an explanation of what is here.
+  const sessionUser = await getSessionUser().catch(() => null);
+  if (!isOperatorEmail(sessionUser?.email)) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
 
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {

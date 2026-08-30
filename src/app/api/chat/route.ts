@@ -19,6 +19,8 @@ import {
   RateLimitedError,
 } from "@/lib/ai/usage-core";
 import { getActiveOrg } from "@/lib/active-org";
+import { getSessionUser } from "@/db/supabase-server";
+import { isOperatorEmail } from "@/lib/admin-gate";
 import { cariMinit, formatHitsForPrompt, type MinutesHit } from "@/lib/ai/cari-minit";
 import { getToolProvider, parseModelJson } from "@/lib/ai/provider";
 import { ORG_TOOL_SPECS, runOrgTool } from "@/lib/ai/org-tools";
@@ -426,10 +428,19 @@ YOUR PREVIOUS ATTEMPT WAS NOT VALID JSON in the required shape. Respond with ONL
     // See docs/助手重做-设计.md section 4.5.
 
     const after = await getUsage(org.id);
+    // D49 (work order 94): behind the e-Invois beta gate, /money/einvois
+    // 404s for non-operators — a Go-to-page button pointing there would be a
+    // dead button. The reply text is untouched; only the button is withheld.
+    const button = routeFor(parsed.data.suggested_page);
+    const gatedButton =
+      button?.href.startsWith("/money/einvois") &&
+      !isOperatorEmail((await getSessionUser().catch(() => null))?.email)
+        ? null
+        : button;
     return NextResponse.json({
       reply: parsed.data.reply,
       inScope: parsed.data.in_scope,
-      button: routeFor(parsed.data.suggested_page),
+      button: gatedButton,
       // Where the assistant looked, by tool name. Provenance for the facts that
       // did NOT come from a meeting document: a total out of the donations
       // table has no meeting to link to, but "I looked in your donation

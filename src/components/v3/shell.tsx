@@ -43,10 +43,12 @@ import {
   groupHasActiveChild,
   isActivePath,
   visibleGroupChildren,
+  type EinvoisGate,
   type NavEntry,
   type NavItem,
 } from "@/components/nav-items";
-import { useEinvoisVisible } from "@/lib/einvois-pref";
+import { EinvoisBetaBadge } from "@/components/einvois-beta-badge";
+import { useEinvoisOperator, useEinvoisVisible } from "@/lib/einvois-pref";
 import { cn } from "./surfaces";
 import { TopBar } from "./top-bar";
 import { AIDock, useAIDock } from "./ai-dock";
@@ -200,10 +202,10 @@ export function AppShell({
 // boot script.
 // ---------------------------------------------------------------------------
 
-function railEntryChildren(entry: NavEntry, einvoisVisible: boolean): NavItem[] {
+function railEntryChildren(entry: NavEntry, einvois: EinvoisGate): NavItem[] {
   // E-2: rail-only steps (attendance, the document) are navigated by the
   // section's own tab rail; the menu lists the jobs.
-  return visibleGroupChildren(entry, einvoisVisible);
+  return visibleGroupChildren(entry, einvois);
 }
 
 function RailItem({
@@ -243,6 +245,12 @@ function RailItem({
       <span className="rail-label min-w-0 break-words py-1 leading-snug">
         <Tri bm={item.bm} zh={item.zh} en={item.en} />
       </span>
+      {/* D49: e-Invois entries wear the BETA pill (operator-only surface). */}
+      {item.beta && (
+        <span className="rail-label ml-auto">
+          <EinvoisBetaBadge />
+        </span>
+      )}
       {/* G3-3 (J #7): "you started something" — the unfinished-drafts count
           on the New minutes row. Amber like every other waiting-for-you
           marker; absent when zero or unknown. */}
@@ -279,6 +287,7 @@ function RailNav({
   collapsed: boolean;
 }) {
   const [einvoisVisible] = useEinvoisVisible();
+  const einvoisOperator = useEinvoisOperator();
   // #2: which groups the person has opened/closed BY HAND on this device.
   // null until read — before that, only the active group is open, which is
   // also what the server renders, so hydration always agrees.
@@ -319,7 +328,10 @@ function RailNav({
             </li>
           );
         }
-        const children = railEntryChildren(entry, einvoisVisible);
+        const children = railEntryChildren(entry, {
+          visible: einvoisVisible,
+          operator: einvoisOperator,
+        });
         const groupActive = groupHasActiveChild(entry, pathname);
         // Closed by default; the active group opens itself; a hand toggle
         // (remembered) wins. In icon-rail mode there is no room for a

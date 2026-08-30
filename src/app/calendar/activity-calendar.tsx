@@ -43,6 +43,7 @@ import { isSpecialLunarDay, gregorianToLunar, lunarCellText } from "@/lib/lunar"
 import { hijriCellText } from "@/lib/hijri";
 import { malaysiaHolidayFor } from "@/lib/malaysia-holidays";
 import type { SimpleEvent } from "@/lib/local-events";
+import { useEinvoisVisible } from "@/lib/einvois-pref";
 import { EventMessageButton } from "./event-message";
 import { formatRm } from "@/lib/minutes-draft";
 import {
@@ -127,20 +128,26 @@ export function ActivityCalendar({
   const hijriOn = showHijri ?? false;
   const holidaysOn = showHolidays ?? false;
 
+  // D49 (work order 94): the e-Invois month-ends obey the same gate as every
+  // other e-Invois surface — home-upcoming already filtered on this flag, the
+  // grid now agrees with it instead of showing everyone a beta's deadlines.
+  const [einvoisVisible] = useEinvoisVisible();
+
   // Future items from the SAME sources the Upcoming sidebar shows, so the two
   // never disagree. DB-stored deadlines/events already arrive inside
   // serverRecords; mergeRecords drops any duplicates.
   const allRecords = useMemo(() => {
     const clientFuture = [
-      ...computeStandardDeadlines(todayIso, { agm, einvoisCount: 6 }).map(
-        futureRecordFromDeadline,
-      ),
+      ...computeStandardDeadlines(todayIso, {
+        agm,
+        einvoisCount: einvoisVisible ? 6 : 0,
+      }).map(futureRecordFromDeadline),
       ...localEvents.map((e) =>
         futureRecordFromEvent({ title: e.title, dateIso: e.dateIso }, todayIso),
       ),
     ];
     return mergeRecords(serverRecords, clientFuture);
-  }, [serverRecords, localEvents, todayIso, agm]);
+  }, [serverRecords, localEvents, todayIso, agm, einvoisVisible]);
 
   const buckets = useMemo(() => bucketByDay(allRecords), [allRecords]);
   const weeks = useMemo(() => monthGrid(month), [month]);
