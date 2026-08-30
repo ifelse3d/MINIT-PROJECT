@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { getActiveOrg } from "@/lib/active-org";
-import { can } from "@/lib/roles";
+import { getSessionUser } from "@/db/supabase-server";
+import { isOperatorEmail } from "@/lib/admin-gate";
 import { SettingsNav } from "./settings-nav";
 
 // ---------------------------------------------------------------------------
@@ -9,16 +9,19 @@ import { SettingsNav } from "./settings-nav";
 // settings — shell.tsx does that — so this column is the only sidebar, and
 // it carries its own "back to the app" row).
 //
-// #11 (same feedback): the System check is an administrator's tool — the nav
-// row and the page row only exist for manage_org roles. /health keeps its own
-// server-side gate regardless of what this layout says.
+// #11, retuned by 97 §7 (93 号拍板): the System check row follows the PAGE's
+// own audience now — /health went operator-only in work order 86 ③ (platform
+// admins, the ADMIN_EMAILS list), so showing the row to org admins was a
+// door painted on a wall: they clicked it and got refused. Row and page gate
+// on the same fact (same precedent as einvoisOperatorOnly). /health keeps
+// its own server-side gate regardless of what this layout says.
 // ---------------------------------------------------------------------------
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsLayout({ children }: { children: ReactNode }) {
-  const active = await getActiveOrg();
-  const showSystem = active !== null && can(active.role, "manage_org");
+  const user = await getSessionUser();
+  const showSystem = isOperatorEmail(user?.email);
   return (
     <div className="flex flex-col gap-4 @4xl:-my-6 @4xl:flex-row @4xl:gap-0">
       <SettingsNav showSystem={showSystem} />

@@ -89,7 +89,11 @@ function MemberLine({ member }: { member: MemberRow }) {
   return (
     <li className="flex flex-col gap-1 rounded-md border border-[color:var(--v2-border)] p-3">
       <div className="flex flex-wrap items-center gap-3">
-        <span className="text-base font-semibold">
+        {/* 97 §7 (J 8/30, the broken phone page): a member's "name" is often
+            their EMAIL — one unbreakable token whose min-content width beats
+            375px and drags the whole page into horizontal scroll. Bound it
+            and let it break anywhere. */}
+        <span className="min-w-0 max-w-full text-base font-semibold [overflow-wrap:anywhere]">
           {member.name}
           {member.isSelf && (
             <span className="ml-2 text-sm font-normal text-muted-foreground">

@@ -4,12 +4,14 @@ import { getSessionUser } from "@/db/supabase-server";
 import { isOperatorEmail } from "@/lib/admin-gate";
 import { SettingsRow, SettingsSection } from "../ui";
 
-// /settings/system — the system check + the impersonation report (§7.2b).
+// /settings/system — the system check (§7.2b).
 // Work order 85 ③ (J, 2026-08-30: 「只有我可以看」): the system-check row is
 // the PLATFORM OPERATOR's tool — the old manage_org gate dated from the
 // self-hosted assumption, under which every org creator would have seen the
-// deployment's env-variable map. The impersonation-report row stays for
-// everyone. /health keeps its own server-side ADMIN_EMAILS gate regardless.
+// deployment's env-variable map. 97 §7 (93 号拍板): the impersonation-report
+// row moved to /settings/feedback — it is a member-facing channel, and this
+// page's audience shrank to the operator (the settings nav row now follows).
+// /health keeps its own server-side ADMIN_EMAILS gate regardless.
 export const dynamic = "force-dynamic";
 
 export default async function SystemSettingsPage() {
@@ -21,26 +23,17 @@ export default async function SystemSettingsPage() {
         <Tri bm="Semakan sistem" zh="系统检查" en="System check" />
       </h1>
       <SettingsSection title={<Tri bm="Sistem" zh="系统" en="System" />}>
-        {process.env.NEXT_PUBLIC_CONTACT_EMAIL && (
-          <SettingsRow
-            label={
-              <Tri bm="Laporkan penyalahgunaan" zh="检举冒用" en="Report impersonation" />
-            }
-            help={
-              <Tri
-                bm="Jika seseorang membuka pertubuhan atas nama persatuan anda tanpa hak, laporkan kepada kami. Membuka pertubuhan atas nama orang lain melanggar Syarat Penggunaan — akaun boleh digantung dan kami bekerjasama dengan pihak berkuasa."
-                zh="如果有人未经授权冒用贵社团的名义在 MinitAI 开机构，请向我们检举。冒名开机构违反《使用条款》—— 账号会被封禁，我们也会配合执法单位。"
-                en="If someone has set up an organisation in your society's name without authority, report it to us. Impersonating an organisation breaches the Terms of Use — accounts are suspended and we cooperate with the authorities."
-              />
-            }
-          >
-            <a
-              href={`mailto:${process.env.NEXT_PUBLIC_CONTACT_EMAIL}?subject=${encodeURIComponent("Laporan penyalahgunaan / 检举冒用 / Impersonation report")}`}
-              className="text-base underline underline-offset-4"
-            >
-              <Tri bm="Hantar laporan" zh="发送检举" en="Send a report" /> →
-            </a>
-          </SettingsRow>
+        {!isOperator && (
+          <p className="p-4 text-base text-muted-foreground">
+            <Tri
+              bm="Halaman ini untuk pentadbir platform MinitAI sahaja. Untuk melaporkan penyalahgunaan nama pertubuhan, gunakan halaman Maklum balas."
+              zh="这一页只给 MinitAI 平台管理员用。要检举冒用社团名义，请到「反馈」页。"
+              en="This page is for the MinitAI platform administrator only. To report impersonation of your society, use the Feedback page."
+            />{" "}
+            <Link href="/settings/feedback" className="underline underline-offset-4">
+              <Tri bm="Ke Maklum balas" zh="去反馈页" en="To Feedback" /> →
+            </Link>
+          </p>
         )}
         {isOperator && (
           <SettingsRow
