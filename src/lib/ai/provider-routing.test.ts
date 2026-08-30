@@ -3,7 +3,7 @@ import { vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { requiredAiKeyEnvVars, routedProviders } from "@/lib/ai/provider";
+import { requiredAiKeyEnvVars, resolveModel, routedProviders } from "@/lib/ai/provider";
 
 // ---------------------------------------------------------------------------
 // P-2 (work order 31): /health must require the keys the ACTUAL routing needs.
@@ -21,6 +21,7 @@ const TASK_VARS = [
   "AI_MODEL_EXTRACT",
   "AI_MODEL_CHAT",
   "AI_MODEL_LONG_DOC",
+  "AI_MODEL_WRITE",
 ] as const;
 
 const saved: Record<string, string | undefined> = {};
@@ -58,6 +59,27 @@ describe("requiredAiKeyEnvVars (P-2)", () => {
     const keys = requiredAiKeyEnvVars();
     expect(keys).not.toContain("ANTHROPIC_API_KEY");
     expect(keys).not.toContain("XAI_API_KEY");
+  });
+
+  // 97 §8: the "write" dial must be a NO-OP until somebody sets it.
+  it('unset AI_MODEL_WRITE resolves "write" to exactly what "long_doc" resolves', () => {
+    setEnv({ AI_MODEL_LONG_DOC: "gemini:gemini-3.5-flash-lite" });
+    expect(resolveModel("write")).toEqual(resolveModel("long_doc"));
+    // And with NOTHING set at all, it still mirrors long_doc's legacy path.
+    setEnv({});
+    expect(resolveModel("write")).toEqual(resolveModel("long_doc"));
+  });
+
+  it("set AI_MODEL_WRITE wins over the long_doc fallback", () => {
+    setEnv({
+      AI_MODEL_LONG_DOC: "gemini:gemini-3.5-flash-lite",
+      AI_MODEL_WRITE: "openai:gpt-5-mini",
+    });
+    expect(resolveModel("write")).toEqual({ provider: "openai", model: "gpt-5-mini" });
+    expect(resolveModel("long_doc")).toEqual({
+      provider: "gemini",
+      model: "gemini-3.5-flash-lite",
+    });
   });
 
   it("an invalid routing value is skipped here, not thrown on", () => {

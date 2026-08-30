@@ -228,7 +228,7 @@ export interface ToolChatProvider {
 // Full runbook: `2026-08-03-换模型手册.md`.
 // ---------------------------------------------------------------------------
 
-export type AiTask = "classify" | "extract" | "chat" | "long_doc";
+export type AiTask = "classify" | "extract" | "chat" | "long_doc" | "write";
 
 /** Where a task's model comes from when no env var is set.
  *  Conservative on purpose: everything defaults to what the app already used,
@@ -238,6 +238,12 @@ const TASK_ENV: Record<AiTask, string> = {
   extract: "AI_MODEL_EXTRACT",
   chat: "AI_MODEL_CHAT",
   long_doc: "AI_MODEL_LONG_DOC",
+  // 97 §8: DOCUMENT WRITING (draft-minutes arrangement + the structured
+  // phrasing loop) gets its own dial — pipe only, no model switched: with
+  // AI_MODEL_WRITE unset, resolveModel("write") answers exactly what
+  // "long_doc" answers today (see below). Which model actually goes here is
+  // the 98-session bench decision; .env stays untouched until J rules.
+  write: "AI_MODEL_WRITE",
 };
 
 /**
@@ -311,7 +317,12 @@ export type ResolvedModel = { provider: AiProviderName; model: string };
  * still honoured so nothing breaks) → the built-in default.
  */
 export function resolveModel(task: AiTask): ResolvedModel {
+  // 97 §8: "write" is a NEW dial that must change nothing until it is set —
+  // unset, it falls back to long_doc's WHOLE resolution (env var, legacy
+  // settings and all), because long_doc is what the writing paths used
+  // until tonight. Today's behaviour, byte for byte.
   const raw = process.env[TASK_ENV[task]];
+  if (task === "write" && !raw) return resolveModel("long_doc");
   if (raw && raw.includes(":")) {
     const [provider, ...rest] = raw.split(":");
     const model = rest.join(":").trim();

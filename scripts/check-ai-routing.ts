@@ -74,6 +74,9 @@ const TASKS: readonly { task: AiTask; kind: TaskKind; envVar: string; what: stri
   { task: "extract", kind: "extract", envVar: "AI_MODEL_EXTRACT", what: "READS THE HANDWRITING" },
   { task: "chat", kind: "chat", envVar: "AI_MODEL_CHAT", what: "short text Q&A" },
   { task: "long_doc", kind: "longDoc", envVar: "AI_MODEL_LONG_DOC", what: "30-page constitutions" },
+  // 97 §8: document writing — unset falls back to long_doc's resolution
+  // (today's behaviour). Priced in the longDoc bucket until it diverges.
+  { task: "write", kind: "longDoc", envVar: "AI_MODEL_WRITE", what: "document WRITING (unset = follows LONG_DOC)" },
 ];
 
 const PRICE_TABLES: Record<AiProviderName, Record<string, { in: number; out: number }>> = {
@@ -127,7 +130,11 @@ function main() {
 
     if (raw === undefined || raw === "") {
       line += `— not set → falls back to ${label}`;
-      notes.push(`${envVar} is not set, so "${what}" inherits the legacy AI_PROVIDER setting.`);
+      notes.push(
+        task === "write"
+          ? `${envVar} is not set, so "${what}" follows AI_MODEL_LONG_DOC's resolution (97 §8).`
+          : `${envVar} is not set, so "${what}" inherits the legacy AI_PROVIDER setting.`,
+      );
     } else if (!raw.includes(":")) {
       // Trap 1: the quiet one. Set, looks right, does nothing.
       line += `🚨 "${raw}" has NO COLON → SILENTLY IGNORED, actually using ${label}`;

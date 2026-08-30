@@ -139,7 +139,9 @@ export async function POST(req: Request) {
       const sGlossary = await loadGlossary(sGate.org.id);
       try {
         const run = await runPhraseMinutesItems({
-          provider: getVisionProvider("long_doc"),
+          // 97 §8: document WRITING rides its own dial (AI_MODEL_WRITE);
+          // unset it resolves to long_doc — today's behaviour unchanged.
+          provider: getVisionProvider("write"),
           items: work.items,
           allTexts: work.allTexts,
           lang,
@@ -161,7 +163,7 @@ export async function POST(req: Request) {
         );
         return NextResponse.json({
           markdown,
-          provider: getVisionProvider("long_doc").name,
+          provider: getVisionProvider("write").name,
         });
       } catch (e) {
         await refundUsage(sGate.org.id, sGate.charges[0]);
@@ -182,9 +184,10 @@ export async function POST(req: Request) {
     const glossaryBlock = glossaryPromptBlockForWriting(glossary);
     const allowedRuns = glossaryAllowedRuns(glossary);
 
-    // long_doc: this is a generation, not a page read. Routed by
-    // AI_MODEL_LONG_DOC so the model can be changed without touching code.
-    const provider = getVisionProvider("long_doc");
+    // 97 §8: this is a generation, not a page read — routed by AI_MODEL_WRITE
+    // (falling back to AI_MODEL_LONG_DOC while unset) so the writing model
+    // can be benched and changed without touching code.
+    const provider = getVisionProvider("write");
     const onUsage = createUsageRecorder(gate.org.id, gate.charges[0]);
 
     // P-1: one deadline shared by both attempts of the loop below, so the
