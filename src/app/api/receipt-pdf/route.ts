@@ -5,6 +5,10 @@ import { buildReceiptPdf } from "@/lib/receipt-pdf";
 import { getSupabaseServer } from "@/db/supabase-server";
 import { dayIsoMalaysia } from "@/lib/history";
 import { getDocumentIdentity, NOT_SIGNED_IN } from "@/lib/doc-identity";
+import {
+  buildReceiptVerifyUrl,
+  signReceiptVerify,
+} from "@/lib/receipt-verify";
 
 // POST /api/receipt-pdf — body: { receiptNo } ONLY. Returns the PDF bytes.
 //
@@ -17,6 +21,38 @@ import { getDocumentIdentity, NOT_SIGNED_IN } from "@/lib/doc-identity";
 // PDPA (Hard Rule 5): donor data flows out in the PDF — NEVER into a log.
 
 const bodySchema = receiptPdfBodySchema;
+
+/**
+ * The origin the QR's verify link points at — the deployment that served
+ * this request (Vercel terminates TLS in front of us, so the forwarded
+ * headers are the truth; request.url is the honest local fallback). Using
+ * the request's own origin means a localhost PDF verifies against localhost
+ * and a production PDF against production, with zero configuration.
+ */
+function requestOrigin(request: Request): string {
+  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
+  if (host) {
+    const proto = request.headers.get("x-forwarded-proto") ?? "https";
+    return `${proto}://${host}`;
+  }
+  return new URL(request.url).origin;
+}
+
+/**
+ * Work order 87 ①: the signed /verify/resit URL for this receipt's QR.
+ * Null when the deployment has no signing secret — the PDF then simply has
+ * no QR (old layout), never a QR pointing at a page that cannot verify it.
+ */
+function verifyUrlFor(
+  request: Request,
+  orgId: number,
+  receiptNo: string,
+): string | undefined {
+  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+  if (secret === "") return undefined;
+  const token = signReceiptVerify({ orgId, receiptNo }, secret);
+  return buildReceiptVerifyUrl(requestOrigin(request), token);
+}
 
 /** The columns the PDF needs, verbatim from the database. */
 const RECEIPT_SELECT =
@@ -112,6 +148,8 @@ export async function POST(request: Request): Promise<Response> {
     // D-1: goods receipts print the items, never money.
     kind: data.donation.kind === "in_kind" ? "in_kind" : "cash",
     itemDesc: data.donation.item_desc ?? undefined,
+    // 87 ①: the QR verify link (undefined = no QR, old layout).
+    verifyUrl: verifyUrlFor(request, identity.orgId, data.receipt_no),
   });
   return new Response(new Uint8Array(bytes), {
     headers: {

@@ -35,7 +35,16 @@ import { NextResponse, type NextRequest } from "next/server";
 // agree to them. A consent form that links to a page you must already have an
 // account to read is not consent — and PDPA s.7 wants the privacy notice given
 // BEFORE personal data is collected, i.e. before the form is submitted.
-const PUBLIC_PATHS = new Set(["/login", "/reset-password", "/terms", "/privacy"]);
+// 2026-08-30 (87 ①): /verify/resit is public because the person scanning a
+// receipt's QR is a DONOR with no account. The page itself refuses anything
+// without a validly signed token, so being public exposes no lookup surface.
+const PUBLIC_PATHS = new Set([
+  "/login",
+  "/reset-password",
+  "/terms",
+  "/privacy",
+  "/verify/resit",
+]);
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.has(pathname);

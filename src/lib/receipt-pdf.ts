@@ -10,6 +10,7 @@ import {
   taxDeductibilityLineBm,
   type TaxExemptStatus,
 } from "@/lib/receipts";
+import { qrMatrix } from "@/lib/receipt-qr";
 
 // ---------------------------------------------------------------------------
 // RECEIPT PDF — server-side generation with pdf-lib (stack decision: pdf-lib,
@@ -52,7 +53,26 @@ export type ReceiptPdfParams = {
   kind?: "cash" | "in_kind";
   /** In-kind only: what was donated. */
   itemDesc?: string;
+  /**
+   * Work order 87 ①: the absolute /verify/resit?t=… URL this receipt's QR
+   * points at. Absent (old callers, or a deployment with no signing secret)
+   * = no QR is drawn and the layout is exactly the pre-87 one — an old
+   * receipt without a QR stays a valid receipt.
+   */
+  verifyUrl?: string;
 };
+
+/** Printed side length of the QR itself (≈31 mm — comfortably phone-scannable
+ *  at QR version 7's ~45 modules). Exported so the probe that re-reads the
+ *  PDF knows what geometry to expect. */
+export const RECEIPT_QR_SIZE_PT = 88;
+
+/** The two caption lines printed beside the QR. Exported for tests: the
+ *  disclaimer must be ON THE PAPER, not only on the verify page. */
+export const RECEIPT_QR_CAPTION_LINES = [
+  "Imbas QR untuk semak resit ini / 扫码查证这张收据 / Scan to verify this receipt",
+  "Halaman semakan hanya mengesahkan nombor resit dikeluarkan oleh sistem ini — bukan identiti persatuan. / 只证明编号出自本系统，不证明社团身份。/ It confirms the number came from this system — not the society's identity.",
+] as const;
 
 /**
  * What the big box on the receipt holds — the ONE decision D-1 must never get
@@ -131,6 +151,7 @@ export async function buildReceiptPdf(params: ReceiptPdfParams): Promise<Uint8Ar
     params.confirmedBy,
     params.confirmedOnIso,
     inKind ? `${params.itemDesc ?? ""} Derma Barangan 实物捐赠` : "",
+    params.verifyUrl ? RECEIPT_QR_CAPTION_LINES.join(" ") : "",
   ].join(" ");
   let noto: PDFFont | null = null;
   if (winAnsiSafe(allText) !== allText) {
@@ -269,6 +290,70 @@ export async function buildReceiptPdf(params: ReceiptPdfParams): Promise<Uint8Ar
   )) {
     drawAt(line, margin, y, 11, { bold: true });
     y -= 15;
+  }
+
+  // ---- Verify QR (work order 87 ①), bottom-right above the audit line. -----
+  // The QR carries the signed /verify/resit URL. Modules are drawn as pure
+  // black vector rects (maximum print contrast, no image embedding); a white
+  // backing rect provides the quiet zone even if a future layout change puts
+  // ink nearby. No verifyUrl = no QR = the pre-87 layout, byte for byte.
+  if (params.verifyUrl) {
+    const matrix = qrMatrix(params.verifyUrl);
+    const n = matrix.length;
+    const moduleSize = RECEIPT_QR_SIZE_PT / n;
+    const quiet = moduleSize * 4;
+    const qrX = pageW - margin - RECEIPT_QR_SIZE_PT;
+    const qrBottom = margin + 104; // clear of the audit block below
+    page.drawRectangle({
+      x: qrX - quiet,
+      y: qrBottom - quiet,
+      width: RECEIPT_QR_SIZE_PT + quiet * 2,
+      height: RECEIPT_QR_SIZE_PT + quiet * 2,
+      color: rgb(1, 1, 1),
+    });
+    const qrTop = qrBottom + RECEIPT_QR_SIZE_PT;
+    for (let r = 0; r < n; r += 1) {
+      // Run-length merge per row: one rect per dark run, not per module —
+      // ~5x fewer PDF objects, identical pixels.
+      let c = 0;
+      while (c < n) {
+        if (!matrix[r][c]) {
+          c += 1;
+          continue;
+        }
+        let run = 1;
+        while (c + run < n && matrix[r][c + run]) run += 1;
+        page.drawRectangle({
+          x: qrX + c * moduleSize,
+          y: qrTop - (r + 1) * moduleSize,
+          width: run * moduleSize,
+          height: moduleSize,
+          color: rgb(0, 0, 0),
+        });
+        c += run;
+      }
+    }
+    // Caption to the left of the QR: what scanning does, and — Hard Rule of
+    // 建議② — what it does NOT prove, stated on the paper itself.
+    const captionW = width - RECEIPT_QR_SIZE_PT - quiet - 24;
+    let cy = qrTop - 10;
+    for (const line of wrap(
+      RECEIPT_QR_CAPTION_LINES[0],
+      (s) => widthOf(s, 9, true),
+      captionW,
+    )) {
+      drawAt(line, margin, cy, 9, { bold: true });
+      cy -= 12;
+    }
+    cy -= 4;
+    for (const line of wrap(
+      RECEIPT_QR_CAPTION_LINES[1],
+      (s) => widthOf(s, 8),
+      captionW,
+    )) {
+      drawAt(line, margin, cy, 8, { color: grey });
+      cy -= 11;
+    }
   }
 
   // ---- Audit line (Hard Rule 8), anchored near the bottom of the page. -----

@@ -55,7 +55,14 @@ import { AIDock, useAIDock } from "./ai-dock";
  *  the legal pages joined — a Terms page inside the app shell, with a sidebar
  *  and a search bar, read like an app screen instead of a document. They keep
  *  their own "back to sign in" link (legal-document.tsx). */
-const BARE_ROUTES = ["/login", "/reset-password", "/terms", "/privacy"];
+const BARE_ROUTES = [
+  "/login",
+  "/reset-password",
+  "/terms",
+  "/privacy",
+  // 87 ①: a donor scanning a receipt QR has no account — no app chrome.
+  "/verify/resit",
+];
 
 function isBareRoute(pathname: string | null): boolean {
   if (!pathname) return false;

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PDFDocument } from "pdf-lib";
+import jsQR from "jsqr";
 import { amountInWordsBm, numberToWordsBm } from "@/lib/receipts";
 import {
   buildReceiptPdf,
@@ -8,6 +9,8 @@ import {
   winAnsiSafe,
   type ReceiptPdfParams,
 } from "@/lib/receipt-pdf";
+import { qrMatrixFromPdf } from "@/lib/qr-in-pdf";
+import { rasterizeQrMatrix } from "@/lib/receipt-qr";
 
 describe("numberToWordsBm", () => {
   it("handles units, teens and tens", () => {
@@ -155,5 +158,39 @@ describe("buildReceiptPdf", () => {
       expect(box.figure).toBe("RM50.00");
       expect(box.words).toContain("Ringgit Malaysia");
     }
+  });
+
+  // Work order 87 ①: the QR must be readable FROM THE BYTES by a real
+  // decoder — extracted with the content-stream interpreter, then handed to
+  // jsQR. A QR that only "was drawn" is not a QR.
+  it("with verifyUrl, prints a QR a real decoder reads back", async () => {
+    const url =
+      "http://localhost:3000/verify/resit?t=eyJvIjoxNSwibiI6Ik1JTi0yMDI2LTAwMDEifQ.c2lnbmF0dXJlLXNpZ25hdHVyZS1zaWduYXR1cmUtc2ln";
+    const bytes = await buildReceiptPdf({ ...baseParams, verifyUrl: url });
+    const matrix = qrMatrixFromPdf(bytes);
+    expect(matrix).not.toBeNull();
+    const { data, width, height } = rasterizeQrMatrix(matrix!);
+    const decoded = jsQR(data, width, height);
+    expect(decoded?.data).toBe(url);
+  });
+
+  // …and on a CJK receipt too (the caption adds Chinese text near the QR).
+  it("QR survives on a CJK receipt", async () => {
+    const url = "http://localhost:3000/verify/resit?t=abc.def";
+    const bytes = await buildReceiptPdf({
+      ...baseParams,
+      donorName: "陈亚九",
+      purpose: "香油钱",
+      verifyUrl: url,
+    });
+    const matrix = qrMatrixFromPdf(bytes);
+    expect(matrix).not.toBeNull();
+    const { data, width, height } = rasterizeQrMatrix(matrix!);
+    expect(jsQR(data, width, height)?.data).toBe(url);
+  });
+
+  it("without verifyUrl there is no QR (old receipts stay old)", async () => {
+    const bytes = await buildReceiptPdf(baseParams);
+    expect(qrMatrixFromPdf(bytes)).toBeNull();
   });
 });
