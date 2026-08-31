@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   BM_GLOSSARY,
   glossaryTermSubstitutions,
+  looksLikeChineseName,
   splitFlaggedLines,
 } from "./bm-glossary";
 import { applyNameSubstitutions } from "./roster-names";
@@ -65,6 +66,15 @@ describe("glossaryTermSubstitutions", () => {
     expect(applied).toContain("Usul");
   });
 
+  it("tells a Malaysian Chinese name from ordinary words", () => {
+    for (const name of ["叶俊成", "何淑仪", "苏明伟", "林志强", "陈秀玲", "黄明", "欧阳志伟"]) {
+      expect(looksLikeChineseName(name), name).toBe(true);
+    }
+    for (const word of ["上届", "没变", "点开始", "感谢大家去年帮忙", "会议室", "银行", "原"]) {
+      expect(looksLikeChineseName(word), word).toBe(false);
+    }
+  });
+
   it("returns nothing for a page with no glossary vocabulary", () => {
     expect(glossaryTermSubstitutions("Mesyuarat bersurai pada 12.30pm")).toEqual([]);
   });
@@ -97,6 +107,18 @@ describe("splitFlaggedLines", () => {
   it("asks the human for the NAMES only, one row each", () => {
     const { nameTokens } = splitFlaggedLines(LINES, subs);
     expect(nameTokens).toEqual(["叶俊成", "何淑仪", "苏明伟"]);
+  });
+
+  // J's third screenshot: 上届, 原, 没变, 感谢大家去年帮忙, 点开始 were all
+  // shown as names wanting an identity-card spelling. None is a person.
+  it("never asks for the identity-card spelling of ordinary words", () => {
+    const prose = ["上届", "原", "没变", "感谢大家去年帮忙", "点开始"];
+    const { nameTokens, proseTokens } = splitFlaggedLines(
+      prose.map((w) => `- ${w}`),
+      [],
+    );
+    expect(nameTokens).toEqual([]);
+    expect(proseTokens).toEqual(["上届", "原", "没变", "感谢大家去年帮忙", "点开始"]);
   });
 
   it("filling a name replaces the NAME, not the sentence it sits in", () => {

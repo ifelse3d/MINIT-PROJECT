@@ -587,6 +587,19 @@ export function MinutesDocument() {
                     />
                   </p>
                 )}
+                {/* Third pass (116 §2): ordinary Chinese that the glossary
+                    does not know is NOT a name. Show it so nothing is hidden,
+                    but never ask for an identity card against a clause — the
+                    BM rewrite below is what finishes these. */}
+                {split.proseTokens.length > 0 && (
+                  <p className="text-sm text-red-900/80 dark:text-red-100/80">
+                    <Tri
+                      bm={`${split.proseTokens.length} lagi ialah perkataan biasa yang tiada dalam senarai (${split.proseTokens.slice(0, 4).join("、")}${split.proseTokens.length > 4 ? "…" : ""}) — butang "biar AI tulis versi BM" di bawah akan menyelesaikannya. Ia bukan nama, jadi tiada apa untuk anda isi.`}
+                      zh={`另外 ${split.proseTokens.length} 个是词汇表里没有的普通词语（${split.proseTokens.slice(0, 4).join("、")}${split.proseTokens.length > 4 ? "…" : ""}）—— 下面「让 AI 译成正式马来文」那颗按钮会处理。它们不是名字，您不用填。`}
+                      en={`Another ${split.proseTokens.length} are ordinary words the table does not know (${split.proseTokens.slice(0, 4).join(", ")}${split.proseTokens.length > 4 ? "…" : ""}) — the "let the AI write the BM version" button below finishes those. They are not names, so there is nothing for you to fill in.`}
+                    />
+                  </p>
+                )}
                 {/* ⑦(c): line → what stands in — the in-place mapping table. */}
                 <div
                   className="flex max-h-72 flex-col gap-2 overflow-y-auto"

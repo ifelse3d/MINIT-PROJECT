@@ -114,27 +114,70 @@ export function glossaryTermSubstitutions(
 /** A CJK run — the unit a human actually supplies a spelling for. */
 const CJK_RUN = /[㐀-䶿一-鿿]+/g;
 
+// ---------------------------------------------------------------------------
+// Third pass (116 §2, J 8/31): a glossary cannot decide what is a name.
+// The second pass treated "not in the table" as "must be a name", so J was
+// asked for the identity-card spelling of 上届, 原, 没变, 点开始 and
+// 感谢大家去年帮忙 — a clause, not a person. Chinese prose cannot be
+// enumerated; Chinese SURNAMES can. So the question is turned round: instead
+// of asking what is ordinary, ask what looks like a person.
+//
+// A Malaysian Chinese personal name is two to four characters opening with one
+// of a closed set of surnames. 叶俊成, 何淑仪, 苏明伟, 林志强 pass; 上届,
+// 没变, 点开始 fail on the surname; 感谢大家去年帮忙 fails on length.
+// A miss sends the run to the BM rewrite, which is itself forbidden from
+// translating names (draft-minutes.ts) — so a missed name is not a lost name.
+// ---------------------------------------------------------------------------
+
+/** Surnames common among Malaysian Chinese. */
+const SURNAMES = new Set(
+  (
+    "陈林黄李王张吴刘蔡杨许郑谢洪郭曾廖赖徐周叶苏何高罗萧潘朱简钟游詹邱余卢梁" +
+    "宋邓杜傅程汤马沈石魏温江侯柯彭田韩尤白姚方翁孔严董袁邹熊唐冯于薛雷贺倪" +
+    "汪任姜范谭金陆郝崔康毛秦史顾邵孟龙万段钱尹黎易常武乔赵龚文庄戴巫官辜纪童" +
+    "陳林黃張劉蔡楊許鄭謝郭曾廖賴徐葉蘇羅蕭鍾詹盧梁鄧傅湯馬瀋魏溫江侯柯彭韓"
+  ).split(""),
+);
+
+const COMPOUND_SURNAMES = ["欧阳", "歐陽", "司徒", "诸葛", "諸葛", "尉迟", "尉遲"];
+
+/**
+ * Does this run of Chinese read as a person's name rather than ordinary words?
+ * Two to four characters, opening on a surname.
+ */
+export function looksLikeChineseName(run: string): boolean {
+  const s = run.trim();
+  if (s.length < 2 || s.length > 4) return false;
+  if (s.length >= 3 && COMPOUND_SURNAMES.includes(s.slice(0, 2))) return true;
+  return SURNAMES.has(s[0]);
+}
+
 export type FlaggedSplit = {
   /** Lines whose Chinese the glossary covers completely — the button's job. */
   termOnly: string[];
-  /** Lines that still hold Chinese the glossary does not know. */
+  /** Lines that still hold Chinese after the glossary has run. */
   linesNeedingNames: string[];
   /**
-   * The distinct Chinese runs still standing in those lines — one row each in
-   * the mapping table. §2 (work order 116, second pass): the table used to key
-   * on the whole LINE, so typing an IC name against
+   * The Chinese runs that read as PEOPLE — one row each in the mapping table.
+   * Keyed on the RUN, not the line: the table used to key on the whole line,
+   * so typing an IC name against
    * "…dicadangkan oleh 叶俊成 dan disokong oleh 何淑仪." replaced THE WHOLE
-   * SENTENCE with that name. Keyed on the run, the sentence survives and only
-   * the name is swapped — and the roster pre-fill starts matching, which it
-   * never could against a whole line.
+   * SENTENCE with that name. Per run, the sentence survives, only the name is
+   * swapped, and the roster pre-fill starts matching — it never could match a
+   * roster name against a whole line.
    */
   nameTokens: string[];
+  /**
+   * The Chinese runs that read as ORDINARY TEXT. Nobody should be asked for
+   * the identity-card spelling of a clause, so these are listed for the reader
+   * to see but never given an input — they are the BM rewrite's job.
+   */
+  proseTokens: string[];
 };
 
 /**
- * Split what the BM guard flagged into "the glossary can finish this line" and
- * "a human must spell this out". Conservative on purpose: a line keeps its
- * human row unless EVERY Chinese run in it is gone once the glossary has run.
+ * Split what the BM guard flagged into three: lines the glossary finishes,
+ * names only a person can spell, and ordinary text the BM rewrite handles.
  */
 export function splitFlaggedLines(
   lines: readonly string[],
@@ -145,6 +188,7 @@ export function splitFlaggedLines(
   const termOnly: string[] = [];
   const linesNeedingNames: string[] = [];
   const nameTokens: string[] = [];
+  const proseTokens: string[] = [];
   const seen = new Set<string>();
   for (const line of lines) {
     let after = line;
@@ -162,8 +206,8 @@ export function splitFlaggedLines(
     for (const r of runs) {
       if (seen.has(r)) continue;
       seen.add(r);
-      nameTokens.push(r);
+      (looksLikeChineseName(r) ? nameTokens : proseTokens).push(r);
     }
   }
-  return { termOnly, linesNeedingNames, nameTokens };
+  return { termOnly, linesNeedingNames, nameTokens, proseTokens };
 }
