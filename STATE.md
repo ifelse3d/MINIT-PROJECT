@@ -2342,3 +2342,18 @@ J 手贴 migration 的步骤：记事本开档 → `Ctrl+A` `Ctrl+C` → Supabas
 3. **不要新增 `YYYY-MM-DD-下一个session从这里开始.md`**
 4. 完整过程报告值得留就放 `docs/archive/`，这里留一行指路
 5. **写「现在是什么」，不要写「上一版写错了，其实是什么」。** 同一件事只留一个说法。
+
+## 116 場（2026-08-31 深夜）——兩件擋路的事
+
+- **多場會議偵測整個拿掉**（`other_meetings` 從 prompt/schema/merge/versions/ask-box
+  全部移除）。它在 J 的兩張真件上兩戰兩敗，誤判的都是「決議裡的未來日期」
+  （18/7/26 的 AGM、17/10/2026 的慈善晚宴），每次誤判都丟掉一條決議。
+  取捨已由 J 拍板：真的兩場寫在一張紙上會讀成一份，人在 step 3 看得到改得動。
+- **BM 語言關新增 `src/lib/bm-glossary.ts`**：標準社團／會計用語對照表，
+  免費按鈕一次填好普通詞語。**表裡沒有名字 ⇒ 結構上碰不到人名**；
+  比對前先把名冊名字／機構註冊名／簽名人挖空。
+- 🔴 **陷阱：eval 的 `case-04-minutes-mixed` 會飄。** 本場兩次跑：
+  第一次 117/126 invented 1（那筆金額被同時寫進 resolutions），
+  第二次 117/125 invented 0（＝基準）。看到 case-04 的 invented 先重跑一次再查。
+- 🔴 **108 號單仍未執行**：`Teh Kim Hoo ditugaskan untuk melantik...`
+  （draft-minutes 的三選一標籤逼模型編出施事者）still live。
