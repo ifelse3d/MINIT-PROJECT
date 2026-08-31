@@ -8,8 +8,8 @@ import { dayIsoMalaysia } from "@/lib/history";
 import { computeStandardDeadlines } from "@/lib/standard-deadlines";
 import { readOrgTypeFlags } from "@/lib/org-flags";
 import { getLatestConfirmedAgm } from "@/db/agm";
-import { HomeUpcoming } from "./home-upcoming";
 import { UpcomingBell } from "./upcoming-bell";
+import { WorkbenchColumns } from "./workbench-columns";
 import { HowItWorksButton } from "./how-it-works";
 
 import { AskBox } from "./ask-box";
@@ -123,23 +123,25 @@ export default async function Home() {
           is the main column's lowest point — no scrolling past cards to type. */}
       {/* C-11 (work order 51): the walkthrough entry sits beside the box's
           own heading — it explains exactly the flow the box starts. */}
-      <div className="flex flex-col gap-8 @4xl:grid @4xl:grid-cols-[minmax(0,1fr)_21rem] @4xl:items-start @4xl:gap-6">
-        <AskBox
-          hasOrg
-          initialRemaining={usage?.totalRemaining ?? null}
-          initialUsedPct={usage?.usedPct ?? null}
-          // §5 (104): the SAME denominator every other percentage uses —
-          // month's allowance plus any top-up (usage-core's quotaPool).
-          monthlyQuota={usage?.quotaPool ?? null}
-          unfinishedDrafts={unfinishedDrafts}
-          howItWorks={<HowItWorksButton variant="link" />}
-        />
-
-        {/* what is due (this org's own deadlines, never invented ones) */}
-        <div className="hidden @4xl:block">
-          <HomeUpcoming deadlines={deadlines} todayIso={todayIso} />
-        </div>
-      </div>
+      {/* §9 (104, J: 「home 的 upcoming 做成可以收起來，然後 CHAT 的空間要大」):
+          the two columns, with the right one foldable. Folded leaves a "⏰ N"
+          chip that puts it back, and the choice is remembered on the device. */}
+      <WorkbenchColumns
+        deadlines={deadlines}
+        todayIso={todayIso}
+        workbench={
+          <AskBox
+            hasOrg
+            initialRemaining={usage?.totalRemaining ?? null}
+            initialUsedPct={usage?.usedPct ?? null}
+            // §5 (104): the SAME denominator every other percentage uses —
+            // month's allowance plus any top-up (usage-core's quotaPool).
+            monthlyQuota={usage?.quotaPool ?? null}
+            unfinishedDrafts={unfinishedDrafts}
+            howItWorks={<HowItWorksButton variant="link" />}
+          />
+        }
+      />
     </div>
   );
 }

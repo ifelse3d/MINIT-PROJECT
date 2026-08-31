@@ -1285,18 +1285,31 @@ export function AskBox({
           }}
         />
 
-        {/* §0-3 (work order 102): the staged-file strip and the ask-back
-            cards moved DOWN beside the composer — the paperclip that stages
-            them lives there now. */}
-
-        {/* §0-3 (work order 102, J's ruling): the conversation scrolls in
-            its OWN region — the composer below is never pushed off screen by
-            a long conversation. overscroll-contain keeps a phone from
-            rubber-banding the page while flicking the transcript. */}
-        {(turns.length > 0 || steps.length > 0) && (
+        {/* 🔴 §8 (work order 104), J: 「爲什麽 chatbox 還是會被推到下面？」
+            THE ROOT CAUSE, and it was not the conversation. 102 put the
+            TRANSCRIPT in this scrolling region and left the four ask-back
+            cards outside it — the staged-file strip, "what kind of page is
+            this?", the constitution price gate, and "this paper has several
+            meetings on it". Every one of those appears at exactly the moment
+            somebody is working, and every one of them pushed the composer
+            further down the page. They are all inside now, on the same
+            scrollbar as the conversation, so nothing that appears can make
+            the box move. overscroll-contain keeps a phone from rubber-banding
+            the page while flicking the transcript. */}
+        {(turns.length > 0 ||
+          steps.length > 0 ||
+          staged.length > 0 ||
+          askKind !== null ||
+          constitutionGate !== null ||
+          meetingChoice !== null) && (
           <div
             ref={convRegionRef}
-            className="v2-scroll flex max-h-[55dvh] flex-col gap-3 overflow-y-auto overscroll-contain"
+            data-probe="conversation-region"
+            // 🔴 h-, not max-h-. A region that GROWS with its content still
+            // moves the composer every time a card appears — smaller than
+            // before, but the same bug. A fixed pane means the box below it
+            // is in the same place at the first card and at the tenth.
+            className="v2-scroll flex h-[46dvh] flex-col gap-3 overflow-y-auto overscroll-contain"
           >
 
         {/* §3: the agent's work, visible while it happens — each step lights
@@ -1536,15 +1549,6 @@ export function AskBox({
         )}
 
         {/* §0-3: the newest answer scrolls into view INSIDE the region. */}
-        <div ref={flowEndRef} aria-hidden />
-          </div>
-        )}
-
-        {error && (
-          <p className="rounded-md border-2 border-red-300 bg-red-50 p-4 text-base font-medium whitespace-pre-line text-red-900 dark:bg-red-400/10 dark:text-red-100">
-            {localizeError(error)}
-          </p>
-        )}
 
         {/* A-2: the staged files, visible and removable BEFORE anything is
             sent or charged. A-5: several photos stage together, each with a
@@ -1552,7 +1556,10 @@ export function AskBox({
             §0-3 (102): the strip sits BESIDE the composer now — the paperclip
             that stages a file is one finger-width away. */}
         {staged.length > 0 && (
-          <div className="flex flex-col gap-3 rounded-md border-2 border-[#a855f7]/40 bg-white/70 p-3 dark:bg-white/10">
+          <div
+            data-probe="askback-card"
+            className="flex flex-col gap-3 rounded-md border-2 border-[#a855f7]/40 bg-white/70 p-3 dark:bg-white/10"
+          >
             <div className="flex flex-wrap gap-3">
               {staged.map((s, i) => (
                 <div
@@ -1647,7 +1654,10 @@ export function AskBox({
         {/* MinitAI could not place the page → it asks, with one-tap answers.
             Only the read is charged after the person answers. */}
         {askKind && staged.length > 0 && (
-          <div className="flex flex-col gap-3 rounded-md border-2 border-[color:var(--v2-border)] bg-white/80 p-4 dark:bg-white/10">
+          <div
+            data-probe="askback-card"
+            className="flex flex-col gap-3 rounded-md border-2 border-[color:var(--v2-border)] bg-white/80 p-4 dark:bg-white/10"
+          >
             <p className="text-lg">
               🤔{" "}
               <Tri
@@ -1718,7 +1728,10 @@ export function AskBox({
             say what reading it will cost and take, and read only on the
             person's own tap. Informative, not a wall: one button starts it. */}
         {constitutionGate && staged.length > 0 && (
-          <div className="flex flex-col gap-3 rounded-md border-2 border-[color:var(--v2-border)] bg-white/80 p-4 dark:bg-white/10">
+          <div
+            data-probe="askback-card"
+            className="flex flex-col gap-3 rounded-md border-2 border-[color:var(--v2-border)] bg-white/80 p-4 dark:bg-white/10"
+          >
             <p className="text-lg">
               📜{" "}
               <Tri
@@ -1759,7 +1772,11 @@ export function AskBox({
             stops and asks which one (真件 A). The paid roads carry their
             price on the button; the free road uses what was already read. */}
         {meetingChoice && staged.length > 0 && (
-          <div className="flex flex-col gap-3 rounded-md border-2 border-[color:var(--v2-primary)]/40 bg-white/80 p-4 dark:bg-white/10">
+          <div
+            data-probe="askback-card"
+            data-card="meeting-choice"
+            className="flex flex-col gap-3 rounded-md border-2 border-[color:var(--v2-primary)]/40 bg-white/80 p-4 dark:bg-white/10"
+          >
             <p className="text-lg font-medium">
               📅{" "}
               <Tri
@@ -1831,12 +1848,45 @@ export function AskBox({
             </div>
           </div>
         )}
+        <div ref={flowEndRef} aria-hidden />
+          </div>
+        )}
+
+        {error && (
+          <p className="rounded-md border-2 border-red-300 bg-red-50 p-4 text-base font-medium whitespace-pre-line text-red-900 dark:bg-red-400/10 dark:text-red-100">
+            {localizeError(error)}
+          </p>
+        )}
+
 
         {/* Type a question — or type context for the staged file. Enter sends;
             Shift+Enter makes a new line. One Send button for both paths (A-2):
             with a file staged it sends the file (plus the typed words as hints
             for the reader); without one it asks the assistant. §0-3 (102): the
-            paperclip lives IN the composer, Claude-style. */}
+            paperclip lives IN the composer, Claude-style.
+
+            🔴 §8 (104): IT STAYS PUT. J: 「輸入框永遠在同一個位置，不用捲頁
+            去找」.
+
+            The way it stays put is the PANE ABOVE IT being a fixed size, not
+            this bar floating over the page. Both were tried; floating loses.
+            A `position: sticky` bar can only travel inside its own parent,
+            and there is nothing below the composer for it to travel through —
+            so on a phone it simply did not stick, and on a desktop it MOVED
+            (measured: top 483 → 724) at the moment the page became long
+            enough to scroll. Worse, a floating bar has to be told the height
+            of the phone tab bar to avoid hiding behind it. A fixed pane plus a
+            bar underneath it needs none of that and cannot drift.
+
+            The negative margins let the bar's background reach the card's own
+            edges, so it reads as the floor of the conversation. */}
+        <div
+          data-probe="composer"
+          // scroll-mb-24: when a phone browser scrolls the focused box into
+          // view it aligns to the WINDOW's bottom, which the app's own fixed
+          // tab bar then covers — the Send button would sit behind the
+          // navigation. The scroll margin reserves the bar's height.
+          className="-mx-4 flex scroll-mb-24 flex-col gap-2 border-t-2 border-[color:var(--v2-border)] px-4 pb-1 pt-3 sm:-mx-6 sm:px-6">
         <form
           className="flex flex-col gap-3 sm:flex-row sm:items-end"
           onSubmit={(e) => {
@@ -1951,12 +2001,14 @@ export function AskBox({
         {/* §0-5 (work order 100): the standing three-language "AI can be
             wrong" line, Anthropic-style, right under the input. §0-3 (102):
             the size-limit line rides beside it whenever the hero (which
-            carries its own) is off screen. */}
+            carries its own) is off screen. §8 (104): inside the pinned block
+            — the disclaimer belongs to the box it is about. */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
           <AiMistakesNote />
           {!(turns.length === 0 && staged.length === 0 && busy === null && hasOrg) && (
             <UploadLimitNote office />
           )}
+        </div>
         </div>
 
         {turns.length === 0 && hasOrg && (
