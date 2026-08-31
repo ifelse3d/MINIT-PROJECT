@@ -32,7 +32,13 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ArrowRight, ArrowUp, CircleHelp, RotateCcw, Sparkles, X } from "lucide-react";
-import { Tri, useTriText } from "@/components/language-provider";
+import {
+  Tri,
+  isLangMode,
+  useLangs,
+  useLocalizedError,
+  useTriText,
+} from "@/components/language-provider";
 import { GlassBadge } from "./surfaces";
 import { AnswerSources, type AnswerSource } from "./answer-sources";
 import { Modal } from "@/components/modal";
@@ -40,8 +46,11 @@ import { ConfirmedAction } from "@/components/confirm-delete";
 import { AiMistakesNote } from "@/components/ai-disclaimer";
 import {
   AgentChangeCard,
+  UiChangeCard,
   type AgentChangeInfo,
+  type AgentUiChangeInfo,
 } from "@/components/agent-change-card";
+import { writeIntake } from "@/lib/intake-handoff";
 import { tidyReply } from "@/lib/tidy-reply";
 import { ASSISTANT_NAME } from "@/lib/brand";
 import {
@@ -67,6 +76,8 @@ type Turn = {
   free?: boolean;
   /** §0-4 (work order 100): record changes the agent made this turn. */
   changes?: AgentChangeInfo[];
+  /** §0-2a (work order 102): device-side changes (language) — old → new + undo. */
+  uiChanges?: AgentUiChangeInfo[];
 };
 
 /** Shape guard for a stored transcript (usePersistentState contract). */
@@ -95,6 +106,11 @@ type ChatOk = {
   lookups: string[] | null;
   /** §0-4: record changes the agent made this turn. */
   changes?: AgentChangeInfo[] | null;
+  /** §0-2a: device-side changes for this browser to apply (language). */
+  uiChanges?: AgentUiChangeInfo[] | null;
+  /** §0-2c: the person dictated a meeting — run the account through the
+   *  extraction pipeline now. */
+  dictate?: boolean;
   remaining: number | null;
   /** Share of the monthly free quota spent, 0–100 (2026-08-22). */
   usedPct: number | null;
@@ -128,8 +144,11 @@ export function AIPanel({
   onClose?: () => void;
 }) {
   const t = useTriText();
+  const localizeError = useLocalizedError();
   const router = useRouter();
   const pathname = usePathname();
+  // §0-2a: the agent can switch the interface language (device preference).
+  const { setMode } = useLangs();
   // D49: prepared e-Invois answers and their chip follow the beta gate.
   const [einvoisVisible] = useEinvoisVisible();
   const [question, setQuestion] = useState("");
@@ -224,6 +243,14 @@ export function AIPanel({
         setTurns((prev) => prev.slice(0, -1));
         return;
       }
+      // §0-2a: apply device-side changes as the answer lands — the interface
+      // switches NOW, and the card shows old → new with an undo.
+      const uiChanges = (body.uiChanges ?? []).filter(
+        (c) => c.kind === "language" && isLangMode(c.to),
+      );
+      for (const c of uiChanges) {
+        if (isLangMode(c.to)) setMode(c.to);
+      }
       setTurns((prev) => [
         ...prev,
         {
@@ -233,8 +260,19 @@ export function AIPanel({
           sources: body.sources ?? null,
           lookups: body.lookups ?? null,
           changes: body.changes && body.changes.length > 0 ? body.changes : undefined,
+          uiChanges: uiChanges.length > 0 ? uiChanges : undefined,
         },
       ]);
+      // §0-2c: the reply said "drafting it now" — run the person's own words
+      // through the dictation road. The panel has no product cards, so the
+      // finished draft arrives as a button to the page that shows it.
+      if (body.dictate) {
+        const story = [
+          ...history.filter((x) => x.role === "user").map((x) => x.text),
+          q,
+        ].join("\n");
+        void runDictation(story);
+      }
       if (typeof body.remaining === "number") setRemaining(body.remaining);
       if (typeof body.usedPct === "number") setUsedPct(body.usedPct);
       setTurnsLeft(Math.max(0, body.maxTurns - body.turnsUsed));
@@ -253,6 +291,76 @@ export function AIPanel({
       );
     } finally {
       if (seq === askSeq.current) setBusy(false);
+    }
+  }
+
+  /**
+   * §0-2c: the dictated-meeting road, panel edition. Same /api/intake
+   * dictation branch as the workbench; the draft is handed to the Minutes
+   * page through the one-shot courier and announced with a button — the
+   * panel has no product cards. First await yields one macrotask so ask()'s
+   * cleanup lands before this takes the busy flag over.
+   */
+  async function runDictation(story: string) {
+    await new Promise((r) => setTimeout(r, 0));
+    setBusy(true);
+    try {
+      const form = new FormData();
+      form.append("dictatedText", story);
+      const res = await fetch("/api/intake", { method: "POST", body: form });
+      const body = (await res.json().catch(() => null)) as {
+        page?: string;
+        fileName?: string;
+        extraction?: unknown;
+        error?: string;
+      } | null;
+      if (!res.ok || !body?.page || !body.extraction) {
+        setError(
+          body?.error ??
+            t(
+              "MinitAI tidak dapat menyusun cerita itu menjadi minit. Cuba sekali lagi.",
+              "MinitAI 没能把这段话整理成会议记录。请再试一次。",
+              "MinitAI could not turn that account into minutes. Please try again.",
+            ),
+        );
+        return;
+      }
+      // The paid-for draft is waiting on the Minutes page (30-min courier).
+      writeIntake({
+        kind: "meeting_notes",
+        fileName: body.fileName ?? "lisan",
+        extraction: body.extraction,
+        storagePath: null,
+        photoDataUrl: null,
+      });
+      setTurns((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          text: t(
+            "Siap — draf minit sudah disediakan daripada cerita anda. Buka dan semak; apa-apa nak ubah, beritahu saya di sana. Guna 1 tindakan AI.",
+            "做好了 —— 已经把您讲的内容整理成会议记录草稿。点开核对；要改哪里，进去后直接跟我说。这次用了 1 个 AI 动作。",
+            "Done — the minutes draft is ready from your account. Open it and check; tell me there if anything needs changing. Used 1 AI action.",
+          ),
+          button: {
+            href: "/minutes?dari=ai",
+            bm: "Buka draf minit",
+            zh: "打开会议草稿",
+            en: "Open the draft",
+          },
+        },
+      ]);
+      router.refresh();
+    } catch {
+      setError(
+        t(
+          "Sambungan internet terputus. Cuba sekali lagi.",
+          "网络断了。请再试一次。",
+          "The internet connection dropped. Please try again.",
+        ),
+      );
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -521,6 +629,27 @@ export function AIPanel({
                   }
                 />
               ))}
+              {/* §0-2a: device-side changes (language) — old → new + undo. */}
+              {turn.uiChanges?.map((c, j) => (
+                <UiChangeCard
+                  key={`ui-${j}`}
+                  change={c}
+                  onUndone={() =>
+                    setTurns((prev) =>
+                      prev.map((x, xi) =>
+                        xi === i
+                          ? {
+                              ...x,
+                              uiChanges: x.uiChanges?.map((y, yj) =>
+                                yj === j ? { ...y, undone: true } : y,
+                              ),
+                            }
+                          : x,
+                      ),
+                    )
+                  }
+                />
+              ))}
             </div>
           ),
         )}
@@ -532,18 +661,29 @@ export function AIPanel({
         )}
 
         {isBlocked && (
-          <p className="rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900 dark:bg-red-400/10 dark:text-red-100">
+          <div className="rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900 dark:bg-red-400/10 dark:text-red-100">
             <Tri
               bm="Bantuan AI untuk bulan ini sudah habis. Ia bermula semula pada 1 hari bulan depan — rekod dan dokumen anda masih boleh dibuka seperti biasa."
               zh="这个月的 AI 用量已经用完了。下个月 1 号会重新开始 —— 您的记录和文件都还能照常打开。"
               en="This month's AI help is used up. It starts again on the 1st of next month — your records and documents still open as normal."
-            />
-          </p>
+            />{" "}
+            {/* §0-7: a used-up meter needs a door, not just a date. */}
+            <Link
+              href="/settings/plan"
+              onClick={() => onNavigate?.()}
+              className="underline underline-offset-4"
+            >
+              <Tri bm="Lihat pelan" zh="看方案" en="See the plans" /> →
+            </Link>
+          </div>
         )}
 
         {error && !isBlocked && (
           <p className="rounded-md border-2 border-red-300 bg-red-50 p-3 text-base whitespace-pre-line text-red-900 dark:bg-red-400/10 dark:text-red-100">
-            {error}
+            {/* §0-7 (work order 102, J's live catch): server errors arrive as
+                the three-line bm/zh/en block — printing it raw stacked Malay
+                on English in one red box. One language, the person's own. */}
+            {localizeError(error)}
           </p>
         )}
 

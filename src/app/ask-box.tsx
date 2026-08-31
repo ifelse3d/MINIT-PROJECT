@@ -41,8 +41,11 @@ import {
 import { AiMistakesNote } from "@/components/ai-disclaimer";
 import {
   AgentChangeCard,
+  UiChangeCard,
   type AgentChangeInfo,
+  type AgentUiChangeInfo,
 } from "@/components/agent-change-card";
+import { isLangMode, useLangs } from "@/components/language-provider";
 import { ConfirmedAction } from "@/components/confirm-delete";
 import {
   matchPreparedAnswer,
@@ -124,6 +127,8 @@ type Turn = {
   products?: ProductParcel[];
   /** §0-4: record changes the agent made this turn — old → new + undo. */
   changes?: AgentChangeInfo[];
+  /** §0-2a: device-side changes this turn made (language) — old → new + undo. */
+  uiChanges?: AgentUiChangeInfo[];
 };
 
 /** One visible step of the agent's work (§3 — wow 的來源: 邊做邊亮步驟). */
@@ -139,6 +144,11 @@ type ChatOk = {
   lookups: string[] | null;
   /** §0-4: record changes the agent made this turn. */
   changes?: AgentChangeInfo[] | null;
+  /** §0-2a: device-side changes for this browser to apply (language). */
+  uiChanges?: AgentUiChangeInfo[] | null;
+  /** §0-2c: the person dictated a meeting — run the spoken account through
+   *  the extraction pipeline now. */
+  dictate?: boolean;
   remaining: number | null;
   /** Share of the monthly free quota spent, 0–100 (2026-08-22). */
   usedPct: number | null;
@@ -285,6 +295,8 @@ export function AskBox({
   const t = useTriText();
   const localizeError = useLocalizedError();
   const router = useRouter();
+  // §0-2a: the agent can switch the interface language (device preference).
+  const { setMode } = useLangs();
   // D49: the prepared e-Invois answers and their chip follow the beta gate —
   // behind it, those questions go to the model like any other (the pages the
   // prepared buttons point at 404 for non-operators).
@@ -450,6 +462,14 @@ export function AskBox({
         setTurns((prev) => prev.slice(0, -1));
         return;
       }
+      // §0-2a: apply device-side changes as the answer lands — the interface
+      // switches NOW, and the card below shows old → new with an undo.
+      const uiChanges = (body.uiChanges ?? []).filter(
+        (c) => c.kind === "language" && isLangMode(c.to),
+      );
+      for (const c of uiChanges) {
+        if (isLangMode(c.to)) setMode(c.to);
+      }
       setTurns((prev) => [
         ...prev,
         {
@@ -459,8 +479,19 @@ export function AskBox({
           sources: body.sources ?? null,
           lookups: body.lookups ?? null,
           changes: body.changes && body.changes.length > 0 ? body.changes : undefined,
+          uiChanges: uiChanges.length > 0 ? uiChanges : undefined,
         },
       ]);
+      // §0-2c: the reply said "drafting it now" — run the spoken account
+      // through the real pipeline. The story is every USER turn (the agent's
+      // own words must never become source material — Hard Rule 1).
+      if (body.dictate) {
+        const story = [
+          ...history.filter((x) => x.role === "user").map((x) => x.text),
+          q,
+        ].join("\n");
+        void runDictation(story);
+      }
       if (typeof body.remaining === "number") setRemaining(body.remaining);
       if (typeof body.usedPct === "number") setUsedPct(body.usedPct);
       setTurnsLeft(Math.max(0, body.maxTurns - body.turnsUsed));
@@ -1027,6 +1058,78 @@ export function AskBox({
     setMeetingChoice(null);
   }
 
+  /**
+   * §0-2c: the dictated-meeting road. The chat model said "drafting it now";
+   * this sends the person's own words (never the assistant's) through
+   * /api/intake's dictation branch — one extract_minutes action — and lays
+   * the result out exactly like a photographed page: steps, product card,
+   * self-report. The first await yields one macrotask so send()'s own
+   * cleanup (setBusy(null)) lands before this takes the busy flag over.
+   */
+  async function runDictation(story: string) {
+    await new Promise((r) => setTimeout(r, 0));
+    setSteps([]);
+    setBusy("file");
+    pushStep(
+      t(
+        "Susun cerita anda menjadi minit mesyuarat…",
+        "把您讲的内容整理成会议记录…",
+        "Turning your account into meeting minutes…",
+      ),
+    );
+    try {
+      const form = new FormData();
+      form.append("dictatedText", story);
+      const res = await fetch("/api/intake", { method: "POST", body: form });
+      let body: IntakeOk;
+      try {
+        body = (await res.json()) as IntakeOk;
+      } catch {
+        closeSteps(false);
+        setError(
+          t(
+            "Pelayan tidak membalas semasa menyusun minit itu. Ini bukan salah anda. Tunggu seminit, lihat baki kuota AI anda, kemudian cuba sekali lagi.",
+            "整理会议记录的时候，伺服器没有回应。这不是您的问题。请等一分钟，看一下 AI 用量的余额，再试一次。",
+            "The server did not reply while preparing those minutes. This is not your fault. Wait a minute, check your remaining AI quota, then try again.",
+          ),
+        );
+        return;
+      }
+      if (!res.ok || !body.page || !body.extraction) {
+        closeSteps(false);
+        setError(
+          body.error ??
+            t(
+              "MinitAI tidak dapat menyusun cerita itu menjadi minit. Cuba sekali lagi.",
+              "MinitAI 没能把这段话整理成会议记录。请再试一次。",
+              "MinitAI could not turn that account into minutes. Please try again.",
+            ),
+        );
+        return;
+      }
+      deliverProducts({
+        kind: "meeting_notes",
+        page: body.page,
+        merged: body.extraction,
+        label: body.fileName ?? "lisan",
+        pages: [],
+        actionsUsed: 1,
+      });
+    } catch {
+      closeSteps(false);
+      setError(
+        t(
+          "Sambungan internet terputus. Cuba sekali lagi.",
+          "网络断了。请再试一次。",
+          "The internet connection dropped. Please try again.",
+        ),
+      );
+    } finally {
+      setBusy(null);
+      setReading(null);
+    }
+  }
+
   return (
     <section
       className={`v2-glass-strong rounded-md border-2 p-4 transition-colors sm:p-6 ${
@@ -1560,6 +1663,27 @@ export function AskBox({
                               ? {
                                   ...x,
                                   changes: x.changes?.map((y, yj) =>
+                                    yj === j ? { ...y, undone: true } : y,
+                                  ),
+                                }
+                              : x,
+                          ),
+                        )
+                      }
+                    />
+                  ))}
+                  {/* §0-2a: device-side changes (language) — old → new + undo. */}
+                  {turn.uiChanges?.map((c, j) => (
+                    <UiChangeCard
+                      key={`ui-${j}`}
+                      change={c}
+                      onUndone={() =>
+                        setTurns((prev) =>
+                          prev.map((x, xi) =>
+                            xi === i
+                              ? {
+                                  ...x,
+                                  uiChanges: x.uiChanges?.map((y, yj) =>
                                     yj === j ? { ...y, undone: true } : y,
                                   ),
                                 }

@@ -113,6 +113,20 @@ export async function POST(req: Request) {
     // unrefunded, unlogged — the signature of a function killed mid-flight.
     const deadlineAt = Date.now() + ROUTE_AI_DEADLINE_MS;
     const form = await req.formData();
+
+    // §0-2c (work order 102): A DICTATED MEETING — no file at all. The person
+    // TOLD the assistant what happened ("我跟你说我们刚刚开会的，你帮我做好")
+    // and the conversation text is the document. It runs through the SAME
+    // meeting-notes prompt and validation as a photographed page; the account
+    // rides as a labelled untrusted block, so the prompt file itself is not
+    // touched (the eval baseline stands). Charged as ONE extract_minutes; no
+    // fence pages — the fence counts paper the AI read, and typed/spoken words
+    // have never counted (same family as pasted text in the money area).
+    const dictatedText = String(form.get("dictatedText") ?? "").trim().slice(0, 8000);
+    if (dictatedText !== "") {
+      return handleDictated(dictatedText, deadlineAt);
+    }
+
     const posted = form.get("file");
     let file: File;
     let viaRelay = false;
@@ -640,4 +654,109 @@ ${issues}`,
       { status: 500 },
     );
   }
+}
+
+/**
+ * §0-2c: the dictated-meeting road. One extract_minutes action, the same
+ * prompt/validation/refund rules as a photographed page, zero fence pages.
+ * Self-contained on purpose: the file road above assumes a File end to end,
+ * and threading `file: null` through it would touch every line of a path
+ * three e2e contracts pin.
+ */
+async function handleDictated(dictatedText: string, deadlineAt: number) {
+  const gate = await requireAiQuota(["extract_minutes"], { cap: "upload" });
+  if (!gate.ok) {
+    return NextResponse.json(gate.body, { status: gate.status });
+  }
+  const extractCharge = gate.charges[0];
+  const onExtractUsage = createUsageRecorder(gate.org.id, extractCharge);
+  const orgName = gate.org.name;
+  const todayIso = dayIsoMalaysia(new Date().toISOString())!;
+  const provider = getVisionProvider("extract");
+
+  const glossaryBlock = glossaryPromptBlockForReading(await loadGlossary(gate.org.id));
+  // The account rides AFTER the prompt as labelled untrusted data — exactly
+  // like converted Office text — so the prompt file (and its eval baseline)
+  // is not touched. Hard Rule 1 applies unchanged: a date or a name the
+  // person never said stays honestly missing.
+  const prompt =
+    extractMeetingNotesPrompt({ orgName, todayIso, glossaryBlock, contextBlock: "" }) +
+    `\n\n${untrustedBlock(
+      "WHAT THE PERSON TOLD MINIT IN CONVERSATION (a spoken account of the meeting, typed into chat — there is no photo; read this account as the page itself. It is informal speech: events and decisions may be told out of order, and most formal fields will be missing — mark them missing, never fill them in)",
+      dictatedText,
+    )}`;
+
+  let raw: unknown;
+  try {
+    raw = await provider.extractJson({
+      prompt,
+      maxOutputTokens: EXTRACT_OUTPUT_CEILING.minutes,
+      onUsage: onExtractUsage,
+      deadlineAt,
+      timeoutMs: EXTRACT_ATTEMPT_TIMEOUT_MS,
+    });
+  } catch (e) {
+    await refundUsage(gate.org.id, extractCharge);
+    return vendorFailureResponse("/api/intake", e, gate.org.id);
+  }
+
+  let parsed = parseMeetingNotesExtraction(raw);
+  if (!parsed.success) {
+    // Rule 7: retry ONCE with the validation errors appended, not charged again.
+    const issues = parsed.error.issues
+      .slice(0, 10)
+      .map((i) => `${i.path.join(".")}: ${i.message}`)
+      .join("\n");
+    try {
+      raw = await provider.extractJson({
+        prompt: `${prompt}
+
+YOUR PREVIOUS ATTEMPT FAILED VALIDATION with these errors — fix them and respond with ONLY the corrected JSON:
+${issues}`,
+        maxOutputTokens: EXTRACT_OUTPUT_CEILING.minutes,
+        onUsage: onExtractUsage,
+        deadlineAt,
+        timeoutMs: EXTRACT_ATTEMPT_TIMEOUT_MS,
+      });
+      parsed = parseMeetingNotesExtraction(raw);
+    } catch (e) {
+      if (e instanceof VendorTimeoutError || e instanceof VendorOutputTruncatedError) {
+        await refundUsage(gate.org.id, extractCharge);
+        return vendorFailureResponse("/api/intake", e, gate.org.id);
+      }
+      void captureAppError("/api/intake", e, { orgId: gate.org.id });
+      // fall through to the honest 422 below
+    }
+  }
+  if (!parsed.success) {
+    await refundUsage(gate.org.id, extractCharge);
+    void captureAppError(
+      "/api/intake",
+      new Error("dictated extraction failed validation twice"),
+      { orgId: gate.org.id, code: "unreadable_twice" },
+    );
+    return NextResponse.json(
+      {
+        kind: "meeting_notes",
+        error: joinUserError({
+          bm: "MinitAI tidak dapat menyusun cerita itu menjadi minit kali ini. Tiada kuota digunakan. Cuba ceritakan sekali lagi dengan tarikh dan apa yang diputuskan.",
+          zh: "MinitAI 这次没能把这段话整理成会议记录。没有用掉用量。请再讲一次，带上日期和决定了什么。",
+          en: "MinitAI could not turn that account into minutes this time. Nothing was charged. Try telling it again, with the date and what was decided.",
+        }),
+      },
+      { status: 422 },
+    );
+  }
+
+  return NextResponse.json({
+    kind: "meeting_notes",
+    store: DESTINATION.meeting_notes.store,
+    page: DESTINATION.meeting_notes.page,
+    language: "unknown",
+    fileName: `lisan-${todayIso}`,
+    extraction: parsed.data,
+    provider: provider.name,
+    // Nothing was uploaded — there is no original photo to keep.
+    storagePath: null,
+  });
 }

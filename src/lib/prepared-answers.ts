@@ -365,5 +365,7 @@ export function preparedButtonFor(entry: PreparedAnswer): {
   const r = isAskActionKey(entry.route)
     ? ASK_ACTION_ROUTES[entry.route]
     : ASK_ROUTES[entry.route as AskRouteKey];
-  return { href: withAiMarker(r.href), bm: r.bm, zh: r.zh, en: r.en };
+  // §0-2d (work order 102): buttons carry the short calm label, never the
+  // full route description.
+  return { href: withAiMarker(r.href), ...r.btn };
 }

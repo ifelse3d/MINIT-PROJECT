@@ -21,12 +21,14 @@ import {
 import { getActiveOrg } from "@/lib/active-org";
 import { getSessionUser } from "@/db/supabase-server";
 import { isOperatorEmail } from "@/lib/admin-gate";
-import { cariMinit, formatHitsForPrompt, type MinutesHit } from "@/lib/ai/cari-minit";
+import { cariMinit, formatHitsForPrompt } from "@/lib/ai/cari-minit";
+import { citedSources } from "@/lib/chat-sources";
 import { getToolProvider, parseModelJson } from "@/lib/ai/provider";
 import {
   ORG_TOOL_SPECS,
   runOrgTool,
   type AgentRecordChange,
+  type AgentUiChange,
 } from "@/lib/ai/org-tools";
 import { runToolConversation } from "@/lib/ai/tool-runner";
 import {
@@ -100,65 +102,33 @@ const replySchema = z.object({
   in_scope: z.boolean(),
   suggested_page: z.string(),
   // Which excerpts the model says it used. Optional on purpose: a model that
-  // forgets this field must still get a usable answer through, and the fallback
-  // (show every excerpt that was found) is safe -- it over-shows sources, it
-  // never invents one.
+  // forgets this field must still get a usable answer through.
   used_sources: z.array(z.number().int().positive()).optional(),
+  // §0-2c (work order 102): true when the person DICTATED a meeting in this
+  // conversation and the reply says the draft is being made now. The browser
+  // then runs the spoken account through the real extraction pipeline and
+  // lays the minutes out as a product card. Optional + catch: an older or
+  // confused model that omits or mangles it must not fail the whole answer.
+  dictated_minutes: z.boolean().optional().catch(undefined),
 });
 
-/** What the assistant is allowed to show as a source.
- *  Not exported: a route module may only export its handlers and config. */
-type ChatSource = {
-  /** The number that appears in the reply as [1], [2]. */
-  n: number;
-  docId: number;
-  meetingDate: string | null;
-  meetingType: string | null;
-};
-
-/**
- * The excerpts the model said it used, mapped back to real meetings.
- *
- * When `used` is missing or empty but excerpts WERE found, every excerpt is
- * shown. That is deliberate: the failure mode of showing one source too many is
- * a person opening a meeting that turns out not to matter, while the failure
- * mode of showing none is a claim with nothing behind it. An out-of-range
- * number is dropped rather than clamped — a model that cites [7] when six
- * excerpts exist is not to be second-guessed about which one it meant.
- */
-function citedSources(hits: MinutesHit[], used?: number[]): ChatSource[] {
-  if (hits.length === 0) return [];
-  const wanted =
-    used && used.length > 0
-      ? used.filter((n) => n >= 1 && n <= hits.length)
-      : hits.map((_, i) => i + 1);
-  const seen = new Set<number>();
-  const out: ChatSource[] = [];
-  for (const n of wanted) {
-    if (seen.has(n)) continue;
-    seen.add(n);
-    const hit = hits[n - 1];
-    out.push({
-      n,
-      docId: hit.docId,
-      meetingDate: hit.meetingDate,
-      meetingType: hit.meetingType,
-    });
-  }
-  return out;
-}
+// The citation gate (§0-2b) lives in src/lib/chat-sources.ts — a route module
+// may only export its handlers and config, and the gate needs its own tests.
 
 function routeFor(key: string): { href: string; bm: string; zh: string; en: string } | null {
   // F-6: action keys land on the page with the form on it (/calendar/add),
   // not the section front door — and carry ?dari=ai so the landing page can
   // say "the AI sent you here" (FromAiNote).
+  // §0-2d (work order 102): buttons carry the SHORT `btn` label, never the
+  // full route description — J's screenshot had "delete organisation" on a
+  // button because the description doubled as the label.
   if (isAskActionKey(key)) {
     const a = ASK_ACTION_ROUTES[key];
-    return { href: withAiMarker(a.href), bm: a.bm, zh: a.zh, en: a.en };
+    return { href: withAiMarker(a.href), ...a.btn };
   }
   if (key === "none" || !(key in ASK_ROUTES)) return null;
   const route = ASK_ROUTES[key as AskRouteKey];
-  return { href: withAiMarker(route.href), bm: route.bm, zh: route.zh, en: route.en };
+  return { href: withAiMarker(route.href), ...route.btn };
 }
 
 export async function POST(req: Request) {
@@ -295,6 +265,9 @@ export async function POST(req: Request) {
     // button gate below (one session read, not two).
     const sessionUser = await getSessionUser().catch(() => null);
     const recordChanges: AgentRecordChange[] = [];
+    // §0-2a (work order 102): device-side changes the agent asked for — the
+    // browser applies them (language switch) and shows old → new + undo.
+    const uiChanges: AgentUiChange[] = [];
 
     // --- cari_minit: what does this society's own record say? --------------
     //
@@ -359,6 +332,10 @@ export async function POST(req: Request) {
               todayIso,
               actorEmail: sessionUser?.email ?? undefined,
               onRecordChange: (c) => recordChanges.push(c),
+              // §0-2a: the raw mode (may be "all") so old → new and the undo
+              // restore exactly what the person had.
+              uiLang: langMode,
+              onUiChange: (c) => uiChanges.push(c),
             }),
           onUsage,
           deadlineAt,
@@ -460,6 +437,12 @@ YOUR PREVIOUS ATTEMPT WAS NOT VALID JSON in the required shape. Respond with ONL
       // §0-4: record changes the agent made this turn — old → new + the undo
       // id. The UI renders each as a change card with its undo button.
       changes: recordChanges,
+      // §0-2a: device-side changes for the browser to apply (language switch).
+      uiChanges,
+      // §0-2c: the person dictated a meeting and the reply says the draft is
+      // being made — the browser now runs the spoken account through the real
+      // extraction pipeline (its own metered action, priced on that road).
+      dictate: parsed.data.dictated_minutes === true,
       // Where the assistant looked, by tool name. Provenance for the facts that
       // did NOT come from a meeting document: a total out of the donations
       // table has no meeting to link to, but "I looked in your donation
@@ -467,7 +450,8 @@ YOUR PREVIOUS ATTEMPT WAS NOT VALID JSON in the required shape. Respond with ONL
       lookups,
       // Every claim about their records, with the meeting it came from — the
       // person can open it and check. "每个事实带出处" (design doc §2).
-      sources: citedSources(hits, parsed.data.used_sources),
+      // §0-2b: cited-only, deduped by document, capped (chat-sources.ts).
+      sources: citedSources(hits, parsed.data.reply, parsed.data.used_sources),
       remaining: after?.totalRemaining ?? null,
       // 2026-08-22: the badge prints both — how many actions are left, and how
       // full the month's free quota is. usedPct measures the FREE quota only

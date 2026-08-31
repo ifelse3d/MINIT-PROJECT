@@ -39,6 +39,42 @@ describe("chat prompt — file intent points at the home door (work order 82 K6)
   });
 });
 
+describe("chat prompt — the agent voice (work order 102 §0-2)", () => {
+  it("a: with tools, tukar_bahasa is described as CHANGING the language, not teaching", () => {
+    const p = chatPrompt({ ...base, tools: true });
+    expect(p).toContain("tukar_bahasa");
+    expect(p).toContain("do not teach them where the setting lives");
+    // ...and the tools=false prompt never promises a switch it cannot do.
+    expect(chatPrompt({ ...base, tools: false })).not.toContain("tukar_bahasa");
+  });
+
+  it("does-it-itself replaces teach-first (§2 主菜)", () => {
+    const p = chatPrompt({ ...base, tools: true });
+    expect(p).toContain("Do it yourself when a tool can do it");
+    expect(p).not.toContain("Minit does the work on its pages, not in this conversation");
+  });
+
+  it("c: the dictated-meeting rule exists, asks for the date first, and gates the flag", () => {
+    const p = chatPrompt(base);
+    expect(p).toContain("A DICTATED MEETING");
+    expect(p).toMatch(/ask for the date [\s\S]*"dictated_minutes": false/);
+    expect(p).toMatch(/"dictated_minutes": true/);
+    // The JSON contract carries the field.
+    expect(p).toContain('"dictated_minutes": <true ONLY');
+  });
+
+  it("b: citations are cited-only — [] for questions not about their records", () => {
+    const p = chatPrompt(base);
+    expect(p).toContain("ONLY excerpts you cited with [n] in the reply");
+    expect(p).toMatch(/language, settings, how to use Minit[\s\S]*give \[\]/);
+  });
+
+  it("d: settings_language is an offered deep link", () => {
+    const p = chatPrompt(base);
+    expect(p).toContain("settings_language");
+  });
+});
+
 describe("chat prompt — the tools flag still swaps rule 1's second half", () => {
   it("with tools: the five lookups are described", () => {
     const p = chatPrompt({ ...base, tools: true });

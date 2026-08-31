@@ -65,6 +65,28 @@ export type ToolContext = {
    * tool result the model sees.
    */
   onRecordChange?: (change: AgentRecordChange) => void;
+  /**
+   * §0-2a (work order 102): the interface language the person is looking at
+   * right now (from the minit-lang cookie). tukar_bahasa needs it to report
+   * an honest old → new.
+   */
+  uiLang?: string;
+  /**
+   * Fires when the agent asks for a DEVICE-SIDE change (today: the interface
+   * language). Nothing is written server-side — the browser applies it, shows
+   * old → new, and the undo is a plain client-side switch back. Without a
+   * listener the tool refuses, so a surface that cannot apply the change
+   * never has the model promising one.
+   */
+  onUiChange?: (change: AgentUiChange) => void;
+};
+
+/** §0-2a: one device-side change the agent asked the browser to make. */
+export type AgentUiChange = {
+  kind: "language";
+  /** LangKey ("bm" | "zh" | "en") — validated by the tool. */
+  from: string;
+  to: string;
 };
 
 /** What one tier-1 agent change looks like to the UI (§0-4). */
@@ -634,6 +656,90 @@ const tukarHandler: ToolHandler = async (args, ctx) => {
 };
 
 // ===========================================================================
+// 7. The interface language (§0-2a, work order 102 — J's live catch).
+// ===========================================================================
+//
+// J's test: 「我看不懂英文，怎麽辦，是否能換話語呢」— and the assistant
+// answered with a lecture about the Settings page. The eROSES test says that
+// is backwards: the person told us the interface is unreadable TO THEM, and
+// the fix is one reversible device preference away. Tier 1 of the two-tier
+// rule (work order 100 §0-4): change it, show old → new, offer undo.
+//
+// NOTHING IS WRITTEN SERVER-SIDE. The language is a device preference
+// (localStorage + the minit-lang cookie, language-provider.tsx), so the
+// "change" is an instruction the browser applies the moment the reply lands.
+// The trail is the change card in the conversation itself — this is not an
+// organisation record, no other member is affected, and undo is total.
+
+const BAHASA_VALUES = ["bm", "zh", "en"] as const;
+const BAHASA_NAME: Record<(typeof BAHASA_VALUES)[number], string> = {
+  bm: "Bahasa Malaysia",
+  zh: "Chinese (中文)",
+  en: "English",
+};
+
+const bahasaSpec: ToolSpec = {
+  name: "tukar_bahasa",
+  description:
+    "CHANGE the interface language of the app the person is looking at, right " +
+    "now. Use this when the person says they cannot read the current language " +
+    "('我看不懂英文', 'saya tak faham bahasa ini', 'can you switch to Chinese') " +
+    "or asks to change the language. Pick the language THEY can read — usually " +
+    "the one they are writing in. The switch is applied immediately and an " +
+    "undo button appears in the conversation; do NOT send them to Settings, " +
+    "and do NOT just answer in their language while leaving the interface " +
+    "unreadable. Only for the app's display language — never for the language " +
+    "of official documents (those stay Bahasa Malaysia by law).",
+  parameters: {
+    language: {
+      type: "string",
+      description:
+        "The language to switch the interface to: bm = Bahasa Malaysia, " +
+        "zh = Chinese, en = English.",
+      enum: BAHASA_VALUES,
+    },
+  },
+  required: ["language"],
+};
+
+const bahasaHandler: ToolHandler = async (args, ctx) => {
+  const to = String(args.language ?? "");
+  if (!(BAHASA_VALUES as readonly string[]).includes(to)) {
+    return { error: `"${to}" is not an interface language. Use bm, zh or en.` };
+  }
+  if (!ctx.onUiChange) {
+    // A surface that cannot apply the change (or a caller that forgot to
+    // listen) must not let the model promise one.
+    return {
+      error:
+        "The language cannot be switched from here. Tell the person the " +
+        "control is on the Language & display page (suggested_page: " +
+        "settings_language).",
+    };
+  }
+  const from = ctx.uiLang ?? "";
+  if (from === to) {
+    return {
+      ok: true,
+      unchanged: true,
+      language: to,
+      note: `The interface is already in ${BAHASA_NAME[to as (typeof BAHASA_VALUES)[number]]}. Say so; do not claim to have changed anything.`,
+    };
+  }
+  ctx.onUiChange({ kind: "language", from, to });
+  return {
+    ok: true,
+    changed: true,
+    old_language: from,
+    new_language: to,
+    note:
+      `The interface is switching to ${BAHASA_NAME[to as (typeof BAHASA_VALUES)[number]]} as this answer arrives. ` +
+      "Tell the person it is done (in the NEW language) and that an undo " +
+      "button is right here in the conversation.",
+  };
+};
+
+// ===========================================================================
 // The registry
 // ===========================================================================
 
@@ -646,6 +752,7 @@ const REGISTRY: RegisteredTool[] = [
   { spec: ajkSpec, handler: ajkHandler },
   { spec: tarikhSpec, handler: tarikhHandler },
   { spec: tukarSpec, handler: tukarHandler },
+  { spec: bahasaSpec, handler: bahasaHandler },
 ];
 
 /** Every tool the assistant may be handed, for the vendor declaration. */

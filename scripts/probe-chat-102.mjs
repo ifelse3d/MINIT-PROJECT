@@ -206,11 +206,26 @@ async function run() {
         if (c2) {
           record.push({ case: "c-2", ...c2 });
           console.log(`\n[c2] A: ${c2.text.slice(0, 600)}\n[c2] buttons: ${JSON.stringify(c2.buttons)}\n`);
-          // The finished piece: a product card in the conversation.
-          const hasCard = await page.evaluate(
-            () => document.querySelectorAll('[data-probe="product-card"]').length > 0,
-          );
+          // The finished piece: a product card in the conversation. The
+          // dictation extraction runs AFTER the reply lands — wait for it.
+          let hasCard = false;
+          for (let i = 0; i < 90 && !hasCard; i++) {
+            await new Promise((r) => setTimeout(r, 1000));
+            hasCard = await page.evaluate(
+              () => document.querySelectorAll('[data-probe="product-card"]').length > 0,
+            );
+          }
           check("c: a minutes product card appeared", hasCard);
+          if (!hasCard) {
+            const errText = await page.evaluate(
+              () =>
+                Array.from(document.querySelectorAll("section p"))
+                  .map((n) => n.textContent ?? "")
+                  .filter((s) => /没能|tidak dapat|could not|断了|terputus/.test(s))
+                  .join(" | "),
+            );
+            note("c: visible error text", errText || "(none)");
+          }
         }
       }
     }
