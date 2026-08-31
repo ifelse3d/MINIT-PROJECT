@@ -248,21 +248,6 @@ export const officeBearerSchema = z.object({
   occupation: textFieldSchema.optional().catch(undefined),
 });
 
-/**
- * §4-② (work order 100): ANOTHER meeting spotted on the same paper — 真件 A
- * is a printed 20 May minit whose margins carry handwritten notes about an
- * 8 July meeting. The extraction still describes the MAIN document; these
- * markers are what lets the workbench stop and ask "which meeting do you
- * want?" instead of quietly stirring two meetings into one document.
- */
-export const otherMeetingSchema = z.object({
-  /** That meeting's date exactly as written, e.g. "8/7/26". */
-  date_text: textFieldSchema,
-  /** The words that mark it as another meeting, e.g. "开会议 8/7/26". */
-  label: textFieldSchema.optional().catch(undefined),
-});
-export type OtherMeeting = z.infer<typeof otherMeetingSchema>;
-
 export const meetingNotesExtractionSchema = z.object({
   meeting_type: meetingTypeFieldSchema,
   /**
@@ -313,7 +298,6 @@ export const meetingNotesExtractionSchema = z.object({
    * failure posture as financial_resolutions — optional, .catch(undefined),
    * a malformed array only costs the "which meeting?" card.
    */
-  other_meetings: z.array(otherMeetingSchema).optional().catch(undefined),
   office_bearers: z.array(officeBearerSchema),
 });
 export type MeetingNotesExtraction = z.infer<

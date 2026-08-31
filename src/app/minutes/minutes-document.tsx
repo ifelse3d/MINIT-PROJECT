@@ -21,6 +21,7 @@ import {
   applyNameSubstitutions,
   rosterNameSubstitutions,
 } from "@/lib/roster-names";
+import { glossaryTermSubstitutions } from "@/lib/bm-glossary";
 import { useMinutes } from "./minutes-store";
 import { TidyView } from "./tidy-view";
 
@@ -203,6 +204,26 @@ export function MinutesDocument() {
         ? rosterNameSubstitutions(shownDocument, filingRoster)
         : [],
     [bmOffenders.length, shownDocument, filingRoster],
+  );
+
+  // §2 (work order 116, J 8/31): the ORDINARY WORDS the guard flagged —
+  // 助学金, 上年结存, 收入, 支出, 银行, 散会 — are settled society and
+  // book-keeping vocabulary, not names. A fixed table swaps them for free,
+  // exactly, inventing nothing, and CANNOT touch a person's name because a
+  // name is not in the table. The roster's names, the org's registered name
+  // and the signer are blanked before matching so a term sitting inside a
+  // name can never claim it. Whatever is still flagged afterwards really is
+  // a name, which is what the IC-name inputs below are for.
+  const termSubs = useMemo(
+    () =>
+      bmOffenders.length > 0
+        ? glossaryTermSubstitutions(shownDocument, [
+            ...filingRoster.map((m) => m.name),
+            documentOrgName,
+            documentSigner,
+          ])
+        : [],
+    [bmOffenders.length, shownDocument, filingRoster, documentOrgName, documentSigner],
   );
 
   // ⑦(c) (work order 89, J 8/30): the flagged lines are a MAPPING TABLE now,
@@ -579,9 +600,9 @@ export function MinutesDocument() {
                             setNameMap((m) => ({ ...m, [s]: e.target.value }))
                           }
                           placeholder={t(
-                            "nama IC / tulisan BM",
-                            "身份证名字／马来文写法",
-                            "IC name / BM wording",
+                            "nama seperti dalam kad pengenalan",
+                            "身份证上的写法",
+                            "the spelling on the identity card",
                           )}
                           className="min-w-[12rem] flex-1 rounded-sm border border-red-300 bg-white/80 px-2 py-1 text-sm dark:bg-white/10"
                         />
@@ -608,6 +629,30 @@ export function MinutesDocument() {
                     );
                   })}
                 </div>
+                {termSubs.length > 0 && (
+                  <div>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="border-green-500"
+                      onClick={() =>
+                        setEdited(
+                          applyNameSubstitutions(
+                            shownDocument,
+                            termSubs.map((r) => ({ ...r, count: 0 })),
+                          ),
+                        )
+                      }
+                    >
+                      ✓{" "}
+                      <Tri
+                        bm={`Isikan ${termSubs.length} perkataan biasa dalam BM (bukan AI, percuma) — nama orang tidak disentuh`}
+                        zh={`一键填好这 ${termSubs.length} 个普通词语的马来文（不用 AI，免费）—— 人名不会被动`}
+                        en={`Fill in ${termSubs.length} ordinary word${termSubs.length > 1 ? "s" : ""} in BM (no AI, free) — names are not touched`}
+                      />
+                    </Button>
+                  </div>
+                )}
                 {filledRows.length > 0 && (
                   <div>
                     <Button

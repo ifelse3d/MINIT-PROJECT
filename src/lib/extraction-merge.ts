@@ -132,11 +132,6 @@ export function mergeMeetingExtractions(
             ...(incoming.financial_resolutions ?? []),
           ]
         : undefined,
-    // §4-② markers: another page may be where the second meeting shows.
-    other_meetings:
-      existing.other_meetings || incoming.other_meetings
-        ? [...(existing.other_meetings ?? []), ...(incoming.other_meetings ?? [])]
-        : undefined,
     office_bearers: [...existing.office_bearers, ...incoming.office_bearers],
   };
 }

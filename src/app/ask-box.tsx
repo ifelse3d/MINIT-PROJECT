@@ -453,26 +453,6 @@ export function AskBox({
    */
   const constitutionResumeRef = useRef<ConstitutionReadResume | null>(null);
   /**
-   * §4-② (work order 100): the paper carried MORE THAN ONE meeting (真件 A —
-   * a printed minit annotated with notes about another meeting). The agent
-   * stops and asks which one; `resume` holds everything already read so the
-   * free "use it as it is" road costs nothing further.
-   */
-  const [meetingChoice, setMeetingChoice] = useState<{
-    context: string;
-    mainDate: string;
-    options: { dateText: string; label: string }[];
-    resume: {
-      kind: IntakeKind;
-      page: string;
-      merged: unknown;
-      label: string;
-      pages: { fileName: string; storagePath: string | null; photoDataUrl: string | null }[];
-      actionsUsed: number;
-    };
-  } | null>(null);
-
-  /**
    * §1-3 (105): every SEPARATE reading of the document just delivered, kept
    * so a sentence typed AFTERWARDS can change how they are put together
    * without reading anything again. J's case exactly: two photos come out as
@@ -969,13 +949,11 @@ export function AskBox({
     constitutionConfirmed?: boolean,
     /** §4-②: true on a re-read from the which-meeting card — the person has
      *  already picked, so the card must not open again. */
-    opts?: { meetingPicked?: boolean },
   ) {
     if (busy || files.length === 0) return;
     setError(null);
     setAskKind(null);
     setConstitutionGate(null);
-    setMeetingChoice(null);
     setRepeatAsk(null);
     setSteps([]);
     setBusy("file");
@@ -1115,8 +1093,7 @@ export function AskBox({
       const asVersions =
         (spoken.kind === "versions" ||
           (spoken.kind === "none" && multiMode === "versions")) &&
-        files.length > 1 &&
-        !opts?.meetingPicked;
+        files.length > 1;
       const pages: {
         fileName: string;
         storagePath: string | null;
@@ -1214,57 +1191,6 @@ export function AskBox({
       // The classify (when it ran) and each page's read are the metered
       // actions — the self-report and the "read it again" buttons quote this.
       const actionsUsed = (forcedKind ? 0 : 1) + files.length;
-
-      // §4-② (work order 100): TWO MEETINGS ON ONE PAPER — stop and ask
-      // which one, instead of quietly stirring both into one document
-      // (真件 A). The free road keeps what was already read; the re-read
-      // roads say their price on the button.
-      if (kind === "meeting_notes" && !opts?.meetingPicked) {
-        const m = merged as MeetingNotesExtraction;
-        const seen = new Set<string>();
-        const others = (m.other_meetings ?? [])
-          .map((o) => ({
-            dateText: o.date_text?.value ?? "",
-            label: o.label?.value ?? "",
-          }))
-          .filter((o) => o.dateText !== "" || o.label !== "")
-          // Two pages often report the SAME other meeting (the merge
-          // concatenates), sometimes written fuller on one page ("18/7" vs
-          // "18/7/26") — keep the fullest writing, one button per meeting.
-          .filter(
-            (o, i, arr) =>
-              o.dateText === "" ||
-              !arr.some(
-                (p, j) =>
-                  j !== i &&
-                  p.dateText.length > o.dateText.length &&
-                  p.dateText.startsWith(o.dateText),
-              ),
-          )
-          .filter((o) => {
-            const key = (o.dateText || o.label).replace(/\s+/g, "").slice(0, 20);
-            if (seen.has(key)) return false;
-            seen.add(key);
-            return true;
-          });
-        if (others.length > 0) {
-          closeSteps(true);
-          setMeetingChoice({
-            context,
-            mainDate: m.meeting_date.value,
-            options: others,
-            resume: {
-              kind,
-              page,
-              merged,
-              label: label ?? files[0].name,
-              pages,
-              actionsUsed,
-            },
-          });
-          return; // staged stays — the card's buttons are the next move.
-        }
-      }
 
       // §3 (105): nobody ticked "different versions" and nobody said so in
       // words — but the readings look like one meeting written out twice.
@@ -1507,7 +1433,6 @@ export function AskBox({
     setStaged([]);
     setPresetKind(null);
     setQuestion("");
-    setMeetingChoice(null);
   }
 
   /**
@@ -2428,86 +2353,6 @@ export function AskBox({
           </div>
         )}
 
-        {/* §4-② (work order 100): TWO MEETINGS ON ONE PAPER — the agent
-            stops and asks which one (真件 A). The paid roads carry their
-            price on the button; the free road uses what was already read. */}
-        {meetingChoice && staged.length > 0 && (
-          <div
-            data-probe="askback-card"
-            data-card="meeting-choice"
-            className="flex flex-col gap-3 rounded-md border-2 border-[color:var(--v2-primary)]/40 bg-white/80 p-4 dark:bg-white/10"
-          >
-            <p className="text-lg font-medium">
-              📅{" "}
-              <Tri
-                bm="Kertas ini ada catatan LEBIH DARIPADA SATU mesyuarat. Yang mana satu mahu dibuat?"
-                zh="这张纸上看到不止一场会议的记录。要做哪一场？"
-                en="This paper carries notes from MORE THAN ONE meeting. Which one do you want?"
-              />
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {[
-                ...(meetingChoice.mainDate
-                  ? [{ dateText: meetingChoice.mainDate, label: "" }]
-                  : []),
-                ...meetingChoice.options,
-              ].map((o, i) => (
-                <Button
-                  key={`${o.dateText}-${i}`}
-                  size="lg"
-                  variant={i === 0 ? "default" : "outline"}
-                  disabled={busy !== null}
-                  onClick={() =>
-                    void sendFiles(
-                      staged.map((s) => s.file),
-                      `Only extract the meeting dated "${o.dateText || o.label}". The paper also carries notes from other meetings — leave every item that belongs to another meeting out of every field. ${meetingChoice.context}`.trim(),
-                      "meeting_notes",
-                      undefined,
-                      { meetingPicked: true },
-                    )
-                  }
-                >
-                  {o.dateText || o.label}
-                  {/* §0-4 (102): the price on the button, in %, when the pool
-                      is known — never a raw action count. */}
-                  {(() => {
-                    const est = pctOfQuota(staged.length, monthlyQuota);
-                    return est === null
-                      ? ` · ${t("baca semula", "重读一次", "re-read")}`
-                      : ` · ${t(
-                          `baca semula (kira-kira ${est}% kuota)`,
-                          `重读一次（约 ${est}% 用量）`,
-                          `re-read (about ${est}% of quota)`,
-                        )}`;
-                  })()}
-                </Button>
-              ))}
-              <Button
-                size="lg"
-                variant="outline"
-                disabled={busy !== null}
-                onClick={() => {
-                  const r = meetingChoice.resume;
-                  setMeetingChoice(null);
-                  deliverProducts({
-                    kind: r.kind,
-                    page: r.page,
-                    merged: r.merged,
-                    label: r.label,
-                    pages: r.pages,
-                    actionsUsed: r.actionsUsed,
-                  });
-                }}
-              >
-                <Tri
-                  bm="Semua dalam satu — guna apa yang sudah dibaca (percuma)"
-                  zh="不用分，全部放一份 —— 用刚才读好的（免费）"
-                  en="Keep it all in one — use what was read (free)"
-                />
-              </Button>
-            </div>
-          </div>
-        )}
         {/* §1 (109): the error belongs INSIDE the pane. Outside it, an error
             appearing was one more thing that pushed the typing box down at
             exactly the moment somebody needed to retype something. */}

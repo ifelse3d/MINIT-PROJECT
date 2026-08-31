@@ -48,7 +48,6 @@ Respond with ONLY JSON in exactly this shape:
   "resolutions": [ { "text": { "value": "...", "confidence": "...", "source_ref": ... }, "kind": "decision" | "task" | "duty" | "info", "section_no": "1", "section_title": "as printed", "own_no": "2.1" } ],
   "figures": [ { "description": { ...field }, "amount_cents": { "value": <integer sen> | null, ...field } } ],
   "financial_resolutions": [ { "vendor_name": { ...field }, "approved_amount_cents": { "value": <integer sen> | null, ...field }, "purpose": { ...field } } ],
-  "other_meetings": [ { "date_text": { ...field }, "label": { ...field } } ],
   "office_bearers": [ { "position": { ...field }, "person_name": { ...field }, "ic_no": { ...field }, "address": { ...field }, "occupation": { ...field } } ]
 }
 
@@ -109,17 +108,6 @@ is a fact about the page and you preserve it:
   put each in the section it is written beside, mark it "check" if smudged.
 - Handwritten note pages and whiteboards usually have NO sections: omit the
   structure markers entirely there.
-
-TWO MEETINGS ON ONE PAPER — a page sometimes carries notes from MORE THAN
-ONE meeting: a printed minit of one meeting with handwritten notes arranging
-ANOTHER (a second date, a second agenda), or two meetings' notes sharing a
-page. Extract the MAIN document's meeting as usual — every rule above
-unchanged — and ALSO list each OTHER meeting you can see in
-"other_meetings": "date_text" = that meeting's date exactly as written
-(e.g. "8/7/26"), "label" = the words that mark it as another meeting (e.g.
-"开会议 8/7/26"). A page that is clearly one single meeting has an empty
-"other_meetings" array. Never silently stir two meetings into one document —
-the reader will be ASKED which meeting they want.
 
 MONEY THE MEETING APPROVED TO PAY OUT — "financial_resolutions" is a
 COPY-INDEX and it must never change what the other fields contain. Fill it

@@ -246,17 +246,6 @@ export function mergeMeetingVersions(
               ),
             ]
           : undefined,
-      other_meetings:
-        out.other_meetings || other.other_meetings
-          ? [
-              ...(out.other_meetings ?? []),
-              ...newRows(
-                out.other_meetings ?? [],
-                other.other_meetings ?? [],
-                (m) => m.date_text.value,
-              ),
-            ]
-          : undefined,
     };
   }
   return out;
