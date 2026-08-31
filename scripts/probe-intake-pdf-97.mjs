@@ -188,6 +188,13 @@ async function main() {
   console.log("signed in, landed on", page.url());
 
   await page.goto(`${BASE}/orgs/new`, { waitUntil: "networkidle2" });
+  // §1 (work order 104): /orgs/new opens on a FORK now — "I have the
+  // constitution" or "I'll type it myself". One tap to the form these
+  // scripts have always driven; a no-op wherever there is no fork.
+  await page.evaluate(() =>
+    document.querySelector('[data-probe="road-manual"]')?.click(),
+  );
+  await new Promise((r) => setTimeout(r, 250));
   await page.type('input[name="name"]', ORG_NAME);
   for (const el of await page.$$("button")) {
     const t = ((await el.evaluate((n) => n.textContent ?? "")) || "").trim();

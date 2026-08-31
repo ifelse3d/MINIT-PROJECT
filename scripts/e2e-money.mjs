@@ -127,6 +127,11 @@ async function run() {
 
   // --- create the test org -------------------------------------------------
   await page.goto(`${BASE}/orgs/new`, { waitUntil: "networkidle2" });
+  // §1 (work order 104): /orgs/new opens on a FORK now. The "I'll type it
+  // myself" road is one tap and lands on exactly the form that was here
+  // before — which is what these scripts have always driven.
+  await page.click('[data-probe="road-manual"]');
+  await new Promise((r) => setTimeout(r, 300));
   await page.type('input[name="name"]', ORG_NAME);
   await clickByText(page, "button", "创建组织");
   await new Promise((r) => setTimeout(r, 6000));
