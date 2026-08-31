@@ -47,9 +47,17 @@ export default async function GeneralSettingsPage() {
   let maklumatDbBehind = false;
   let committeeCount = 0;
   let branchCount = 0;
+  // §0-8 (work order 102, the 97-场 tuck-away pattern): the "Switch
+  // organisation, or add a branch" door shows only for someone who really
+  // has more than one organisation — the /orgs page and every existing door
+  // (avatar menu's org row) stay; a single-org treasurer just is not
+  // invited into multi-org plumbing from here. Fail-OPEN: if the count
+  // cannot be read, the door shows — hiding it on a DB hiccup would strand
+  // a multi-org user.
+  let showSwitchDoor = true;
   if (active) {
     const supabase = await getSupabaseServer();
-    const [orgRead, bankRead, rosterRead, branchesRead] = await Promise.all([
+    const [orgRead, bankRead, rosterRead, branchesRead, orgCountRead] = await Promise.all([
       supabase
         .from("orgs")
         .select("phone, financial_year_start, members_registered, members_voting")
@@ -68,6 +76,8 @@ export default async function GeneralSettingsPage() {
         .from("orgs")
         .select("id", { count: "exact", head: true })
         .eq("parent_org_id", active.id),
+      // §0-8: how many organisations this PERSON can see at all (RLS-scoped).
+      supabase.from("orgs").select("id", { count: "exact", head: true }),
     ]);
     if (!orgRead.error && orgRead.data) {
       maklumat = {
@@ -90,6 +100,7 @@ export default async function GeneralSettingsPage() {
     if (!bankRead.error && bankRead.data) banks = bankRead.data as BankAccountRow[];
     committeeCount = rosterRead.count ?? 0;
     branchCount = branchesRead.count ?? 0;
+    showSwitchDoor = orgCountRead.error ? true : (orgCountRead.count ?? 0) > 1;
   }
   const canManage = active !== null && can(active.role, "manage_org");
 
@@ -124,14 +135,18 @@ export default async function GeneralSettingsPage() {
                   </span>
                 )}
               </p>
-              <Link href="/orgs" className="w-fit text-base underline underline-offset-4">
-                <Tri
-                  bm="Tukar pertubuhan, atau tambah cawangan"
-                  zh="切换机构，或添加分会"
-                  en="Switch organisation, or add a branch"
-                />{" "}
-                →
-              </Link>
+              {/* §0-8 (102): tucked away for the single-org treasurer — the
+                  door renders only when there is somewhere to switch TO. */}
+              {showSwitchDoor && (
+                <Link href="/orgs" className="w-fit text-base underline underline-offset-4">
+                  <Tri
+                    bm="Tukar pertubuhan, atau tambah cawangan"
+                    zh="切换机构，或添加分会"
+                    en="Switch organisation, or add a branch"
+                  />{" "}
+                  →
+                </Link>
+              )}
             </div>
           ) : (
             <Link href="/orgs" className="text-base underline underline-offset-4">
