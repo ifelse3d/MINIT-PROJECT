@@ -30,7 +30,7 @@ probe-slice-105 11 项 PASS（真 12 页 PDF 真切三批）· probe-duplicates-
 那次 117/125 全套里的同 4 支逐案逐格一模一样** · 品质 eval 3/3 PASS 0 findings ·
 全场真钱 **≈US$0.034**（授权 ≤1.20）。**
 **🔴🔴 J 的三件事（107 号报告开头一分钟版）：①双击 `push-cabang.bat`
-（本场 **10 支** commit）；②**这次一定要贴 migration 43**
+（本场 **12 支** commit）；②**这次一定要贴 migration 43**
 （`20260921000000_ai_jobs.sql`）——**没贴＝排队整条休眠**，app 会安静地走回
 旧路（长档案照旧读不完），不会坏、不会乱扣钱，贴完自动生效；③上线丢一份
 12 页以上的 PDF 走一次，再开一份会议记录看「正式版」。
@@ -41,7 +41,7 @@ probe-slice-105 11 项 PASS（真 12 页 PDF 真切三批）· probe-duplicates-
 ## 🌙 现在在哪里（2026-08-31 深夜，105 号场收工）
 
 > **已上线**：https://minit-project.vercel.app —— 开工实测 main==origin/main
-> （104 场 10 支 J 已推上 ✓）；**105 号场 10 支 commit 等 J push-cabang.bat**。
+> （104 场 10 支 J 已推上 ✓）；**105 号场 12 支 commit 等 J push-cabang.bat**。
 > 🔴 **migration 43（`ai_jobs`）NOT YET —— 等 J 亲手贴**，check:migrations
 > 实测 1 条 NOT YET，就是它。**这是本场唯一一条挡路的**：没贴时
 > `/api/job/start` 回 `available:false`（软性拒绝，非 500），门口走回单请求
@@ -1212,7 +1212,7 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
 
 ### 🔴 J 的事（2026-08-31 深夜，105 场收工版）
 
-1. **双击 push-cabang.bat（最要紧）**——105 号场 **10 支** commit 等推。
+1. **双击 push-cabang.bat（最要紧）**——105 号场 **12 支** commit 等推。
    ~~104 场 10 支~~ 已推 ✓。
 2. 🔴🔴 **贴 migration 43**（`20260921000000_ai_jobs.sql`，排队慢慢读那张表）。
    `salin-migration.bat` 选 43，或直接开档 Ctrl+A / Ctrl+C，贴进 Supabase →
@@ -1286,7 +1286,7 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
 **105 号场（底座场：排队背景工＋会议记录两层＋侦测重复页 ✅）做完**
 （107 号报告；之前：104 号=106 号、102 号=103 号、100 号=101 号、97 号=99 号）。
 🔴 **migration 43（`ai_jobs`）是唯一 NOT YET，等 J 亲手贴**；
-**105 场 10 支 commit 等 J push**。
+**105 场 12 支 commit 等 J push**。
 **下一场最该做的一件事：排队链路的第一次真跑**——J 贴完 43 之后，丢一份真的
 12 页 PDF，把 `ai_jobs` 那一列的 `batches_done / pages_done / actions_charged`
 三个数字对一次帐（工作场做不了这一步：D8 不准对线上 DB 跑 migration，
