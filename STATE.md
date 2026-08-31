@@ -5,52 +5,129 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-31 下午（MYT）· Fable 5（102 号场：聊天路接脑＋额度百分比）**
-**🔴 本场（102 号场）状态一句话（103 号报告）：102 号施工单八个 Stage
-全部做完。J 上线抓的四个现场用原句真 vendor 重测全过：a「我看不懂英文」
-→ agent 当场换介面语言（新工具 tukar_bahasa，装置偏好零 DB，改动卡＋
-还原键）；b citation 守门（引用了才显示、同 minutes 去重、上限 3、
-功能类问题零 citation，chat-sources.ts 7 支测试钉死）；c 口述开会→
-追问日期→就地起稿（/api/intake 新 dictatedText 分支走同一套 extract
-prompt——prompt byte 零改动＝eval 铁律不触发；成品卡直达）；d 按钮
-短标签白名单（ask-routes 每路加 btn，「delete organisation」下按钮，
-settings_language 直达 /settings/display）。佈局照拍板：对话区自卷＋
-输入框钉底＋回纹针进输入框＋桌机 Upcoming 右栏/手机铃铛（13 项断言＋
-5 截图）。额度显示全面改 %（页脚/预估/回报/Clear 旁；quota-display.ts）；
-Plan 页 Trial 15%·Standard 100%·Plus 200%（新 plus 方案）＋HQ 栏
-operator-only＋「已选未开通」句重写；额度用完讯息单语化（§0-7 疊语
-bug 修在 ai-panel localizeError）＋看方案按钮。migration 42 只写档
-（plan_quotas 四池＋orgs.plan 放行 plus＋admin_set_plan_quota/
-admin_set_org_plan 两支审计 RPC）；/admin 新用量池面板（取代 83 §7
-SQL）。Switch organisation 对单 org 用户收起（fail-open）。**
-**测过：tsc 0 · eslint 20（基准逐字同）· vitest 1273（+22）· build ✓ ·
-三条 e2e 全绿（契约零改动）· probe-chat-102 四案真 vendor 全 PASS ·
-shot-workbench-102 13 项 PASS（375 溢出 0px）· probe-intake-pdf-97 真
-vendor 重跑 PASS $0.0061 · deadbuttons（自动吃到 settings_language，
-16 颗全活）/k1/k3/ui-97/ui-89/members-51/h1-69 全 PASS · 品质 eval 3/3
-PASS 0 findings · check:migrations 41 全 APPLIED、42 唯一 NOT YET ·
-四支 extract prompt byte 零改动（93.6% 基准照旧）· 全场真钱 ≈US$0.03
-（授权 ≤1.00）。**
-**🔴 J 的三件事（103 号报告开头一分钟版）：①双击 push-cabang.bat
-（本场 8 支 commit）；②salin-migration.bat 选 42 贴进 Supabase（用量池
-＋plus 方案＋控制台 RPC）——贴完开 /admin 用「改单一机构的方案」把
-org 91/197 设成 standard，测试额度就回来了（不用再跑 SQL）；③上线用
-四句原话重测四案（103 §3 有逐步）。旧拍板照旧欠：bench 模型、eval
-对外口径（101 §3/§5）。**
+**最后更新：2026-08-31 晚（MYT）· Opus 5（104 号场：上线第二轮十件快修）**
+**🔴 本场（104 号场）状态一句话（106 号报告）：104 号施工单十条全做完。
+①建机构先问「有没有章程」（岔路，手打那条一 tap，原因注解保住）；
+②章程读取同一次呼叫多回三个栏位（注册名／地址／注册号），regex 降级
+为后备并修好两处砍头；③名字读错终于有第三条路「我自己打」——而且
+/settings/general 现在真的有改名框（两个画面叫人来这里改，来了却没有
+控制项，已经好几个月）；④孤儿条不再顶到 FASAL 1 前面（真因在
+sortClauses 把「Fasal」当字排序），改成留在原位＋淡色标签；⑤额度百分比
+改成「已用 ÷（月额度＋充值）」——J 那句「0% left 旁边 +607%」绝迹，
+不变量两头钉死；⑥控制台两张面板搬到大表上面＋#plan 锚点，Plan 页黄字
+对 operator 多一行「去控制台开通 →」；⑦.docx 不再被叫去切 PDF（讯息按
+PDF／Office／照片分三种说法，永不说「再试一次」）；⑧四张 ask-back 卡
+全部搬进捲动框、捲动框改固定高——输入框从第一张卡到最后一张卡纹丝不动
+（桌机 470→759 变 693→693，手机 684→1067 变 696→696）；⑨桌机 Upcoming
+可收起（757px→1139px 让给对话）＋「⏰ N」小标记回来＋记住选择；
+⑩上传两份以上时先问「不同页还是不同版本」，选版本就用最详细那份
+（J 两张真件实测 14 行→13 行，重复那行消失）；⑪委员卡把 IC 名字＋州属
+摆前面，填好前按钮是灰的（跟伺服器同一支判断函式）。**
+**测过：tsc 0 · eslint 20（基准逐字同）· vitest 1328（+55）· build ✓ ·
+三条 e2e 全绿 · 章程 eval 21/22（95.5%）invented=0——比同两案的改前
+20/22（90.9%）**升**· 品质 eval 3/3 PASS 0 findings · probe-createorg-104
+真 vendor 12/12 PASS（名字栏读出完整注册名）· shot-workbench-104 24 项
+PASS（含改前对照）· shot-quota-104 3 项 PASS · deadbuttons-82／k1-82／
+k3-82／ui-97／ui-89／members-51／h1-69 全 PASS · e2e 与 44 支探针脚本
+已教会新岔路 · check:migrations 全 APPLIED（本场没有新 migration）·
+**extract-meeting-notes／ledger／classify 三支 prompt byte 级零改动**
+（93.6% 基准不触发）· 全场真钱 **≈US$0.06**（授权 ≤0.60）。**
+**🔴 J 的三件事（106 号报告开头一分钟版）：①双击 push-cabang.bat
+（本场 10 支 commit）；②不用贴 migration（本场没有新的）；③上线走一次
+「建机构 → 我有章程 → 上传 → 看名字栏」，再看 Plan 页那一行还剩多少 %。
+线上 org #369 现在真的叫「Persatuan」、#91 叫「…dan selepas ini」——
+两个都是同一个 bug 留下的，改法在 106 §3（设定 → 机构 → 改机构的名字），
+**工作场没有替你动线上资料**。旧拍板照旧欠：bench 模型、eval 对外口径。**
 
 ---
 
-## 🌙 现在在哪里（2026-08-31 下午，102 号场收工）
+## 🌙 现在在哪里（2026-08-31 晚，104 号场收工）
 
 > **已上线**：https://minit-project.vercel.app —— 开工实测 main==origin/main
-> （100 场 10 支 J 已推上 ✓）；**102 号场 8 支 commit 等 J push-cabang.bat**。
-> **migration 1–41 全 APPLIED（41 开工实测已贴）；42（plan_quotas 用量池＋
-> plus 方案＋控制台 RPC）只写档等 J 贴**（check:migrations 实测 42 是唯一
-> NOT YET）。线上 org：15「J」、58「avocado」、91「TESTING1」、197
-> 「TESTING2」（J 的 org 额度 15/15 用完——贴完 42 用 /admin 面板加回，
-> 83 号 §7 的 SQL 从此退役）。
+> （102 场 8 支 J 已推上 ✓）；**104 号场 10 支 commit 等 J push-cabang.bat**。
+> **migration 全部 APPLIED（含 42，J 亲手贴的；check:migrations 实测 0 条
+> NOT YET）——本场没有新增 migration**。线上 org：15「J」、58「avocado」、
+> 91「Persatuan Penganut Dewa Guan Di Selangor - Cawangan Klang, dan selepas
+> ini」、197「TESTING2」、315「PERTUBUHAN PENGAJIAN TAO (HONG TAO) KANGAR,
+> PERLIS」、369「Persatuan」。**#369 与 #91 的名字都是本场修掉的那个 bug
+> 留下的伤口**（regex 把「selepas ini disebut "Persatuan"」当成名字）；
+> 修法在 106 号报告 §3，**工作场没有替 J 动线上资料**。
 
-### 这一场做了什么（102 号场 ✅，103 号报告——聊天路接脑＋额度百分比）
+### 这一场做了什么（104 号场 ✅，106 号报告——上线第二轮十件快修）
+
+- **§2 章程读取根治**：extraction 新 `organisation` 区块（registered_name／
+  registered_address／registration_no，完整 Hard Rule 1 契约、跨行接成一串、
+  逐字、读不到就 missing），跟条文同一次呼叫、不另外收费。
+  `constitution-identity.ts` 的 regex **降级为后备**并修掉两处砍头：
+  ①`\n` 从断句字元里拿掉（PDF 换行不是句号）；②「hereinafter／簡稱」
+  尾巴要在找引号**之前**先砍——不然 Fasal 1 里唯一的引号是尾巴里的简称，
+  答案就是「Persatuan」。**旧代码对今晚这份 extraction 实测就回
+  "Persatuan"**（tmp 对照跑，零 AI）。章程 eval 21/22 invented=0（改前 20/22）。
+- **§1 建机构岔路**：`/orgs/new` 第一眼是岔路不是名字框。「我有章程」把
+  上传搬到最前、名字框变可留空，读完**留在原页**把注册名／注册号／地址
+  填进可改的框；「我自己打」一 tap 回到原本那张表（名字必填、章程框仍在
+  最后，当初把它放最后的理由原文保留在代码里）。因为每个 AI 动作都算在
+  某个 org 头上，章程那条路的 org 先用暂名
+  `PERTUBUHAN BARU — NAMA BELUM DIISI` 建起来，读完就被换掉；读失败也会
+  开一个空的名字框在「再试一次」旁边。新 server action `saveOrgIdentity`
+  （name＋ppm_no，走 column ladder、user-scoped）。
+- **§3 名字读错要能自己打**：识别卡从两条路变三条（「都不对，我自己打」，
+  预填读到的名字）；两个 not-found 分支也长出同一个框；**`/settings/general`
+  新增改名框**——那两个画面叫人「到设定→机构改」已经好几个月，而那一页
+  上的名字一直只是文字，没有任何控制项。三条路走同一支 `renameOrg`。
+- **§4 孤儿条**：真因在 `sortClauses` 把标签字（Fasal/Clause/Perkara）当
+  token 排——「Fasal 8」是字、「8.2」是数字，数字排在字前面，所以每一条
+  裸号子条都跑到 Fasal 1 前面。改成排序前先脱标签。97 §3 的「沉底」于是
+  没必要了（那正是 J 说的「观感＝坏掉」：正本後面又跟一本），
+  `sinkOrphanClauses` → `markOrphanClauses`：位置不动，只挂淡色「找不到
+  父条」标签＋清单顶端一行说有几条。
+- **§5 额度含充值**：usage-core 新 `quotaPool`（= 已用＋还剩，写成这样
+  才经得起「充值被花掉一部分」的中局），所有面向用户的 % 都以它为分母；
+  两道钳制保住不变量（说 0% 就真的不能做事、还能做事就不准说 0%）。
+  Plan 页的「+607% 充值额度」整行删掉，`/settings/ai` 的「+N kredit
+  tambahan」与 `/orgs` 的「0/15」原始次数一并改 %。9 支断言（含 105 组
+  状态扫描）＋ shot-quota-104 在 J 的真状态下拍照：**14% 已用 · 86% 还剩**。
+- **§6 人工开通指路**：`/admin` 两张面板（用量池、加额度）搬到大表**上面**
+  ＋`#plan` 锚点，各加一句人话；Plan 页黄字对 operator 多一行「去控制台
+  开通 →」（非 operator 照旧看不到控制台存在）；旧的「跑 SQL」折叠改成
+  指那颗按钮。
+- **§7 .docx 不再被叫去切 PDF**：`documentTooLongError(kind)` 按 PDF／
+  Office／照片／未知分四种说法，`docKindOfUpload` 认 MIME 再退回副档名；
+  六条上传路全部传 kind。两件事故意不动：**永不说「再试一次」**（重传必
+  同样失败、还再扣一次钱，四种 × 三语都有测试钉住）和「额度已退回」。
+  ⏳ 讯息末尾多一句「长文件排队慢慢读施工中」——**105 场做完要拆掉**，
+  函式注解写了。
+- **§8 输入框不再被推下去**：真因不是对话，是**四张 ask-back 卡长在捲动框
+  外面**（缩图条、这是什么纸、章程价格闸、这张纸有好几场会）。四张全搬
+  进框里，框改**固定高**（`h-[46dvh]`，不是 max-h——会长大的框一样会推）。
+  实测（真 dev server、intake 被拦截喂假回覆，零 AI）：桌机 470→759（推了
+  289px）变 693→693；手机 684→1067 变 696→696。`position: sticky` 的浮动
+  版做过又拆了，为什么写在代码里。顺手修掉手机上「聚焦输入框时被 tab bar
+  盖住送出键」（scroll-mb-24）。
+- **§9 Upcoming 可收起**：桌机右栏收合、宽度让给对话（757px→1139px）、
+  留「⏰ N」小标记点回来、选择记在装置上。手机照旧是铃铛。
+- **§10 上传时选「不同页/不同版本」**：缩图条多两个选项（预设照旧「不同
+  页」）。选「不同版本」时 `mergeMeetingVersions` 用**最完整**那份当正文
+  （比事实数，不是比字数），其余版本只补它没有的。`sameItem` 三条臂：
+  相同／包含／**共同词比例**——第三条臂的门槛是从 J 两张真件量出来的
+  （真重复 0.67、真不同 0.11 与 0.00），且至少要三个实词才启用。实测
+  14 行 → 13 行，重复那行消失，另外两条真新的照留。
+- **§11 委员卡**：IC 名字＋州属（会议没写日期时还有任命日期）摆在按钮
+  **前面**，填好前「确认加入」是灰的；判断用的是伺服器同一支
+  `missingErosesCommitteeFields`，两边不会走岔。`MALAYSIAN_STATES` 搬进
+  lib（两个画面各写一份州名，迟早在政府表单上拼出两种 Pulau Pinang）。
+- **顺手**：`clausesFromExtraction` 搬进 `src/lib/constitution-display.ts`
+  （两个画面要用）；`eval/run-eval.ts` 新 `EVAL_ONLY` 环境变数（只跑某几
+  个 case——本场只动章程 prompt，不该花钱重量没动过的会议记录）；
+  **44 支探针/截图脚本＋三条 e2e 教会新岔路**（插入的那一步在没有岔路的
+  页面上是 no-op，对旧 build 也还能跑）。
+- **测过**：见上方一句话块。⚠ 没能验证的：真手机（375 是 headless 量的）；
+  Vercel 线上；「不同版本」在真 UI 上从头跑一遍（合并逻辑与 UI 分别验过，
+  两者接起来的那一次真读取留给 J 上线丢两张纸最省）；§11 委员卡的真
+  截图（要一份已确认、且带 add_member 建议的会议记录，成本不值当，
+  单元测试与伺服器同函式已钉住）。
+
+### 上一场做了什么（102 号场 ✅，103 号报告——聊天路接脑＋额度百分比）
 
 - **S1 病历**：probe-chat-102.mjs 用 J 四句原话录改前行为
   （eval/reports/chat-102-before.json；「不需要更改任何设置」「請到
@@ -1072,24 +1149,27 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
   真 HEIC 大图在真手机浏览器上的行为（helper 的 HEIC 退路只有单元测试）；
   围栏真挡下（未决 #1 照旧）；真 vendor 合并写作（D37 旧项）。
 
-### 🔴 J 的事（2026-08-31，102 场收工版）
+### 🔴 J 的事（2026-08-31 晚，104 场收工版）
 
-1. **双击 push-cabang.bat（最要紧）**——102 号场 8 支 commit 等推。
-   ~~100 场 10 支~~ 已推 ✓、~~migration 41~~ 已贴 ✓（开工实测坐实）。
-2. **salin-migration.bat 选 42** 贴进 Supabase 按 Run（用量池＋plus＋
-   控制台 RPC）。贴完开 `/admin`「各方案的用量池」下半：机构编号 91 →
-   standard → 更改方案（197 同做）——测试 org 额度就回来了，
-   **83 号 §7 那句 SQL 从此不用**。没贴前面板会诚实拒绝（db_behind）。
-3. **上线用四句原话重测四案**（103 §3 逐步）：换语言当场换＋还原键、
-   零 citation、口述出成品卡、按钮无吓人字眼。
-4. 100 场两个验收案照旧欠一试：对 agent 说「TESTER3 换了电话」、org197
-   孤儿条归位（41 已贴，应该直接活）。
-5. **两个一句话拍板照旧**：①bench 模型（101 §3）；②eval 对外口径
+1. **双击 push-cabang.bat（最要紧）**——104 号场 10 支 commit 等推。
+   ~~102 场 8 支~~ 已推 ✓、~~migration 42~~ 已贴 ✓（开工实测：
+   check:migrations 0 条 NOT YET）。
+2. **本场没有新 migration** ——`salin-migration.bat` 这次不用开。
+3. **两个名字要自己改回来**（工作场不动线上资料）：org **#369**「Persatuan」、
+   org **#91**「…Cawangan Klang, dan selepas ini」——两个都是本场修掉的
+   regex 咬到的伤口。改法：切到那个机构 → **设定 → 机构 → 「改机构的名字」**
+   （这个框是本场新加的；在那之前那一页只印名字，没有控制项）。
+4. **上线走一次新岔路**：`/orgs/new` → 「我有章程」→ 丢一份章程 →
+   看名字栏是不是完整的注册名；再看 **Plan 页那一行**还剩多少 %
+   （不该再出现「0% left」旁边挂「+607%」）。
+5. 100 场两个验收案照旧欠一试：对 agent 说「TESTER3 换了电话」、org197
+   孤儿条归位。
+6. **两个一句话拍板照旧**：①bench 模型（101 §3）；②eval 对外口径
    93.6–95.2% 区间（101 §5）。
-6. 旧账照旧：收据 QR 真机一扫（87 场欠）；Vercel 的
+7. 旧账照旧：收据 QR 真机一扫（87 场欠）；Vercel 的
    `NEXT_PUBLIC_CONTACT_EMAIL`；MyInvois 模板（未决 #12）；真
    undang-undang 重传；tester 清单（73/77 号）；54 号 GUIDE 设 Supabase
-   邮件。~~TESTING1/2 抬 quota 的 SQL~~ 由 #2 的控制台面板取代。
+   邮件。
 
 ### ❓ 未决问题
 
@@ -1134,17 +1214,17 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
 
 ### ⏭ 下一个 session 从哪开始
 
-**102 号场（聊天路接脑＋额度百分比 ✅，migration 42 只写档）做完**
-（103 号报告；之前：100 号=101 号、97 号=99 号、94 号=96 号）。
-**migration 1–41 全 APPLIED；42 等 J 贴**；**102 场 8 支 commit 等 J
-push**。下一步候选：**④后半小包**（加人卡预填 ic/地址/职业＋州属从
-地址带出，extraction 已备好数据）；**90 号单「聊天真上传」**（单现成——
-本场回纹针只接档案 staging，聊天泡泡内真传图还没做）；**% 长尾小包**
-（深页估价行全换 %，103 §7 留残）；真件 A 选场重读＋真件 B 重读的真
-vendor 验收（J 上线自己丢最省）；agent 对话额度/定价重设计（讨论场
-议题）；RLS 下一阶段。
-**等 J 反馈的**：42 贴＋控制台面板一试；四案上线重测；100 场两个验收案
-（换电话/孤儿条，41 已贴应直接活）；bench 模型拍板；eval 口径拍板；
+**104 号场（上线第二轮十件快修 ✅，本场无 migration）做完**
+（106 号报告；之前：102 号=103 号、100 号=101 号、97 号=99 号）。
+**migration 全部 APPLIED（含 42）**；**104 场 10 支 commit 等 J push**。
+**下一张单已经写好：105 号（底座场——排队背景工／会议记录两层／读完后
+偵測重複頁）**，104 收工後開，那三件是本场照实留的残。
+其他候选：**④后半小包**（加人卡预填 ic/地址/职业＋州属从地址带出，
+extraction 已备好数据）；**90 号单「聊天真上传」**（聊天泡泡内真传图
+还没做）；**% 长尾小包**（深页估价行全换 %，103 §7 留残）；agent 对话
+额度/定价重设计（讨论场议题）；RLS 下一阶段。
+**等 J 反馈的**：新岔路上线走一次；#369／#91 两个名字自己改回来；
+100 场两个验收案（换电话/孤儿条）；bench 模型拍板；eval 口径拍板；
 真 undang-undang 重传；tester 清单（73/77 号）；MyInvois 模板原档
 （未决 #12）。竞赛 8/31 截止已过内部 cutoff，材料 J 自己定，**不催**。
 RESPONSIVE：J 若再圈破版，贴 46 号单同段 PROMPT 继续。
@@ -1152,6 +1232,50 @@ RESPONSIVE：J 若再圈破版，贴 46 号单同段 PROMPT 继续。
 ---
 
 ## 6. 已知陷阱（踩过的，别再踩）
+
+### 2026-08-31 晚新增（104 号上线第二轮快修场）
+
+- ⚠ **`position: sticky` 只能在**自己的父层**里走动——底下没有东西可走，
+  它就不会 stick。** §8 第一版把输入框做成 `sticky bottom-…` 想「钉在画面
+  底部」：手机上根本没生效（composer 是父层最后一个孩子，父层底就是它的
+  底），桌机上则在页面刚好变得可捲的那一刻**跳了 241px**（实测 483→724）。
+  正解是把上面那块做成**固定高度的捲动窗**，输入框跟在它下面——不用 z-index、
+  不用知道手机 tab bar 多高、也不会漂。要浮动只有 `fixed` 一条路，代价是
+  宽度、遮挡、tab bar 三样都要自己算。
+- ⚠ **`max-h` 的捲动框一样会推下面的东西。** 会长大的框只是把「推」变小，
+  没有消掉。要「位置不变」就得 `h-`。
+- ⚠ **手机浏览器把聚焦的输入框捲进视野时，对齐的是「视窗底」，不是
+  「app 自己那条 fixed tab bar 的上缘」**——送出键就被导航栏盖住。
+  `scroll-mb-*` 是给这件事用的。
+- ⚠ **`display:none` 的元素 `getBoundingClientRect()` 回 0×0 在原点。**
+  探针拿 tab bar 的 top 当「可用高度上限」，在桌机上就变成 0，好好的断言
+  一路 FAIL。量一个可能被藏起来的元素，先看它 height > 0。
+- ⚠ **改了 `/orgs/new` 的第一屏 = 全部探针脚本一起断。** 44 支脚本＋三条
+  e2e 都在 `page.type('input[name="name"]')`。规矩：动建机构第一屏，
+  同一支 commit 里把脚本一起教会（插入的那一步要写成在没有岔路时是 no-op，
+  这样对旧 build 也还能跑）。
+- ⚠ **`sortClauses` 之类的排序把「标签字」当 token，会让两种编号风格
+  排进两个宇宙。**「Fasal 8」是字、「8.2」是数字，而规则是数字排在字前面
+  —— 于是每一条裸号子条都排到 Fasal 1 前面。**排序前先脱标签**。
+  （97 §3 当时把它们「沉底」当解，那是治了症状：J 看到的是「正本後面又
+  跟了一本」。）
+- ⚠ **写 regex 抓「名字」时，先砍尾巴再找引号。** Fasal 1 常写
+  「…dikenali dengan nama X, dan selepas ini disebut "Persatuan"」——
+  整句里唯一的引号在尾巴里，先找引号就会答「Persatuan」，而且这个答案
+  会被人按下「用章程的名字」写进 orgs.name（线上 #369／#91 就是这样来的）。
+- ⚠ **`\n` 不是句号。** PDF 在名字和地址中间换行是排版，不是句子结束。
+  断句字元集里放 `\n`，跨行的名字地址一律被砍头。
+- ⚠ **eval 只动了一支 prompt，就只跑那几个 case。** `EVAL_ONLY=constitution`
+  （104 场加的）——不然会花真钱重量一支 byte 都没动的 prompt。
+  但**对外公布的准确率永远是全套跑出来的数字**。
+- ⚠ **要证明「改前是坏的」，就得让探针在旧代码上也跑得动。** 旧档没有
+  `data-probe`，选择器要留 fallback（`#minit-ask-input` 的 closest form）；
+  另外把断言在 `SHOT_TAG=before` 时降级成「量测不是闸」，不然 before 那
+  一轮自己就 exit 1。
+- ⚠ **「同一件事的两个版本」不能靠 `includes` 判重。** 两只手写同一件事，
+  词序会不同、名字会拼错（真件：`Lim Guat Kior` vs `Lim Guat Kioy`）。
+  门槛要从真资料量出来再写死，并把量到的数字写进注解（0.67 vs 0.11/0.00）
+  ——不然下一个人不知道能不能动它。
 
 ### 2026-08-31 下午新增（102 号聊天路接脑场）
 
