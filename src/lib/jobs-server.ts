@@ -102,7 +102,6 @@ export async function createJob(input: {
   context: string;
   totalPages: number;
   totalBatches: number;
-  fencePages: number;
 }): Promise<{ ok: true; job: JobRow } | JobsUnavailable> {
   const supabase = await getSupabaseServer();
   let createdBy: string | null = null;
@@ -122,7 +121,6 @@ export async function createJob(input: {
       context: input.context === "" ? null : input.context.slice(0, 2000),
       total_pages: input.totalPages,
       total_batches: input.totalBatches,
-      fence_pages: input.fencePages,
     })
     .select(COLUMNS)
     .single();

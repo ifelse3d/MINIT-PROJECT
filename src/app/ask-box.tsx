@@ -68,6 +68,14 @@ import { canStageTogether } from "@/lib/multi-page-staging";
 import { mergeMeetingVersions } from "@/lib/extraction-versions";
 import { ConstitutionReadEstimate } from "@/components/constitution-read-estimate";
 import {
+  forgetOpenJob,
+  readOpenJob,
+  rememberOpenJob,
+  runJob,
+  startJob,
+} from "@/lib/jobs-client";
+import type { JobEstimate } from "@/lib/jobs-core";
+import {
   mergeConstitutionExtractions,
   mergeLedgerExtractions,
   mergeMeetingExtractions,
@@ -90,6 +98,12 @@ import { isTurnArray } from "@/components/v3/ai-panel";
 import { usePersistentState } from "@/lib/use-persistent-state";
 import { useScopedKey } from "@/lib/storage-scope";
 import { pctOfQuota, remainingPct } from "@/lib/quota-display";
+
+/** §1 (105): the queue's estimate reads in whole minutes — "about 0 minutes"
+ *  is not an estimate anybody believes, so it never goes below 1. */
+function queueMinutes(seconds: number): number {
+  return Math.max(1, Math.ceil(seconds / 60));
+}
 
 /**
  * A finished piece the agent made from what was handed over (work order 100
@@ -360,6 +374,40 @@ export function AskBox({
     context: string;
   } | null>(null);
   /**
+   * §1 (work order 105): a long PDF that will be read a FEW PAGES AT A TIME
+   * waits here for the person's own "start reading" tap, with the queue's
+   * estimate shown first (§1-2 「預估講在前面」). The job row already exists
+   * at this point and has cost nothing — /api/job/start is a quotation.
+   */
+  const [queueGate, setQueueGate] = useState<{
+    jobId: number;
+    kind: IntakeKind;
+    page: string;
+    fileName: string;
+    context: string;
+    estimate: JobEstimate;
+  } | null>(null);
+  /** Where the running queue has got to — "part 3 of 7". */
+  const [queue, setQueue] = useState<{
+    fileName: string;
+    batchesDone: number;
+    totalBatches: number;
+    percent: number;
+    waiting: boolean;
+  } | null>(null);
+  /**
+   * §1: a document this org left half-read — from this browser's own memory
+   * after a reload, or from /api/job/open when it was somebody else's phone.
+   * Closing the tab is not a failure; this card is what says so.
+   */
+  const [pickUp, setPickUp] = useState<{
+    jobId: number;
+    kind: IntakeKind;
+    fileName: string;
+    batchesDone: number;
+    totalBatches: number;
+  } | null>(null);
+  /**
    * I1 (work order 81): where a partly-read LONG constitution PDF can pick up
    * again — a failed segment keeps everything read so far here, and pressing
    * Send on the same staged file continues from that segment on the same
@@ -413,6 +461,53 @@ export function AskBox({
       hydratedScroll.current = true;
     }
   }, [turns]);
+
+  // §1 (105): is this society still reading something? Two roads, because
+  // they answer different questions — localStorage says "YOU were reading
+  // this on THIS device", /api/job/open says "this ORGANISATION has an
+  // unfinished document", which is how the treasurer's half-read ledger
+  // reaches the secretary's laptop. The server's answer wins where both
+  // speak: it is the one that knows how far the read actually got.
+  useEffect(() => {
+    if (!hasOrg) return;
+    let cancelled = false;
+    void (async () => {
+      const note = readOpenJob();
+      try {
+        const res = await fetch("/api/job/open");
+        const body = (await res.json().catch(() => null)) as {
+          jobs?: {
+            jobId: number;
+            kind: IntakeKind;
+            fileName: string;
+            batchesDone: number;
+            totalBatches: number;
+          }[];
+        } | null;
+        const jobs = body?.jobs ?? [];
+        const mine = note ? jobs.find((j) => j.jobId === note.jobId) : undefined;
+        const pick = mine ?? jobs[0];
+        if (!cancelled && pick) {
+          setPickUp({
+            jobId: pick.jobId,
+            kind: pick.kind,
+            fileName: pick.fileName,
+            batchesDone: pick.batchesDone,
+            totalBatches: pick.totalBatches,
+          });
+          return;
+        }
+        // The row is gone (finished elsewhere, or the org was switched):
+        // the device's note is stale and must not offer a dead document.
+        if (!cancelled && note) forgetOpenJob();
+      } catch {
+        // No answer: show nothing rather than a card that cannot work.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [hasOrg]);
 
   const outOfQuota = remaining !== null && remaining <= 0;
 
@@ -839,6 +934,34 @@ export function AskBox({
             router.push("/constitution");
             return;
           }
+          // §1 (105): NOT a constitution, and too long for one request —
+          // this is the read that used to die at the 60s wall ("超過 10 頁的
+          // FILE 讀不到"). It goes to the QUEUE: the file is put where the
+          // server can reach it, a job row is opened, and the person is shown
+          // what it will cost BEFORE anything is charged. The whole-file read
+          // below stays as the fallback for a deployment without migration 43.
+          if (kind === "meeting_notes" || kind === "ledger_page") {
+            setReading(files[0].name);
+            const started = await startJob(files[0], kind, context);
+            if (started.ok) {
+              closeSteps(true);
+              setQueueGate({
+                jobId: started.jobId,
+                kind,
+                page: kind === "meeting_notes" ? "/minutes" : "/money",
+                fileName: started.fileName,
+                context,
+                estimate: started.estimate,
+              });
+              return;
+            }
+            if (!started.fallback) {
+              closeSteps(false);
+              setError(started.message);
+              return;
+            }
+            // fallback: read it whole, exactly as before the queue existed.
+          }
           // Not a constitution: the classify is paid; the loop below reads
           // the WHOLE file with the answer as its forced kind, so nothing is
           // classified (or charged for classifying) twice.
@@ -1019,6 +1142,92 @@ export function AskBox({
    * ready, instead of being teleported mid-thought. Shared by the normal
    * read road and the "use it as it is" road of the which-meeting card.
    */
+  /**
+   * §1 (105): drive one queued document to the end. Every request does one
+   * four-page batch, so no single request meets the platform's 60s wall; the
+   * loop is what makes the DOCUMENT unbounded. The job id is remembered on
+   * this device so a reload offers to carry on, and forgotten the moment the
+   * document is finished or given up.
+   */
+  async function runQueue(a: {
+    jobId: number;
+    kind: IntakeKind;
+    page: string;
+    fileName: string;
+    totalBatches: number;
+  }) {
+    if (busy) return;
+    setError(null);
+    setQueueGate(null);
+    setPickUp(null);
+    setBusy("file");
+    setQueue({
+      fileName: a.fileName,
+      batchesDone: 0,
+      totalBatches: a.totalBatches,
+      percent: 0,
+      waiting: false,
+    });
+    rememberOpenJob({
+      jobId: a.jobId,
+      kind: a.kind as "meeting_notes" | "ledger_page" | "constitution",
+      fileName: a.fileName,
+      totalBatches: a.totalBatches,
+    });
+    pushStep(
+      t(
+        `Baca "${a.fileName}" sedikit demi sedikit…`,
+        `一批一批地读「${a.fileName}」…`,
+        `Reading "${a.fileName}" a few pages at a time…`,
+      ),
+    );
+    try {
+      const r = await runJob(a.jobId, {
+        onProgress: (p) =>
+          setQueue({
+            fileName: a.fileName,
+            batchesDone: p.batchesDone,
+            totalBatches: p.totalBatches,
+            percent: p.percent,
+            waiting: p.waiting,
+          }),
+      });
+      if (!r.ok) {
+        closeSteps(false);
+        // Resumable means the row is still there with everything read so
+        // far — the pick-up card is the honest next move, not "try again".
+        if (r.resumable) {
+          setPickUp({
+            jobId: a.jobId,
+            kind: a.kind,
+            fileName: a.fileName,
+            batchesDone: r.batchesDone,
+            totalBatches: r.totalBatches,
+          });
+        } else {
+          forgetOpenJob();
+        }
+        setError(r.message);
+        return;
+      }
+      forgetOpenJob();
+      closeSteps(true);
+      deliverProducts({
+        kind: a.kind,
+        page: a.page,
+        merged: r.extraction,
+        label: a.fileName,
+        pages: [{ fileName: a.fileName, storagePath: r.storagePath, photoDataUrl: null }],
+        // The queue charged batch by batch; the row knows the real total and
+        // the self-report quotes THAT, never the estimate (§1-2).
+        actionsUsed: r.actionsCharged,
+      });
+    } finally {
+      setQueue(null);
+      setBusy(null);
+    }
+  }
+
   function deliverProducts(a: {
     kind: IntakeKind;
     page: string;
@@ -1326,6 +1535,9 @@ export function AskBox({
           staged.length > 0 ||
           askKind !== null ||
           constitutionGate !== null ||
+          queueGate !== null ||
+          queue !== null ||
+          pickUp !== null ||
           meetingChoice !== null) && (
           <div
             ref={convRegionRef}
@@ -1841,6 +2053,165 @@ export function AskBox({
                 onClick={() => setConstitutionGate(null)}
               >
                 <Tri bm="Belum lagi" zh="先不读" en="Not yet" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* §1 (work order 105): a long PDF that will be read a FEW PAGES AT
+            A TIME. Say what it will cost and how long it will take, then read
+            it on the person's own tap — the same manners the constitution
+            gate has, for the documents that used to simply fail. */}
+        {queueGate && (
+          <div
+            data-probe="askback-card"
+            data-card="queue-gate"
+            className="flex flex-col gap-3 rounded-md border-2 border-[color:var(--v2-border)] bg-white/80 p-4 dark:bg-white/10"
+          >
+            <p className="text-lg">
+              📚{" "}
+              <Tri
+                bm={`"${queueGate.fileName}" ada ${queueGate.estimate.pages} muka surat — terlalu panjang untuk dibaca sekali gus, jadi MinitAI akan membacanya sedikit demi sedikit.`}
+                zh={`「${queueGate.fileName}」有 ${queueGate.estimate.pages} 页 —— 一次读不完，MinitAI 会一批一批慢慢读。`}
+                en={`"${queueGate.fileName}" has ${queueGate.estimate.pages} pages — too long to read in one go, so MinitAI will read it a few pages at a time.`}
+              />
+            </p>
+            <p className="text-base text-[color:var(--v2-text-soft)]">
+              <Tri
+                bm={`${queueGate.estimate.batches} bahagian · lebih kurang ${queueMinutes(queueGate.estimate.seconds)} minit${queueGate.estimate.quotaPct === null ? "" : ` · kira-kira ${queueGate.estimate.quotaPct}% kuota bulan ini`}`}
+                zh={`分 ${queueGate.estimate.batches} 批 · 大约 ${queueMinutes(queueGate.estimate.seconds)} 分钟${queueGate.estimate.quotaPct === null ? "" : ` · 大约用本月用量的 ${queueGate.estimate.quotaPct}%`}`}
+                en={`${queueGate.estimate.batches} parts · about ${queueMinutes(queueGate.estimate.seconds)} minute(s)${queueGate.estimate.quotaPct === null ? "" : ` · about ${queueGate.estimate.quotaPct}% of this month's quota`}`}
+              />
+            </p>
+            <p className="text-base text-[color:var(--v2-text-soft)]">
+              <Tri
+                bm="Anda boleh tutup halaman ini di tengah jalan — apa yang sudah dibaca disimpan, dan anda sambung semula bila-bila masa tanpa bayar dua kali."
+                zh="中途关掉这一页也没关系 —— 已经读好的都留着，随时回来接着读，不会重扣。"
+                en="You can close this page part-way through — what has been read is kept, and you continue any time without paying twice."
+              />
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="lg"
+                disabled={busy !== null}
+                onClick={() =>
+                  void runQueue({
+                    jobId: queueGate.jobId,
+                    kind: queueGate.kind,
+                    page: queueGate.page,
+                    fileName: queueGate.fileName,
+                    totalBatches: queueGate.estimate.batches,
+                  })
+                }
+              >
+                📖 <Tri bm="Mula baca" zh="开始读" en="Start reading" />
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                disabled={busy !== null}
+                onClick={() => setQueueGate(null)}
+              >
+                <Tri bm="Belum lagi" zh="先不读" en="Not yet" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* §1: where the queue has got to. A bar and a sentence — "part 3 of
+            7" is the thing a person waiting actually wants to know. */}
+        {queue && (
+          <div
+            data-probe="queue-progress"
+            className="flex flex-col gap-2 rounded-md border-2 border-[color:var(--v2-primary)]/40 bg-white/80 p-4 dark:bg-white/10"
+          >
+            <p className="text-base font-medium">
+              <Tri
+                bm={`Membaca "${queue.fileName}" — bahagian ${Math.min(queue.batchesDone + 1, queue.totalBatches)} daripada ${queue.totalBatches}`}
+                zh={`正在读「${queue.fileName}」—— 第 ${Math.min(queue.batchesDone + 1, queue.totalBatches)}／${queue.totalBatches} 批`}
+                en={`Reading "${queue.fileName}" — part ${Math.min(queue.batchesDone + 1, queue.totalBatches)} of ${queue.totalBatches}`}
+              />
+            </p>
+            <div
+              className="h-2 w-full overflow-hidden rounded-full bg-[color:var(--v2-primary)]/15"
+              role="progressbar"
+              aria-valuenow={queue.percent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <div
+                className="h-full rounded-full bg-[color:var(--v2-primary)] transition-all"
+                style={{ width: `${queue.percent}%` }}
+              />
+            </div>
+            <p className="text-base text-[color:var(--v2-text-soft)]">
+              {queue.waiting ? (
+                <Tri
+                  bm="Dokumen ini sedang dibaca di tetingkap lain — menunggu giliran."
+                  zh="这份文件正在另一个视窗里读 —— 在等它。"
+                  en="This document is being read in another window — waiting for it."
+                />
+              ) : (
+                <Tri
+                  bm="Boleh tutup halaman ini — bacaan disambung bila anda kembali."
+                  zh="可以关掉这一页 —— 回来的时候接着读。"
+                  en="You can close this page — it carries on when you come back."
+                />
+              )}
+            </p>
+          </div>
+        )}
+
+        {/* §1: a document this society left half-read — from this browser's
+            own memory, or from another phone entirely. Closing the tab is not
+            a failure, and this card is what makes that true on screen. */}
+        {pickUp && !queue && (
+          <div
+            data-probe="askback-card"
+            data-card="queue-pickup"
+            className="flex flex-col gap-3 rounded-md border-2 border-amber-300 bg-amber-50 p-4 dark:bg-amber-400/10"
+          >
+            <p className="text-lg">
+              ⏸{" "}
+              <Tri
+                bm={`"${pickUp.fileName}" dibaca sampai bahagian ${pickUp.batchesDone} daripada ${pickUp.totalBatches}. Sambung dari situ?`}
+                zh={`「${pickUp.fileName}」读到第 ${pickUp.batchesDone}／${pickUp.totalBatches} 批。要从那里接着读吗？`}
+                en={`"${pickUp.fileName}" was read up to part ${pickUp.batchesDone} of ${pickUp.totalBatches}. Continue from there?`}
+              />
+            </p>
+            <p className="text-base text-[color:var(--v2-text-soft)]">
+              <Tri
+                bm="Muka surat yang sudah dibaca tidak dicaj semula."
+                zh="已经读好的页不会重扣。"
+                en="The pages already read are not charged again."
+              />
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="lg"
+                disabled={busy !== null}
+                onClick={() =>
+                  void runQueue({
+                    jobId: pickUp.jobId,
+                    kind: pickUp.kind,
+                    page: pickUp.kind === "ledger_page" ? "/money" : "/minutes",
+                    fileName: pickUp.fileName,
+                    totalBatches: pickUp.totalBatches,
+                  })
+                }
+              >
+                ▶ <Tri bm="Sambung baca" zh="接着读" en="Carry on reading" />
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                disabled={busy !== null}
+                onClick={() => {
+                  forgetOpenJob();
+                  setPickUp(null);
+                }}
+              >
+                <Tri bm="Nanti dulu" zh="先不用" en="Not now" />
               </Button>
             </div>
           </div>

@@ -71,16 +71,29 @@ export function docKindOfUpload(mime: string, fileName = ""): UploadDocKind {
  * 2026-08-28, at RM0.10 a tap.) The only fix in the person's hands is a
  * smaller piece of document, and each kind has its own way of making one.
  *
- * ⏳ The last sentence is a PROMISE WITH A DEADLINE: queued reading of long
- * documents is work order 105. Delete that sentence when 105 lands — a
- * "coming soon" that outlives the thing it promised is worse than silence.
+ * ⏳ THE "COMING SOON" SENTENCE IS GONE (work order 105 §1-4, 2026-08-31).
+ * It promised queued reading of long documents; queued reading now exists
+ * (/api/job/*), so the promise was retired the day it was kept — a "coming
+ * soon" that outlives the thing it promised is worse than silence.
+ *
+ * WHAT STILL REACHES THIS MESSAGE, now that the queue is real: a document
+ * the queue cannot cut into pages. In practice that is a PHOTO holding many
+ * pages, a Word/PowerPoint file whose converted text is longer than one pass
+ * can generate, and a PDF whose pages cannot be counted or split (encrypted,
+ * or odd scanner output). A multi-page PDF at the home door goes to the
+ * queue instead and never gets here.
  */
 export function documentTooLongError(kind: UploadDocKind): UserError {
   const how: Record<UploadDocKind, UserError> = {
     pdf: {
-      bm: "Bahagikan PDF itu kepada beberapa fail yang lebih kecil (contohnya 10 muka surat satu fail) dan hantar satu demi satu.",
-      zh: "请把这个 PDF 分成几份小的（例如每 10 页一份），一份一份地传。",
-      en: "Split the PDF into smaller files (for example 10 pages each) and send them one at a time.",
+      // 105 §1-4: a countable multi-page PDF is read in batches at the home
+      // door now, so a PDF only lands here when its pages could not be
+      // counted or cut at all (encrypted, or odd scanner output). "Print it
+      // to a fresh PDF" is the fix for exactly that, and it is a menu item
+      // the person can find.
+      bm: "Buka PDF itu dan simpan/cetak semula sebagai PDF baharu (fail yang berkunci atau hasil pengimbas yang ganjil tidak boleh dipecahkan), atau bahagikan kepada beberapa fail kecil dan hantar satu demi satu.",
+      zh: "请打开这个 PDF，重新「另存／列印成 PDF」一份新的（加密或扫描器输出怪异的档案切不开），或者分成几份小的，一份一份地传。",
+      en: "Open the PDF and save (or print) it as a fresh PDF — a locked file or odd scanner output cannot be split — or break it into smaller files and send them one at a time.",
     },
     office: {
       bm: "Fail Word/Excel/PowerPoint: buka fail itu, salin bahagian yang anda perlukan sahaja ke dalam fail baharu (atau tampal teksnya terus ke dalam kotak), kemudian hantar bahagian demi bahagian.",
@@ -100,9 +113,9 @@ export function documentTooLongError(kind: UploadDocKind): UserError {
   };
   const a = how[kind];
   return {
-    bm: `Dokumen ini terlalu panjang untuk dibaca sekali gus. ${a.bm} Menghantar fail yang sama semula TIDAK akan berjaya. Kuota anda telah dipulangkan. Kami sedang membina bacaan beratur untuk dokumen panjang — ia akan datang.`,
-    zh: `这份文件太长，AI 一次读不完。${a.zh}原样重传同一份是不会成功的。这一次的用量已经退回。长文件「排队慢慢读」正在施工中，之后会支援。`,
-    en: `This document is too long to read in one pass. ${a.en} Sending the same file again will NOT work. Your quota for this attempt has been returned. Queued reading for long documents is being built — it is on the way.`,
+    bm: `Dokumen ini terlalu panjang untuk dibaca sekali gus. ${a.bm} Menghantar fail yang sama semula TIDAK akan berjaya. Kuota anda telah dipulangkan.`,
+    zh: `这份文件太长，AI 一次读不完。${a.zh}原样重传同一份是不会成功的。这一次的用量已经退回。`,
+    en: `This document is too long to read in one pass. ${a.en} Sending the same file again will NOT work. Your quota for this attempt has been returned.`,
   };
 }
 

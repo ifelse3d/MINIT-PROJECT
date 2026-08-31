@@ -13,8 +13,11 @@ describe("documentTooLongError", () => {
     expect(e.zh).toMatch(/Word/);
   });
 
-  it("still says 'split the PDF' for a PDF", () => {
-    expect(documentTooLongError("pdf").en).toMatch(/Split the PDF/);
+  it("tells a PDF what to do with a PDF, not with a photo or a Word file", () => {
+    const e = documentTooLongError("pdf");
+    expect(e.en).toMatch(/PDF/);
+    expect(e.en).not.toMatch(/Word\/Excel\/PowerPoint/);
+    expect(e.en).not.toMatch(/Photograph one page/);
   });
 
   it("tells a photo to shoot one page at a time", () => {
@@ -41,8 +44,16 @@ describe("documentTooLongError", () => {
     }
   });
 
-  it("points at the queue that is being built (delete this when 105 lands)", () => {
-    expect(documentTooLongError("pdf").zh).toMatch(/排队/);
+  it("🔴 §1-4 (105): the 'queued reading is coming' promise is gone, in all three languages", () => {
+    // The queue exists now (/api/job/*). A promise that outlives the thing it
+    // promised is worse than silence — and a person who reads "coming soon"
+    // on the very feature they just used stops believing the other sentences.
+    for (const kind of ["pdf", "office", "photo", "unknown"] as const) {
+      const e = documentTooLongError(kind);
+      expect(e.zh).not.toMatch(/排队|施工中/);
+      expect(e.bm.toLowerCase()).not.toMatch(/beratur|akan datang/);
+      expect(e.en.toLowerCase()).not.toMatch(/queued reading|on the way|being built/);
+    }
   });
 });
 

@@ -16,7 +16,8 @@ import {
   type UsageCharge,
 } from "@/lib/ai/usage";
 import { QuotaExceededError } from "@/lib/ai/usage-core";
-import { refundFence } from "@/lib/fence";
+import { chargeFence, refundFence } from "@/lib/fence";
+import { constitutionFencePages } from "@/lib/constitution-pages";
 import {
   parseConstitutionExtraction,
   parseLedgerExtraction,
@@ -201,6 +202,32 @@ export async function POST(req: Request) {
       );
     }
 
+    // --- A6: the free plan's page meter, once, on the FIRST batch ----------
+    // Taken here and not at /api/job/start because start is only a quotation:
+    // the person had not yet said go, and a fence page spent on a document
+    // that was never read is a page taken for nothing. Stored on the row so a
+    // job that ends having read NOTHING hands every page back (failBatch).
+    let fencePages = job.fencePages;
+    if (job.batchesDone === 0 && fencePages === 0) {
+      const want =
+        job.kind === "constitution"
+          ? constitutionFencePages(job.totalPages)
+          : job.totalPages;
+      const fenceGate = await chargeFence(org, { pages: want });
+      if (!fenceGate.ok) {
+        await saveJob(job.id, {
+          status: "failed",
+          lastError: "fence",
+          releaseLease: true,
+        });
+        return NextResponse.json(fenceGate.body, { status: fenceGate.status });
+      }
+      if (fenceGate.charge) {
+        fencePages = want;
+        await saveJob(job.id, { fencePages });
+      }
+    }
+
     // --- money, before the vendor (D47 delta for THIS batch's pages) --------
     const owed = jobActionsDelta(job.pagesDone, batch.to);
     const charges: UsageCharge[] = [];
@@ -240,7 +267,7 @@ export async function POST(req: Request) {
       .download(job.sourcePath);
     if (dlError || !blob) {
       for (const c of charges) await refundUsage(org.id, c);
-      return await failBatch(job, batch, "source", charges.length);
+      return await failBatch({ ...job, fencePages }, batch, "source", charges.length);
     }
     const whole = await blob.arrayBuffer();
     const sliced = await slicePdfPages(whole, batch.from, batch.to);
@@ -296,7 +323,7 @@ export async function POST(req: Request) {
       for (const c of charges) await refundUsage(org.id, c);
       void captureAppError("/api/job/step", e, { orgId: org.id });
       return await failBatch(
-        job,
+        { ...job, fencePages },
         batch,
         e instanceof VendorTimeoutError
           ? "timeout"
@@ -338,7 +365,7 @@ ${issues}`,
         new Error("batch failed validation twice"),
         { orgId: org.id, code: "unreadable_twice" },
       );
-      return await failBatch(job, batch, "unreadable", charges.length);
+      return await failBatch({ ...job, fencePages }, batch, "unreadable", charges.length);
     }
 
     // S0-7 parity: a "confirmed" phone with the wrong digit count is an
@@ -359,6 +386,7 @@ ${issues}`,
       attempts: 0,
       result: merged,
       actionsCharged: job.actionsCharged + charges.length,
+      fencePages,
       lastError: null,
       releaseLease: true,
     });

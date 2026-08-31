@@ -5,8 +5,6 @@ import { getActiveOrg } from "@/lib/active-org";
 import { can, permissionError } from "@/lib/roles";
 import { getSupabaseServer } from "@/db/supabase-server";
 import { checkPageLimit, countPdfPages } from "@/lib/pdf-pages";
-import { constitutionFencePages } from "@/lib/constitution-pages";
-import { chargeFence, refundFence } from "@/lib/fence";
 import { isJobSourcePathForOrg, looksLikePdf } from "@/lib/upload-relay";
 import {
   estimateJob,
@@ -20,14 +18,14 @@ import { getUsage } from "@/lib/ai/usage";
 // ---------------------------------------------------------------------------
 // START A QUEUED READ (work order 105 §1). The browser has already put the
 // original in Storage at {orgId}/jobs/… — this route counts its pages, checks
-// the page cap for the kind the classifier decided, takes the A6 fence pages
-// for the whole document, and writes the ai_jobs row.
+// the page cap for the kind the classifier decided, and writes the ai_jobs row.
 //
-// IT CHARGES NO AI ACTION. Nothing has been read yet, and §1-2 is explicit
-// that the bill follows the reading batch by batch. What this route DOES hand
-// back is the estimate the person is shown before they agree to it
-// (「預估講在前面」): pages, batches, actions, and what that is as a
-// percentage of this month's allowance.
+// 🔴 IT CHARGES NOTHING AT ALL — not an AI action, not a free-plan page.
+// Nothing has been read yet, and the person has not yet said go: this route
+// exists to produce the estimate they agree to first (§1-2:
+// 「預估講在前面」) — pages, batches, actions, and what that is as a share of
+// this month's pool. The first /api/job/step is where the money starts, which
+// is also where the reading starts.
 //
 // FAILS SOFT: without migration 43 the answer is `{ available: false }` and
 // the door reads the document the way it always has (which, for a document
@@ -125,17 +123,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // A6 (D45): the free plan's lifetime read-pages meter, taken ONCE for the
-    // whole document exactly as the single-request road takes it. A
-    // constitution is capped at 5; everything else pays its real page count.
-    // Stored on the row so a job that reads NOTHING can give every page back.
-    const fencePages =
-      kind === "constitution" ? constitutionFencePages(totalPages) : totalPages;
-    const fenceGate = await chargeFence(org, { pages: fencePages });
-    if (!fenceGate.ok) {
-      return NextResponse.json(fenceGate.body, { status: fenceGate.status });
-    }
-
     const batches = planJobBatches(totalPages);
     const created = await createJob({
       orgId: org.id,
@@ -145,10 +132,8 @@ export async function POST(req: Request) {
       context,
       totalPages,
       totalBatches: batches.length,
-      fencePages: fenceGate.charge ? fencePages : 0,
     });
     if (!created.ok) {
-      await refundFence(fenceGate.charge);
       if (created.reason === "unavailable") {
         // Migration 43 is not applied yet. The door falls back; nothing was
         // charged, and the person is never told about a migration.

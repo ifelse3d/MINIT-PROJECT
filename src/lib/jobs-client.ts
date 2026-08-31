@@ -173,7 +173,15 @@ export type JobProgress = {
 };
 
 export type JobRunOutcome =
-  | { ok: true; extraction: unknown; kind: JobKind; fileName: string; storagePath: string | null }
+  | {
+      ok: true;
+      extraction: unknown;
+      kind: JobKind;
+      fileName: string;
+      storagePath: string | null;
+      /** What the queue REALLY deducted, batch by batch — never an estimate. */
+      actionsCharged: number;
+    }
   | {
       ok: false;
       message: string;
@@ -189,6 +197,7 @@ type StepBody = {
   batchesDone?: number;
   totalBatches?: number;
   percent?: number;
+  actionsCharged?: number;
   busy?: boolean;
   extraction?: unknown;
   kind?: JobKind;
@@ -295,6 +304,7 @@ export async function runJob(
         kind: (body.kind ?? "meeting_notes") as JobKind,
         fileName: body.fileName ?? "",
         storagePath: body.storagePath ?? null,
+        actionsCharged: body.actionsCharged ?? 0,
       };
     }
     if (body.status === "failed" || res.status === 402) {
