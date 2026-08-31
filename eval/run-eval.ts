@@ -363,9 +363,22 @@ export type SuiteResult = {
  * to choose a model would be a second set of rules that can drift from the app.
  */
 export async function runSuite(opts: { quiet?: boolean } = {}): Promise<SuiteResult> {
+  // §12 (work order 104): EVAL_ONLY runs a SUBSET — comma-separated substrings
+  // matched against the case folder names. It exists because a change can be
+  // confined to one extractor: work order 104 touched the constitution prompt
+  // and was forbidden to touch the meeting-notes one, so re-running the
+  // meeting cases would have spent real money re-measuring a prompt whose
+  // bytes had not moved. Unset (the default, and every CI/bench path) = the
+  // whole suite, exactly as before — the published accuracy number is always
+  // a full-suite number.
+  const only = (process.env.EVAL_ONLY ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s !== "");
   const caseNames = readdirSync(CASES_DIR, { withFileTypes: true })
     .filter((d) => d.isDirectory())
     .map((d) => d.name)
+    .filter((n) => only.length === 0 || only.some((p) => n.includes(p)))
     .sort();
   if (caseNames.length === 0) throw new Error("No cases found in eval/cases.");
 

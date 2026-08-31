@@ -2,6 +2,7 @@ import type {
   ConstitutionExtraction,
   LedgerExtraction,
   MeetingNotesExtraction,
+  TextField,
 } from "@/lib/extraction";
 
 // ---------------------------------------------------------------------------
@@ -150,6 +151,14 @@ export function mergeLedgerExtractions(
   };
 }
 
+/** Hard Rule 1's "nothing here" — the stand-in for a side of the merge whose
+ *  organisation block is absent entirely. */
+const MISSING_FIELD: TextField = {
+  value: "",
+  confidence: "missing",
+  source_ref: null,
+};
+
 /** A-5 (work order 51): several photographed pages of one constitution, sent
  *  together from the home door. Clauses append in page order; the title keeps
  *  the first real reading (page 1 carries it; later pages read "missing"). */
@@ -159,6 +168,28 @@ export function mergeConstitutionExtractions(
 ): ConstitutionExtraction {
   return {
     document_title: mergeScalar(existing.document_title, incoming.document_title),
+    // §2 (104): the society's own name/address/registration number. Page 1
+    // (or segment 1 of a long PDF) is where they are printed, so a later
+    // page reads them `missing` — mergeScalar's rule keeps the real reading
+    // and never lets a blank later page erase it. Absent on both sides stays
+    // absent (an old saved constitution has no block at all).
+    organisation:
+      existing.organisation || incoming.organisation
+        ? {
+            registered_name: mergeScalar(
+              existing.organisation?.registered_name ?? MISSING_FIELD,
+              incoming.organisation?.registered_name ?? MISSING_FIELD,
+            ),
+            registered_address: mergeScalar(
+              existing.organisation?.registered_address ?? MISSING_FIELD,
+              incoming.organisation?.registered_address ?? MISSING_FIELD,
+            ),
+            registration_no: mergeScalar(
+              existing.organisation?.registration_no ?? MISSING_FIELD,
+              incoming.organisation?.registration_no ?? MISSING_FIELD,
+            ),
+          }
+        : undefined,
     clauses: [...existing.clauses, ...incoming.clauses],
   };
 }

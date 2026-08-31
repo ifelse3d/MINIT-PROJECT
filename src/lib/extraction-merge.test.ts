@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   hasMeetingContent,
+  mergeConstitutionExtractions,
   mergeLedgerExtractions,
   mergeMeetingExtractions,
   mergedSourceLabel,
@@ -8,7 +9,9 @@ import {
 import {
   emptyLedgerExtraction,
   emptyMeetingNotesExtraction,
+  type ConstitutionExtraction,
   type MeetingNotesExtraction,
+  type TextField,
 } from "@/lib/extraction";
 
 // G-2 (J #10): a photo taken after typing ADDS; it never wipes. These tests
@@ -265,5 +268,60 @@ describe("mergedSourceLabel", () => {
   it("keeps counting UP after collapsing", () => {
     expect(mergedSourceLabel("3 × 📄", "page4.jpg")).toBe("4 × 📄");
     expect(mergedSourceLabel("11 × 📄", "page12.jpg")).toBe("12 × 📄");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// §2 (work order 104): the organisation block across several photographed
+// pages. Page 1 prints the name; page 2 does not — and page 2 must not be
+// allowed to erase it.
+// ---------------------------------------------------------------------------
+
+describe("mergeConstitutionExtractions — the organisation block", () => {
+  const page = (org?: ConstitutionExtraction["organisation"]): ConstitutionExtraction => ({
+    document_title: missing(),
+    organisation: org,
+    clauses: [],
+  });
+  const org = (name: TextField): ConstitutionExtraction["organisation"] => ({
+    registered_name: name,
+    registered_address: missing(),
+    registration_no: missing(),
+  });
+
+  it("a later page that read nothing does not erase page 1's name", () => {
+    const merged = mergeConstitutionExtractions(
+      page(org(confirmed("PERTUBUHAN CONTOH HARMONI"))),
+      page(org(missing())),
+    );
+    expect(merged.organisation?.registered_name.value).toBe(
+      "PERTUBUHAN CONTOH HARMONI",
+    );
+  });
+
+  it("a later page fills in what page 1 could not read", () => {
+    const merged = mergeConstitutionExtractions(
+      page(org(missing())),
+      page(org(check("PERTUBUHAN CONTOH HARMONI"))),
+    );
+    expect(merged.organisation?.registered_name.value).toBe(
+      "PERTUBUHAN CONTOH HARMONI",
+    );
+  });
+
+  it("absent on both sides stays absent (a constitution read before §2)", () => {
+    const merged = mergeConstitutionExtractions(page(), page());
+    expect(merged.organisation).toBeUndefined();
+  });
+
+  it("one side absent still keeps the other side's reading", () => {
+    const merged = mergeConstitutionExtractions(
+      page(),
+      page(org(confirmed("PERTUBUHAN CONTOH HARMONI"))),
+    );
+    expect(merged.organisation?.registered_name.value).toBe(
+      "PERTUBUHAN CONTOH HARMONI",
+    );
+    expect(merged.organisation?.registration_no.confidence).toBe("missing");
   });
 });

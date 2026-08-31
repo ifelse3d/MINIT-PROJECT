@@ -332,3 +332,156 @@ describe("constitutionCoverage", () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// §2 (work order 104) — the AI reads the society's own identity, the regex is
+// the fallback, and a line break no longer cuts a name or an address in half.
+//
+// J's report, 2026-08-31 evening: 「名字讀成 Persatuan、地址斷在 Taman」 —
+// both from the same cause, `\n` sitting in the sentence-end character class
+// while a real PDF wraps exactly there.
+// ---------------------------------------------------------------------------
+
+import {
+  readRegisteredAddress,
+  readRegisteredName,
+  readRegistrationNo,
+} from "./constitution-identity";
+import type { ConstitutionOrganisation } from "./extraction";
+
+const AI_NAME: ConstitutionOrganisation = {
+  registered_name: {
+    value: "PERTUBUHAN CONTOH HARMONI KANGAR, PERLIS",
+    confidence: "confirmed",
+    source_ref: { location: "page 1, Fasal 1", snippet: "Pertubuhan ini dikenali" },
+  },
+  registered_address: {
+    value: "No. 12, Jalan Tepi Sungai, Taman Aman, 01000 Kangar, Perlis",
+    confidence: "confirmed",
+    source_ref: { location: "page 1, Fasal 2", snippet: "Tempat urusan berdaftar" },
+  },
+  registration_no: {
+    value: "PPM-012-02-01011990",
+    confidence: "check",
+    source_ref: { location: "cover page", snippet: "No. Pendaftaran" },
+  },
+};
+
+const NOTHING: ConstitutionOrganisation = {
+  registered_name: { value: "", confidence: "missing", source_ref: null },
+  registered_address: { value: "", confidence: "missing", source_ref: null },
+  registration_no: { value: "", confidence: "missing", source_ref: null },
+};
+
+describe("§2 — the three organisation fields", () => {
+  it("prefers what the AI read over the clause regex", () => {
+    const fact = readRegisteredName(
+      [clause("Fasal 1", "NAMA", "Pertubuhan ini dikenali sebagai Persatuan Lain.")],
+      AI_NAME,
+    );
+    expect(fact?.value).toBe("PERTUBUHAN CONTOH HARMONI KANGAR, PERLIS");
+    expect(fact?.source.kind).toBe("ai");
+  });
+
+  it("falls back to the clause regex when the AI says missing", () => {
+    const fact = readRegisteredName(
+      [
+        clause(
+          "Fasal 1",
+          "NAMA",
+          "Pertubuhan ini dikenali sebagai PERSATUAN PENDUDUK TAMAN SRI MUDA.",
+        ),
+      ],
+      NOTHING,
+    );
+    expect(fact?.value).toBe("PERSATUAN PENDUDUK TAMAN SRI MUDA");
+    expect(fact?.source.kind).toBe("clause");
+  });
+
+  it("falls back to the clause regex for a constitution read before §2 existed", () => {
+    const fact = readRegisteredName(
+      [clause("Fasal 1", "NAMA", "Pertubuhan ini dikenali sebagai PERSATUAN LAMA.")],
+      undefined,
+    );
+    expect(fact?.value).toBe("PERSATUAN LAMA");
+  });
+
+  it("returns null when neither the AI nor the clauses have it — never a guess", () => {
+    expect(readRegisteredName([], NOTHING)).toBeNull();
+    expect(readRegisteredAddress([], NOTHING)).toBeNull();
+    expect(readRegistrationNo(NOTHING)).toBeNull();
+    expect(readRegistrationNo(undefined)).toBeNull();
+  });
+
+  it("carries the AI's source_ref and confidence through to the screen", () => {
+    const fact = readRegistrationNo(AI_NAME);
+    expect(fact?.value).toBe("PPM-012-02-01011990");
+    expect(fact?.source).toEqual({
+      kind: "ai",
+      ref: { location: "cover page", snippet: "No. Pendaftaran" },
+      confidence: "check",
+    });
+  });
+
+  it("keeps a NAME that the PDF wrapped over two lines whole (J's 「Persatuan」)", () => {
+    const fact = readRegisteredName([
+      clause(
+        "Fasal 1",
+        "NAMA",
+        "Pertubuhan ini dikenali sebagai PERTUBUHAN CONTOH\nHARMONI KANGAR, PERLIS.",
+      ),
+    ]);
+    expect(fact?.value).toBe("PERTUBUHAN CONTOH HARMONI KANGAR, PERLIS");
+  });
+
+  it("keeps an ADDRESS that the PDF wrapped over two lines whole (J's 「Taman」)", () => {
+    const fact = readRegisteredAddress([
+      clause(
+        "Fasal 2",
+        "ALAMAT",
+        "Tempat urusan berdaftar pertubuhan ini ialah No. 12, Jalan Tepi Sungai, Taman\nAman, 01000 Kangar, Perlis.",
+      ),
+    ]);
+    expect(fact?.value).toBe(
+      "No. 12, Jalan Tepi Sungai, Taman Aman, 01000 Kangar, Perlis",
+    );
+  });
+
+  it("refuses an AI value with no letters in it (a misread, not a fact)", () => {
+    const junk: ConstitutionOrganisation = {
+      ...NOTHING,
+      registered_name: {
+        value: "—— ,,,",
+        confidence: "confirmed",
+        source_ref: { location: "page 1", snippet: "…" },
+      },
+    };
+    expect(readRegisteredName([], junk)).toBeNull();
+  });
+
+  it("does not answer with the abbreviation in the hereinafter tail", () => {
+    // The shape of a real bilingual Fasal 1 — the only quoted run in the
+    // sentence is "Persatuan" in the tail. J saw exactly this.
+    const fact = readRegisteredName([
+      clause(
+        "Fasal 1",
+        "NAMA / 名稱",
+        'Pertubuhan ini dikenali dengan nama PERSATUAN TIONGHUA BANDAR SERI\nMELATI, SELANGOR, dengan nama ringkas PTBSM, dan selepas ini disebut "Persatuan".',
+      ),
+    ]);
+    expect(fact?.value).toBe("PERSATUAN TIONGHUA BANDAR SERI MELATI, SELANGOR");
+  });
+
+  it("keeps the tail off the address too (atau di mana-mana tempat lain)", () => {
+    const fact = readRegisteredAddress([
+      clause(
+        "Fasal 2",
+        "ALAMAT / 會所地址",
+        "Alamat berdaftar dan tempat urusan Persatuan ialah No. 88, Jalan Bunga Melati 3,\nTaman Seri Melati, 43500 Bandar Seri Melati, Selangor Darul Ehsan, atau di mana-mana tempat lain yang ditetapkan dari semasa ke semasa oleh Jawatankuasa.",
+      ),
+    ]);
+    expect(fact?.value).toBe(
+      "No. 88, Jalan Bunga Melati 3, Taman Seri Melati, 43500 Bandar Seri Melati, Selangor Darul Ehsan",
+    );
+  });
+});

@@ -25,6 +25,11 @@ Respond with ONLY JSON in exactly this shape:
 
 {
   "document_title": { "value": "...", "confidence": "...", "source_ref": ... },
+  "organisation": {
+    "registered_name":    { "value": "...", "confidence": "...", "source_ref": ... },
+    "registered_address": { "value": "...", "confidence": "...", "source_ref": ... },
+    "registration_no":    { "value": "...", "confidence": "...", "source_ref": ... }
+  },
   "clauses": [
     {
       "clause_no": { "value": "...", "confidence": "...", "source_ref": ... },
@@ -42,6 +47,12 @@ Every field object has:
   - "check"     = partially legible / photocopy cut off / handwritten amendment — a human must verify
   - "missing"   = not present; then value MUST be "" and source_ref MUST be null
 - "source_ref": { "location": "page 3, middle", "snippet": "the first ~10 words exactly as printed" } — REQUIRED for every non-missing field.
+
+"organisation": WHAT THIS SOCIETY IS, copied out of the very same pages — the three facts every registered society's constitution prints on its first page or two.
+- "registered_name": the society's registered name, exactly as printed in the NAMA clause (Fasal 1 in almost every ROS-approved constitution). Copy the WHOLE name, character for character, INCLUDING brackets, commas and the state — "PERTUBUHAN CONTOH HARMONI KANGAR, PERLIS", not "Pertubuhan". A name printed over TWO OR MORE LINES is ONE name: join the lines with a single space and give the whole string. Do NOT stop at a line break. Do NOT include the "hereinafter referred to as …" / "selepas ini disebut …" / "以下简称" tail, and do NOT include the words that introduce it ("dikenali sebagai", "名称：").
+- "registered_address": the registered address / tempat urusan berdaftar, exactly as printed, joined into ONE string across line breaks and INCLUDING the postcode and the state — "No. 12, Jalan Tepi Sungai, Taman Aman, 01000 Kangar, Perlis", never cut off at "Taman". Leave out any "…atau di mana-mana tempat lain yang ditetapkan…" tail: that is not the address.
+- "registration_no": the PPM/ROS registration number as printed, e.g. "PPM-012-02-01011990" or "0123/2005 (Perlis)". Only if it is printed in the document.
+Each of the three is "missing" (value "", source_ref null) when the pages you were given do not print it. NEVER guess a name, an address or a number, and never assemble one out of the document title if the clause itself does not say it.
 
 Clauses: one output entry per numbered clause or sub-clause you can see (Fasal 5, 5.1, 5.2 are separate entries). Never merge clauses, never skip clauses — an amended/struck-through clause is still output with "check" confidence and the amendment noted in the snippet.
 clause_no: exactly as printed ("Fasal 12", "12.1", "第十二条").

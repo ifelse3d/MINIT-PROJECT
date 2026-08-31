@@ -490,9 +490,42 @@ export const clauseExtractionSchema = z.object({
 });
 export type ClauseExtraction = z.infer<typeof clauseExtractionSchema>;
 
+/**
+ * §2 (work order 104, J 2026-08-31 evening: 「名字讀出來的很智障，寫好好的也被
+ * 他讀到很爛」). WHAT THE SOCIETY IS, read out of its own constitution in the
+ * SAME call that reads the clauses — no second request, no second charge.
+ *
+ * 🔴 WHY THIS IS A FIELD AND NOT A REGEX. It always was a regex
+ * (src/lib/constitution-identity.ts), and the regex cut the name at the first
+ * newline — which in a real PDF is usually in the middle of it, so
+ * "PERTUBUHAN PENGAJIAN TAO (HONG TAO) KANGAR, PERLIS" arrived as
+ * "Persatuan". A model that is already looking at the page can hand the whole
+ * string over; the regex stays as the FALLBACK for a document read before
+ * today (and for a model that answers `missing`).
+ *
+ * The verbatim rule still holds — these are copied character for character,
+ * joined across line breaks, never rewritten. OPTIONAL and `.catch(undefined)`
+ * so every constitution saved or fixtured before today parses unchanged, and a
+ * malformed block costs only the identity panel, never the clauses
+ * (CLAUDE.md rule 7).
+ */
+export const constitutionOrganisationSchema = z.object({
+  /** The registered name as printed in the NAMA clause, joined across lines. */
+  registered_name: textFieldSchema,
+  /** The registered address / tempat urusan, joined across lines. */
+  registered_address: textFieldSchema,
+  /** The PPM/ROS registration number as printed, e.g. "PPM-012-02-01011990". */
+  registration_no: textFieldSchema,
+});
+export type ConstitutionOrganisation = z.infer<
+  typeof constitutionOrganisationSchema
+>;
+
 export const constitutionExtractionSchema = z.object({
   /** Document title if printed, e.g. "Undang-Undang Tubuh Persatuan ..." */
   document_title: textFieldSchema,
+  /** §2 (104): the society's own name / address / registration number. */
+  organisation: constitutionOrganisationSchema.optional().catch(undefined),
   clauses: z.array(clauseExtractionSchema),
 });
 export type ConstitutionExtraction = z.infer<typeof constitutionExtractionSchema>;
