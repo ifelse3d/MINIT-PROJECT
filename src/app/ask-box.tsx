@@ -2043,8 +2043,14 @@ export function AskBox({
               )}
               {/* §0-4 (102): the price BEFORE the work, as a share of the
                   monthly pool ("這份 5 頁，大約用 X%"). Recognise-then-read
-                  is why it says "about". */}
-              {(() => {
+                  is why it says "about".
+                  🔴 §1 (105): SILENT from the moment the queue quotes this
+                  document — while the gate is up AND while it is reading.
+                  This line guesses from the FILE COUNT (one classify + one
+                  read); the queue knows the real page count and quotes from
+                  that. Both on screen at once is two numbers calling each
+                  other liars — the exact thing 104 §5 was opened to kill. */}
+              {queueGate === null && queue === null && (() => {
                 const est = pctOfQuota(staged.length + 1, monthlyQuota);
                 return est === null ? null : (
                   <>
