@@ -66,6 +66,7 @@ import {
 } from "@/lib/constitution-read-client";
 import { canStageTogether } from "@/lib/multi-page-staging";
 import { mergeMeetingVersions } from "@/lib/extraction-versions";
+import { asksToRedo, readStagedInstruction } from "@/lib/staged-instructions";
 import { ConstitutionReadEstimate } from "@/components/constitution-read-estimate";
 import {
   forgetOpenJob,
@@ -434,6 +435,22 @@ export function AskBox({
     };
   } | null>(null);
 
+  /**
+   * §1-3 (105): every SEPARATE reading of the document just delivered, kept
+   * so a sentence typed AFTERWARDS can change how they are put together
+   * without reading anything again. J's case exactly: two photos come out as
+   * one document, he says "these two are the same, use the fuller one", and
+   * the answer must be a NEW finished card — not a lesson about the upload
+   * box (103 §7), and not a second bill for pages already paid for.
+   */
+  const lastReadRef = useRef<{
+    kind: IntakeKind;
+    page: string;
+    readings: unknown[];
+    label: string;
+    pages: { fileName: string; storagePath: string | null; photoDataUrl: string | null }[];
+  } | null>(null);
+
   // K5 (work order 82): after a send, bring the newest bubble AND the input
   // (they are adjacent now) into view. A ref, not state: nothing re-renders,
   // and hydrating an old conversation on page load must NOT yank the page.
@@ -513,7 +530,32 @@ export function AskBox({
 
   async function send(text: string) {
     const q = text.trim();
-    if (!q || busy || outOfQuota) return;
+    if (!q || busy) return;
+    // §1-3 (105): the person is talking about the papers Minit is already
+    // holding. "These two are the same, use the fuller one" is an instruction
+    // about a document that has ALREADY been read — so it is carried out on
+    // the readings in hand: no photo is read again, no action is charged, and
+    // what comes back is a finished card, not an explanation. This runs
+    // BEFORE the quota check on purpose, because it does not use any.
+    const last = lastReadRef.current;
+    if (last && last.readings.length > 1 && last.kind === "meeting_notes" && asksToRedo(q)) {
+      setError(null);
+      setQuestion("");
+      scrollPending.current = true;
+      setTurns((prev) => [...prev, { role: "user", text: q, free: true }]);
+      deliverProducts({
+        kind: last.kind,
+        page: last.page,
+        merged: mergeMeetingVersions(last.readings as MeetingNotesExtraction[]),
+        label: last.label,
+        pages: last.pages,
+        // Nothing was read again — the cost sentence must not claim otherwise.
+        actionsUsed: 0,
+        redoneAsVersions: true,
+      });
+      return;
+    }
+    if (outOfQuota) return;
     // K1 (work order 82): the free layer answers first — zero AI, zero quota.
     const hit = matchPreparedAnswer(q, { einvois: einvoisVisible });
     if (hit) {
@@ -974,8 +1016,17 @@ export function AskBox({
       // §10 (104): in "versions" mode the readings are NOT folded together as
       // they arrive — the fullest one has to be chosen once they are all in.
       const readings: unknown[] = [];
+      // §1-3 (105): the tick-box on the strip (104 §10) is not the only way
+      // to say this — J says it in words, in the box, in three languages at
+      // once. A sentence that clearly says "same thing / use the fuller one"
+      // is obeyed; one that says "page 2" is obeyed the other way; anything
+      // else leaves the tick-box in charge exactly as before.
+      const spoken = readStagedInstruction(context);
       const asVersions =
-        multiMode === "versions" && files.length > 1 && !opts?.meetingPicked;
+        (spoken.kind === "versions" ||
+          (spoken.kind === "none" && multiMode === "versions")) &&
+        files.length > 1 &&
+        !opts?.meetingPicked;
       const pages: {
         fileName: string;
         storagePath: string | null;
@@ -1040,6 +1091,16 @@ export function AskBox({
       if (asVersions && kind === "meeting_notes" && readings.length > 1) {
         merged = mergeMeetingVersions(readings as MeetingNotesExtraction[]);
       }
+      // §1-3: hold on to the separate readings. Everything above has been
+      // paid for; if the person says afterwards that these were two tellings
+      // of one thing, that has to be doable without buying them again.
+      lastReadRef.current = {
+        kind,
+        page,
+        readings,
+        label: label ?? files[0].name,
+        pages,
+      };
 
       // A constitution is a whole-book read with its own review flow — it
       // still goes straight to /constitution (same contract as the long-PDF
@@ -1235,6 +1296,9 @@ export function AskBox({
     label: string;
     pages: { fileName: string; storagePath: string | null; photoDataUrl: string | null }[];
     actionsUsed: number;
+    /** §1-3 (105): this card was rebuilt from readings already paid for,
+     *  because the person said the papers were two tellings of one thing. */
+    redoneAsVersions?: boolean;
   }) {
     const { kind, page, merged, label, pages, actionsUsed } = a;
     const mainParcel: ProductParcel = {
@@ -1309,10 +1373,18 @@ export function AskBox({
             `Done. The ledger page is read — open the card below to check each row.${costEn}`,
           );
 
+    const redoLine = a.redoneAsVersions
+      ? t(
+          " Saya susun semula dua kertas itu sebagai DUA VERSI perkara yang sama: yang paling lengkap jadi dokumen, yang satu lagi hanya menambah apa yang tiada. Tiada gambar dibaca semula, jadi ini tidak mengambil kuota.",
+          " 我把那两张当成同一件事的两个版本重做了一次：最完整的那份当正文，另一份只补它没有的。照片没有重读，所以这一次不花用量。",
+          " I put those two papers back together as TWO VERSIONS of one thing: the fullest is the document, the other only adds what it was missing. No photo was read again, so this used no quota.",
+        )
+      : "";
+
     scrollPending.current = true;
     setTurns((prev) => [
       ...prev,
-      { role: "assistant", text: reportText, products, free: false },
+      { role: "assistant", text: reportText + redoLine, products, free: false },
     ]);
     setSteps([]);
     setStaged([]);
