@@ -200,11 +200,11 @@ describe("estimateJob — what the person is told BEFORE it starts", () => {
   });
 
   it("🔴 never flatters a real deduction to 0%", () => {
-    // 1 action out of a 500-action allowance is 0.2% — it still shows 1%.
-    expect(estimateJob(4, 500).quotaPct).toBe(1);
+    // 1 action out of a 500-action pool is 0.2% — it still shows 1%.
+    expect(estimateJob(5, 500).quotaPct).toBe(1);
   });
 
-  it("no allowance known: the action count stands on its own", () => {
+  it("no pool known: the action count stands on its own", () => {
     expect(estimateJob(12, 0).quotaPct).toBeNull();
     expect(estimateJob(12, null).quotaPct).toBeNull();
   });

@@ -36,6 +36,7 @@
 // D47 was written to stop.
 // ---------------------------------------------------------------------------
 
+import { pctOfQuota } from "@/lib/quota-display";
 import {
   CONSTITUTION_SEGMENT_PAGES,
   constitutionActionsDelta,
@@ -209,16 +210,19 @@ export function advanceJob(
 
 /**
  * What the person is told BEFORE the queue starts (§1-2: 「預估講在前面」).
- * `monthlyQuota` is the org's own allowance; 0 or missing means the caller
- * shows the action count without a percentage rather than dividing by zero.
+ * `quotaPool` is the org's own denominator for the month — 104 §5's
+ * 「已用 ÷（月額度＋充值）」, the SAME number every other percentage in the
+ * app divides by. 0 or missing means the caller shows no percentage rather
+ * than dividing by zero.
  */
 export type JobEstimate = {
   pages: number;
   batches: number;
   actions: number;
-  /** Percent of this month's allowance, rounded up so it is never flattered
-   *  to 0% — an estimate that says "0%" and then deducts something is the
-   *  kind of number J stopped trusting (104 §5). null when unknown. */
+  /** Percent of this month's pool, through the app's ONE percentage helper
+   *  (pctOfQuota), which never flatters a real deduction to 0% — an estimate
+   *  that says "0%" and then deducts something is the kind of number J
+   *  stopped trusting (104 §5). null when the pool is unknown. */
   quotaPct: number | null;
   /** Rough wall-clock seconds, from the same measured 3.1s/page. */
   seconds: number;
@@ -229,7 +233,7 @@ export const JOB_SECONDS_PER_PAGE = 3.1;
 
 export function estimateJob(
   totalPages: number,
-  monthlyQuota: number | null = null,
+  quotaPool: number | null = null,
 ): JobEstimate {
   const pages = Math.max(1, Math.floor(totalPages));
   const actions = jobReadActions(pages);
@@ -237,10 +241,7 @@ export function estimateJob(
     pages,
     batches: planJobBatches(pages).length,
     actions,
-    quotaPct:
-      monthlyQuota && monthlyQuota > 0
-        ? Math.max(1, Math.ceil((actions / monthlyQuota) * 100))
-        : null,
+    quotaPct: pctOfQuota(actions, quotaPool),
     seconds: Math.ceil(pages * JOB_SECONDS_PER_PAGE),
   };
 }

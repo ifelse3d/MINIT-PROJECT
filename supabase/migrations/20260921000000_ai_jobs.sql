@@ -76,6 +76,10 @@ create table if not exists ai_jobs (
   result jsonb,
   -- The member-side deduction so far, for the honest "this cost N" line.
   actions_charged int not null default 0 check (actions_charged >= 0),
+  -- A6 free-plan fence pages taken when the job was created. Kept here so a
+  -- job that gives up having read NOTHING can hand every one of them back —
+  -- the fence counts pages the AI read, and it read none.
+  fence_pages int not null default 0 check (fence_pages >= 0),
 
   -- Optimistic lock: while this is in the future, another tab's step leaves
   -- the job alone rather than reading the same pages twice.

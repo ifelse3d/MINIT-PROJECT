@@ -143,3 +143,28 @@ export function looksLikeZip(bytes: ArrayBuffer): boolean {
 export function bytesMatchRelayKind(kind: RelayKind, bytes: ArrayBuffer): boolean {
   return kind === "pdf" ? looksLikePdf(bytes) : looksLikeZip(bytes);
 }
+
+// ---------------------------------------------------------------------------
+// THE QUEUE'S SOURCE FILE (work order 105 §1). A relay object is deleted the
+// moment its bytes are in memory — right for a read that finishes in one
+// request, wrong for a document read over several. A queued document's
+// original has to OUTLIVE the request that started it, because the batch
+// after this one may run in a different tab, on a different phone, tomorrow.
+//
+// Same bucket, same org-first path shape (storage RLS checks segment 1), a
+// different folder so the relay sweeper never touches a document that is
+// still being read. /api/job/step deletes it as soon as the last batch is in.
+// ---------------------------------------------------------------------------
+
+export function jobSourcePathFor(
+  orgId: number,
+  name: string,
+  now: number = Date.now(),
+): string {
+  return `${orgId}/jobs/${now}-${relaySafeName(name)}`;
+}
+
+/** True only for a well-formed job-source path belonging to THIS org. */
+export function isJobSourcePathForOrg(path: string, orgId: number): boolean {
+  return new RegExp(`^${orgId}/jobs/\d+-[^/]+$`).test(path);
+}
