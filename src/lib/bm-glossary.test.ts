@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { BM_GLOSSARY, glossaryTermSubstitutions } from "./bm-glossary";
+import {
+  BM_GLOSSARY,
+  glossaryTermSubstitutions,
+  splitFlaggedLines,
+} from "./bm-glossary";
 import { applyNameSubstitutions } from "./roster-names";
 
 // §2 (work order 116): J's own AGM page. Nine flagged lines, not one a name.
@@ -68,5 +72,56 @@ describe("glossaryTermSubstitutions", () => {
   it("has no duplicate Chinese terms in the table", () => {
     const froms = BM_GLOSSARY.map(([from]) => from);
     expect(new Set(froms).size).toBe(froms.length);
+  });
+});
+
+describe("splitFlaggedLines", () => {
+  // J's real page, 8/31: money lines and real names in one flagged list.
+  const LINES = [
+    "· Tempat: 会议室",
+    "- 助学金: RM3,000.00",
+    "- 上年结存: RM7,680.00",
+    "- 收入：会员: RM1,200.00",
+    "Minit mesyuarat penggal lalu (15/3/2025) disahkan tanpa sebarang pindaan, dicadangkan oleh 叶俊成 dan disokong oleh 何淑仪.",
+    "Pemeriksa kira-kira, 苏明伟, mengesahkan bahawa akaun tiada masalah.",
+  ];
+  const subs = glossaryTermSubstitutions(LINES.join("\n"));
+
+  it("folds the ordinary-word lines away from the human's list", () => {
+    const { termOnly, linesNeedingNames } = splitFlaggedLines(LINES, subs);
+    expect(termOnly).toHaveLength(4);
+    expect(linesNeedingNames).toHaveLength(2);
+    expect(termOnly.join(" ")).toContain("助学金");
+  });
+
+  it("asks the human for the NAMES only, one row each", () => {
+    const { nameTokens } = splitFlaggedLines(LINES, subs);
+    expect(nameTokens).toEqual(["叶俊成", "何淑仪", "苏明伟"]);
+  });
+
+  it("filling a name replaces the NAME, not the sentence it sits in", () => {
+    const sentence = LINES[4];
+    const out = applyNameSubstitutions(sentence, [
+      { from: "叶俊成", to: "YAP CHOON SENG", count: 0 },
+    ]);
+    expect(out).toContain("YAP CHOON SENG");
+    expect(out).toContain("disokong oleh 何淑仪");
+    expect(out).toContain("Minit mesyuarat penggal lalu (15/3/2025)");
+  });
+
+  it("keeps a line in the human list when ANY Chinese survives the glossary", () => {
+    const { termOnly, nameTokens } = splitFlaggedLines(["收入：陈大文 RM50"], subs);
+    expect(termOnly).toHaveLength(0);
+    expect(nameTokens).toContain("陈大文");
+  });
+
+  it("never puts the same name in the human list twice", () => {
+    // Terms come from the same text in real use, so 主席 is covered here too.
+    const text = ["主席 苏明伟", "Pemeriksa 苏明伟"];
+    const { nameTokens } = splitFlaggedLines(
+      text,
+      glossaryTermSubstitutions(text.join(String.fromCharCode(10))),
+    );
+    expect(nameTokens).toEqual(["苏明伟"]);
   });
 });

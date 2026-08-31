@@ -21,7 +21,7 @@ import {
   applyNameSubstitutions,
   rosterNameSubstitutions,
 } from "@/lib/roster-names";
-import { glossaryTermSubstitutions } from "@/lib/bm-glossary";
+import { glossaryTermSubstitutions, splitFlaggedLines } from "@/lib/bm-glossary";
 import { useMinutes } from "./minutes-store";
 import { TidyView } from "./tidy-view";
 
@@ -226,6 +226,19 @@ export function MinutesDocument() {
     [bmOffenders.length, shownDocument, filingRoster, documentOrgName, documentSigner],
   );
 
+  // §2 second pass (116, J 8/31): the flagged list mixed two jobs. Money
+  // lines (助学金, 上年结存, 收入:会员) sat next to real names (叶俊成,
+  // 何淑仪, 苏明伟), every one of them asking a human for "the spelling on the
+  // identity card". The glossary lines are now folded behind the button and
+  // the table keeps only what a person genuinely has to spell — keyed on the
+  // Chinese RUN, not the line, so filling in a name no longer replaces the
+  // whole sentence it sits in.
+  const split = useMemo(
+    () =>
+      splitFlaggedLines(bmOffenders, termSubs, [documentOrgName, documentSigner]),
+    [bmOffenders, termSubs, documentOrgName, documentSigner],
+  );
+
   // ⑦(c) (work order 89, J 8/30): the flagged lines are a MAPPING TABLE now,
   // not a list to stare at — each row shows the line, an input for what
   // should stand in its place (pre-filled from the roster when the roster
@@ -238,7 +251,7 @@ export function MinutesDocument() {
     nameSubs.find((s) => s.from === snippet.trim()) ?? null;
   const mappedValue = (snippet: string) =>
     nameMap[snippet] ?? rosterFor(snippet)?.to ?? "";
-  const filledRows = bmOffenders
+  const filledRows = split.nameTokens
     .map((s) => ({ from: s, to: mappedValue(s).trim() }))
     .filter((r) => r.to !== "" && r.to !== r.from);
 
@@ -554,19 +567,32 @@ export function MinutesDocument() {
                     en={`This Bahasa Malaysia document still contains ${bmOffenders.length} line(s) of Chinese — eROSES requires full Bahasa Malaysia.`}
                   />
                 </p>
-                <p className="text-sm text-red-900/80 dark:text-red-100/80">
-                  <Tri
-                    bm="Tekan mana-mana baris — editor akan skrol ke situ dan menandakannya."
-                    zh="点任何一行 —— 编辑框会跳到那里并选中它，方便找。"
-                    en="Tap any line — the editor scrolls there and highlights it."
-                  />
-                </p>
+                {/* §2 second pass (116): say which part is MinitAI's job and
+                    which part is the reader's, before showing either. */}
+                {split.termOnly.length > 0 && (
+                  <p className="text-sm font-medium text-red-900/90 dark:text-red-100/90">
+                    <Tri
+                      bm={`${split.termOnly.length} baris ialah perkataan biasa — MinitAI boleh isi sendiri dengan butang di bawah (percuma).`}
+                      zh={`其中 ${split.termOnly.length} 行是普通词语 —— 下面那颗按钮一键填好（免费）。`}
+                      en={`${split.termOnly.length} of them are ordinary words — the button below fills those in for free.`}
+                    />
+                  </p>
+                )}
+                {split.nameTokens.length > 0 && (
+                  <p className="text-sm text-red-900/80 dark:text-red-100/80">
+                    <Tri
+                      bm={`${split.nameTokens.length} nama perlu ejaan anda — salin daripada kad pengenalan, jangan transliterasi sendiri. Tekan mana-mana nama untuk mencarinya dalam dokumen.`}
+                      zh={`有 ${split.nameTokens.length} 个名字要您来写 —— 请照身份证上的写法抄，不要自己音译。点名字就能在文件里找到它。`}
+                      en={`${split.nameTokens.length} name(s) need your spelling — copy it from the identity card, never transliterate. Tap a name to find it in the document.`}
+                    />
+                  </p>
+                )}
                 {/* ⑦(c): line → what stands in — the in-place mapping table. */}
                 <div
                   className="flex max-h-72 flex-col gap-2 overflow-y-auto"
                   data-probe="bm-name-map"
                 >
-                  {bmOffenders.map((s) => {
+                  {split.nameTokens.map((s) => {
                     const fromRoster = rosterFor(s);
                     const value = mappedValue(s);
                     return (

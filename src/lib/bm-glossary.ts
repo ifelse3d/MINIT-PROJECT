@@ -110,3 +110,60 @@ export function glossaryTermSubstitutions(
   }
   return out;
 }
+
+/** A CJK run — the unit a human actually supplies a spelling for. */
+const CJK_RUN = /[㐀-䶿一-鿿]+/g;
+
+export type FlaggedSplit = {
+  /** Lines whose Chinese the glossary covers completely — the button's job. */
+  termOnly: string[];
+  /** Lines that still hold Chinese the glossary does not know. */
+  linesNeedingNames: string[];
+  /**
+   * The distinct Chinese runs still standing in those lines — one row each in
+   * the mapping table. §2 (work order 116, second pass): the table used to key
+   * on the whole LINE, so typing an IC name against
+   * "…dicadangkan oleh 叶俊成 dan disokong oleh 何淑仪." replaced THE WHOLE
+   * SENTENCE with that name. Keyed on the run, the sentence survives and only
+   * the name is swapped — and the roster pre-fill starts matching, which it
+   * never could against a whole line.
+   */
+  nameTokens: string[];
+};
+
+/**
+ * Split what the BM guard flagged into "the glossary can finish this line" and
+ * "a human must spell this out". Conservative on purpose: a line keeps its
+ * human row unless EVERY Chinese run in it is gone once the glossary has run.
+ */
+export function splitFlaggedLines(
+  lines: readonly string[],
+  termSubs: readonly NameSubstitution[],
+  protectedText: readonly string[] = [],
+): FlaggedSplit {
+  const terms = [...termSubs].sort((a, b) => b.from.length - a.from.length);
+  const termOnly: string[] = [];
+  const linesNeedingNames: string[] = [];
+  const nameTokens: string[] = [];
+  const seen = new Set<string>();
+  for (const line of lines) {
+    let after = line;
+    for (const t of terms) after = after.split(t.from).join(" ");
+    for (const p of protectedText) {
+      const trimmed = p.trim();
+      if (trimmed !== "") after = after.split(trimmed).join(" ");
+    }
+    const runs = after.match(CJK_RUN) ?? [];
+    if (runs.length === 0) {
+      termOnly.push(line);
+      continue;
+    }
+    linesNeedingNames.push(line);
+    for (const r of runs) {
+      if (seen.has(r)) continue;
+      seen.add(r);
+      nameTokens.push(r);
+    }
+  }
+  return { termOnly, linesNeedingNames, nameTokens };
+}
