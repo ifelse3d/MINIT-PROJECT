@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { captureAppError } from "@/lib/app-errors";
 import {
+  docKindOfUpload,
   joinUserError,
   tooManyPagesError,
   USER_ERRORS,
@@ -399,7 +400,10 @@ export async function POST(req: Request) {
       // for a failed read hurt most exactly here.
       // P-1: the failure is also recorded now (app_errors) — see id=5.
       await refundThisRequest();
-      return vendorFailureResponse("/api/extract-constitution", e, org.id);
+      return vendorFailureResponse("/api/extract-constitution", e, org.id, {
+        // §7 (104): advise about the file that was actually sent.
+        docKind: docKindOfUpload(file.type, file.name),
+      });
     }
 
     let parsed = parseConstitutionExtraction(raw);
@@ -430,7 +434,9 @@ ${issues}`;
         // what THIS request charged.
         if (e instanceof VendorTimeoutError || e instanceof VendorOutputTruncatedError) {
           await refundThisRequest();
-          return vendorFailureResponse("/api/extract-constitution", e, org.id);
+          return vendorFailureResponse("/api/extract-constitution", e, org.id, {
+            docKind: docKindOfUpload(file.type, file.name),
+          });
         }
         void captureAppError("/api/extract-constitution", e, { orgId: org.id });
         // fall through to the failure response below

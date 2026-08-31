@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { captureAppError } from "@/lib/app-errors";
 import { demoteSuspectPhones } from "@/lib/verbatim";
 import {
+  docKindOfUpload,
   joinUserError,
   tooManyPagesError,
   USER_ERRORS,
@@ -169,6 +170,8 @@ export async function POST(req: Request) {
       await refundFence(fenceCharge);
       return vendorFailureResponse("/api/extract-ledger", e, gate.org.id, {
         bigDocument: pageCount > TIMEOUT_SPLIT_ADVICE_PAGES,
+        // §7 (104): advise about the file that was actually sent.
+        docKind: docKindOfUpload(photo.type, photo.name),
       });
     }
 
@@ -202,6 +205,7 @@ ${issues}`;
           await refundFence(fenceCharge);
           return vendorFailureResponse("/api/extract-ledger", e, gate.org.id, {
             bigDocument: pageCount > TIMEOUT_SPLIT_ADVICE_PAGES,
+            docKind: docKindOfUpload(photo.type, photo.name),
           });
         }
         void captureAppError("/api/extract-ledger", e, { orgId: gate.org.id });

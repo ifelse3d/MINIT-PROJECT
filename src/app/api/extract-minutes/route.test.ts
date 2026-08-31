@@ -129,11 +129,15 @@ describe("extract-minutes vendor failure chain (P-1)", () => {
     expect(refundUsage).toHaveBeenCalledTimes(1);
     expect(captureAppError).toHaveBeenCalledTimes(1);
     const body = (await res.json()) as { error: string };
-    // Must tell the person the actionable truth in all three languages…
-    expect(body.error).toContain("Bahagikan");
-    expect(body.error).toContain("分成");
+    // §7 (work order 104): the advice is about the file that was SENT. This
+    // fixture is a PHOTO, so it says "one page at a time" — and it must not
+    // say "split the PDF", which is what J was told about his .docx.
+    expect(body.error).toContain("satu muka surat setiap kali");
+    expect(body.error).toContain("一次拍一页");
+    expect(body.error).not.toContain("PDF");
     // …and must NOT invite a retry of the same file.
     expect(body.error).not.toContain("tap the button again");
+    expect(body.error).not.toContain("再试一次");
   });
 
   it("passes the sized output ceiling to the vendor call", async () => {

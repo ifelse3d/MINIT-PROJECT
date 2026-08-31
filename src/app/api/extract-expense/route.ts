@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { captureAppError } from "@/lib/app-errors";
 import {
+  docKindOfUpload,
   joinUserError,
   tooManyPagesError,
   USER_ERRORS,
@@ -137,7 +138,9 @@ export async function POST(req: Request) {
       // P-1: the failure is also recorded now (app_errors) — see id=5.
       await refundUsage(gate.org.id, gate.charges[0]);
       await refundFence(fenceCharge);
-      return vendorFailureResponse("/api/extract-expense", e, gate.org.id);
+      return vendorFailureResponse("/api/extract-expense", e, gate.org.id, {
+        docKind: docKindOfUpload(photo.type, photo.name),
+      });
     }
 
     let parsed = parseExpenseExtraction(raw);
@@ -159,7 +162,9 @@ ${issues}`;
         if (e instanceof VendorTimeoutError) {
           await refundUsage(gate.org.id, gate.charges[0]);
           await refundFence(fenceCharge);
-          return vendorFailureResponse("/api/extract-expense", e, gate.org.id);
+          return vendorFailureResponse("/api/extract-expense", e, gate.org.id, {
+            docKind: docKindOfUpload(photo.type, photo.name),
+          });
         }
         void captureAppError("/api/extract-expense", e, { orgId: gate.org.id });
         // fall through to the failure response below

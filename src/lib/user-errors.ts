@@ -28,6 +28,84 @@ export function joinUserError(e: UserError): string {
   return `${e.bm}\n${e.zh}\n${e.en}`;
 }
 
+// ---------------------------------------------------------------------------
+// §7 (work order 104) — SPEAK ABOUT THE FILE THE PERSON ACTUALLY SENT.
+//
+// J, 2026-08-31 evening: he uploaded a .docx and was told to split the PDF.
+// The message had been written for PDFs and then reused for everything,
+// because the failure (the vendor's output ran past the ceiling) is the same
+// whatever came in. The failure being the same does not make the ADVICE the
+// same: "split the PDF into 10-page files" is unfollowable holding a Word
+// document, and an instruction you cannot follow reads as a broken app.
+//
+// Rule 2 of this file ("say what to DO next, concretely") only holds if the
+// thing to do exists on the reader's screen.
+// ---------------------------------------------------------------------------
+
+/** What the person sent, as far as the advice is concerned. */
+export type UploadDocKind = "pdf" | "office" | "photo" | "unknown";
+
+/** MIME → the kind whose advice applies. Extension is the fallback, because a
+ *  phone browser sometimes sends an empty type for a picked file. */
+export function docKindOfUpload(mime: string, fileName = ""): UploadDocKind {
+  if (mime === "application/pdf" || /\.pdf$/i.test(fileName)) return "pdf";
+  if (mime.startsWith("image/") || /\.(jpe?g|png|webp|heic|heif)$/i.test(fileName)) {
+    return "photo";
+  }
+  if (
+    mime.startsWith("application/vnd.openxmlformats") ||
+    mime === "application/msword" ||
+    mime === "application/vnd.ms-excel" ||
+    mime === "application/vnd.ms-powerpoint" ||
+    /\.(docx?|xlsx?|pptx?)$/i.test(fileName)
+  ) {
+    return "office";
+  }
+  return "unknown";
+}
+
+/**
+ * 🔴 IT MUST NEVER SAY "TRY AGAIN". A retry fails identically — the document
+ * needs more output than one pass allows — so "try again" is a lie that bills
+ * the member a second time. (That lie ran twice on J's new-user test,
+ * 2026-08-28, at RM0.10 a tap.) The only fix in the person's hands is a
+ * smaller piece of document, and each kind has its own way of making one.
+ *
+ * ⏳ The last sentence is a PROMISE WITH A DEADLINE: queued reading of long
+ * documents is work order 105. Delete that sentence when 105 lands — a
+ * "coming soon" that outlives the thing it promised is worse than silence.
+ */
+export function documentTooLongError(kind: UploadDocKind): UserError {
+  const how: Record<UploadDocKind, UserError> = {
+    pdf: {
+      bm: "Bahagikan PDF itu kepada beberapa fail yang lebih kecil (contohnya 10 muka surat satu fail) dan hantar satu demi satu.",
+      zh: "请把这个 PDF 分成几份小的（例如每 10 页一份），一份一份地传。",
+      en: "Split the PDF into smaller files (for example 10 pages each) and send them one at a time.",
+    },
+    office: {
+      bm: "Fail Word/Excel/PowerPoint: buka fail itu, salin bahagian yang anda perlukan sahaja ke dalam fail baharu (atau tampal teksnya terus ke dalam kotak), kemudian hantar bahagian demi bahagian.",
+      zh: "Word／Excel／PowerPoint 档：请打开档案，把您需要的那一段另存成一份新档（或者直接把那段文字贴进框里），然后一段一段地传。",
+      en: "For a Word/Excel/PowerPoint file: open it, copy just the part you need into a new file (or paste that text straight into the box), then send it a part at a time.",
+    },
+    photo: {
+      bm: "Ambil gambar satu muka surat setiap kali dan hantar satu demi satu — satu gambar yang memuatkan banyak muka surat terlalu panjang untuk dibaca sekali gus.",
+      zh: "请一次拍一页、一张一张地传 —— 一张照片里塞了很多页，一次是读不完的。",
+      en: "Photograph one page at a time and send them one by one — one photo holding many pages is too much to read in a single pass.",
+    },
+    unknown: {
+      bm: "Hantar bahagian yang anda perlukan sahaja: pecahkan dokumen itu kepada bahagian yang lebih kecil dan hantar satu demi satu.",
+      zh: "请只传您需要的那部分：把文件拆成小一点的几份，一份一份地传。",
+      en: "Send only the part you need: break the document into smaller pieces and send them one at a time.",
+    },
+  };
+  const a = how[kind];
+  return {
+    bm: `Dokumen ini terlalu panjang untuk dibaca sekali gus. ${a.bm} Menghantar fail yang sama semula TIDAK akan berjaya. Kuota anda telah dipulangkan. Kami sedang membina bacaan beratur untuk dokumen panjang — ia akan datang.`,
+    zh: `这份文件太长，AI 一次读不完。${a.zh}原样重传同一份是不会成功的。这一次的用量已经退回。长文件「排队慢慢读」正在施工中，之后会支援。`,
+    en: `This document is too long to read in one pass. ${a.en} Sending the same file again will NOT work. Your quota for this attempt has been returned. Queued reading for long documents is being built — it is on the way.`,
+  };
+}
+
 export const USER_ERRORS = {
   noPhoto: {
     bm: "Tiada gambar dipilih. Tekan butang kamera dan pilih atau ambil satu gambar.",
@@ -160,12 +238,12 @@ export const USER_ERRORS = {
    * the JSON came back cut off. A RETRY FAILS IDENTICALLY, so this message
    * must never say "try again"; the only fix in the person's hands is a
    * smaller document. The quota for the attempt is returned by the route.
+   *
+   * §7 (104): the WORDING now depends on what was sent — see
+   * documentTooLongError above. This entry is the fallback for a caller that
+   * does not know the file kind; every upload route does, and passes it.
    */
-  documentTooLong: {
-    bm: "Dokumen ini terlalu panjang untuk dibaca sekali gus. Bahagikan PDF kepada beberapa fail kecil (contohnya 10 muka surat satu fail) atau ambil gambar satu muka demi satu, kemudian muat naik bahagian demi bahagian. Menghantar fail yang sama semula TIDAK akan berjaya. Kuota anda telah dipulangkan.",
-    zh: "这份文件太长，AI 一次读不完。请把 PDF 分成几份小的（例如每 10 页一份），或者一页一页拍照，然后一份一份上传。原样重传同一份文件是不会成功的。这一次的用量已经退回。",
-    en: "This document is too long to read in one pass. Split the PDF into smaller files (for example 10 pages each), or photograph it page by page, then upload the parts one at a time. Sending the same file again will NOT work. Your quota for this attempt has been returned.",
-  },
+  documentTooLong: documentTooLongError("unknown"),
 
   /**
    * The model answered twice and both answers failed validation. Concrete photo

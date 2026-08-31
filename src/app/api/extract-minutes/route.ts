@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { captureAppError } from "@/lib/app-errors";
-import { joinUserError, tooManyPagesError, USER_ERRORS } from "@/lib/user-errors";
+import {
+  docKindOfUpload,
+  joinUserError,
+  tooManyPagesError,
+  USER_ERRORS,
+} from "@/lib/user-errors";
 import {
   EXTRACT_OUTPUT_CEILING,
   getVisionProvider,
@@ -246,7 +251,11 @@ export async function POST(req: Request) {
       // ai_usage id=5 incident left app_errors at 0 rows.
       await refundUsage(gate.org.id, gate.charges[0]);
       await refundFence(fenceCharge);
-      return vendorFailureResponse("/api/extract-minutes", e, gate.org.id);
+      return vendorFailureResponse("/api/extract-minutes", e, gate.org.id, {
+        // 🔴 §7 (104): THE route J hit with a .docx and was told to split a
+        // PDF. This is the one that had to stop guessing.
+        docKind: docKindOfUpload(photo.type, photo.name),
+      });
     }
 
     let parsed = parseMeetingNotesExtraction(raw);
@@ -278,7 +287,9 @@ ${issues}`;
         if (e instanceof VendorTimeoutError || e instanceof VendorOutputTruncatedError) {
           await refundUsage(gate.org.id, gate.charges[0]);
           await refundFence(fenceCharge);
-          return vendorFailureResponse("/api/extract-minutes", e, gate.org.id);
+          return vendorFailureResponse("/api/extract-minutes", e, gate.org.id, {
+            docKind: docKindOfUpload(photo.type, photo.name),
+          });
         }
         void captureAppError("/api/extract-minutes", e, { orgId: gate.org.id });
         // fall through to the failure response below

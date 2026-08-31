@@ -2,7 +2,12 @@ import "server-only";
 
 import { NextResponse } from "next/server";
 import { captureAppError } from "@/lib/app-errors";
-import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
+import {
+  documentTooLongError,
+  joinUserError,
+  USER_ERRORS,
+  type UploadDocKind,
+} from "@/lib/user-errors";
 import { VendorTimeoutError } from "./http";
 import { VendorOutputTruncatedError } from "./provider";
 
@@ -35,6 +40,10 @@ import { VendorOutputTruncatedError } from "./provider";
  *     2026-08-28, at RM0.10 a tap).
  *   - anything else              → 502, "the AI could not be reached".
  *
+ * §7 (2026-08-31, work order 104): pass `docKind` when the route knows what
+ * kind of file it was reading. J uploaded a .docx and was told to split the
+ * PDF — advice he could not follow, which reads as a broken app.
+ *
  * D0-2 (2026-08-29, work order 56): pass `bigDocument: true` when the failed
  * call was reading a MANY-page document (the caller knows the page count).
  * For such a document a timeout is DETERMINISTIC — generation time exceeds
@@ -46,26 +55,25 @@ export function vendorFailureResponse(
   route: string,
   err: unknown,
   orgId: number | null,
-  opts?: { bigDocument?: boolean },
+  opts?: { bigDocument?: boolean; docKind?: UploadDocKind },
 ): NextResponse {
+  // §7 (104): the "split it" advice speaks about the file the person actually
+  // sent — a .docx must never be told to split a PDF. Routes that hold the
+  // upload pass docKind; ones that do not get the neutral wording.
+  const tooLong = () => joinUserError(documentTooLongError(opts?.docKind ?? "unknown"));
   // Fire-and-forget on purpose: the person is waiting for their error message,
   // and captureAppError is best-effort by design.
   void captureAppError(route, err, { orgId });
   if (err instanceof VendorTimeoutError) {
     return NextResponse.json(
       {
-        error: joinUserError(
-          opts?.bigDocument ? USER_ERRORS.documentTooLong : USER_ERRORS.aiTimeout,
-        ),
+        error: opts?.bigDocument ? tooLong() : joinUserError(USER_ERRORS.aiTimeout),
       },
       { status: 504 },
     );
   }
   if (err instanceof VendorOutputTruncatedError) {
-    return NextResponse.json(
-      { error: joinUserError(USER_ERRORS.documentTooLong) },
-      { status: 413 },
-    );
+    return NextResponse.json({ error: tooLong() }, { status: 413 });
   }
   return NextResponse.json(
     { error: joinUserError(USER_ERRORS.aiUnavailable) },

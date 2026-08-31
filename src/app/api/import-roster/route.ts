@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { captureAppError } from "@/lib/app-errors";
 import { z } from "zod";
 import {
+  docKindOfUpload,
   joinUserError,
   tooManyPagesError,
   USER_ERRORS,
@@ -185,6 +186,7 @@ export async function POST(req: Request) {
       await refundFence(fenceCharge);
       return vendorFailureResponse("/api/import-roster", e, gate.org.id, {
         bigDocument: pageCount > TIMEOUT_SPLIT_ADVICE_PAGES,
+        docKind: file ? docKindOfUpload(file.type, file.name) : "unknown",
       });
     }
 
