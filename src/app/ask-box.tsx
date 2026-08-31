@@ -532,6 +532,16 @@ export function AskBox({
    * Deliberately NOT a remembered preference: a person who cleared the
    * conversation is back at the beginning, and the beginning has doors.
    *
+   * 🔴 NO PHASE STATE, NO TIMER, NO UNMOUNT. The block stays in the tree and
+   * its ROW collapses to a genuine zero (`grid-template-rows: 0fr`, see
+   * .minit-collapse in globals.css) — which is how 「不留任何殘餘高度」 becomes
+   * a measurable fact instead of a promise, and how coming back after
+   * "Clear conversation" animates open instead of snapping. An unmount timer
+   * would have needed setState inside an effect; this needs neither.
+   *
+   * `inert` is load-bearing, not decoration: a collapsed row is invisible but
+   * its buttons would still be reachable by Tab and readable by a screen
+   * reader. Six doors nobody can see is worse than no doors.
    */
   const entryOpen =
     hasOrg && turns.length === 0 && staged.length === 0 && busy === null;
@@ -2550,8 +2560,27 @@ export function AskBox({
 
             §2: they leave when the conversation starts and come back when it
             is cleared — one fact, no remembered preference. */}
-        {entryOpen && (
-          <div data-probe="entry-cards-shell" className="my-auto">
+        <div
+          data-probe="entry-cards-shell"
+          data-leaving={entryOpen ? "false" : "true"}
+          aria-hidden={!entryOpen}
+          inert={!entryOpen}
+          className="minit-collapse my-auto"
+        >
+          {/* 🔴 TWO DIVS, AND THE INNER ONE CARRIES ALL THE SPACING. The
+              collapsing row sizes the grid item's CONTENT box; padding and
+              borders are added on top of it, so a PADDED grid item folds down
+              to its padding and stops there — measured on the first attempt:
+              34px of nothing left sitting above the typing box, which is
+              exactly the residual height §2 forbids. The grid item is
+              therefore bare, and the spacing lives inside it where the
+              collapse takes it away too.
+
+              The 8px of side/bottom slack is for the cards' own hover lift
+              and soft shadow: the row clips its content while it collapses
+              (that is what makes the collapse a real one), and without the
+              slack the outer cards' shadows would be shaved off. */}
+          <div>
             <div className="px-2 pt-6 pb-2">
               <EntryCards
                 unfinished={unfinishedDrafts}
@@ -2566,7 +2595,7 @@ export function AskBox({
               />
             </div>
           </div>
-        )}
+        </div>
 
         <div ref={flowEndRef} aria-hidden />
         </div>

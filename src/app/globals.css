@@ -794,3 +794,45 @@ input[type="checkbox"] {
     animation: minit-enter-still 120ms var(--ease-out) both;
   }
 }
+
+/* --- LEAVING, for the one block that is allowed to (work order 113 §2) -----
+
+   J: 「送出第一則訊息之後，整組卡收起來（不是消失得很突然——淡出＋高度收合）」.
+
+   🔴 THIS IS THE ONE EXCEPTION TO "NEVER ANIMATE HEIGHT", and it is narrow on
+   purpose. 109 banned height animation inside the conversation because a card
+   ARRIVING among twenty others reflows every one of them, every frame. This
+   block is the opposite case: it is the only thing in an otherwise empty
+   pane, it collapses exactly once per conversation, and what it leaves behind
+   has to be ZERO — 「卡收起來之後，不留任何殘餘高度」. A fade alone would leave
+   an invisible slab of nothing sitting above the typing box.
+
+   `grid-template-rows: 1fr -> 0fr` is the pure-CSS height collapse: no
+   measuring, no JavaScript, no library, and the end state is a genuinely
+   zero-height row. The child carries `min-height: 0` and `overflow: hidden`
+   because without both, a grid item refuses to be smaller than its content
+   and the collapse does nothing at all. */
+.minit-collapse {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition:
+    grid-template-rows 180ms var(--ease-out),
+    opacity 140ms var(--ease-out);
+}
+.minit-collapse > * {
+  min-height: 0;
+  overflow: hidden;
+}
+.minit-collapse[data-leaving="true"] {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
+/* Reduced motion: the fade stays, the movement goes — the same rule the
+   arrival animation follows. Less, and gentler, never nothing. */
+@media (prefers-reduced-motion: reduce) {
+  .minit-collapse {
+    transition: opacity 120ms var(--ease-out);
+  }
+}
