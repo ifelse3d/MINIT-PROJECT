@@ -164,6 +164,7 @@ export default async function RootLayout({
                   showAiLauncher={Boolean(active)}
                   aiRemaining={usage?.totalRemaining ?? null}
                   aiUsedPct={usage?.usedPct ?? null}
+                  aiQuota={usage?.monthlyFreeQuota ?? null}
                   aiBlocked={usage?.blocked ?? false}
                   showAdmin={showAdmin}
                   minutesDraftsCount={minutesDraftsCount}

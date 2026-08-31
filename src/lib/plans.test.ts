@@ -18,6 +18,13 @@ describe("plans (S-1, 2026-08-25)", () => {
     }
   });
 
+  it("§0-5 (102): the tiers keep J's ratios — Trial 15%, Standard 100%, Plus 200%", () => {
+    const std = PLANS.standard.monthlyAiQuota;
+    expect(Math.round((PLANS.trial.monthlyAiQuota / std) * 100)).toBe(15);
+    expect(Math.round((PLANS.plus.monthlyAiQuota / std) * 100)).toBe(200);
+    expect(planById("plus").id).toBe("plus");
+  });
+
   it("fails CLOSED: an unknown plan string behaves as the trial", () => {
     expect(planById("enterprise-ultra").id).toBe("trial");
     expect(planById(null).id).toBe("trial");

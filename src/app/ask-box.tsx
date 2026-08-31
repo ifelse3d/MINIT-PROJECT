@@ -88,6 +88,7 @@ import {
 import { isTurnArray } from "@/components/v3/ai-panel";
 import { usePersistentState } from "@/lib/use-persistent-state";
 import { useScopedKey } from "@/lib/storage-scope";
+import { pctOfQuota, remainingPct } from "@/lib/quota-display";
 
 /**
  * A finished piece the agent made from what was handed over (work order 100
@@ -276,6 +277,7 @@ export function AskBox({
   hasOrg,
   initialRemaining,
   initialUsedPct,
+  monthlyQuota = null,
   unfinishedDrafts = null,
   howItWorks,
 }: {
@@ -284,6 +286,9 @@ export function AskBox({
   initialRemaining: number | null;
   /** Share of the monthly free quota spent, 0–100; null when unknown. */
   initialUsedPct: number | null;
+  /** The monthly pool (actions) — §0-4 (102): the display layer speaks
+   *  percentages, and a percentage needs its denominator. */
+  monthlyQuota?: number | null;
   /** G3-3: unfinished workspace drafts — a quiet reminder line in the
    *  greeting. null = unknown, no claim made (the home-card-lines rule:
    *  a failed query must never read like "you have none"). */
@@ -1048,20 +1053,26 @@ export function AskBox({
     }
 
     // §4-⑨: the agent reports what it did, in plain words — what came out,
-    // what to look at, and what it cost.
+    // what to look at, and what it cost. §0-4 (102): the receipt speaks
+    // PERCENTAGES of the monthly pool, never action counts; when the pool is
+    // unknown the cost sentence is omitted rather than guessed.
+    const costPct = pctOfQuota(actionsUsed, monthlyQuota);
+    const costBm = costPct === null ? "" : ` Guna kira-kira ${costPct}% kuota bulanan.`;
+    const costZh = costPct === null ? "" : `这次用了大约 ${costPct}% 的本月用量。`;
+    const costEn = costPct === null ? "" : ` Used about ${costPct}% of the monthly quota.`;
     const m = kind === "meeting_notes" ? (merged as MeetingNotesExtraction) : null;
     const dateBit = m?.meeting_date.value ? ` (${m.meeting_date.value})` : "";
     const reportText =
       kind === "meeting_notes"
         ? t(
-            `Siap. Saya baca nota itu dan sediakan minit mesyuarat${dateBit} — ${m!.resolutions.length} perkara.${moneyRows > 0 ? ` Saya juga ternampak ${moneyRows} baris wang — kad kedua di bawah kalau mahu rekod sekali.` : ""} Guna ${actionsUsed} tindakan AI. Buka kad untuk semak; apa-apa nak ubah, beritahu saya di halaman itu.`,
-            `做好了。笔记读完，会议记录${dateBit ? `（${m!.meeting_date.value}）` : ""}整理出 ${m!.resolutions.length} 条内容。${moneyRows > 0 ? `我还看到 ${moneyRows} 笔钱 —— 想一起记账就点第二张卡。` : ""}这次用了 ${actionsUsed} 个 AI 动作。点卡片进去核对；要改哪里，进去后直接跟我说。`,
-            `Done. I read the notes and prepared the meeting minutes${dateBit} — ${m!.resolutions.length} items.${moneyRows > 0 ? ` I also spotted ${moneyRows} money line(s) — the second card records them if you want.` : ""} Used ${actionsUsed} AI action(s). Open the card to check; tell me there if anything needs changing.`,
+            `Siap. Saya baca nota itu dan sediakan minit mesyuarat${dateBit} — ${m!.resolutions.length} perkara.${moneyRows > 0 ? ` Saya juga ternampak ${moneyRows} baris wang — kad kedua di bawah kalau mahu rekod sekali.` : ""}${costBm} Buka kad untuk semak; apa-apa nak ubah, beritahu saya di halaman itu.`,
+            `做好了。笔记读完，会议记录${dateBit ? `（${m!.meeting_date.value}）` : ""}整理出 ${m!.resolutions.length} 条内容。${moneyRows > 0 ? `我还看到 ${moneyRows} 笔钱 —— 想一起记账就点第二张卡。` : ""}${costZh}点卡片进去核对；要改哪里，进去后直接跟我说。`,
+            `Done. I read the notes and prepared the meeting minutes${dateBit} — ${m!.resolutions.length} items.${moneyRows > 0 ? ` I also spotted ${moneyRows} money line(s) — the second card records them if you want.` : ""}${costEn} Open the card to check; tell me there if anything needs changing.`,
           )
         : t(
-            `Siap. Halaman lejar itu sudah dibaca — buka kad di bawah untuk semak setiap baris. Guna ${actionsUsed} tindakan AI.`,
-            `做好了。账页读完了 —— 点下面的卡片逐行核对。这次用了 ${actionsUsed} 个 AI 动作。`,
-            `Done. The ledger page is read — open the card below to check each row. Used ${actionsUsed} AI action(s).`,
+            `Siap. Halaman lejar itu sudah dibaca — buka kad di bawah untuk semak setiap baris.${costBm}`,
+            `做好了。账页读完了 —— 点下面的卡片逐行核对。${costZh}`,
+            `Done. The ledger page is read — open the card below to check each row.${costEn}`,
           );
 
     scrollPending.current = true;
@@ -1613,6 +1624,22 @@ export function AskBox({
                   en="Not sent yet — you can type a few words first, then press Send."
                 />
               )}
+              {/* §0-4 (102): the price BEFORE the work, as a share of the
+                  monthly pool ("這份 5 頁，大約用 X%"). Recognise-then-read
+                  is why it says "about". */}
+              {(() => {
+                const est = pctOfQuota(staged.length + 1, monthlyQuota);
+                return est === null ? null : (
+                  <>
+                    {" "}
+                    <Tri
+                      bm={`Bacaan ini guna kira-kira ${est}% kuota bulanan.`}
+                      zh={`这次读取大约用 ${est}% 的本月用量。`}
+                      en={`This reading uses about ${est}% of the monthly quota.`}
+                    />
+                  </>
+                );
+              })()}
             </span>
           </div>
         )}
@@ -1764,12 +1791,18 @@ export function AskBox({
                   }
                 >
                   {o.dateText || o.label}
-                  {" · "}
-                  {t(
-                    `baca semula (${staged.length} tindakan AI)`,
-                    `重读一次（${staged.length} 个 AI 动作）`,
-                    `re-read (${staged.length} AI action${staged.length === 1 ? "" : "s"})`,
-                  )}
+                  {/* §0-4 (102): the price on the button, in %, when the pool
+                      is known — never a raw action count. */}
+                  {(() => {
+                    const est = pctOfQuota(staged.length, monthlyQuota);
+                    return est === null
+                      ? ` · ${t("baca semula", "重读一次", "re-read")}`
+                      : ` · ${t(
+                          `baca semula (kira-kira ${est}% kuota)`,
+                          `重读一次（约 ${est}% 用量）`,
+                          `re-read (about ${est}% of quota)`,
+                        )}`;
+                  })()}
                 </Button>
               ))}
               <Button
@@ -1790,9 +1823,9 @@ export function AskBox({
                 }}
               >
                 <Tri
-                  bm="Semua dalam satu — guna apa yang sudah dibaca (0 tindakan)"
-                  zh="不用分，全部放一份 —— 用刚才读好的（0 动作）"
-                  en="Keep it all in one — use what was read (0 actions)"
+                  bm="Semua dalam satu — guna apa yang sudah dibaca (percuma)"
+                  zh="不用分，全部放一份 —— 用刚才读好的（免费）"
+                  en="Keep it all in one — use what was read (free)"
                 />
               </Button>
             </div>
@@ -1963,16 +1996,18 @@ export function AskBox({
              are gone. The ONE number is the meter — "X% used this month" —
              always saying what the percentage is OF ("guna / 用了 / used"),
              because a bare percentage reads as the remaining one. */
+          /* §0-4 (102): percentages only — the "N actions left" count is
+             retired from the display layer (metering unchanged). */
           <Tri
             bm={`Soalan dan gambar di sini menggunakan kuota AI bulanan.${
-              usedPct === null ? "" : ` Bulan ini sudah guna ${usedPct}%.`
-            }${remaining === null ? "" : ` Baki ${remaining} tindakan.`}`}
+              usedPct === null ? "" : ` Bulan ini sudah guna ${usedPct}%, baki ${remainingPct(usedPct)}%.`
+            }`}
             zh={`在这里提问或上传照片会用本月的 AI 用量。${
-              usedPct === null ? "" : `本月已用 ${usedPct}%。`
-            }${remaining === null ? "" : `还剩 ${remaining} 次。`}`}
+              usedPct === null ? "" : `本月已用 ${usedPct}%，还剩 ${remainingPct(usedPct)}%。`
+            }`}
             en={`Questions and photos here use the monthly AI allowance.${
-              usedPct === null ? "" : ` ${usedPct}% used this month.`
-            }${remaining === null ? "" : ` ${remaining} actions left.`}`}
+              usedPct === null ? "" : ` ${usedPct}% used this month, ${remainingPct(usedPct)}% left.`
+            }`}
           />
         )}
       </p>

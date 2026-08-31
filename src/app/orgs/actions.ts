@@ -281,7 +281,14 @@ export async function createOrg(
   // user-side update; this insert runs under service_role, which is the same
   // exemption createOrg already relies on). Anything unexpected → trial.
   const planRaw = String(formData.get("plan") ?? "");
-  const plan = planRaw === "standard" || planRaw === "hq" ? planRaw : "trial";
+  // "plus" (102 §0-5) rides the same strip-retry ladder as the others: a
+  // database whose orgs_plan_check predates migration 42 refuses the value,
+  // the ladder drops the column, and the org lands as trial — the wish is
+  // re-statable, never a failed signup.
+  const plan =
+    planRaw === "standard" || planRaw === "plus" || planRaw === "hq"
+      ? planRaw
+      : "trial";
 
   if (!name) return { error: ERR.name, ok: false };
 

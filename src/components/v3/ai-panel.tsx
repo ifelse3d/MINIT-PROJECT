@@ -51,6 +51,7 @@ import {
   type AgentUiChangeInfo,
 } from "@/components/agent-change-card";
 import { writeIntake } from "@/lib/intake-handoff";
+import { pctOfQuota } from "@/lib/quota-display";
 import { tidyReply } from "@/lib/tidy-reply";
 import { ASSISTANT_NAME } from "@/lib/brand";
 import {
@@ -127,6 +128,7 @@ type ChatOk = {
 export function AIPanel({
   initialRemaining,
   initialUsedPct,
+  initialQuota = null,
   blocked,
   onNavigate,
   onClose,
@@ -135,6 +137,8 @@ export function AIPanel({
   initialRemaining: number | null;
   /** Share of the monthly free quota spent, 0–100. null = unknown. */
   initialUsedPct: number | null;
+  /** The monthly pool (actions) — display-layer % conversion only (102). */
+  initialQuota?: number | null;
   blocked: boolean;
   /** Close the sheet when the member follows the Go-to-page button. Omitted by
    *  the docked desktop rail, which deliberately STAYS open while the page
@@ -333,14 +337,21 @@ export function AIPanel({
         storagePath: null,
         photoDataUrl: null,
       });
+      // §0-4 (102): the receipt speaks percentages, never action counts.
+      const pct = pctOfQuota(1, initialQuota);
+      const costBit = {
+        bm: pct === null ? "" : ` Guna kira-kira ${pct}% kuota bulanan.`,
+        zh: pct === null ? "" : `这次用了大约 ${pct}% 的本月用量。`,
+        en: pct === null ? "" : ` Used about ${pct}% of the monthly quota.`,
+      };
       setTurns((prev) => [
         ...prev,
         {
           role: "assistant",
           text: t(
-            "Siap — draf minit sudah disediakan daripada cerita anda. Buka dan semak; apa-apa nak ubah, beritahu saya di sana. Guna 1 tindakan AI.",
-            "做好了 —— 已经把您讲的内容整理成会议记录草稿。点开核对；要改哪里，进去后直接跟我说。这次用了 1 个 AI 动作。",
-            "Done — the minutes draft is ready from your account. Open it and check; tell me there if anything needs changing. Used 1 AI action.",
+            `Siap — draf minit sudah disediakan daripada cerita anda. Buka dan semak; apa-apa nak ubah, beritahu saya di sana.${costBit.bm}`,
+            `做好了 —— 已经把您讲的内容整理成会议记录草稿。点开核对；要改哪里，进去后直接跟我说。${costBit.zh}`,
+            `Done — the minutes draft is ready from your account. Open it and check; tell me there if anything needs changing.${costBit.en}`,
           ),
           button: {
             href: "/minutes?dari=ai",

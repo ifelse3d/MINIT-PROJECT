@@ -20,7 +20,7 @@
  */
 export const TBD_PRICING = <T>(placeholder: T): T => placeholder;
 
-export type PlanId = "trial" | "standard" | "hq";
+export type PlanId = "trial" | "standard" | "plus" | "hq";
 
 /**
  * The free fence (D44, J's numbers, 2026-08-28). LIFETIME totals — they never
@@ -90,6 +90,20 @@ export const PLANS: Record<PlanId, Plan> = {
     fence: null, // paid = no fence (D44)
     priceRm: null, // TBD_PRICING — announced when costs are measured
   },
+  // DECIDED (J 2026-08-31, work order 102 §0-5): Plus = twice the Standard
+  // pool — on the plan page the three tiers read as percentages of Standard
+  // (Trial 15% · Standard 100% · Plus 200%). The underlying pool sizes stay
+  // J-adjustable (plan_quotas via the ops console once migration 42 lands).
+  plus: {
+    id: "plus",
+    name: { bm: "Plus", zh: "Plus", en: "Plus" },
+    monthlyAiQuota: TBD_PRICING(200),
+    maxRootOrgs: TBD_PRICING(1),
+    maxBranches: null,
+    features: { branchHierarchy: false, einvois: true },
+    fence: null, // paid = no fence (D44)
+    priceRm: null, // TBD_PRICING
+  },
   hq: {
     id: "hq",
     name: { bm: "Ibu Pejabat", zh: "总部", en: "HQ" },
@@ -104,9 +118,10 @@ export const PLANS: Record<PlanId, Plan> = {
 
 /** Fail-closed: an unknown plan string behaves as the most restricted plan. */
 export function planById(raw: string | null | undefined): Plan {
-  if (raw === "standard" || raw === "hq") return PLANS[raw];
+  if (raw === "standard" || raw === "plus" || raw === "hq") return PLANS[raw];
   return PLANS.trial;
 }
 
-/** The comparison-table order. */
-export const PLAN_ORDER: PlanId[] = ["trial", "standard", "hq"];
+/** The comparison-table order. §0-5 (102): HQ is tucked away on the plan
+ *  page (operator-only column) — the PLANS entry and every feature stay. */
+export const PLAN_ORDER: PlanId[] = ["trial", "standard", "plus", "hq"];

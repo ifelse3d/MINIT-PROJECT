@@ -128,6 +128,7 @@ export default async function Home() {
           hasOrg
           initialRemaining={usage?.totalRemaining ?? null}
           initialUsedPct={usage?.usedPct ?? null}
+          monthlyQuota={usage?.monthlyFreeQuota ?? null}
           unfinishedDrafts={unfinishedDrafts}
           howItWorks={<HowItWorksButton variant="link" />}
         />

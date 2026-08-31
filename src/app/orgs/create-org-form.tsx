@@ -101,7 +101,7 @@ export function CreateOrgForm({
   // one that changes anything today — standard/hq RECORD the choice
   // (orgs.plan) and we activate by hand once prices exist. No fake checkout,
   // no fake prices (D12), quota stays at the trial 15 until then.
-  const [plan, setPlan] = useState<"trial" | "standard" | "hq">("trial");
+  const [plan, setPlan] = useState<"trial" | "standard" | "plus">("trial");
   // C-2 (8/20 #19 后段): a NEW society and a society that has EXISTED for
   // years start in different places — the answer only reorders the landing
   // card, nothing else. Default "existing": Minit is built for registered
@@ -441,9 +441,11 @@ export function CreateOrgForm({
         </div>
       </fieldset>
 
-      {/* C-1 (拍板⑤): pick a plan. Trial is the default; standard/hq RECORD
+      {/* C-1 (拍板⑤): pick a plan. Trial is the default; a paid choice RECORDS
           the wish and a human activates it — no prices, no checkout (D12),
-          and the AI allowance stays at the trial level until activation. */}
+          and the AI allowance stays at the trial level until activation.
+          §0-5 (102): the tiers read as percentages of Standard (15/100/200)
+          and HQ is tucked away — J opens HQ by hand for the network case. */}
       <fieldset className="flex flex-col gap-2">
         <legend className="text-base font-semibold">
           <Tri bm="Pelan" zh="配套" en="Plan" />
@@ -456,27 +458,27 @@ export function CreateOrgForm({
                 bm: "Percubaan",
                 zh: "试用",
                 en: "Trial",
-                subBm: "Percuma buat masa ini · 15 tindakan AI sebulan · 1 pertubuhan",
-                subZh: "目前免费 · 每月 15 次 AI · 1 个机构",
-                subEn: "Free for now · 15 AI actions/month · 1 organisation",
+                subBm: "Percuma buat masa ini · kuota AI 15% daripada Biasa · 1 pertubuhan",
+                subZh: "目前免费 · AI 用量为标准的 15% · 1 个机构",
+                subEn: "Free for now · 15% of the Standard AI quota · 1 organisation",
               },
               {
                 value: "standard" as const,
                 bm: "Biasa",
                 zh: "标准",
                 en: "Standard",
-                subBm: "Kuota lebih besar untuk pertubuhan yang aktif",
-                subZh: "给活跃社团的更大用量",
-                subEn: "A bigger allowance for an active society",
+                subBm: "Kuota penuh (100%) untuk pertubuhan yang aktif",
+                subZh: "完整用量（100%），给活跃社团",
+                subEn: "The full quota (100%) for an active society",
               },
               {
-                value: "hq" as const,
-                bm: "Ibu Pejabat",
-                zh: "总部",
-                en: "HQ",
-                subBm: "Ibu pejabat dengan rangkaian cawangan",
-                subZh: "总部＋分会网络",
-                subEn: "A headquarters with branches",
+                value: "plus" as const,
+                bm: "Plus",
+                zh: "Plus",
+                en: "Plus",
+                subBm: "Dua kali kuota Biasa (200%)",
+                subZh: "标准的两倍用量（200%）",
+                subEn: "Twice the Standard quota (200%)",
               },
             ]
           ).map((opt) => (

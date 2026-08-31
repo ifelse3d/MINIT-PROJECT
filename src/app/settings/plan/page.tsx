@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { Tri } from "@/components/language-provider";
 import { getSupabase } from "@/db/supabase";
+import { getSessionUser } from "@/db/supabase-server";
 import { getActiveOrg } from "@/lib/active-org";
 import { getUsage } from "@/lib/ai/usage";
+import { isOperatorEmail } from "@/lib/admin-gate";
 import { getFenceState } from "@/lib/fence";
-import { PLANS, PLAN_ORDER, planById, type Plan } from "@/lib/plans";
+import { remainingPct } from "@/lib/quota-display";
+import { PLANS, PLAN_ORDER, planById, type Plan, type PlanId } from "@/lib/plans";
 import { UsageBar } from "@/components/usage-bar";
 import { loadUsageByPerson } from "../usage-by-person";
 
@@ -44,7 +47,10 @@ const FEATURE_ROWS: {
 ];
 
 function featureCell(plan: Plan, key: "quota" | "orgs" | "branches"): string {
-  if (key === "quota") return `${plan.monthlyAiQuota}`;
+  // §0-4/§0-5 (102): the quota row reads as a share of the Standard pool —
+  // Trial 15% · Standard 100% · Plus 200% — never raw action counts.
+  if (key === "quota")
+    return `${Math.round((plan.monthlyAiQuota / PLANS.standard.monthlyAiQuota) * 100)}%`;
   if (key === "orgs") return `${plan.maxRootOrgs}`;
   return plan.maxBranches === null ? "—" : `${plan.maxBranches}`;
 }
@@ -68,7 +74,7 @@ export default async function PlanPage() {
     );
   }
 
-  const [plan, usage, usageByPerson, fenceState] = await Promise.all([
+  const [plan, usage, usageByPerson, fenceState, sessionUser] = await Promise.all([
     loadPlan(active.id),
     getUsage(active.id).catch(() => null),
     // K-2's by-member split — lived on the old long /settings page; since the
@@ -76,8 +82,20 @@ export default async function PlanPage() {
     loadUsageByPerson(active.id),
     // D44: the free fence's lifetime meters. null = this org is not fenced.
     getFenceState(active).catch(() => null),
+    getSessionUser().catch(() => null),
   ]);
   const contactEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "";
+
+  // §0-5 (102): the HQ column is tucked away — J opens the branches network
+  // by hand for the org that needs it; a village society choosing between
+  // three tiers does not need a fourth. Nothing about HQ is deleted: the
+  // plan, its features and every HQ org keep working, and an org already ON
+  // hq keeps seeing its own column.
+  const operator = isOperatorEmail(sessionUser?.email);
+  const shownPlans: PlanId[] = PLAN_ORDER.filter(
+    (id) => id !== "hq" || operator || plan.id === "hq",
+  );
+  const showBranchesRow = shownPlans.includes("hq");
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 pb-10">
@@ -104,19 +122,24 @@ export default async function PlanPage() {
             </p>
           </div>
           {usage && (
+            // §0-4 (102): percentages, never raw action counts.
             <p className="text-base">
-              <span className="font-semibold tabular-nums">
-                {usage.usedThisMonth} / {usage.monthlyFreeQuota}
-              </span>{" "}
+              <span className="font-semibold tabular-nums">{usage.usedPct}%</span>{" "}
               <Tri bm="digunakan" zh="已用" en="used" />
               {" · "}
-              <span className="font-semibold tabular-nums">{usage.usedPct}%</span>
+              <span className="font-semibold tabular-nums">
+                {remainingPct(usage.usedPct)}%
+              </span>{" "}
+              <Tri bm="baki" zh="还剩" en="left" />
               {/* Moved with the §1-13 split: top-up credits were only ever
-                  shown on the old long settings page. */}
-              {usage.extraCredits > 0 && (
+                  shown on the old long settings page. Shown as a share of
+                  this org's own pool, same unit as everything else. */}
+              {usage.extraCredits > 0 && usage.monthlyFreeQuota > 0 && (
                 <>
                   {" · "}
-                  <span className="font-semibold tabular-nums">+{usage.extraCredits}</span>{" "}
+                  <span className="font-semibold tabular-nums">
+                    +{Math.round((usage.extraCredits / usage.monthlyFreeQuota) * 100)}%
+                  </span>{" "}
                   <Tri bm="kredit tambahan" zh="充值额度" en="extra credits" />
                 </>
               )}
@@ -150,24 +173,26 @@ export default async function PlanPage() {
         {usage && usage.monthlyFreeQuota > plan.monthlyAiQuota && (
           <p className="text-sm text-[color:var(--v2-text-soft)]">
             <Tri
-              bm={`Kuota pertubuhan ini ialah ${usage.monthlyFreeQuota}/bulan (akaun awal); standard untuk pertubuhan baharu ialah ${plan.monthlyAiQuota}/bulan.`}
-              zh={`您这个机构的额度是 ${usage.monthlyFreeQuota}/月（早期账号）；新机构标准为 ${plan.monthlyAiQuota}/月。`}
-              en={`This organisation's allowance is ${usage.monthlyFreeQuota}/month (early account); the standard for new organisations is ${plan.monthlyAiQuota}/month.`}
+              bm={`Akaun awal: kuota pertubuhan ini ${Math.round((usage.monthlyFreeQuota / PLANS.standard.monthlyAiQuota) * 100)}% daripada pelan Biasa — lebih tinggi daripada pelan semasa.`}
+              zh={`早期账号：此机构的额度是「标准」方案的 ${Math.round((usage.monthlyFreeQuota / PLANS.standard.monthlyAiQuota) * 100)}%，比当前方案的标准更高。`}
+              en={`Early account: this organisation's allowance is ${Math.round((usage.monthlyFreeQuota / PLANS.standard.monthlyAiQuota) * 100)}% of the Standard plan — higher than its current plan's level.`}
             />
           </p>
         )}
-        {/* C-1 (拍板⑤): a chosen-but-not-activated plan is said out loud.
-            The tell is honest arithmetic: the plan says standard/hq but the
-            metered quota is still at the trial level — activation (J's admin
-            SQL) raises the quota, and this note disappears by itself. */}
+        {/* C-1 (拍板⑤) + §0-5 (102, J: 「選了 Standard 卻還是 15 次」的矛盾
+            画面): the chosen-but-not-activated state reads as ONE sentence
+            with three beats — chosen ✓, activation pending, meanwhile the
+            meter above measures the TRIAL pool. The bar filling up is then
+            expected, not a contradiction. Activation raises the quota and
+            this note disappears by itself. */}
         {plan.id !== "trial" &&
           usage &&
           usage.monthlyFreeQuota <= PLANS.trial.monthlyAiQuota && (
             <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-sm font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
               <Tri
-                bm={`Pelan ${plan.name.bm} sudah dipilih — kami mengaktifkannya secara manual selepas harga diumumkan. Sehingga itu, kuota AI kekal pada tahap percubaan (${PLANS.trial.monthlyAiQuota} sebulan).`}
-                zh={`已选「${plan.name.zh}」配套 —— 价格公布后由我们人工开通。开通之前，AI 用量照试用（每月 ${PLANS.trial.monthlyAiQuota} 次）。`}
-                en={`The ${plan.name.en} plan is selected — we activate it by hand once prices are announced. Until then the AI allowance stays at the trial level (${PLANS.trial.monthlyAiQuota}/month).`}
+                bm={`Pelan ${plan.name.bm} sudah dipilih ✓ — menunggu pengaktifan manual (selepas harga diumumkan). Sementara menunggu, meter di atas mengukur kuota PERCUBAAN (${Math.round((PLANS.trial.monthlyAiQuota / PLANS.standard.monthlyAiQuota) * 100)}% daripada Biasa), jadi ia boleh penuh lebih awal — itu bukan ralat.`}
+                zh={`已选「${plan.name.zh}」方案 ✓ —— 等待人工开通（价格公布后）。开通之前，上面的用量条量的是「试用」额度（标准的 ${Math.round((PLANS.trial.monthlyAiQuota / PLANS.standard.monthlyAiQuota) * 100)}%），所以会比较快用满 —— 这不是出错。`}
+                en={`The ${plan.name.en} plan is chosen ✓ — awaiting manual activation (once prices are announced). Until then the meter above measures the TRIAL pool (${Math.round((PLANS.trial.monthlyAiQuota / PLANS.standard.monthlyAiQuota) * 100)}% of Standard), so it can fill up sooner — that is not an error.`}
               />
             </p>
           )}
@@ -225,7 +250,7 @@ export default async function PlanPage() {
           <thead>
             <tr className="border-b border-[color:var(--v2-border)] text-left">
               <th className="px-4 py-3" />
-              {PLAN_ORDER.map((id) => (
+              {shownPlans.map((id) => (
                 <th
                   key={id}
                   className={`px-4 py-3 font-semibold ${
@@ -243,18 +268,30 @@ export default async function PlanPage() {
             </tr>
           </thead>
           <tbody>
-            {FEATURE_ROWS.map((row) => (
+            {FEATURE_ROWS.filter((r) => r.key !== "branches" || showBranchesRow).map((row) => (
               <tr key={row.key} className="border-b border-[color:var(--v2-border)] last:border-b-0">
                 <td className="px-4 py-3 text-[color:var(--v2-text-soft)]">
                   <Tri bm={row.bm} zh={row.zh} en={row.en} />
                 </td>
-                {PLAN_ORDER.map((id) => (
+                {shownPlans.map((id) => (
                   <td key={id} className="px-4 py-3 tabular-nums">
                     {featureCell(PLANS[id], row.key)}
                   </td>
                 ))}
               </tr>
             ))}
+            {/* §0-4: what the quota % is OF, said once under the % row. */}
+            <tr className="border-b border-[color:var(--v2-border)]">
+              <td className="px-4 py-3" colSpan={shownPlans.length + 1}>
+                <span className="text-sm text-[color:var(--v2-text-soft)]">
+                  <Tri
+                    bm="Kuota AI ditunjukkan sebagai peratus daripada pelan Biasa (Biasa = 100%)."
+                    zh="AI 用量以「标准」方案为 100% 来比较。"
+                    en="AI quotas are shown as a share of the Standard plan (Standard = 100%)."
+                  />
+                </span>
+              </td>
+            </tr>
             {/* D44: the fence rows — what "free vs paid" concretely means. */}
             {(
               [
@@ -291,7 +328,7 @@ export default async function PlanPage() {
                 <td className="px-4 py-3 text-[color:var(--v2-text-soft)]">
                   <Tri bm={row.bm} zh={row.zh} en={row.en} />
                 </td>
-                {PLAN_ORDER.map((id) => (
+                {shownPlans.map((id) => (
                   <td key={id} className="px-4 py-3 tabular-nums">
                     {PLANS[id].fence ? PLANS[id].fence[row.key] : "∞"}
                   </td>
@@ -302,7 +339,7 @@ export default async function PlanPage() {
               <td className="px-4 py-3 text-[color:var(--v2-text-soft)]">
                 <Tri bm="Harga" zh="价格" en="Price" />
               </td>
-              <td className="px-4 py-3" colSpan={PLAN_ORDER.length}>
+              <td className="px-4 py-3" colSpan={shownPlans.length}>
                 <Tri
                   bm="Harga akan diumumkan selepas kos sebenar diukur. Sehingga itu, hubungi kami untuk menaik taraf."
                   zh="价格会在量出真实成本之后公布。公布之前，升级请联络我们。"

@@ -89,6 +89,7 @@ export function AppShell({
   showAiLauncher,
   aiRemaining,
   aiUsedPct,
+  aiQuota = null,
   aiBlocked,
   showAdmin = false,
   minutesDraftsCount = null,
@@ -98,6 +99,8 @@ export function AppShell({
   aiRemaining: number | null;
   /** Share of the monthly free quota already spent, 0–100. null = unknown. */
   aiUsedPct: number | null;
+  /** The monthly pool itself (actions) — display-layer % conversion only. */
+  aiQuota?: number | null;
   aiBlocked: boolean;
   /** P-4: server-decided "may this session see the Ops console row?". A
    *  boolean only — the operator list itself never reaches the client, and
@@ -185,6 +188,7 @@ export function AppShell({
             dock={dock}
             initialRemaining={aiRemaining}
             initialUsedPct={aiUsedPct}
+            initialQuota={aiQuota}
             blocked={aiBlocked}
           />
         )}

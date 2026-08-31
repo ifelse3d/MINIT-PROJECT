@@ -169,6 +169,7 @@ export function AIDock({
   dock,
   initialRemaining,
   initialUsedPct,
+  initialQuota = null,
   blocked,
 }: {
   dock: AIDockState;
@@ -176,6 +177,8 @@ export function AIDock({
   initialRemaining: number | null;
   /** Share of the monthly free quota already spent, 0–100. null = unknown. */
   initialUsedPct: number | null;
+  /** The monthly pool (actions) — display-layer % conversion only (102). */
+  initialQuota?: number | null;
   blocked: boolean;
 }) {
   const { open, setOpen, width, isDesktop, dragging, startResize, nudgeWidth } =
@@ -271,6 +274,7 @@ export function AIDock({
               <AIPanel
                 initialRemaining={initialRemaining}
                 initialUsedPct={initialUsedPct}
+                initialQuota={initialQuota}
                 blocked={blocked}
                 onClose={() => setOpen(false)}
                 // Docked: following the "go to this page" button navigates the
@@ -305,6 +309,7 @@ export function AIDock({
                   <AIPanel
                     initialRemaining={initialRemaining}
                     initialUsedPct={initialUsedPct}
+                    initialQuota={initialQuota}
                     blocked={blocked}
                     onClose={() => setOpen(false)}
                     // A phone sheet covers the page, so following a link must
