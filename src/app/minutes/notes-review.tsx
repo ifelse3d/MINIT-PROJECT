@@ -345,12 +345,21 @@ export function NotesReview() {
               aria-hidden
               className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center"
             >
-              <span className="rotate-[-18deg] select-none rounded border-4 border-red-400/50 px-6 py-2 text-4xl font-black tracking-widest text-red-500/40">
+              {/* §3 (109): the stamp stays — it is the difference between a
+                  draft and a document, and that difference is legal. What
+                  changed is that you can now READ THROUGH IT: 40% → 22% ink,
+                  and a thinner frame. */}
+              <span className="rotate-[-18deg] select-none rounded border-2 border-red-400/25 px-6 py-2 text-4xl font-black tracking-widest text-red-500/[0.22]">
                 DRAF
               </span>
             </span>
           )}
-          <pre className="v2-scroll max-h-96 overflow-auto whitespace-pre-wrap bg-[color:var(--v2-card)] p-4 text-sm leading-relaxed">
+          {/* §3 (109): the preview is the point of this section, so it gets
+              the height of a page instead of a fixed 384px window that
+              scrolls a document you are trying to read. It still caps — a
+              forty-page minute must not push the buttons under it off the
+              screen — but the cap is now most of the window. */}
+          <pre className="v2-scroll max-h-[70dvh] min-h-64 overflow-auto whitespace-pre-wrap bg-[color:var(--v2-card)] p-4 text-sm leading-relaxed">
             {minutesDraft}
           </pre>
         </div>

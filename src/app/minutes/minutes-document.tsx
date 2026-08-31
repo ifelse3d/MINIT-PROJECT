@@ -463,7 +463,12 @@ export function MinutesDocument() {
                 }
                 spellCheck={false}
                 rows={22}
-                className="w-full rounded-md border-2 border-input bg-white/80 p-4 text-base leading-relaxed dark:bg-white/5"
+                // §3 (109, J: 「step 3 的文件框…它是這頁的主角，
+                // 給它主要的高度」): a fixed 22 rows is a small box on a
+                // large screen and a fair one on a laptop. The floor is now
+                // most of the window, so the document a person came here to
+                // read is the biggest thing on the page at any size.
+                className="min-h-[60dvh] w-full rounded-md border-2 border-input bg-white/80 p-4 text-base leading-relaxed dark:bg-white/5"
               />
               <p className="text-sm text-muted-foreground">
                 <Tri
@@ -501,7 +506,7 @@ export function MinutesDocument() {
               )}
             </div>
           ) : (
-            <pre className="rounded-md border-2 border-input bg-white/80 p-4 text-base whitespace-pre-wrap dark:bg-white/5">
+            <pre className="min-h-[60dvh] rounded-md border-2 border-input bg-white/80 p-4 text-base whitespace-pre-wrap dark:bg-white/5">
               {shownDocument}
             </pre>
           )}

@@ -85,7 +85,12 @@ export function SectionTabs({
                 // F-3 (2026-08-25): min-h-11 = the app's 44px touch-target
                 // floor. These pills are the PRIMARY step navigation on a
                 // phone; 36px was below the floor everything else keeps.
-                className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xs border-2 px-3 text-base font-medium md:min-h-9 md:px-2.5 md:text-sm ${tone} ${
+                // §3 (work order 109, J: 「步驟條收窄，不要在手機上換行變兩層」):
+                // the pill keeps the 44px touch floor (F-3) and loses the
+                // WIDTH — text-sm and a tighter gap below md. Three steps at
+                // text-base wrapped onto two rows on a 375px phone, and a
+                // two-storey step rail above a document reads as two rails.
+                className={`inline-flex min-h-11 shrink-0 items-center gap-1 whitespace-nowrap rounded-xs border-2 px-2.5 text-sm font-medium md:min-h-9 ${tone} ${
                   // The page you are ON is the one thing this rail must make
                   // unmissable — colour alone cannot do it, because two tabs can
                   // legitimately share a colour.
@@ -106,14 +111,30 @@ export function SectionTabs({
                   // D-4 (work order 31, 客⑩): a solid badge that SAYS what the
                   // number is. The old faint circle with a bare digit read as
                   // decoration, not as "3 things are waiting for you".
-                  <span className="rounded-xs bg-amber-700 px-2 py-0.5 text-sm font-bold text-white dark:bg-amber-400 dark:text-black">
+                  <span className="rounded-xs bg-amber-700 px-1.5 py-0.5 text-sm font-bold text-white dark:bg-amber-400 dark:text-black">
                     {/* G3-4 (work order 68, J #8): "1 to check" read as
-                        jargon — say it the way a person would. */}
-                    {t(
-                      `${tab.count} menunggu anda`,
-                      `${tab.count} 项等你确认`,
-                      `${tab.count} waiting for you`,
-                    )}
+                        jargon — say it the way a person would.
+                        §3 (109): the full sentence is what pushed this rail
+                        onto a second row on a phone. Below md it says the
+                        same thing in fewer words — still a WORDED count, not
+                        the bare digit D-4 threw out. Only one of the two is
+                        in the accessibility tree at a time (md:hidden is
+                        display:none), so a screen reader reads one count,
+                        never both. */}
+                    <span className="md:hidden">
+                      {t(
+                        `${tab.count} perlu`,
+                        `${tab.count} 项要看`,
+                        `${tab.count} to do`,
+                      )}
+                    </span>
+                    <span className="hidden md:inline">
+                      {t(
+                        `${tab.count} menunggu anda`,
+                        `${tab.count} 项等你确认`,
+                        `${tab.count} waiting for you`,
+                      )}
+                    </span>
                   </span>
                 )}
               </Link>
