@@ -27,6 +27,7 @@ import {
 } from "@/lib/constitution";
 import type { ConfirmedClause } from "@/lib/constitution";
 import type { ConstitutionExtraction } from "@/lib/extraction";
+import { mergeConstitutionOrganisations } from "@/lib/extraction-merge";
 import { usePersistentState } from "@/lib/use-persistent-state";
 import { useScopedKey } from "@/lib/storage-scope";
 import { consumeIntake } from "@/lib/intake-handoff";
@@ -80,6 +81,18 @@ type StoredConstitution = {
   clauses: ConfirmedClause[];
   /** The file the clauses were read from, shown so the user can tell. */
   sourceLabel: string;
+  /**
+   * §2 (104): the three facts the READ handed back about the society itself
+   * (name / address / registration number), for the identity panel.
+   *
+   * DEVICE-SIDE ONLY, and deliberately so. `constitutions.clauses_json` holds
+   * the clause ARRAY and nothing else; giving this block a durable home needs
+   * a migration, and only J applies those (D8). So: on the device that did the
+   * reading the panel shows the AI's answer; on a second device the panel
+   * falls back to the clause regex (fixed tonight) over the same clauses. Both
+   * are honest, and neither invents.
+   */
+  organisation?: ConstitutionExtraction["organisation"];
 };
 
 /** Shape guard for the stored blob (see usePersistentState). */
@@ -312,6 +325,12 @@ export function ConstitutionReview({
       title: prev?.title ?? nextTitle,
       clauses: mergeClauses(prev?.clauses ?? [], read),
       sourceLabel: handed.fileName,
+      // §2 (104): same page-by-page rule as the clauses — a later page that
+      // read nothing never erases what page 1 read.
+      organisation: mergeConstitutionOrganisations(
+        prev?.organisation,
+        extraction.organisation,
+      ),
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -481,6 +500,10 @@ export function ConstitutionReview({
         clauses: mergeClauses(prev?.clauses ?? [], read),
         sourceLabel:
           files.length === 1 ? files[0].name : `${files.length} × 📄`,
+        organisation: mergeConstitutionOrganisations(
+          prev?.organisation,
+          r.extraction.organisation,
+        ),
       }));
       setStaged([]);
       setResult(null);
@@ -585,6 +608,7 @@ export function ConstitutionReview({
           the single worst thing this panel could do. */}
       <OrgIdentityPanel
         clauses={hasOwn ? clauses : []}
+        organisation={hasOwn ? stored.organisation : undefined}
         orgName={orgName}
         orgId={orgId}
       />

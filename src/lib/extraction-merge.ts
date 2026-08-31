@@ -159,6 +159,38 @@ const MISSING_FIELD: TextField = {
   source_ref: null,
 };
 
+/**
+ * §2 (104): the society's own name/address/registration number, across the
+ * pages of one constitution. Page 1 (or segment 1 of a long PDF) is where they
+ * are printed, so a later page reads them `missing` — mergeScalar's rule keeps
+ * the real reading and never lets a blank later page erase it. Absent on both
+ * sides stays absent (a constitution read before §2 existed has no block).
+ *
+ * Exported because the constitution REVIEW page merges page by page too, on
+ * the device, and a second copy of this rule there is a second place for it to
+ * drift (CLAUDE.md rule 13: pure logic goes to src/lib BEFORE the UI divides).
+ */
+export function mergeConstitutionOrganisations(
+  existing: ConstitutionExtraction["organisation"],
+  incoming: ConstitutionExtraction["organisation"],
+): ConstitutionExtraction["organisation"] {
+  if (!existing && !incoming) return undefined;
+  return {
+    registered_name: mergeScalar(
+      existing?.registered_name ?? MISSING_FIELD,
+      incoming?.registered_name ?? MISSING_FIELD,
+    ),
+    registered_address: mergeScalar(
+      existing?.registered_address ?? MISSING_FIELD,
+      incoming?.registered_address ?? MISSING_FIELD,
+    ),
+    registration_no: mergeScalar(
+      existing?.registration_no ?? MISSING_FIELD,
+      incoming?.registration_no ?? MISSING_FIELD,
+    ),
+  };
+}
+
 /** A-5 (work order 51): several photographed pages of one constitution, sent
  *  together from the home door. Clauses append in page order; the title keeps
  *  the first real reading (page 1 carries it; later pages read "missing"). */
@@ -168,28 +200,10 @@ export function mergeConstitutionExtractions(
 ): ConstitutionExtraction {
   return {
     document_title: mergeScalar(existing.document_title, incoming.document_title),
-    // §2 (104): the society's own name/address/registration number. Page 1
-    // (or segment 1 of a long PDF) is where they are printed, so a later
-    // page reads them `missing` — mergeScalar's rule keeps the real reading
-    // and never lets a blank later page erase it. Absent on both sides stays
-    // absent (an old saved constitution has no block at all).
-    organisation:
-      existing.organisation || incoming.organisation
-        ? {
-            registered_name: mergeScalar(
-              existing.organisation?.registered_name ?? MISSING_FIELD,
-              incoming.organisation?.registered_name ?? MISSING_FIELD,
-            ),
-            registered_address: mergeScalar(
-              existing.organisation?.registered_address ?? MISSING_FIELD,
-              incoming.organisation?.registered_address ?? MISSING_FIELD,
-            ),
-            registration_no: mergeScalar(
-              existing.organisation?.registration_no ?? MISSING_FIELD,
-              incoming.organisation?.registration_no ?? MISSING_FIELD,
-            ),
-          }
-        : undefined,
+    organisation: mergeConstitutionOrganisations(
+      existing.organisation,
+      incoming.organisation,
+    ),
     clauses: [...existing.clauses, ...incoming.clauses],
   };
 }

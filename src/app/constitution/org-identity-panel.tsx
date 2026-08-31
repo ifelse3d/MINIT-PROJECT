@@ -9,11 +9,14 @@ import {
   findAddressClause,
   findAmendmentRule,
   findNameClause,
-  findRegisteredAddress,
-  findRegisteredName,
+  readRegisteredAddress,
+  readRegisteredName,
+  readRegistrationNo,
   type ClauseCoverage,
+  type IdentityFact,
 } from "@/lib/constitution-identity";
 import type { ConfirmedClause } from "@/lib/constitution";
+import type { ConstitutionOrganisation } from "@/lib/extraction";
 import { renameOrg, type OrgActionState } from "../orgs/actions";
 
 // ---------------------------------------------------------------------------
@@ -61,16 +64,24 @@ const INITIAL: OrgActionState = { error: null, ok: false };
 
 export function OrgIdentityPanel({
   clauses,
+  organisation,
   orgName,
   orgId,
 }: {
   clauses: ConfirmedClause[];
+  /**
+   * §2 (104): the three facts the READ handed back — the AI's own answer,
+   * preferred over the clause regex. Absent for a constitution read before
+   * tonight (the durable copy stores clauses, not this block), and then every
+   * row below falls back to the regex exactly as it always did.
+   */
+  organisation?: ConstitutionOrganisation;
   /** The name Minit currently uses for the active org. */
   orgName: string | null;
   /** null when there is no active org (nothing to rename). */
   orgId: number | null;
 }) {
-  const registered = findRegisteredName(clauses);
+  const registered = readRegisteredName(clauses, organisation);
   const amendment = findAmendmentRule(clauses);
   const coverage = constitutionCoverage(clauses);
 
@@ -96,7 +107,8 @@ export function OrgIdentityPanel({
         orgId={orgId}
         coverage={coverage}
       />
-      <AlamatRow clauses={clauses} />
+      <AlamatRow clauses={clauses} organisation={organisation} />
+      <RegistrationRow organisation={organisation} />
       <AmendmentRow amendment={amendment} coverage={coverage} />
     </div>
   );
@@ -111,7 +123,7 @@ function NameRow({
   orgId,
   coverage,
 }: {
-  registered: ReturnType<typeof findRegisteredName>;
+  registered: IdentityFact | null;
   /** The NAMA clause itself, when one was read — even if the name inside it
    *  could not be parsed. */
   nameClause: ReturnType<typeof findNameClause>;
@@ -121,6 +133,9 @@ function NameRow({
 }) {
   const [state, formAction, pending] = useActionState(renameOrg, INITIAL);
   const [dismissed, setDismissed] = useState(false);
+  /** §3 (104): the third road — "none of these, I'll type it". */
+  const [typing, setTyping] = useState(false);
+  const [typed, setTyped] = useState("");
 
   if (!registered) {
     // 🔴 Three different truths, three different sentences (work order 85 ①;
@@ -145,14 +160,18 @@ function NameRow({
                 en="Your constitution does have a NAMA clause, but MinitAI could not tell which part is the registered name. Please read the clause yourself:"
               />
             </p>
-            <Source clause={nameClause} showText />
+            <Source source={{ kind: "clause", clause: nameClause }} showText />
             <p className="text-sm text-muted-foreground">
               <Tri
-                bm={`Nama yang MinitAI guna sekarang: ${orgName ?? "—"}. Kalau nama dalam fasal berbeza, betulkannya di Tetapan → Pertubuhan.`}
-                zh={`MinitAI 现在用的名字是：${orgName ?? "—"}。如果条文里写的不一样，请到 设置 → 机构 改过来。`}
-                en={`The name MinitAI is using now: ${orgName ?? "—"}. If the clause says otherwise, correct it in Settings → Organisation.`}
+                bm={`Nama yang MinitAI guna sekarang: ${orgName ?? "—"}.`}
+                zh={`MinitAI 现在用的名字是：${orgName ?? "—"}。`}
+                en={`The name MinitAI is using now: ${orgName ?? "—"}.`}
               />
             </p>
+            {/* §3 (104): the box is HERE, not a sentence pointing at
+                Settings. J read the clause, saw the right name, and had
+                nowhere to put it. */}
+            <TypeOwnName orgId={orgId} />
           </div>
         </Field>
       );
@@ -165,24 +184,27 @@ function NameRow({
           coverage={coverage}
           absent={
             <Tri
-              bm="Tiada fasal NAMA dalam perlembagaan yang MinitAI pegang. Taip nama berdaftar sendiri di Tetapan → Pertubuhan."
-              zh="MinitAI 手上这份章程里没有「名称」那一条。注册名称请到 设置 → 机构 自己填。"
-              en="There is no NAMA clause in the constitution MinitAI holds. Type the registered name yourself in Settings → Organisation."
+              bm="Tiada fasal NAMA dalam perlembagaan yang MinitAI pegang. Taip nama berdaftar di bawah."
+              zh="MinitAI 手上这份章程里没有「名称」那一条。注册名称请在下面自己填。"
+              en="There is no NAMA clause in the constitution MinitAI holds. Type the registered name below."
             />
           }
         />
+        <div className="mt-2">
+          <TypeOwnName orgId={orgId} />
+        </div>
       </Field>
     );
   }
 
   const matches =
     orgName !== null &&
-    registered.name.trim().toLowerCase() === orgName.trim().toLowerCase();
+    registered.value.trim().toLowerCase() === orgName.trim().toLowerCase();
 
   return (
     <Field label={<Tri bm="Nama berdaftar" zh="注册名称" en="Registered name" />}>
-      <p className="text-base font-semibold">{registered.name}</p>
-      <Source clause={registered.clause} />
+      <p className="text-base font-semibold">{registered.value}</p>
+      <Source source={registered.source} />
 
       {state.ok || matches || dismissed ? (
         <p className="mt-2 text-base text-green-800 dark:text-green-300">
@@ -233,7 +255,7 @@ function NameRow({
             {orgId !== null && (
               <form action={formAction}>
                 <input type="hidden" name="orgId" value={orgId} />
-                <input type="hidden" name="name" value={registered.name} />
+                <input type="hidden" name="name" value={registered.value} />
                 <Button type="submit" disabled={pending}>
                   {pending ? (
                     <Tri bm="Sebentar…" zh="请稍候…" en="One moment…" />
@@ -258,10 +280,127 @@ function NameRow({
                 en="Keep the current name"
               />
             </Button>
+            {/* 🔴 §3 (104), THE THIRD ROAD. J, 2026-08-31 evening: 「讀錯了
+                沒得改」— and he was right, there were only ever two buttons.
+                He pressed "use the constitution's name", the read was wrong,
+                and his organisation was then really called "Persatuan" with
+                no way back on this screen. A reading the person can only
+                accept or ignore is not a review. */}
+            {orgId !== null && !typing && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setTyped(registered.value);
+                  setTyping(true);
+                }}
+              >
+                ✏️{" "}
+                <Tri
+                  bm="Dua-dua salah — saya taip sendiri"
+                  zh="都不对，我自己打"
+                  en="Neither — I'll type it myself"
+                />
+              </Button>
+            )}
           </div>
+          {orgId !== null && typing && (
+            <TypeOwnName orgId={orgId} initial={typed} />
+          )}
         </div>
       )}
     </Field>
+  );
+}
+
+/**
+ * §3 (104): the box where a person types the registered name themselves.
+ *
+ * Deliberately the SAME write path as the adopt button — renameOrg, which is
+ * user-scoped so RLS decides whether this account may rename this society, and
+ * which revalidates the layout so the new name appears everywhere at once.
+ * There is no second door into orgs.name, and no new server action to audit.
+ *
+ * It is a text box, not a form to fill in, and it opens PRE-FILLED with what
+ * MinitAI read — the eROSES test survives: the person corrects a draft, they
+ * are not interviewed. (Where nothing was read at all, it opens empty, which
+ * is the one case in which typing is the only honest option.)
+ */
+function TypeOwnName({
+  orgId,
+  initial = "",
+}: {
+  orgId: number | null;
+  initial?: string;
+}) {
+  const [state, formAction, pending] = useActionState(renameOrg, INITIAL);
+  const [value, setValue] = useState(initial);
+
+  if (orgId === null) return null;
+  if (state.ok) {
+    return (
+      <p className="text-base text-green-800 dark:text-green-300">
+        ✓{" "}
+        <Tri
+          bm="Nama pertubuhan sudah dikemas kini."
+          zh="机构名称已经更新。"
+          en="The organisation name has been updated."
+        />
+      </p>
+    );
+  }
+  return (
+    <form action={formAction} className="mt-2 flex flex-col gap-2">
+      <input type="hidden" name="orgId" value={orgId} />
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-muted-foreground">
+          <Tri
+            bm="Nama berdaftar pertubuhan anda"
+            zh="您机构的注册名称"
+            en="Your organisation's registered name"
+          />
+        </span>
+        <input
+          name="name"
+          value={value}
+          onChange={(e) => {
+            // C-4 (拍板 33), the same rule as the sign-up box: the ROS
+            // register writes society names in CAPITALS, so a mixed-case
+            // name here would disagree with every official document.
+            // Uppercasing never changes the length, so the caret stays put.
+            const el = e.currentTarget;
+            const pos = el.selectionStart;
+            setValue(el.value.toUpperCase());
+            if (pos !== null)
+              requestAnimationFrame(() => el.setSelectionRange(pos, pos));
+          }}
+          maxLength={200}
+          autoCapitalize="characters"
+          className="w-full rounded-md border-2 border-input bg-white px-3 py-2 text-base dark:bg-white/5"
+        />
+      </label>
+      <span className="text-sm text-muted-foreground">
+        <Tri
+          bm="Nama ini dicetak pada setiap resit dan dokumen rasmi. Salin daripada perlembagaan atau sijil pendaftaran."
+          zh="这个名字会印在每一张收据和正式文件上。请照章程或注册证书上的写法抄。"
+          en="This name is printed on every receipt and official document. Copy it from the constitution or the registration certificate."
+        />
+      </span>
+      {state.error && (
+        <p className="text-sm font-medium text-red-800 dark:text-red-300">
+          {state.error}
+        </p>
+      )}
+      <div>
+        <Button type="submit" disabled={pending || value.trim() === ""}>
+          {pending ? (
+            <Tri bm="Sebentar…" zh="请稍候…" en="One moment…" />
+          ) : (
+            <Tri bm="Simpan nama ini" zh="用这个名字" en="Save this name" />
+          )}
+        </Button>
+      </div>
+    </form>
   );
 }
 
@@ -278,8 +417,14 @@ function NameRow({
  * deliberately no "use this address" button (and no migration for it — this
  * panel records what the document says, and its source).
  */
-function AlamatRow({ clauses }: { clauses: ConfirmedClause[] }) {
-  const found = findRegisteredAddress(clauses);
+function AlamatRow({
+  clauses,
+  organisation,
+}: {
+  clauses: ConfirmedClause[];
+  organisation?: ConstitutionOrganisation;
+}) {
+  const found = readRegisteredAddress(clauses, organisation);
   const addressClause = found ? null : findAddressClause(clauses);
   if (!found && !addressClause) return null;
 
@@ -291,8 +436,20 @@ function AlamatRow({ clauses }: { clauses: ConfirmedClause[] }) {
     >
       {found ? (
         <>
-          <p className="text-base font-semibold">{found.address}</p>
-          <Source clause={found.clause} />
+          <p className="text-base font-semibold">{found.value}</p>
+          <Source source={found.source} />
+          {/* §3 (104): said out loud, because there is no button here and a
+              row with no button reads like a row that failed. The orgs table
+              has no address column — adopting it needs a migration, which is
+              J's to apply (D8), so tonight this row RECORDS what the document
+              says and cites where. */}
+          <p className="mt-1 text-sm text-muted-foreground">
+            <Tri
+              bm="MinitAI menyimpan alamat ini bersama perlembagaan anda dan menunjukkannya di sini. Ia belum boleh disalin ke dalam profil pertubuhan — itu perlu perubahan pangkalan data."
+              zh="MinitAI 把这个地址跟章程一起留着，在这里给您看。目前还不能一键写进机构资料 —— 那需要改数据库。"
+              en="MinitAI keeps this address with your constitution and shows it here. It cannot yet be copied into the organisation's profile — that needs a database change."
+            />
+          </p>
         </>
       ) : (
         <div className="flex flex-col gap-2">
@@ -303,9 +460,41 @@ function AlamatRow({ clauses }: { clauses: ConfirmedClause[] }) {
               en="Your constitution has a clause about the address, but MinitAI could not tell which part is the address. Please read the clause yourself:"
             />
           </p>
-          <Source clause={addressClause!} showText />
+          <Source source={{ kind: "clause", clause: addressClause! }} showText />
         </div>
       )}
+    </Field>
+  );
+}
+
+// --- the PPM/ROS registration number -----------------------------------------
+
+/**
+ * §2 (104): the third of the three fields. Display-only and silent when the
+ * document does not print it — same posture as the address row, and for the
+ * same reason: there IS an orgs.ppm_no column, but the place a person sets it
+ * is the sign-up door (§1) and Settings; a second writer of the same column on
+ * this screen is a second thing to keep in step.
+ */
+function RegistrationRow({
+  organisation,
+}: {
+  organisation?: ConstitutionOrganisation;
+}) {
+  const found = readRegistrationNo(organisation);
+  if (!found) return null;
+  return (
+    <Field
+      label={
+        <Tri
+          bm="No. pendaftaran (PPM/ROS)"
+          zh="注册号（PPM/ROS）"
+          en="Registration no. (PPM/ROS)"
+        />
+      }
+    >
+      <p className="text-base font-semibold">{found.value}</p>
+      <Source source={found.source} />
     </Field>
   );
 }
@@ -402,7 +591,7 @@ function AmendmentRow({
             )}
         </ul>
 
-        <Source clause={clause} showText />
+        <Source source={{ kind: "clause", clause }} showText />
 
         {/* "Then ask if they need help." The paperwork this clause just
             demanded is paperwork MinitAI already knows how to make. */}
@@ -566,14 +755,52 @@ function Field({
 }
 
 /** Where a fact came from. Hard Rule 1's `source_ref` reaching the screen:
- *  never a claim without the clause it rests on. */
+ *  never a claim without the place it rests on.
+ *
+ *  §2 (104): two kinds now. A fact the CLAUSE regex parsed cites the clause it
+ *  parsed; a fact the AI handed back cites the AI's own source_ref (where on
+ *  the page, and the first words as printed) plus its confidence, so a
+ *  "check" reading looks like one. */
 function Source({
-  clause,
+  source,
   showText = false,
 }: {
-  clause: ConfirmedClause;
+  source: IdentityFact["source"];
   showText?: boolean;
 }) {
+  if (source.kind === "ai") {
+    const ref = source.ref;
+    return (
+      <div className="text-sm text-muted-foreground">
+        <p>
+          <Tri bm="Sumber" zh="出处" en="Source" />:{" "}
+          <span className="font-medium">
+            {ref?.location ?? (
+              <Tri bm="perlembagaan anda" zh="您的章程" en="your constitution" />
+            )}
+          </span>
+          {source.confidence === "check" && (
+            <>
+              {" · "}
+              <span className="font-medium text-amber-800 dark:text-amber-300">
+                <Tri
+                  bm="sila semak"
+                  zh="请核对一下"
+                  en="please double-check"
+                />
+              </span>
+            </>
+          )}
+        </p>
+        {ref?.snippet && (
+          <blockquote className="mt-1.5 border-l-4 border-muted-foreground/30 pl-3 italic leading-relaxed">
+            {ref.snippet}
+          </blockquote>
+        )}
+      </div>
+    );
+  }
+  const clause = source.clause;
   return (
     <div className="text-sm text-muted-foreground">
       <p>

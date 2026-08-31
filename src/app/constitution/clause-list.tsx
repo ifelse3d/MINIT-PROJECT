@@ -9,9 +9,9 @@ import { searchClauses, type ConfirmedClause } from "@/lib/constitution";
 import {
   annotateClauseHierarchy,
   cleanClauseField,
+  markOrphanClauses,
   proposeOrphanHomes,
   shortPageRef,
-  sinkOrphanClauses,
   splitClauseText,
   type DisplayClause,
 } from "@/lib/constitution-display";
@@ -27,7 +27,8 @@ import {
 //   * variant "collapsible": <details> rows — the compact block on
 //                            /constitution.
 //
-// Display-only throughout: search, hierarchy indent, orphan sinking and the
+// Display-only throughout: search, hierarchy indent, orphan TAGGING (§4 of
+// work order 104 — they used to be moved; now they are only marked) and the
 // "missing"-word scrub never change a stored byte (Hard Rule 1).
 // ---------------------------------------------------------------------------
 
@@ -42,9 +43,9 @@ export function ClauseList({
   variant: "cards" | "collapsible";
   /**
    * §0-6 (work order 100): the STORED (reading-order) array, for proposing a
-   * home per orphan run — sorting shuffles orphans to the top, so the sorted
-   * book cannot say which Fasal each was read under. Optional: without it
-   * (or without onReattach) the list behaves exactly as before.
+   * home per orphan run — sorting interleaves the orphans by number, so the
+   * sorted book cannot say which Fasal each was read UNDER. Optional: without
+   * it (or without onReattach) the list behaves exactly as before.
    */
   storedOrder?: ConfirmedClause[];
   /** Confirm one proposal — rename the orphans under the parent, traced. */
@@ -65,28 +66,46 @@ export function ClauseList({
     [storedOrder, onReattach],
   );
 
-  // §3(c): bare "(3)"-style orphans in a Fasal-style book sink to the end;
+  // §4 (104): orphans stay in NUMBER ORDER and are TAGGED — they no longer
+  // move to the end (97 §3) and no longer jump to the top (the sortClauses
+  // root cause, fixed in src/lib/constitution.ts).
   // §3(a): the literal word "missing" never prints as a heading/page value.
-  const { main, orphans } = useMemo(() => {
+  const { clauses: combed, orphanNos } = useMemo(() => {
     const scrubbed = book.map((c) => ({
       ...c,
       heading: cleanClauseField(c.heading),
       page_ref: cleanClauseField(c.page_ref),
     }));
-    return sinkOrphanClauses(scrubbed);
+    return markOrphanClauses(scrubbed);
   }, [book]);
 
-  const shownMain = useMemo(
-    () => annotateClauseHierarchy(searchClauses(main, query)),
-    [main, query],
+  const shown = useMemo(
+    () => annotateClauseHierarchy(searchClauses(combed, query)),
+    [combed, query],
   );
-  const shownOrphans = useMemo(
-    () => searchClauses(orphans, query).map((clause) => ({ clause, child: false })),
-    [orphans, query],
+  const shownCount = shown.length;
+  /** Tagged clauses the current search is actually showing. */
+  const shownOrphanCount = shown.filter((d) =>
+    orphanNos.has(d.clause.clause_no.trim()),
+  ).length;
+
+  /** §4: the quiet tag. It says the ONE thing that is true — MinitAI could
+   *  not find the Fasal this sub-clause hangs under — and nothing more. */
+  const orphanTag = (
+    <span
+      className="rounded-sm border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-800 dark:border-amber-400/40 dark:bg-amber-400/10 dark:text-amber-200"
+      title={t(
+        "Fasal induk tidak dijumpai dalam apa yang MinitAI pegang",
+        "在 MinitAI 手上这份里找不到它的父条",
+        "The parent Fasal is not in what MinitAI holds",
+      )}
+    >
+      <Tri bm="induk tiada" zh="找不到父条" en="no parent found" />
+    </span>
   );
-  const shownCount = shownMain.length + shownOrphans.length;
 
   const renderClause = ({ clause: c, child }: DisplayClause) => {
+    const orphan = orphanNos.has(c.clause_no.trim());
     const parts = splitClauseText(c.clause_no, c.text).map((part, i) => (
       <p
         key={i}
@@ -117,6 +136,7 @@ export function ClauseList({
             {/* An untitled clause shows no placeholder — the missing heading
                 is the book's own fact. */}
             <span className="flex-1 font-medium">{c.heading}</span>
+            {orphan && orphanTag}
             {c.page_ref && (
               <span className="text-sm text-muted-foreground" title={c.page_ref}>
                 {shortPageRef(c.page_ref)}
@@ -144,6 +164,7 @@ export function ClauseList({
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <span className="font-mono text-base font-bold">{c.clause_no}</span>
           {c.heading && <span className="text-lg font-semibold">{c.heading}</span>}
+          {orphan && orphanTag}
           {c.page_ref && (
             <span className="text-sm text-muted-foreground" title={c.page_ref}>
               {shortPageRef(c.page_ref)}
@@ -155,12 +176,12 @@ export function ClauseList({
     );
   };
 
-  async function confirmReattach(orphanNos: string[], parentNo: string) {
+  async function confirmReattach(nos: string[], parentNo: string) {
     if (!onReattach || reattachBusy) return;
     setReattachBusy(parentNo);
     setReattachError(null);
     try {
-      const r = await onReattach(orphanNos, parentNo);
+      const r = await onReattach(nos, parentNo);
       if (!r.ok) setReattachError(r.error ?? "…");
     } catch {
       setReattachError(
@@ -177,6 +198,16 @@ export function ClauseList({
 
   const orphanNote = (
     <div className="flex flex-col gap-2">
+      {/* §4 (104): ONE line at the top of the list saying how many clauses
+          carry the tag, so the warning is not only a small label somebody has
+          to notice. The clauses themselves stay in number order below. */}
+      <p className="text-sm text-muted-foreground">
+        <Tri
+          bm={`${shownOrphanCount} perkara ditanda «induk tiada» — ia kekal pada nombornya dalam senarai di bawah.`}
+          zh={`有 ${shownOrphanCount} 条标了「找不到父条」—— 它们照号码留在下面的清单里。`}
+          en={`${shownOrphanCount} clause(s) tagged “no parent found” — they stay at their own number in the list below.`}
+        />
+      </p>
       {/* §0-6: the agent's proposal comes FIRST; re-photographing is the
           fallback line inside it, not the only road any more. */}
       {proposals.map((p) => (
@@ -287,18 +318,15 @@ export function ClauseList({
             en={`No clause contains “${query.trim()}”. It may genuinely not be in your constitution — or that page may not have been photographed yet.`}
           />
         </p>
-      ) : variant === "collapsible" ? (
-        <div className="flex flex-col gap-2">
-          {shownMain.map(renderClause)}
-          {shownOrphans.length > 0 && orphanNote}
-          {shownOrphans.map(renderClause)}
-        </div>
       ) : (
         <>
-          <ol className="flex flex-col gap-3">{shownMain.map(renderClause)}</ol>
-          {shownOrphans.length > 0 && orphanNote}
-          {shownOrphans.length > 0 && (
-            <ol className="flex flex-col gap-3">{shownOrphans.map(renderClause)}</ol>
+          {/* §4 (104): the note sits ABOVE the book now. The orphans are IN
+              the book, at their own numbers — there is no second list. */}
+          {shownOrphanCount > 0 && orphanNote}
+          {variant === "collapsible" ? (
+            <div className="flex flex-col gap-2">{shown.map(renderClause)}</div>
+          ) : (
+            <ol className="flex flex-col gap-3">{shown.map(renderClause)}</ol>
           )}
         </>
       )}

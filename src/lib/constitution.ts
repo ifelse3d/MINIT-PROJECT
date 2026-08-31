@@ -200,6 +200,17 @@ export function sortClauses(clauses: readonly ConfirmedClause[]): ConfirmedClaus
   const segmentsOf = (no: string): (number | string)[] =>
     no
       .toLowerCase()
+      // \ud83d\udd34 \u00a74 (work order 104). The LABEL WORD is not part of the number.
+      //
+      // J, 2026-08-31 evening: \u300c8.2\u20138.8 \u6392\u5728 FASAL 1 \u524d\u9762\u300d. Half a real book
+      // writes "Fasal 8" and the other half writes its sub-clauses bare
+      // ("8.2"), because that is how the document is typeset. Tokenising the
+      // word made the two styles sort in different universes: "fasal" is a
+      // word, "8" is a number, and the rule below puts numbers before words \u2014
+      // so EVERY bare sub-clause landed above Fasal 1, and the book looked
+      // broken. Dropping the label first makes "8.2" sort as what it is: the
+      // second sub-clause of clause 8, right after "Fasal 8".
+      .replace(/^\s*(fasal|clause|perkara|artikel|article)\b\s*/, "")
       .split(/[^0-9a-z\u4e00-\u9fff]+/)
       .filter((x) => x !== "")
       .map((x) => (/^\d+$/.test(x) ? Number(x) : x));

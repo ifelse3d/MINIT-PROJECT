@@ -31,24 +31,34 @@ export function cleanClauseField(value: string): string {
 }
 
 /**
- * (c) work order 97 §3: a page photographed from the MIDDLE of a Fasal gives
- * clauses numbered only "(3)"…"(10)" — sub-clauses whose Fasal heading was
- * never in frame. sortClauses puts numbers before words, so those orphans
- * used to sit ABOVE Fasal 1 at the very top of the book.
+ * (c) work order 97 §3, REVISED by §4 (work order 104): a page photographed
+ * from the MIDDLE of a Fasal gives clauses numbered only "(3)"…"(10)" —
+ * sub-clauses whose Fasal heading was never in frame.
  *
- * Display-only: when the book is Fasal-style (any clause_no says "Fasal"),
- * bare-number / "(N)"-style clauses with no parent in the book sink to the
- * END, where the screens hang an honest note under them ("these belong to
- * some Fasal — re-photograph the page with the heading and they slot in").
- * A book numbered entirely without "Fasal" (org 197's fixture shape: 1, 8,
- * 8.1…) is left exactly as sorted — bare numbers ARE its style.
+ * WHAT CHANGED AND WHY. 97 §3 moved those orphans to the END of the book to
+ * get them off the top, where sortClauses had been putting them. J's verdict
+ * on the result, 2026-08-31 evening: 「本意 good、觀感＝壞掉」— the reader now
+ * met the book in the right order and then found a second, stray book after
+ * it. The real cause was inside sortClauses (the label word "Fasal" sorting as
+ * a WORD while a bare "8.2" sorted as a NUMBER, and numbers come first); that
+ * is fixed at the root now, so an orphan sits WHERE ITS NUMBER SAYS IT
+ * BELONGS and this function only reports WHICH clauses have no parent in the
+ * book. The warning survives — a quiet tag beside the clause number, and one
+ * line above the list — and the agent's "shall I slot these under Fasal X?"
+ * proposal (§0-6, order 100) is untouched.
+ *
+ * Display-only: nothing here changes a stored byte (Hard Rule 1). A book
+ * numbered entirely without "Fasal" (1, 8, 8.1…) has no orphans at all —
+ * bare numbers ARE its style.
  */
-export function sinkOrphanClauses(clauses: readonly ConfirmedClause[]): {
-  main: ConfirmedClause[];
-  orphans: ConfirmedClause[];
+export function markOrphanClauses(clauses: readonly ConfirmedClause[]): {
+  /** Every clause, in the order it came in — nothing is moved. */
+  clauses: ConfirmedClause[];
+  /** The clause_nos (trimmed, as stored) whose parent is not in the book. */
+  orphanNos: Set<string>;
 } {
   const hasFasal = clauses.some((c) => /^\s*fasal\b/i.test(c.clause_no));
-  if (!hasFasal) return { main: [...clauses], orphans: [] };
+  if (!hasFasal) return { clauses: [...clauses], orphanNos: new Set() };
 
   const numbers = new Set(clauses.map((c) => c.clause_no.trim().toLowerCase()));
   const hasParent = (no: string): boolean => {
@@ -63,10 +73,9 @@ export function sinkOrphanClauses(clauses: readonly ConfirmedClause[]): {
     return !hasParent(no);
   };
 
-  const main: ConfirmedClause[] = [];
-  const orphans: ConfirmedClause[] = [];
-  for (const c of clauses) (isOrphan(c) ? orphans : main).push(c);
-  return { main, orphans };
+  const orphanNos = new Set<string>();
+  for (const c of clauses) if (isOrphan(c)) orphanNos.add(c.clause_no.trim());
+  return { clauses: [...clauses], orphanNos };
 }
 
 /**
@@ -97,7 +106,7 @@ export type OrphanHomeProposal = {
   orphanNos: string[];
 };
 
-/** The same bare shapes sinkOrphanClauses treats as orphans. */
+/** The same bare shapes markOrphanClauses treats as orphans. */
 function isOrphanShape(no: string): boolean {
   return /^\(?\d+(\.\d+)?\)?$/.test(no.trim());
 }

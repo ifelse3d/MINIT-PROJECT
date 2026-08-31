@@ -266,6 +266,32 @@ describe("sortClauses", () => {
     expect(out.map((c) => c.clause_no)).toEqual(["12", "12.1"]);
   });
 
+  // 🔴 §4 (work order 104), J: 「8.2–8.8 排在 FASAL 1 前面」. Half a real book
+  // writes "Fasal 8" and its sub-clauses bare ("8.2") — the label word used
+  // to be tokenised, and "numbers before words" then put EVERY bare
+  // sub-clause above Fasal 1.
+  it("sorts a bare sub-clause with its Fasal parent, not above Fasal 1", () => {
+    const out = sortClauses([
+      numbered("8.4"),
+      numbered("8.2"),
+      numbered("Fasal 1"),
+      numbered("Fasal 8"),
+      numbered("Fasal 9"),
+    ]);
+    expect(out.map((c) => c.clause_no)).toEqual([
+      "Fasal 1",
+      "Fasal 8",
+      "8.2",
+      "8.4",
+      "Fasal 9",
+    ]);
+  });
+
+  it("treats the other label words the same way", () => {
+    const out = sortClauses([numbered("Perkara 12"), numbered("2.1"), numbered("Clause 2")]);
+    expect(out.map((c) => c.clause_no)).toEqual(["Clause 2", "2.1", "Perkara 12"]);
+  });
+
   it("keeps an unnumbered clause at the end instead of in the middle", () => {
     const out = sortClauses([numbered("3"), numbered(""), numbered("1")]);
     expect(out.map((c) => c.clause_no)).toEqual(["1", "3", ""]);

@@ -4,9 +4,9 @@ import {
   clauseParentNo,
   cleanClauseField,
   proposeOrphanHomes,
+  markOrphanClauses,
   reattachedClauseNo,
   shortPageRef,
-  sinkOrphanClauses,
   splitClauseText,
 } from "@/lib/constitution-display";
 import type { ConfirmedClause } from "@/lib/constitution";
@@ -149,42 +149,49 @@ describe("cleanClauseField (the literal word 'missing' as a value)", () => {
   });
 });
 
-describe("sinkOrphanClauses (org 197's real-book shape)", () => {
-  // The real 2026-08-30 case: a Fasal-style book where a page photographed
-  // from the middle of a Fasal produced bare "(3)"…"(10)" clauses that
-  // sortClauses tops the book with.
+// §4 (work order 104): orphans are MARKED, not moved. J on the 97 §3
+// behaviour: 「本意 good、觀感＝壞掉」— a second stray book after the real
+// one. The root cause (sortClauses topping the book with them) is fixed in
+// src/lib/constitution.ts; this function now only reports which clauses have
+// no parent, and the order it was handed is the order it gives back.
+describe("markOrphanClauses (org 197's real-book shape)", () => {
   const FASAL_BOOK: ConfirmedClause[] = [
-    clause("(3)", "", "Sub-perkara yang fasalnya tidak difoto."),
-    clause("(4)", "", "Lagi satu sub-perkara."),
     clause("Fasal 1", "NAMA", "Pertubuhan ini dikenali sebagai Persatuan Contoh."),
     clause("Fasal 2", "TEMPAT", "Alamat berdaftar ialah…"),
+    clause("(3)", "", "Sub-perkara yang fasalnya tidak difoto."),
+    clause("(4)", "", "Lagi satu sub-perkara."),
   ];
 
-  it("sinks bare-(N) orphans below the Fasal clauses", () => {
-    const { main, orphans } = sinkOrphanClauses(FASAL_BOOK);
-    expect(main.map((c) => c.clause_no)).toEqual(["Fasal 1", "Fasal 2"]);
-    expect(orphans.map((c) => c.clause_no)).toEqual(["(3)", "(4)"]);
+  it("tags bare-(N) orphans and MOVES NOTHING", () => {
+    const { clauses, orphanNos } = markOrphanClauses(FASAL_BOOK);
+    expect(clauses.map((c) => c.clause_no)).toEqual([
+      "Fasal 1",
+      "Fasal 2",
+      "(3)",
+      "(4)",
+    ]);
+    expect([...orphanNos]).toEqual(["(3)", "(4)"]);
   });
 
-  it("keeps a dotted sub-clause whose Fasal parent IS in the book", () => {
-    const { main, orphans } = sinkOrphanClauses([
+  it("does not tag a dotted sub-clause whose Fasal parent IS in the book", () => {
+    const { clauses, orphanNos } = markOrphanClauses([
       clause("Fasal 8", "MESYUARAT", "…"),
       clause("8.1", "Kuorum", "…"),
     ]);
-    expect(orphans).toEqual([]);
-    expect(main.map((c) => c.clause_no)).toEqual(["Fasal 8", "8.1"]);
+    expect([...orphanNos]).toEqual([]);
+    expect(clauses.map((c) => c.clause_no)).toEqual(["Fasal 8", "8.1"]);
   });
 
-  it("does NOT touch a book numbered entirely without Fasal (org 197 fixture)", () => {
-    const { main, orphans } = sinkOrphanClauses(ORG197_SHAPE);
-    expect(orphans).toEqual([]);
-    expect(main).toEqual(ORG197_SHAPE);
+  it("does NOT tag anything in a book numbered entirely without Fasal", () => {
+    const { clauses, orphanNos } = markOrphanClauses(ORG197_SHAPE);
+    expect([...orphanNos]).toEqual([]);
+    expect(clauses).toEqual(ORG197_SHAPE);
   });
 
   it("never touches the clause objects themselves", () => {
-    const { main, orphans } = sinkOrphanClauses(FASAL_BOOK);
-    expect([...main, ...orphans].length).toBe(FASAL_BOOK.length);
-    for (const c of FASAL_BOOK) expect([...main, ...orphans]).toContain(c);
+    const { clauses } = markOrphanClauses(FASAL_BOOK);
+    expect(clauses.length).toBe(FASAL_BOOK.length);
+    for (const c of FASAL_BOOK) expect(clauses).toContain(c);
   });
 });
 
@@ -231,15 +238,15 @@ describe("proposeOrphanHomes + reattachedClauseNo", () => {
     expect(proposals).toEqual([]);
   });
 
-  it("reattachedClauseNo makes a number that sorts under its Fasal and never re-sinks", () => {
+  it("reattachedClauseNo makes a number that sorts under its Fasal and is never tagged", () => {
     expect(reattachedClauseNo("(3)", "Fasal 8")).toBe("Fasal 8(3)");
     expect(reattachedClauseNo("3", "Fasal 8")).toBe("Fasal 8(3)");
-    // The reattached shape is no longer an orphan to sinkOrphanClauses.
-    const { orphans } = sinkOrphanClauses([
+    // The reattached shape is no longer an orphan to markOrphanClauses.
+    const { orphanNos } = markOrphanClauses([
       clause("Fasal 8", "PEMERIKSA", "…"),
       clause("Fasal 8(3)", "", "…"),
     ]);
-    expect(orphans).toEqual([]);
+    expect([...orphanNos]).toEqual([]);
   });
 });
 

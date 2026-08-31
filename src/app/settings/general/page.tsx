@@ -11,6 +11,7 @@ import {
   type BankAccountRow,
   type MaklumatAmValues,
 } from "../maklumat-am-card";
+import { OrgNameEdit } from "../org-name-row";
 
 // /settings/general — the organisation's identity + tax status (§7.2b).
 export const dynamic = "force-dynamic";
@@ -135,6 +136,13 @@ export default async function GeneralSettingsPage() {
                   </span>
                 )}
               </p>
+              {/* §3 (104, J: 「也沒得改好名字」): the rename box. Two other
+                  screens have been telling people to come here and correct
+                  the name for months, and there was nothing here to do it
+                  with. */}
+              {canManage && (
+                <OrgNameEdit orgId={active.id} currentName={active.name} />
+              )}
               {/* §0-8 (102): tucked away for the single-org treasurer — the
                   door renders only when there is somewhere to switch TO. */}
               {showSwitchDoor && (
