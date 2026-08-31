@@ -9,6 +9,7 @@ import { computeStandardDeadlines } from "@/lib/standard-deadlines";
 import { readOrgTypeFlags } from "@/lib/org-flags";
 import { getLatestConfirmedAgm } from "@/db/agm";
 import { HomeUpcoming } from "./home-upcoming";
+import { UpcomingBell } from "./upcoming-bell";
 import { HowItWorksButton } from "./how-it-works";
 
 import { AskBox } from "./ask-box";
@@ -104,27 +105,38 @@ export default async function Home() {
   const deadlines = computeStandardDeadlines(todayIso, { agm, orgType: orgFlags.orgType });
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 pb-10">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 pb-10">
       <Header />
+
+      {/* §0-3 (work order 102, J's ruling): on a phone "Upcoming" is a
+          notification bell, not a block — the workbench owns the screen.
+          Container variants, not viewport ones (<main> is the @container). */}
+      <UpcomingBell deadlines={deadlines} todayIso={todayIso} className="@4xl:hidden" />
 
       {/* §1-6 (work order 69): the old ?welcome=1 landing card is gone — a
           new organisation now lands on /orgs/welcome, the guided sequence. */}
 
       {/* THE WORKBENCH — photo / file / typing, mixed; type first, then
           confirm to send; MinitAI asks back when unsure, shows its steps
-          while it works, and lays the finished pieces out as cards. */}
+          while it works, and lays the finished pieces out as cards. On a
+          desktop the deadlines live in the right column (§0-3): the composer
+          is the main column's lowest point — no scrolling past cards to type. */}
       {/* C-11 (work order 51): the walkthrough entry sits beside the box's
           own heading — it explains exactly the flow the box starts. */}
-      <AskBox
-        hasOrg
-        initialRemaining={usage?.totalRemaining ?? null}
-        initialUsedPct={usage?.usedPct ?? null}
-        unfinishedDrafts={unfinishedDrafts}
-        howItWorks={<HowItWorksButton variant="link" />}
-      />
+      <div className="flex flex-col gap-8 @4xl:grid @4xl:grid-cols-[minmax(0,1fr)_21rem] @4xl:items-start @4xl:gap-6">
+        <AskBox
+          hasOrg
+          initialRemaining={usage?.totalRemaining ?? null}
+          initialUsedPct={usage?.usedPct ?? null}
+          unfinishedDrafts={unfinishedDrafts}
+          howItWorks={<HowItWorksButton variant="link" />}
+        />
 
-      {/* what is due (this org's own deadlines, never invented ones) */}
-      <HomeUpcoming deadlines={deadlines} todayIso={todayIso} />
+        {/* what is due (this org's own deadlines, never invented ones) */}
+        <div className="hidden @4xl:block">
+          <HomeUpcoming deadlines={deadlines} todayIso={todayIso} />
+        </div>
+      </div>
     </div>
   );
 }

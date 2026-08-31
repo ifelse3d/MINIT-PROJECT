@@ -26,20 +26,28 @@ import { mergeUpcoming } from "@/lib/standard-deadlines";
 
 const UPCOMING_LIMIT = 5;
 
-export function HomeUpcoming({ deadlines, todayIso }: { deadlines: Deadline[]; todayIso: string }) {
-  const t = useTriText();
+/**
+ * §0-3 (work order 102): the merged upcoming list, shared by the right-column
+ * card (desktop) and the notification bell (phone) — one merge, two doors.
+ */
+export function useUpcomingItems(deadlines: Deadline[], todayIso: string) {
   const [events, setEvents] = useState<SimpleEvent[]>([]);
   useEffect(() => setEvents(loadEvents()), []);
   // R-6 (2026-08-25): e-Invois is optional and default OFF — its month-end
   // deadlines are noise for a society that never files it.
   const [einvoisVisible] = useEinvoisVisible();
 
-  const items = useMemo(() => {
+  return useMemo(() => {
     const shown = einvoisVisible
       ? deadlines
       : deadlines.filter((d) => d.kind !== "einvois_monthend");
     return mergeUpcoming(shown, events, todayIso, UPCOMING_LIMIT);
   }, [deadlines, events, todayIso, einvoisVisible]);
+}
+
+export function HomeUpcoming({ deadlines, todayIso }: { deadlines: Deadline[]; todayIso: string }) {
+  const t = useTriText();
+  const items = useUpcomingItems(deadlines, todayIso);
 
   return (
     <section aria-label={t("Akan datang", "即将到来", "Upcoming")}>
