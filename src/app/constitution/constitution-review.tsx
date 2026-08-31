@@ -42,7 +42,7 @@ import {
   type ConstitutionReadResume,
 } from "@/lib/constitution-read-client";
 import { ConstitutionReadEstimate } from "@/components/constitution-read-estimate";
-import { cleanClauseField } from "@/lib/constitution-display";
+import { clausesFromConstitutionExtraction } from "@/lib/constitution-display";
 import { ClauseList } from "./clause-list";
 import { canStageTogether, isPhotoType } from "@/lib/multi-page-staging";
 import { compressPhoto } from "@/app/minutes/minutes-storage";
@@ -111,39 +111,6 @@ function isStoredConstitution(parsed: unknown): boolean {
       typeof x.page_ref === "string"
     );
   });
-}
-
-/**
- * Extraction → confirmed clauses.
- *
- * Hard Rule 1: a clause whose TEXT the model could not read is DROPPED, not
- * guessed at. A constitution clause has legal meaning and must be verbatim, so a
- * half-read one is worse than an absent one — the refusal path already handles
- * "I cannot find that in your constitution" honestly.
- */
-function clausesFromExtraction(e: ConstitutionExtraction): ConfirmedClause[] {
-  return e.clauses
-    .filter(
-      (c) =>
-        c.clause_no.confidence !== "missing" &&
-        c.clause_no.value !== "" &&
-        c.text.confidence !== "missing" &&
-        c.text.value !== "",
-    )
-    .map((c) => ({
-      clause_no: c.clause_no.value,
-      // 97 §3(a): the model was taught (until tonight) to write the literal
-      // word "missing" as a heading value, and confidence stayed "confirmed"
-      // so the confidence check alone let it through. cleanClauseField
-      // catches the word itself, whatever the label says.
-      heading: cleanClauseField(
-        c.heading.confidence === "missing" ? "" : c.heading.value,
-      ),
-      text: c.text.value,
-      page_ref: cleanClauseField(
-        c.page_ref.confidence === "missing" ? "" : c.page_ref.value,
-      ),
-    }));
 }
 
 type AskResult =
@@ -314,7 +281,7 @@ export function ConstitutionReview({
     const handed = consumeIntake("constitution");
     if (!handed) return;
     const extraction = handed.extraction as ConstitutionExtraction;
-    const read = clausesFromExtraction(extraction);
+    const read = clausesFromConstitutionExtraction(extraction);
     if (read.length === 0) return;
     const nextTitle =
       extraction.document_title.confidence !== "missing" &&
@@ -480,7 +447,7 @@ export function ConstitutionReview({
         return;
       }
       resumeRef.current = null;
-      const read = clausesFromExtraction(r.extraction);
+      const read = clausesFromConstitutionExtraction(r.extraction);
       if (read.length === 0) {
         setAiError(joinUserError(USER_ERRORS.aiCouldNotRead));
         return;

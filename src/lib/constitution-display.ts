@@ -16,6 +16,7 @@
 // ---------------------------------------------------------------------------
 
 import type { ConfirmedClause } from "@/lib/constitution";
+import type { ConstitutionExtraction } from "@/lib/extraction";
 
 /**
  * (a) work order 97 §3: the model was TAUGHT (extract-constitution.ts, until
@@ -28,6 +29,45 @@ import type { ConfirmedClause } from "@/lib/constitution";
 export function cleanClauseField(value: string): string {
   const v = value.trim();
   return v.toLowerCase() === "missing" ? "" : value;
+}
+
+/**
+ * Extraction → confirmed clauses.
+ *
+ * Hard Rule 1: a clause whose TEXT the model could not read is DROPPED, not
+ * guessed at. A constitution clause has legal meaning and must be verbatim, so
+ * a half-read one is worse than an absent one — the refusal path already
+ * handles "I cannot find that in your constitution" honestly.
+ *
+ * Lived inside constitution-review.tsx until §1 (work order 104) gave the
+ * sign-up form a second reason to need it. CLAUDE.md rule 13: pure logic goes
+ * to src/lib BEFORE the UI divides, or the next bug has to be fixed twice.
+ */
+export function clausesFromConstitutionExtraction(
+  e: ConstitutionExtraction,
+): ConfirmedClause[] {
+  return e.clauses
+    .filter(
+      (c) =>
+        c.clause_no.confidence !== "missing" &&
+        c.clause_no.value !== "" &&
+        c.text.confidence !== "missing" &&
+        c.text.value !== "",
+    )
+    .map((c) => ({
+      clause_no: c.clause_no.value,
+      // 97 §3(a): the model was taught (until then) to write the literal word
+      // "missing" as a heading value, and confidence stayed "confirmed" so the
+      // confidence check alone let it through. cleanClauseField catches the
+      // word itself, whatever the label says.
+      heading: cleanClauseField(
+        c.heading.confidence === "missing" ? "" : c.heading.value,
+      ),
+      text: c.text.value,
+      page_ref: cleanClauseField(
+        c.page_ref.confidence === "missing" ? "" : c.page_ref.value,
+      ),
+    }));
 }
 
 /**

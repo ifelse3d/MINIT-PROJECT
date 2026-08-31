@@ -13,7 +13,35 @@ import { getSupabaseServer, getSessionUser } from "@/db/supabase-server";
 import { setActiveOrgCookie } from "@/lib/active-org";
 import { planById } from "@/lib/plans";
 
-export type OrgActionState = { error: string | null; ok: boolean };
+export type OrgActionState = {
+  error: string | null;
+  ok: boolean;
+  /**
+   * §1 (work order 104): the id of the org that was just created, so the
+   * sign-up form can finish the job on the SAME screen — read the attached
+   * constitution, then put the name/address/registration number it found into
+   * boxes the person can correct. Absent on every other action.
+   */
+  orgId?: number;
+};
+
+/**
+ * §1 (104): the name an organisation carries for the few seconds between
+ * "create" and "the constitution has been read".
+ *
+ * 🔴 WHY A PLACEHOLDER EXISTS AT ALL. Every AI action is charged to an
+ * ORGANISATION (requireAiQuota → org.id) and stored under its RLS scope, so
+ * the constitution cannot be read before the org exists — and the whole point
+ * of §1 is that the person does NOT have to type the name first. So the org is
+ * created with this, the read runs, and the name goes in.
+ *
+ * It is written to look like what it is: nobody can mistake it for a society
+ * name, and it is in CAPITALS like every other org name so it does not look
+ * like a different KIND of value. If a person abandons the flow here, the
+ * organisation is still theirs and still renameable — /settings/general has
+ * the box (§3) and so does the constitution panel.
+ */
+const PROVISIONAL_ORG_NAME = "PERTUBUHAN BARU — NAMA BELUM DIISI";
 
 // ---------------------------------------------------------------------------
 // P0-3 — HOW MANY ORGANISATIONS ONE ACCOUNT MAY CREATE.
@@ -290,7 +318,13 @@ export async function createOrg(
       ? planRaw
       : "trial";
 
-  if (!name) return { error: ERR.name, ok: false };
+  // §1 (104): the constitution road does not ask for a name — the document
+  // has it. The form says so, and the placeholder is replaced the moment the
+  // read comes back (see PROVISIONAL_ORG_NAME).
+  const constitutionPending =
+    String(formData.get("constitutionPending") ?? "") === "1";
+  const finalName = name || (constitutionPending ? PROVISIONAL_ORG_NAME : "");
+  if (!finalName) return { error: ERR.name, ok: false };
 
   const admin = getSupabase(); // service role — see file header
 
@@ -370,7 +404,10 @@ export async function createOrg(
   // tomorrow's migration (STATE §6). The dropped values are the safe defaults
   // anyway ('registered' / 'trial'; a plan wish lost this way is re-statable
   // on /settings/plan by contacting us, never silently upgraded).
-  const extendedRow: Record<string, unknown> = { name, parent_org_id: parentOrgId };
+  const extendedRow: Record<string, unknown> = {
+    name: finalName,
+    parent_org_id: parentOrgId,
+  };
   if (orgType !== "registered") extendedRow.org_type = orgType;
   if (ppmNo !== "") extendedRow.ppm_no = ppmNo;
   if (plan !== "trial") extendedRow.plan = plan;
@@ -388,7 +425,7 @@ export async function createOrg(
   ) {
     const retry = await admin
       .from("orgs")
-      .insert({ name, parent_org_id: parentOrgId })
+      .insert({ name: finalName, parent_org_id: parentOrgId })
       .select("id")
       .single();
     org = retry.data;
@@ -412,5 +449,61 @@ export async function createOrg(
 
   await setActiveOrgCookie(org.id);
   revalidatePath("/", "layout");
-  return { error: null, ok: true };
+  return { error: null, ok: true, orgId: org.id };
+}
+
+/**
+ * §1 (104): put the identity MinitAI read out of the constitution onto the
+ * organisation — after the person has looked at it and corrected whatever was
+ * wrong.
+ *
+ * Two columns, one write: `name` (the same column renameOrg touches) and
+ * `ppm_no`, which is printed on official letterheads. USER-SCOPED client like
+ * renameOrg: `orgs_update` restricts UPDATE to accessible_orgs_admin(), so a
+ * non-admin matches no row and changes nothing — and the privileged columns
+ * (quota, credits, tax status, parent) are trigger-protected regardless.
+ *
+ * The address is deliberately NOT here: the orgs table has no address column,
+ * and inventing one needs a migration, which is J's to apply (D8). The
+ * constitution panel shows what the document says and cites the clause.
+ */
+export async function saveOrgIdentity(
+  _prev: OrgActionState,
+  formData: FormData,
+): Promise<OrgActionState> {
+  const user = await getSessionUser();
+  if (!user) return { error: ERR.login, ok: false };
+
+  const raw = String(formData.get("orgId") ?? "");
+  if (!/^\d+$/.test(raw)) return { error: ERR.failed, ok: false };
+  const orgId = Number(raw);
+
+  const name = String(formData.get("name") ?? "").trim().slice(0, 200);
+  if (!name) return { error: ERR.name, ok: false };
+  const ppmNo = String(formData.get("ppmNo") ?? "").trim().slice(0, 64);
+
+  const supabase = await getSupabaseServer();
+  // The optional-column ladder (D8): ppm_no arrives with migration
+  // 20260902000000, and PostgREST fails the WHOLE update over one unknown
+  // column. A database that is behind still gets the NAME — which is the part
+  // the person came here for.
+  let res = await supabase
+    .from("orgs")
+    .update(ppmNo === "" ? { name } : { name, ppm_no: ppmNo })
+    .eq("id", orgId)
+    .select("id")
+    .maybeSingle();
+  if (res.error && /ppm_no|schema cache|column/i.test(res.error.message ?? "")) {
+    res = await supabase
+      .from("orgs")
+      .update({ name })
+      .eq("id", orgId)
+      .select("id")
+      .maybeSingle();
+  }
+  // No row back = RLS refused (not an admin of this org). PDPA: nothing logged.
+  if (res.error || !res.data) return { error: ERR.notAdmin, ok: false };
+
+  revalidatePath("/", "layout");
+  return { error: null, ok: true, orgId };
 }
