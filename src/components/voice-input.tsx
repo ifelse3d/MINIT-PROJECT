@@ -23,7 +23,7 @@
 // D10).
 // ---------------------------------------------------------------------------
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type RefObject } from "react";
 import { Mic, Square } from "lucide-react";
 import { useLangs, useTriText } from "@/components/language-provider";
 import { htmlLangFor } from "@/lib/lang";
@@ -65,14 +65,41 @@ function recognitionLang(uiLang: string): string {
   }
 }
 
+/**
+ * Can this browser listen at all? (work order 113 §1, card 4 「剛開完會 →
+ * 直接開麥克風」.)
+ *
+ * 🔴 THE ENTRY CARD HAS TO ASK BEFORE IT OFFERS. This button renders nothing
+ * where speech recognition does not exist, which is the right behaviour for a
+ * small control beside a text box — but a whole card saying "just say it" that
+ * does nothing when pressed is a dead control (CLAUDE.md rule 13), so the card
+ * asks this first and simply is not there in a browser that cannot hear.
+ *
+ * Hydration-safe by the same trick the button uses: the server snapshot is
+ * false, the client's is the real answer, React reconciles after hydration.
+ */
+export function useSpeechSupported(): boolean {
+  return useSyncExternalStore(
+    subscribeNever,
+    () => getRecognitionCtor() !== null,
+    () => false,
+  );
+}
+
 export function VoiceButton({
   onText,
   className,
   bare = false,
+  startRef,
 }: {
   /** Called with the recognised words (one utterance). */
   onText: (text: string) => void;
   className?: string;
+  /** §1 (113): the entry card presses this button without there being a
+   *  button to press — it hands over a `start()` so "剛開完會" opens the
+   *  microphone directly. Left null while the browser cannot listen, which is
+   *  exactly when the card is not rendered either. */
+  startRef?: RefObject<(() => void) | null>;
   /** §1 (work order 109): inside the chat composer this button lives in the
    *  same little toolbar row as the paperclip, INSIDE the box's own border —
    *  a second bordered box in there reads as a stray control. Everywhere else
@@ -84,11 +111,7 @@ export function VoiceButton({
   // Hydration-safe capability check WITHOUT a setState-in-effect: the server
   // snapshot says false (renders nothing), the client snapshot answers the
   // real question, and React reconciles the difference after hydration.
-  const supported = useSyncExternalStore(
-    subscribeNever,
-    () => getRecognitionCtor() !== null,
-    () => false,
-  );
+  const supported = useSpeechSupported();
   const [listening, setListening] = useState(false);
   const [failed, setFailed] = useState(false);
   const recRef = useRef<SpeechRecognitionLike | null>(null);
@@ -99,6 +122,21 @@ export function VoiceButton({
       recRef.current?.stop();
     };
   }, []);
+
+  // §1 (113): hand the caller a way to START listening without a click on
+  // this button — the "just came out of a meeting" card is the button, three
+  // hundred pixels away. Re-assigned every render on purpose: the handle must
+  // close over the CURRENT `listening`, or the card would toggle the
+  // microphone off for somebody who is already talking.
+  useEffect(() => {
+    if (!startRef) return;
+    startRef.current = () => {
+      if (!listening) toggle();
+    };
+    return () => {
+      startRef.current = null;
+    };
+  });
 
   if (!supported) return null;
 

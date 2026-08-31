@@ -87,8 +87,9 @@ import type {
   LedgerExtraction,
   MeetingNotesExtraction,
 } from "@/lib/extraction";
-import { VoiceButton } from "@/components/voice-input";
+import { useSpeechSupported, VoiceButton } from "@/components/voice-input";
 import { writeIntake, type IntakeKind } from "@/lib/intake-handoff";
+import { EntryCards } from "./entry-cards";
 import { compressPhoto } from "@/app/minutes/minutes-storage";
 import { tidyReply } from "@/lib/tidy-reply";
 import {
@@ -348,6 +349,23 @@ export function AskBox({
   // the same questions per page. Each entry keeps a small preview for the
   // thumbnail strip (images only; PDFs/Office files show an icon).
   const [staged, setStaged] = useState<{ file: File; preview: string | null }[]>([]);
+  /**
+   * §1 (work order 113): the person pressed "notes from a meeting" / "money
+   * that came in" / "the constitution" instead of just dropping a file in —
+   * so they have ALREADY answered "what kind of paper is this?".
+   *
+   * 🔴 THIS IS THE WHOLE POINT OF CARDS 1–3, not the file chooser. It rides
+   * with the staged file all the way to sendFiles(), where it becomes
+   * `forcedKind` and /api/intake skips the classify step: one AI action fewer
+   * every time (`actionsUsed = (forcedKind ? 0 : 1) + files.length`), and one
+   * fewer chance of the classifier placing the page wrongly. Dropping a file
+   * in WITHOUT a card still classifies — the card is a shortcut for people
+   * who know, never a question everybody has to answer first.
+   *
+   * Cleared wherever the staging area empties: a kind left lying around
+   * would silently force the NEXT, unrelated paper down the same road.
+   */
+  const [presetKind, setPresetKind] = useState<IntakeKind | null>(null);
   /** §3: the agent's work, visible step by step while a file is being read. */
   const [steps, setSteps] = useState<AgentStep[]>([]);
   /** Drag-and-drop highlight for the whole workbench (photos/PDF/Office). */
@@ -500,6 +518,33 @@ export function AskBox({
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
   }, [question]);
+
+  /** §1 (113): card 4 opens the microphone, from three hundred pixels away. */
+  const micStart = useRef<(() => void) | null>(null);
+  /** Does this browser have speech recognition at all? No → no card 4. */
+  const canDictate = useSpeechSupported();
+
+  /**
+   * §2 (113): WHEN THE ENTRY CARDS ARE ON SCREEN, and how they leave.
+   *
+   * They follow ONE fact — "is this conversation empty?" — and nothing else.
+   * J: 「開始聊天后那些 card 就會收起來」/「`Clear conversation` 之後卡回來」.
+   * Deliberately NOT a remembered preference: a person who cleared the
+   * conversation is back at the beginning, and the beginning has doors.
+   *
+   */
+  const entryOpen =
+    hasOrg && turns.length === 0 && staged.length === 0 && busy === null;
+
+  /**
+   * Cards 1–3: say what the paper is, THEN choose the file. Two things
+   * happen in this order for a reason — the chooser is modal on a phone, so
+   * the kind has to be recorded before the browser takes the screen away.
+   */
+  function pickWithKind(kind: IntakeKind) {
+    setPresetKind(kind);
+    fileInput.current?.click();
+  }
 
   const convRegionRef = useRef<HTMLDivElement | null>(null);
   const hydratedScroll = useRef(false);
@@ -1006,6 +1051,7 @@ export function AskBox({
               extraction: r.extraction,
             });
             setStaged([]);
+            setPresetKind(null);
             setQuestion("");
             router.push("/constitution");
             return;
@@ -1149,6 +1195,7 @@ export function AskBox({
           pages,
         });
         setStaged([]);
+        setPresetKind(null);
         setQuestion("");
         router.push(page);
         return;
@@ -1448,6 +1495,7 @@ export function AskBox({
     ]);
     setSteps([]);
     setStaged([]);
+    setPresetKind(null);
     setQuestion("");
     setMeetingChoice(null);
   }
@@ -1596,24 +1644,11 @@ export function AskBox({
           // min-height:auto and would refuse to shrink below its content.
           className="v2-scroll flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain pb-2"
         >
-          {/* G3-3: the unfinished-drafts reminder, moved off the deleted task
-              card. Only when the count is KNOWN and non-zero — a failed query
-              must never read like "you have none". §1 (109): it lives INSIDE
-              the pane now, so it scrolls away with the rest instead of
-              standing between the screen and the conversation. */}
-          {hasOrg && unfinishedDrafts !== null && unfinishedDrafts > 0 && (
-            <p className="text-base text-[color:var(--v2-text-soft)]">
-              ✍️{" "}
-              <Tri
-                bm={`Ada ${unfinishedDrafts} draf minit yang belum siap.`}
-                zh={`您有 ${unfinishedDrafts} 份还没做完的会议记录草稿。`}
-                en={`You have ${unfinishedDrafts} unfinished minutes draft(s).`}
-              />{" "}
-              <Link href="/minutes/drafts" className="underline underline-offset-4">
-                <Tri bm="Sambung" zh="继续做" en="Continue" /> →
-              </Link>
-            </p>
-          )}
+          {/* G3-3's unfinished-work reminder used to be a line of its own
+              right here. §1 (113) moved it INTO the entry cards as card 6,
+              where it is a door rather than a sentence about a door — and
+              the top of the conversation stops opening with a status report.
+              The null-is-not-zero rule travelled with it (entry-cards.ts). */}
 
           {!hasOrg && (
             <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-4 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
@@ -1901,7 +1936,12 @@ export function AskBox({
                     type="button"
                     disabled={busy !== null}
                     onClick={() => {
-                      setStaged((prev) => prev.filter((_, j) => j !== i));
+                      const next = staged.filter((_, j) => j !== i);
+                      setStaged(next);
+                      // The card's answer belonged to THAT paper. With the
+                      // staging area empty it must not carry over to whatever
+                      // the person picks next.
+                      if (next.length === 0) setPresetKind(null);
                       setAskKind(null);
                       setConstitutionGate(null);
                     }}
@@ -2095,6 +2135,7 @@ export function AskBox({
                 disabled={busy !== null}
                 onClick={() => {
                   setStaged([]);
+                  setPresetKind(null);
                   setAskKind(null);
                 }}
               >
@@ -2485,42 +2526,44 @@ export function AskBox({
           </p>
         )}
 
-        {/* §1 (109), J: 「下面的也太奇怪爲什麼要放那些整個設計模板很奇怪」.
-            THE EMPTY STATE IS A SENTENCE, NOT A HOARDING. What stood here was
-            a 176px dashed box saying "drop your paper here" — the largest
-            thing on the page, doing nothing the paperclip under it does not
-            do, and it collapsed the moment anything happened, taking the
-            composer 125px up the screen with it (measured).
+        {/* 🔴 §1 + §2 (work order 113) — THE EMPTY STATE IS A SET OF DOORS.
+            J: 「這個 HOME 一定要改…你做成 CARD，可以按有想要 UPLOAD 東西，
+            或者問東西…這裏是 ALL IN ONE」.
 
-            `mt-auto` puts these two quiet lines at the FOOT of the pane, one
-            line above the box they are about; being inside the pane, they can
-            never move it when they go. */}
-        {turns.length === 0 && staged.length === 0 && busy === null && hasOrg && (
-          <div className="mt-auto flex flex-col gap-1 pt-6">
-            <p className="text-base text-[color:var(--v2-text-soft)]">
-              <Tri
-                bm="Seret kertas anda ke mana-mana di skrin ini, atau tekan klip kertas di bawah — gambar, PDF atau fail Office. Ada soalan? Taip sahaja."
-                zh="把手上的纸拖进这个画面的任何地方，或按下面的回形针 —— 照片、PDF、Office 档都行。有问题？直接打字问。"
-                en="Drag your paper anywhere on this screen, or press the paperclip below — photo, PDF or Office file. Got a question? Just type it."
-              />{" "}
-              {howItWorks}
-            </p>
-            {/* The two suggested questions, kept but demoted: small quiet
-                text above the box (§1), not two large buttons under it. They
-                still clear the 44px touch floor — a light control is not a
-                control you have to aim at. */}
-            <div className="flex flex-wrap items-center gap-x-4">
-              {suggestedQuestionsFor(einvoisVisible).map((ex) => (
-                <button
-                  key={ex.en}
-                  type="button"
-                  disabled={busy !== null || outOfQuota}
-                  onClick={() => setQuestion(t(ex.bm, ex.zh, ex.en))}
-                  className="min-h-11 text-left text-sm font-medium text-[color:var(--v2-primary)] underline-offset-4 hover:underline disabled:opacity-50"
-                >
-                  {t(ex.bm, ex.zh, ex.en)}
-                </button>
-              ))}
+            What stood here: two quiet lines of instructions and two small
+            suggestion buttons. What stands here now: six cards that each
+            start a real job, and the suggestions folded into one of them.
+
+            🔴 IT IS INSIDE THIS PANE, and that is the whole discipline of
+            this change. 104 §8 and 109 §1 both cured the same illness —
+            something appears on the home page and the typing box slides down
+            the screen. The cards are content of the SCROLLING conversation
+            region, exactly like an answer or a finished-work card, so they
+            cannot move the composer at any width in any state. `mt-auto`
+            centres them in whatever room the pane has: bottom-anchored, the
+            whole of J's 「中間那塊大留白」 simply moved to the top of the
+            screen (measured: 250px of nothing above them). Auto margins are
+            also the safe way to centre inside a SCROLLING box — when free
+            space runs out they resolve to zero, so a short screen scrolls
+            from the top instead of clipping it, which `justify-center` would
+            do.
+
+            §2: they leave when the conversation starts and come back when it
+            is cleared — one fact, no remembered preference. */}
+        {entryOpen && (
+          <div data-probe="entry-cards-shell" className="my-auto">
+            <div className="px-2 pt-6 pb-2">
+              <EntryCards
+                unfinished={unfinishedDrafts}
+                canDictate={canDictate}
+                questions={suggestedQuestionsFor(einvoisVisible)}
+                disabled={busy !== null || outOfQuota}
+                dragActive={dragActive}
+                howItWorks={howItWorks}
+                onPick={pickWithKind}
+                onDictate={() => micStart.current?.()}
+                onAsk={(text) => void send(text)}
+              />
             </div>
           </div>
         )}
@@ -2579,7 +2622,15 @@ export function AskBox({
                   "constitution",
                   true,
                 );
-              else void sendFiles(staged.map((s) => s.file), question);
+              // §1 (113): a card said what this paper is, so the classify
+              // step is skipped and one action is saved. Undefined when the
+              // file simply arrived — then it is classified, as always.
+              else
+                void sendFiles(
+                  staged.map((s) => s.file),
+                  question,
+                  presetKind ?? undefined,
+                );
             } else void send(question);
           }}
         >
@@ -2600,7 +2651,11 @@ export function AskBox({
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
                   if (staged.length > 0)
-                    void sendFiles(staged.map((s) => s.file), question);
+                    void sendFiles(
+                      staged.map((s) => s.file),
+                      question,
+                      presetKind ?? undefined,
+                    );
                   else void send(question);
                 }
               }}
@@ -2650,6 +2705,9 @@ export function AskBox({
           {hasOrg && !outOfQuota && (
             <VoiceButton
               bare
+              // §1 (113): card 4 「剛開完會 → 用講的」 has no button of its
+              // own — it borrows this one's start().
+              startRef={micStart}
               onText={(text) =>
                 setQuestion((q) => (q.trim() ? `${q.trim()} ${text}` : text))
               }
