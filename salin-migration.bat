@@ -111,6 +111,8 @@ echo    40.  20260918000000  resit kedai pada perbelanjaan (97 nombor 5)
 echo         gambar resit / "tiada resit" pada setiap baris perbelanjaan
 echo    41.  20260919000000  jejak ubahan agent + telefon AJK (100 nombor 0-4)
 echo         agent boleh ubah telefon/e-mel AJK - setiap ubahan ada rekod + undo
+echo    42.  20260920000000  kolam kuota setiap pelan + pelan Plus (102 nombor 0-6)
+echo         J tetapkan kuota Trial/Standard/Plus/HQ dari konsol - tiada SQL lagi
 echo.
 echo     0.  Keluar / Quit
 echo.
@@ -158,6 +160,7 @@ if "%pick%"=="38" set f=20260916000000_orgs_created_by.sql& goto copy
 if "%pick%"=="39" set f=20260917000000_role_rls.sql& goto copy
 if "%pick%"=="40" set f=20260918000000_expense_receipt.sql& goto copy
 if "%pick%"=="41" set f=20260919000000_agent_changes.sql& goto copy
+if "%pick%"=="42" set f=20260920000000_plan_quotas.sql& goto copy
 
 echo.
 echo    Nombor tak sah / not a valid number.

@@ -8,6 +8,8 @@ import { isOperatorEmail } from "@/lib/admin-gate";
 import { Tri } from "@/components/language-provider";
 import { FleetCharts } from "./fleet-charts";
 import { GrantCreditsCard } from "./grant-credits-card";
+import { PlanQuotasCard } from "./plan-quotas-card";
+import { loadPlanQuotas } from "@/lib/plan-quotas";
 
 // ---------------------------------------------------------------------------
 // /admin — the minimal ops console (S-6, 2026-08-25; J asked twice).
@@ -296,9 +298,11 @@ export default async function AdminPage() {
   if (!isAdmin(user?.email)) notFound();
 
   const { rows, monthly } = await loadRows();
-  const [platformAdmin, feedback] = await Promise.all([
+  const [platformAdmin, feedback, planQuotas] = await Promise.all([
     isPlatformAdmin(user?.email ?? ""),
     loadFeedback(),
+    // §0-6 (102): current per-plan pools (DB-first, compiled fallback).
+    loadPlanQuotas(),
   ]);
   const unattributedErrors = await (async () => {
     const admin = getSupabase();
@@ -459,7 +463,11 @@ export default async function AdminPage() {
 
       {/* K-3: the audited grant path — only when the DATABASE lists you. */}
       {platformAdmin ? (
-        <GrantCreditsCard />
+        <>
+          {/* §0-6 (102): the plan dials + the org-plan switch, same gate. */}
+          <PlanQuotasCard quotas={planQuotas} />
+          <GrantCreditsCard />
+        </>
       ) : (
         <p className="rounded-md border-2 border-dashed p-4 text-sm text-[color:var(--v2-text-soft)]">
           <Tri

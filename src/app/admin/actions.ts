@@ -33,6 +33,93 @@ export type GrantResult =
       reason: "no_session" | "not_admin" | "invalid" | "db_behind" | "db";
     };
 
+// ---------------------------------------------------------------------------
+// §0-6 (work order 102): the plan-quota dials and the org-plan switch — the
+// console doors that retire report 83 §7's hand-written SQL. Same shape as
+// adminGrantCredits: the SECURITY DEFINER RPC (migration 42) verifies the
+// caller against platform_admins; these wrappers only shape input and
+// translate errors. db_behind = migration 42 not applied yet — honest, and
+// nothing happened.
+// ---------------------------------------------------------------------------
+
+export type PlanAdminResult =
+  | { ok: true; message: string }
+  | { ok: false; reason: "no_session" | "not_admin" | "invalid" | "db_behind" | "db" };
+
+function translatePlanAdminError(msg: string): Exclude<PlanAdminResult, { ok: true }> {
+  if (/not a platform admin|insufficient_privilege|42501/i.test(msg)) {
+    return { ok: false, reason: "not_admin" };
+  }
+  if (/could not find|function|PGRST202|schema cache|relation .* does not exist/i.test(msg)) {
+    return { ok: false, reason: "db_behind" };
+  }
+  if (/invalid_parameter_value|out of range|unknown plan|no_data_found|no such organisation/i.test(msg)) {
+    return { ok: false, reason: "invalid" };
+  }
+  return { ok: false, reason: "db" };
+}
+
+const PLAN_IDS = ["trial", "standard", "plus", "hq"] as const;
+
+export async function adminSetPlanQuota(input: {
+  plan: string;
+  quota: number;
+}): Promise<PlanAdminResult> {
+  const user = await getSessionUser();
+  if (!user) return { ok: false, reason: "no_session" };
+  if (
+    !(PLAN_IDS as readonly string[]).includes(input.plan) ||
+    !Number.isInteger(input.quota) ||
+    input.quota < 0 ||
+    input.quota > 100_000
+  ) {
+    return { ok: false, reason: "invalid" };
+  }
+  const supabase = await getSupabaseServer();
+  const { data, error } = await supabase.rpc("admin_set_plan_quota", {
+    p_plan: input.plan,
+    p_quota: input.quota,
+  });
+  if (error) return translatePlanAdminError(error.message ?? "");
+  const row = (Array.isArray(data) ? data[0] : data) as
+    | { plan_id?: string; monthly_ai_quota?: number }
+    | undefined;
+  if (!row) return { ok: false, reason: "db" };
+  return {
+    ok: true,
+    message: `${row.plan_id}: ${row.monthly_ai_quota}`,
+  };
+}
+
+export async function adminSetOrgPlan(input: {
+  orgId: number;
+  plan: string;
+}): Promise<PlanAdminResult> {
+  const user = await getSessionUser();
+  if (!user) return { ok: false, reason: "no_session" };
+  if (
+    !Number.isInteger(input.orgId) ||
+    input.orgId <= 0 ||
+    !(PLAN_IDS as readonly string[]).includes(input.plan)
+  ) {
+    return { ok: false, reason: "invalid" };
+  }
+  const supabase = await getSupabaseServer();
+  const { data, error } = await supabase.rpc("admin_set_org_plan", {
+    p_org_id: input.orgId,
+    p_plan: input.plan,
+  });
+  if (error) return translatePlanAdminError(error.message ?? "");
+  const row = (Array.isArray(data) ? data[0] : data) as
+    | { org_id?: number; org_name?: string; plan?: string; monthly_free_quota?: number }
+    | undefined;
+  if (!row) return { ok: false, reason: "db" };
+  return {
+    ok: true,
+    message: `${row.org_name} (#${row.org_id}) → ${row.plan}, ${row.monthly_free_quota}/月`,
+  };
+}
+
 export async function adminGrantCredits(input: {
   orgId: number;
   delta: number;

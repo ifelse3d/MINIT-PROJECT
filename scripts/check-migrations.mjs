@@ -91,6 +91,7 @@ const probes = [
   ["20260918000000 expense no-receipt flag (97 §5)", "expenses", "no_receipt"],
   ["20260919000000 agent change trail (100 §0-4)", "agent_changes", "field"],
   ["20260919000000 roster phone (100 §0-4)", "committee_roster", "phone"],
+  ["20260920000000 plan quota pools (102 §0-6)", "plan_quotas", "monthly_ai_quota"],
 ];
 
 const headers = { apikey: key, Authorization: `Bearer ${key}` };

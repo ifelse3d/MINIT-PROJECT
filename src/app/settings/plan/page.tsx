@@ -6,6 +6,7 @@ import { getActiveOrg } from "@/lib/active-org";
 import { getUsage } from "@/lib/ai/usage";
 import { isOperatorEmail } from "@/lib/admin-gate";
 import { getFenceState } from "@/lib/fence";
+import { loadPlanQuotas, planPctOfStandard, type PlanQuotas } from "@/lib/plan-quotas";
 import { remainingPct } from "@/lib/quota-display";
 import { PLANS, PLAN_ORDER, planById, type Plan, type PlanId } from "@/lib/plans";
 import { UsageBar } from "@/components/usage-bar";
@@ -46,11 +47,16 @@ const FEATURE_ROWS: {
   { key: "branches", bm: "Cawangan (HQ)", zh: "分会（总部）", en: "Branches (HQ)" },
 ];
 
-function featureCell(plan: Plan, key: "quota" | "orgs" | "branches"): string {
+function featureCell(
+  plan: Plan,
+  key: "quota" | "orgs" | "branches",
+  quotas: PlanQuotas,
+): string {
   // §0-4/§0-5 (102): the quota row reads as a share of the Standard pool —
-  // Trial 15% · Standard 100% · Plus 200% — never raw action counts.
-  if (key === "quota")
-    return `${Math.round((plan.monthlyAiQuota / PLANS.standard.monthlyAiQuota) * 100)}%`;
+  // Trial 15% · Standard 100% · Plus 200% — never raw action counts. The
+  // pools come from plan_quotas (J's console dial), compiled fallback while
+  // migration 42 is pending.
+  if (key === "quota") return `${planPctOfStandard(quotas, plan.id)}%`;
   if (key === "orgs") return `${plan.maxRootOrgs}`;
   return plan.maxBranches === null ? "—" : `${plan.maxBranches}`;
 }
@@ -74,7 +80,7 @@ export default async function PlanPage() {
     );
   }
 
-  const [plan, usage, usageByPerson, fenceState, sessionUser] = await Promise.all([
+  const [plan, usage, usageByPerson, fenceState, sessionUser, quotas] = await Promise.all([
     loadPlan(active.id),
     getUsage(active.id).catch(() => null),
     // K-2's by-member split — lived on the old long /settings page; since the
@@ -83,6 +89,8 @@ export default async function PlanPage() {
     // D44: the free fence's lifetime meters. null = this org is not fenced.
     getFenceState(active).catch(() => null),
     getSessionUser().catch(() => null),
+    // §0-6 (102): the pools behind every % on this page — J's console dial.
+    loadPlanQuotas(),
   ]);
   const contactEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "";
 
@@ -173,9 +181,9 @@ export default async function PlanPage() {
         {usage && usage.monthlyFreeQuota > plan.monthlyAiQuota && (
           <p className="text-sm text-[color:var(--v2-text-soft)]">
             <Tri
-              bm={`Akaun awal: kuota pertubuhan ini ${Math.round((usage.monthlyFreeQuota / PLANS.standard.monthlyAiQuota) * 100)}% daripada pelan Biasa — lebih tinggi daripada pelan semasa.`}
-              zh={`早期账号：此机构的额度是「标准」方案的 ${Math.round((usage.monthlyFreeQuota / PLANS.standard.monthlyAiQuota) * 100)}%，比当前方案的标准更高。`}
-              en={`Early account: this organisation's allowance is ${Math.round((usage.monthlyFreeQuota / PLANS.standard.monthlyAiQuota) * 100)}% of the Standard plan — higher than its current plan's level.`}
+              bm={`Akaun awal: kuota pertubuhan ini ${Math.round((usage.monthlyFreeQuota / quotas.standard) * 100)}% daripada pelan Biasa — lebih tinggi daripada pelan semasa.`}
+              zh={`早期账号：此机构的额度是「标准」方案的 ${Math.round((usage.monthlyFreeQuota / quotas.standard) * 100)}%，比当前方案的标准更高。`}
+              en={`Early account: this organisation's allowance is ${Math.round((usage.monthlyFreeQuota / quotas.standard) * 100)}% of the Standard plan — higher than its current plan's level.`}
             />
           </p>
         )}
@@ -190,9 +198,9 @@ export default async function PlanPage() {
           usage.monthlyFreeQuota <= PLANS.trial.monthlyAiQuota && (
             <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-sm font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
               <Tri
-                bm={`Pelan ${plan.name.bm} sudah dipilih ✓ — menunggu pengaktifan manual (selepas harga diumumkan). Sementara menunggu, meter di atas mengukur kuota PERCUBAAN (${Math.round((PLANS.trial.monthlyAiQuota / PLANS.standard.monthlyAiQuota) * 100)}% daripada Biasa), jadi ia boleh penuh lebih awal — itu bukan ralat.`}
-                zh={`已选「${plan.name.zh}」方案 ✓ —— 等待人工开通（价格公布后）。开通之前，上面的用量条量的是「试用」额度（标准的 ${Math.round((PLANS.trial.monthlyAiQuota / PLANS.standard.monthlyAiQuota) * 100)}%），所以会比较快用满 —— 这不是出错。`}
-                en={`The ${plan.name.en} plan is chosen ✓ — awaiting manual activation (once prices are announced). Until then the meter above measures the TRIAL pool (${Math.round((PLANS.trial.monthlyAiQuota / PLANS.standard.monthlyAiQuota) * 100)}% of Standard), so it can fill up sooner — that is not an error.`}
+                bm={`Pelan ${plan.name.bm} sudah dipilih ✓ — menunggu pengaktifan manual (selepas harga diumumkan). Sementara menunggu, meter di atas mengukur kuota PERCUBAAN (${planPctOfStandard(quotas, "trial")}% daripada Biasa), jadi ia boleh penuh lebih awal — itu bukan ralat.`}
+                zh={`已选「${plan.name.zh}」方案 ✓ —— 等待人工开通（价格公布后）。开通之前，上面的用量条量的是「试用」额度（标准的 ${planPctOfStandard(quotas, "trial")}%），所以会比较快用满 —— 这不是出错。`}
+                en={`The ${plan.name.en} plan is chosen ✓ — awaiting manual activation (once prices are announced). Until then the meter above measures the TRIAL pool (${planPctOfStandard(quotas, "trial")}% of Standard), so it can fill up sooner — that is not an error.`}
               />
             </p>
           )}
@@ -275,7 +283,7 @@ export default async function PlanPage() {
                 </td>
                 {shownPlans.map((id) => (
                   <td key={id} className="px-4 py-3 tabular-nums">
-                    {featureCell(PLANS[id], row.key)}
+                    {featureCell(PLANS[id], row.key, quotas)}
                   </td>
                 ))}
               </tr>
