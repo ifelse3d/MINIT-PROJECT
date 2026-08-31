@@ -92,6 +92,7 @@ const probes = [
   ["20260919000000 agent change trail (100 §0-4)", "agent_changes", "field"],
   ["20260919000000 roster phone (100 §0-4)", "committee_roster", "phone"],
   ["20260920000000 plan quota pools (102 §0-6)", "plan_quotas", "monthly_ai_quota"],
+  ["20260921000000 ai_jobs 排队慢慢读 (105 §1)", "ai_jobs", "batches_done"],
 ];
 
 const headers = { apikey: key, Authorization: `Bearer ${key}` };
