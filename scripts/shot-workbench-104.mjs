@@ -340,6 +340,14 @@ async function run() {
     // --- §9: Upcoming folds, and the chip brings it back -------------------
     if (TAG !== "before") {
     await page.setViewport({ width: 1440, height: 950 });
+    // §2 (work order 109) changed the DEFAULT: the column starts folded now,
+    // and only an explicit stored "0" opens it. This test is about the fold
+    // still working, so it puts the column back the way 104 found it first.
+    await page.evaluate(() => {
+      try {
+        localStorage.setItem("minit.home.upcoming.collapsed.v1", "0");
+      } catch {}
+    });
     await page.goto(BASE, { waitUntil: "networkidle2" });
     await new Promise((r) => setTimeout(r, 600));
     const hasCollapse = (await page.$('[data-probe="upcoming-collapse"]')) !== null;

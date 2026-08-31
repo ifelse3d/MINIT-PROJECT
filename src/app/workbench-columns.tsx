@@ -40,15 +40,26 @@ export function WorkbenchColumns({
   // The same merge the column and the phone bell use — one list, three
   // readers, so the chip's number can never disagree with the column.
   const count = useUpcomingItems(deadlines, todayIso).length;
-  // Starts OPEN and corrects itself after mount: reading localStorage during
-  // render would make the server and the client disagree about the layout.
-  const [collapsed, setCollapsed] = useState(false);
+  // §2 (work order 109, J: 「J 要的是聊天空間大」): FOLDED IS THE DEFAULT
+  // now. 104 made the column foldable and left it open, so every visit still
+  // opened with 21rem of the screen spent on dates that are usually months
+  // away. A person who wants it open opens it once and this device remembers
+  // — which is what the stored "0" below means. Only an explicit stored
+  // choice can expand it; anything else (a new device, a private window,
+  // storage refused) starts folded.
+  //
+  // Starts folded and corrects itself after mount: reading localStorage
+  // during render would make the server and the client disagree about the
+  // layout, and the FIRST paint being wrong is what the boot script in
+  // layout.tsx exists to avoid elsewhere.
+  const [collapsed, setCollapsed] = useState(true);
   useEffect(() => {
     const id = setTimeout(() => {
       try {
-        setCollapsed(localStorage.getItem(STORE_KEY) === "1");
+        setCollapsed(localStorage.getItem(STORE_KEY) !== "0");
       } catch {
-        // Storage unavailable (private window) — the column simply stays open.
+        // Storage unavailable (private window) — the column stays folded and
+        // the chip is still there to open it for this visit.
       }
     }, 0);
     return () => clearTimeout(id);
@@ -80,21 +91,34 @@ export function WorkbenchColumns({
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {/* The chip lives above the workbench so it is on screen the moment
             the page opens — a way back that needs scrolling is not a way
-            back. Desktop only; the phone has the bell. */}
+            back. Desktop only; the phone has the bell.
+            §2 (109): folded is the DEFAULT now, so this chip is the only way
+            back and it is always here — 104's promise, and its probe, both
+            say so. With nothing due it drops the number rather than
+            announcing “⏰ 0”; the clock alone is a door, and a zero is a
+            statistic nobody asked for. */}
         {collapsed && (
-          <div className="mb-3 hidden justify-end @4xl:flex">
+          <div className="mb-2 hidden justify-end @4xl:flex">
             <button
               type="button"
               data-probe="upcoming-reopen"
               onClick={() => set(false)}
               className="inline-flex min-h-9 items-center gap-2 rounded-full border-2 border-[color:var(--v2-border)] bg-white/70 px-3 text-sm font-medium text-[color:var(--v2-text-soft)] hover:border-[color:var(--v2-primary)]/60 hover:text-[color:var(--v2-primary)] dark:bg-white/10"
-              aria-label={t(
-                `Buka semula «Akan datang» — ${count} perkara`,
-                `重新展开「即将到来」—— ${count} 项`,
-                `Show “Upcoming” again — ${count} item(s)`,
-              )}
+              aria-label={
+                count > 0
+                  ? t(
+                      `Buka semula «Akan datang» — ${count} perkara`,
+                      `重新展开「即将到来」—— ${count} 项`,
+                      `Show “Upcoming” again — ${count} item(s)`,
+                    )
+                  : t(
+                      "Buka semula «Akan datang» — tiada apa-apa buat masa ini",
+                      "重新展开「即将到来」—— 目前没有",
+                      "Show “Upcoming” again — nothing due",
+                    )
+              }
             >
-              ⏰ <span className="tabular-nums">{count}</span>
+              ⏰ {count > 0 && <span className="tabular-nums">{count}</span>}
               <span className="sr-only">
                 <Tri bm="Akan datang" zh="即将到来" en="Upcoming" />
               </span>
