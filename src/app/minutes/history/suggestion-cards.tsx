@@ -30,6 +30,10 @@ import { saveEvent } from "@/app/calendar/actions";
 import { makeEvent } from "@/lib/local-events";
 import { formatDateLong } from "@/lib/date-input";
 import { permissionError } from "@/lib/roles";
+import {
+  MALAYSIAN_STATES,
+  missingErosesCommitteeFields,
+} from "@/lib/eroses-committee";
 import { scopedKey } from "@/lib/storage-scope-core";
 import type {
   EventSuggestion,
@@ -54,9 +58,32 @@ type CardStatus = {
   /** The members action asked "same name — another person?" — answered by
    *  re-submitting with confirmSameName=1, exactly like the /members form. */
   askSameName: { name: string; official: string } | null;
+  /**
+   * §11 (work order 104): the eROSES boxes, ON THE CARD.
+   *
+   * J, 2026-08-31 evening: 「委員卡按了才擋」. Pressing "Confirm and add" was
+   * the only way to discover that a committee row cannot be saved without the
+   * name AS PRINTED ON THE IC and the state — D48 made the form a hard gate in
+   * work order 89, and this card was never given the boxes to satisfy it. So
+   * the person pressed a green button and got a red refusal, every time.
+   *
+   * The boxes are here now, filled in before the button is live. The rule
+   * itself is unchanged, and it is still the SERVER that enforces it.
+   */
+  nameOfficial: string;
+  state: string;
+  termStart: string;
 };
 
-const IDLE: CardStatus = { busy: false, done: null, error: null, askSameName: null };
+const IDLE: CardStatus = {
+  busy: false,
+  done: null,
+  error: null,
+  askSameName: null,
+  nameOfficial: "",
+  state: "",
+  termStart: "",
+};
 
 function hiddenStoreKey(docId: number): string {
   return scopedKey(`suggestion-hidden:${docId}`);
@@ -134,12 +161,17 @@ export function SuggestionCards({
   }
 
   async function confirmMember(card: MemberSuggestion, confirmSameName: boolean) {
+    const st = of(card.key);
     patch(card.key, { busy: true, error: null });
     try {
       const fd = new FormData();
       fd.set("position", card.position);
       fd.set("personName", card.personName);
-      fd.set("termStart", card.termStartIso ?? "");
+      // §11 (104): what the person typed on the card. The appointment date
+      // comes from the meeting itself when the minit gave one.
+      fd.set("termStart", card.termStartIso ?? st.termStart);
+      fd.set("nameOfficial", st.nameOfficial);
+      fd.set("state", st.state);
       if (confirmSameName) fd.set("confirmSameName", "1");
       const res = await addCommitteeMember({ error: null, ok: false }, fd);
       if (res.askSameName) {
@@ -356,10 +388,23 @@ export function SuggestionCards({
                     </div>
                   )}
 
+                  {/* 🔴 §11 (104): the eROSES boxes come BEFORE the button,
+                      not after the refusal. */}
+                  {s.type === "add_member" && (
+                    <ErosesBoxes
+                      status={st}
+                      needsDate={s.termStartIso === null}
+                      onChange={(p) => patch(s.key, p)}
+                    />
+                  )}
+
                   <div className="flex flex-wrap items-center gap-2">
                     <Button
                       type="button"
-                      disabled={st.busy}
+                      disabled={
+                        st.busy ||
+                        (s.type === "add_member" && erosesGaps(st, s).length > 0)
+                      }
                       onClick={() =>
                         s.type === "add_member"
                           ? void confirmMember(s, false)
@@ -437,5 +482,125 @@ export function SuggestionCards({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// §11 (work order 104) — the eROSES boxes, on the card.
+//
+// J, 2026-08-31 evening: 「委員卡按了才擋」. A committee row is a GOVERNMENT
+// FILING: since D48 (work order 89) the server refuses to save one without the
+// name as printed on the IC and the state. This card offered a green "Confirm
+// and add" and no boxes, so pressing it was the only way to find that out —
+// and the answer was a red refusal.
+//
+// 🔴 THE RULE DID NOT MOVE. The server still refuses; these boxes only let the
+// person satisfy it before they press. The never-transliterate warning stays
+// glued to the IC-name box, where it has been since work order 68: an invented
+// romanisation on a government form is a false filing.
+// ---------------------------------------------------------------------------
+
+/** Which eROSES boxes this card still lacks — the SAME rule the server uses. */
+function erosesGaps(st: CardStatus, card: MemberSuggestion) {
+  return missingErosesCommitteeFields({
+    person_name: card.personName,
+    name_official: st.nameOfficial,
+    state: st.state,
+    term_start: card.termStartIso ?? st.termStart,
+  });
+}
+
+function ErosesBoxes({
+  status,
+  needsDate,
+  onChange,
+}: {
+  status: CardStatus;
+  /** True when the minit gave no date to appoint them from. */
+  needsDate: boolean;
+  onChange: (patch: Partial<CardStatus>) => void;
+}) {
+  const inputCls =
+    "w-full rounded-md border-2 border-input bg-white px-3 py-2 text-base dark:bg-white/5";
+  return (
+    <div
+      data-probe="eroses-boxes"
+      className="flex flex-col gap-2 rounded-md border-2 border-[color:var(--v2-border)] bg-white/60 p-3 dark:bg-white/5"
+    >
+      <p className="text-sm text-muted-foreground">
+        <Tri
+          bm="Baris ini masuk ke eROSES, jadi dua perkara ini diperlukan sebelum ia boleh disimpan."
+          zh="这一行会进 eROSES 的理事名单，所以要先有这两样才能保存。"
+          en="This row goes into eROSES, so these are needed before it can be saved."
+        />
+      </p>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium">
+          <Tri
+            bm="Nama dalam IC (eROSES)"
+            zh="身份证上的名字（eROSES）"
+            en="Name on IC (eROSES)"
+          />
+        </span>
+        <input
+          data-probe="eroses-name-official"
+          value={status.nameOfficial}
+          onChange={(e) => onChange({ nameOfficial: e.currentTarget.value })}
+          maxLength={160}
+          className={inputCls}
+        />
+        <span className="text-sm text-amber-800 dark:text-amber-300">
+          ⚠{" "}
+          <Tri
+            bm="Salin daripada kad pengenalan — jangan terjemah atau eja sendiri."
+            zh="请照身份证上的写法抄，不要自己音译或改拼法。"
+            en="Copy it from the identity card — never transliterate or respell it yourself."
+          />
+        </span>
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium">
+          <Tri bm="Negeri (eROSES)" zh="州属（eROSES）" en="State (eROSES)" />
+        </span>
+        <input
+          data-probe="eroses-state"
+          value={status.state}
+          onChange={(e) => onChange({ state: e.currentTarget.value })}
+          maxLength={60}
+          list="suggestion-committee-states"
+          className={inputCls}
+        />
+        <datalist id="suggestion-committee-states">
+          {MALAYSIAN_STATES.map((x) => (
+            <option key={x} value={x} />
+          ))}
+        </datalist>
+      </label>
+      {needsDate && (
+        <label className="flex flex-col gap-1">
+          <span className="text-sm font-medium">
+            <Tri
+              bm="Tarikh perlantikan (eROSES)"
+              zh="任命日期（eROSES）"
+              en="Appointment date (eROSES)"
+            />
+          </span>
+          <input
+            type="date"
+            data-probe="eroses-term-start"
+            value={status.termStart}
+            onChange={(e) => onChange({ termStart: e.currentTarget.value })}
+            className={inputCls}
+          />
+          <span className="text-sm text-muted-foreground">
+            <Tri
+              bm="Minit ini tidak menyatakan tarikh mesyuarat, jadi tarikh perlantikan perlu diisi di sini."
+              zh="这份会议记录没有写开会日期，所以任命日期要在这里填。"
+              en="These minutes do not state a meeting date, so the appointment date has to be filled in here."
+            />
+          </span>
+        </label>
+      )}
+    </div>
   );
 }

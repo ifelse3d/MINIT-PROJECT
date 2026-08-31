@@ -9,6 +9,7 @@ import {
   useTriText,
 } from "@/components/language-provider";
 import { toIsoDate } from "@/lib/date-input";
+import { MALAYSIAN_STATES } from "@/lib/eroses-committee";
 import {
   addCommitteeMember,
   importCommittee,
@@ -153,25 +154,9 @@ function honorificSuggestions(mode: string): string[] {
   return groups.flatMap((g) => g.titles);
 }
 
-/** The 13 states + 3 federal territories, for the Negeri box (eROSES asks). */
-const STATE_SUGGESTED = [
-  "Johor",
-  "Kedah",
-  "Kelantan",
-  "Melaka",
-  "Negeri Sembilan",
-  "Pahang",
-  "Perak",
-  "Perlis",
-  "Pulau Pinang",
-  "Sabah",
-  "Sarawak",
-  "Selangor",
-  "Terengganu",
-  "WP Kuala Lumpur",
-  "WP Labuan",
-  "WP Putrajaya",
-];
+/** §11 (104): the one list, now in @/lib/eroses-committee — the suggestion
+ *  card on a confirmed minit offers the same box. */
+const STATE_SUGGESTED = MALAYSIAN_STATES;
 
 /** One row, not a second card. Adding a person is part of reading the list —
  *  the previous layout put it in a separate panel below, which is how a page

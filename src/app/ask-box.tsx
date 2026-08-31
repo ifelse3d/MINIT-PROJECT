@@ -65,6 +65,7 @@ import {
   type ConstitutionReadResume,
 } from "@/lib/constitution-read-client";
 import { canStageTogether } from "@/lib/multi-page-staging";
+import { mergeMeetingVersions } from "@/lib/extraction-versions";
 import { ConstitutionReadEstimate } from "@/components/constitution-read-estimate";
 import {
   mergeConstitutionExtractions,
@@ -339,6 +340,14 @@ export function AskBox({
   // Set when Minit could not place the page: it ASKS instead of giving up.
   // Holds the text that accompanied the failed attempt so the retry carries it.
   const [askKind, setAskKind] = useState<{ context: string } | null>(null);
+  /**
+   * §10 (work order 104, J's ruling 「上傳時選」): several photos of ONE
+   * meeting are either its PAGES (page 1, page 2 — concatenate, which is what
+   * this has always done) or two VERSIONS of the same thing (a short note and
+   * a typed-up minit — use the fullest and let the other only add). Only the
+   * person holding the paper knows which, so the strip asks.
+   */
+  const [multiMode, setMultiMode] = useState<"pages" | "versions">("pages");
   /**
    * ④ (work order 85): a long PDF just classified as a CONSTITUTION waits
    * here for the person's own "start reading" tap — with the price-and-time
@@ -839,6 +848,11 @@ export function AskBox({
       let merged: unknown = null;
       let page: string | null = null;
       let label: string | null = null;
+      // §10 (104): in "versions" mode the readings are NOT folded together as
+      // they arrive — the fullest one has to be chosen once they are all in.
+      const readings: unknown[] = [];
+      const asVersions =
+        multiMode === "versions" && files.length > 1 && !opts?.meetingPicked;
       const pages: {
         fileName: string;
         storagePath: string | null;
@@ -881,6 +895,10 @@ export function AskBox({
         const body = r.body;
         kind = body.kind as IntakeKind;
         page = body.page ?? page;
+        // Every reading is kept whole for §10; `merged` still folds them the
+        // way it always has, so a kind with no version rule (a ledger, a
+        // constitution) behaves exactly as before whatever was ticked.
+        readings.push(body.extraction);
         merged = merged === null ? body.extraction : mergeByKind(kind, merged, body.extraction);
         label = label === null ? (body.fileName ?? file.name) : mergedSourceLabel(label, file.name);
         pages.push({
@@ -892,6 +910,13 @@ export function AskBox({
         });
       }
       if (!kind || !page || merged === null) return;
+
+      // §10: the person said these are VERSIONS of one thing. The fullest
+      // reading becomes the document; the others may only add what it does
+      // not already carry, so one agenda is never written out twice.
+      if (asVersions && kind === "meeting_notes" && readings.length > 1) {
+        merged = mergeMeetingVersions(readings as MeetingNotesExtraction[]);
+      }
 
       // A constitution is a whole-book read with its own review flow — it
       // still goes straight to /constitution (same contract as the long-PDF
@@ -1617,12 +1642,65 @@ export function AskBox({
                 </button>
               )}
             </div>
+            {/* 🔴 §10 (104, J: 「上傳時選」). Two papers about one meeting are
+                either its PAGES or two VERSIONS of it, and the app cannot
+                tell — it can only see two files. Reading versions as pages is
+                what produced J's document running "3. 4. 5." and then
+                "1. 2.1 4. 5.": the same agenda twice, in two hands. So the
+                person says which, before anything is paid for. */}
+            {staged.length > 1 && (
+              <fieldset
+                data-probe="multi-mode"
+                className="flex flex-col gap-1.5 rounded-md border-2 border-[color:var(--v2-border)] bg-white/60 p-3 dark:bg-white/5"
+              >
+                <legend className="px-1 text-sm font-semibold">
+                  <Tri
+                    bm="Fail-fail ini ialah…"
+                    zh="这几份是……"
+                    en="These are…"
+                  />
+                </legend>
+                {(
+                  [
+                    {
+                      value: "pages" as const,
+                      bm: "Muka surat yang berlainan bagi dokumen yang sama (m/s 1, m/s 2…)",
+                      zh: "同一份的不同页（第 1 页、第 2 页…）",
+                      en: "Different pages of the same document (page 1, page 2…)",
+                    },
+                    {
+                      value: "versions" as const,
+                      bm: "Versi berlainan bagi perkara yang sama — MinitAI guna yang paling lengkap",
+                      zh: "同一件事的不同版本（一份简、一份详）—— MinitAI 用最详细的那份",
+                      en: "Different versions of the same thing — MinitAI uses the fullest one",
+                    },
+                  ]
+                ).map((opt) => (
+                  <label
+                    key={opt.value}
+                    className="flex cursor-pointer items-start gap-2 text-sm"
+                  >
+                    <input
+                      type="radio"
+                      name="multi-mode"
+                      value={opt.value}
+                      data-probe={`multi-mode-${opt.value}`}
+                      checked={multiMode === opt.value}
+                      disabled={busy !== null}
+                      onChange={() => setMultiMode(opt.value)}
+                      className="mt-0.5 h-4 w-4 accent-[color:var(--v2-primary)]"
+                    />
+                    <Tri bm={opt.bm} zh={opt.zh} en={opt.en} />
+                  </label>
+                ))}
+              </fieldset>
+            )}
             <span className="text-sm text-muted-foreground">
               {staged.length > 1 ? (
                 <Tri
-                  bm={`${staged.length} gambar akan dibaca sebagai SATU dokumen (muka surat demi muka surat). Belum dihantar — tekan Hantar bila siap.`}
-                  zh={`这 ${staged.length} 张会当成同一份文件、一页一页读。还没送出 —— 准备好按送出。`}
-                  en={`These ${staged.length} photos will be read as ONE document, page by page. Not sent yet — press Send when ready.`}
+                  bm={`${staged.length} fail ini dibaca sebagai SATU dokumen. Belum dihantar — tekan Hantar bila siap.`}
+                  zh={`这 ${staged.length} 份会当成同一份文件来读。还没送出 —— 准备好按送出。`}
+                  en={`These ${staged.length} files are read as ONE document. Not sent yet — press Send when ready.`}
                 />
               ) : (
                 <Tri

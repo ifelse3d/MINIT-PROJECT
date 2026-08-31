@@ -28,6 +28,32 @@
 // invented romanisation on a government form is a false filing).
 // ---------------------------------------------------------------------------
 
+/**
+ * The 13 states + 3 federal territories, for the Negeri box eROSES asks for.
+ *
+ * Lived inside members-form.tsx until §11 (work order 104) put the same box on
+ * the minutes-suggestion card. CLAUDE.md rule 13: one list, or two screens
+ * start offering different spellings of Pulau Pinang on a government form.
+ */
+export const MALAYSIAN_STATES = [
+  "Johor",
+  "Kedah",
+  "Kelantan",
+  "Melaka",
+  "Negeri Sembilan",
+  "Pahang",
+  "Perak",
+  "Perlis",
+  "Pulau Pinang",
+  "Sabah",
+  "Sarawak",
+  "Selangor",
+  "Terengganu",
+  "WP Kuala Lumpur",
+  "WP Labuan",
+  "WP Putrajaya",
+] as const;
+
 export type ErosesCommitteeField =
   | "personName"
   | "nameOfficial"

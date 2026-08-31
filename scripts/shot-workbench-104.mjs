@@ -226,6 +226,19 @@ async function run() {
       const before = await composerRect(page);
       check(`${label}: the composer is on screen with the thumbnails up`, before !== null);
 
+      // §10 (104): two files staged → the strip ASKS whether they are pages
+      // of one document or two versions of one thing.
+      const modes = await page.evaluate(() => ({
+        asked: document.querySelector('[data-probe="multi-mode"]') !== null,
+        pagesDefault:
+          document.querySelector('[data-probe="multi-mode-pages"]')?.checked ?? false,
+        hasVersions:
+          document.querySelector('[data-probe="multi-mode-versions"]') !== null,
+      }));
+      check(`${label}: §10 the strip asks pages-or-versions`, modes.asked);
+      check(`${label}: §10 "different pages" stays the default`, modes.pagesDefault);
+      check(`${label}: §10 "different versions" is offered`, modes.hasVersions);
+
       // ② send → the canned reading brings up the which-meeting card
       await page.evaluate(() => {
         const b = [...document.querySelectorAll("button")].find((x) =>
