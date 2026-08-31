@@ -94,22 +94,36 @@ export type UsageState = {
   /** True when the next AI action would be refused */
   blocked: boolean;
   /**
-   * How much of the MONTHLY FREE QUOTA is spent, 0–100, rounded.
+   * EVERYTHING THIS MONTH'S METER MEASURES: what has been used plus what is
+   * still there (free remaining + credits). The denominator of every
+   * percentage the user is shown — §5 (work order 104).
    *
-   * 2026-08-22: J asked for percentages instead of raw counts. This is the
-   * "both" answer (STATE.md §5 Q1 option c) — the number of actions left stays,
-   * because "99 left" is concrete for an older treasurer in a way "1% used" is
-   * not, and the percentage is the gauge that makes "am I about to run out"
-   * readable at a glance.
+   * Written as used+remaining rather than quota+credits on purpose: when
+   * credits have been SPENT they have already left `extraCredits` and already
+   * arrived in `usedThisMonth`, so quota+credits would shrink as the month
+   * went on and the percentages would not add up to what is actually left.
+   * Where nothing has been spent from credits the two are identical, which is
+   * J's rule 「已用 ÷（月額度＋充值）」 exactly.
+   */
+  quotaPool: number;
+  /**
+   * How much of that pool is spent, 0–100, rounded.
    *
-   * 🔴 It deliberately measures the FREE quota only, not free + purchased
-   * credits. A percentage whose denominator grows every time you buy more is a
-   * gauge that goes DOWN when you spend money, which is the opposite of what it
-   * looks like it is saying. Purchased credits are a separate number.
+   * 2026-08-22: J asked for percentages instead of raw counts.
    *
-   * ⚠ Not the same thing as D1-L2 (charging by real cost rather than by count).
-   * That one still needs two weeks of live data; this one never did — which is
-   * why it sat unasked in STATE.md §5 for four days instead of being done.
+   * 🔴 §5 (work order 104) CHANGED THE DENOMINATOR, and this is why. It used
+   * to measure the FREE quota only, on the argument that a denominator which
+   * grows when you top up makes the gauge fall when you spend money. That
+   * argument lost to what it produced on J's own screen: "100% used · 0% left"
+   * beside "+607% extra credits", on an account that could still do 91 things.
+   * Two numbers on one line calling each other liars. J, 2026-08-31 evening:
+   * 「607% extra credit 是什麽鬼」.
+   *
+   * THE INVARIANT, and it is the whole point: if the screen says 0% left, the
+   * next action must really be refused; if the next action would go through,
+   * the screen must not say 0%. The clamps below are what enforce it — a
+   * rounded 100% on an account with credits left would break it just as badly
+   * as the old formula did.
    */
   usedPct: number;
 };
@@ -117,14 +131,21 @@ export type UsageState = {
 export function computeUsageState(s: UsageSnapshot): UsageState {
   const freeRemaining = Math.max(0, s.monthlyFreeQuota - s.usedThisMonth);
   const totalRemaining = freeRemaining + Math.max(0, s.extraCredits);
+  const blocked = totalRemaining <= 0;
+  const quotaPool = Math.max(0, s.usedThisMonth) + totalRemaining;
+  let usedPct = usedPercent(s.usedThisMonth, quotaPool);
+  // §5's invariant, both ways round.
+  if (!blocked && usedPct >= 100) usedPct = 99;
+  if (s.usedThisMonth > 0 && usedPct <= 0) usedPct = 1;
   return {
     usedThisMonth: s.usedThisMonth,
     monthlyFreeQuota: s.monthlyFreeQuota,
     extraCredits: s.extraCredits,
     freeRemaining,
     totalRemaining,
-    blocked: totalRemaining <= 0,
-    usedPct: usedPercent(s.usedThisMonth, s.monthlyFreeQuota),
+    quotaPool,
+    blocked,
+    usedPct,
   };
 }
 

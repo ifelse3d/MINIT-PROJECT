@@ -330,6 +330,33 @@ export default async function AdminPage() {
         </p>
       </div>
 
+      {/* 🔴 §6 (104), J: 「什麽 manual action 我在我的系統根本沒看到」. These
+          two panels have been on this page since 102 — UNDER the fleet table,
+          which is long, so J never met them. He comes here to PRESS something,
+          not to read a table; the table now goes below. #plan is where the
+          Plan page's "activate in the console" link lands. */}
+      <div id="plan" className="scroll-mt-24">
+        {platformAdmin ? (
+          <div className="flex flex-col gap-6">
+            {/* §0-6 (102): the plan dials + the org-plan switch, same gate. */}
+            <PlanQuotasCard quotas={planQuotas} />
+            <GrantCreditsCard />
+          </div>
+        ) : (
+          <p className="rounded-md border-2 border-dashed p-4 text-sm text-[color:var(--v2-text-soft)]">
+            <Tri
+              bm="Borang beri-kredit disembunyikan: akaun ini belum ada dalam senarai pentadbir platform (pangkalan data yang memutuskan, bukan butang). Untuk membukanya, jalankan dalam SQL Editor:"
+              zh="加额度的表单被隐藏了：这个账号还不在平台管理员名单里（是数据库在把关，不是按钮）。要开通，在 SQL Editor 跑："
+              en="The grant-credits form is hidden: this account is not on the platform-admin list (the database is the gate, not the button). To enable it, run in the SQL Editor:"
+            />{" "}
+            <code className="rounded bg-muted px-1">
+              insert into platform_admins (email) values (&#39;{user?.email}&#39;) on
+              conflict (email) do nothing;
+            </code>
+          </p>
+        )}
+      </div>
+
       {/* #20 (launch feedback): the numbers as CHARTS — months of cost,
           this month's usage by org, the totals lined up. */}
       <FleetCharts
@@ -452,35 +479,18 @@ export default async function AdminPage() {
         <summary className="cursor-pointer underline underline-offset-4">
           <Tri bm="Bagaimana tukar pelan?" zh="怎么改配套？" en="How do I change a plan?" />
         </summary>
+        {/* §6 (104): this used to send the operator to the SQL Editor. Since
+            102 the panel at the TOP of this page does it with a button, and
+            telling somebody to write SQL for a job a button does is how a
+            button goes unnoticed for a week. */}
         <p className="mt-1">
           <Tri
-            bm="Dalam Supabase SQL Editor, jalankan SQL di hujung fail migrasi 20260830000000_orgs_plan.sql."
-            zh="在 Supabase 的 SQL Editor 里，跑 migration 档 20260830000000_orgs_plan.sql 末尾附的那段 SQL。"
-            en="In the Supabase SQL Editor, run the SQL at the foot of migration file 20260830000000_orgs_plan.sql."
+            bm="Guna panel «Pelan & kuota» di atas halaman ini — pilih pertubuhan, pilih pelan, tekan. Kuota bulanannya ditetapkan semula mengikut kolam pelan itu serta-merta."
+            zh="用这一页最上面的「方案与用量池」面板 —— 选机构、选方案、按下去。该机构的每月额度会立刻照那个方案的池子重设。"
+            en="Use the “Plans & quotas” panel at the top of this page — pick the organisation, pick the plan, press. Its monthly allowance is reset to that plan's pool immediately."
           />
         </p>
       </details>
-
-      {/* K-3: the audited grant path — only when the DATABASE lists you. */}
-      {platformAdmin ? (
-        <>
-          {/* §0-6 (102): the plan dials + the org-plan switch, same gate. */}
-          <PlanQuotasCard quotas={planQuotas} />
-          <GrantCreditsCard />
-        </>
-      ) : (
-        <p className="rounded-md border-2 border-dashed p-4 text-sm text-[color:var(--v2-text-soft)]">
-          <Tri
-            bm="Borang beri-kredit disembunyikan: akaun ini belum ada dalam senarai pentadbir platform (pangkalan data yang memutuskan, bukan butang). Untuk membukanya, jalankan dalam SQL Editor:"
-            zh="加额度的表单被隐藏了：这个账号还不在平台管理员名单里（是数据库在把关，不是按钮）。要开通，在 SQL Editor 跑："
-            en="The grant-credits form is hidden: this account is not on the platform-admin list (the database is the gate, not the button). To enable it, run in the SQL Editor:"
-          />{" "}
-          <code className="rounded bg-muted px-1">
-            insert into platform_admins (email) values (&#39;{user?.email}&#39;) on
-            conflict (email) do nothing;
-          </code>
-        </p>
-      )}
 
       {/* K-1: the feedback inbox. */}
       <div className="v2-glass flex flex-col gap-3 p-5">

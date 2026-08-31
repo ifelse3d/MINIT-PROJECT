@@ -217,3 +217,115 @@ describe("RateLimitedError", () => {
     expect(RATE_LIMITED_MESSAGE.en).toContain("did not use");
   });
 });
+
+// ---------------------------------------------------------------------------
+// §5 (work order 104) — THE TWO NUMBERS MUST NOT CALL EACH OTHER LIARS.
+//
+// J, 2026-08-31 evening: 「607% extra credit 是什麽鬼」. His Plan page showed
+// "100% used · 0% left" next to "+607% extra credits" on an account that could
+// still do 91 things — because usedPct measured the FREE quota alone while the
+// credits were spent quietly behind it.
+//
+// The invariant these tests exist for, both ways round:
+//   * the screen says 0% left  ⇒ the next action really is refused;
+//   * the next action goes through ⇒ the screen does not say 0% left.
+// ---------------------------------------------------------------------------
+
+describe("§5 — percentages include the top-up", () => {
+  /** J's actual state on 2026-08-31. */
+  const JS_STATE = { usedThisMonth: 15, monthlyFreeQuota: 15, extraCredits: 91 };
+
+  it("J's state no longer reads 0% left while 91 actions remain", () => {
+    const s = computeUsageState(JS_STATE);
+    expect(s.blocked).toBe(false);
+    expect(s.usedPct).toBeLessThan(100);
+    expect(100 - s.usedPct).toBeGreaterThan(0);
+  });
+
+  it("the pool is the month's allowance plus the top-up", () => {
+    const s = computeUsageState(JS_STATE);
+    expect(s.quotaPool).toBe(106);
+    expect(s.usedPct).toBe(14); // 15 / 106
+  });
+
+  it("the pool stays honest after credits have been SPENT", () => {
+    // 20 used = 15 free + 5 credits; 95 credits left of the 100 granted.
+    const s = computeUsageState({
+      usedThisMonth: 20,
+      monthlyFreeQuota: 15,
+      extraCredits: 95,
+    });
+    // used + remaining, so the percentages describe the same 115 things.
+    expect(s.quotaPool).toBe(115);
+    expect(s.totalRemaining).toBe(95);
+    expect(s.usedPct).toBe(17);
+  });
+
+  it("blocked really is 100% used and 0% left", () => {
+    const s = computeUsageState({
+      usedThisMonth: 15,
+      monthlyFreeQuota: 15,
+      extraCredits: 0,
+    });
+    expect(s.blocked).toBe(true);
+    expect(s.usedPct).toBe(100);
+  });
+
+  it("never reads 100% used while ONE action is still available", () => {
+    // 199/200 rounds to 100% — and this account can still do one thing.
+    const s = computeUsageState({
+      usedThisMonth: 199,
+      monthlyFreeQuota: 200,
+      extraCredits: 0,
+    });
+    expect(s.blocked).toBe(false);
+    expect(s.usedPct).toBe(99);
+  });
+
+  it("never reads 0% used after a real action was spent", () => {
+    // 1/500 rounds to 0% — and something WAS charged.
+    const s = computeUsageState({
+      usedThisMonth: 1,
+      monthlyFreeQuota: 500,
+      extraCredits: 0,
+    });
+    expect(s.usedPct).toBe(1);
+  });
+
+  it("an untouched month is 0% used and 100% left", () => {
+    const s = computeUsageState({
+      usedThisMonth: 0,
+      monthlyFreeQuota: 15,
+      extraCredits: 0,
+    });
+    expect(s.usedPct).toBe(0);
+    expect(s.quotaPool).toBe(15);
+  });
+
+  it("an org with no allowance at all is fully spent, not NaN", () => {
+    const s = computeUsageState({
+      usedThisMonth: 0,
+      monthlyFreeQuota: 0,
+      extraCredits: 0,
+    });
+    expect(s.quotaPool).toBe(0);
+    expect(s.usedPct).toBe(100);
+    expect(s.blocked).toBe(true);
+  });
+
+  it("the invariant holds across a sweep of states", () => {
+    for (const quota of [0, 1, 15, 100, 200]) {
+      for (const credits of [0, 1, 91]) {
+        for (const used of [0, 1, 14, 15, 99, 199, 300]) {
+          const s = computeUsageState({
+            usedThisMonth: used,
+            monthlyFreeQuota: quota,
+            extraCredits: credits,
+          });
+          const saysNothingLeft = 100 - s.usedPct === 0;
+          expect(saysNothingLeft).toBe(s.blocked);
+        }
+      }
+    }
+  });
+});

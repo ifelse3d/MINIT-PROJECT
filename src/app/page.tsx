@@ -128,7 +128,9 @@ export default async function Home() {
           hasOrg
           initialRemaining={usage?.totalRemaining ?? null}
           initialUsedPct={usage?.usedPct ?? null}
-          monthlyQuota={usage?.monthlyFreeQuota ?? null}
+          // §5 (104): the SAME denominator every other percentage uses —
+          // month's allowance plus any top-up (usage-core's quotaPool).
+          monthlyQuota={usage?.quotaPool ?? null}
           unfinishedDrafts={unfinishedDrafts}
           howItWorks={<HowItWorksButton variant="link" />}
         />

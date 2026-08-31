@@ -6,6 +6,7 @@ import { getSupabaseServer } from "@/db/supabase-server";
 import { getUsage } from "@/lib/ai/usage";
 import { QUOTA_BLOCKED_MESSAGE, usageMonthMalaysia } from "@/lib/ai/usage-core";
 import { formatDateLong } from "@/lib/date-input";
+import { remainingPct } from "@/lib/quota-display";
 import { UsageBar, usageIsLow } from "@/components/usage-bar";
 import { loadUsageByPerson } from "../usage-by-person";
 import { SettingsBlock, SettingsSection } from "../ui";
@@ -93,25 +94,23 @@ export default async function AiUsageSettingsPage() {
             </div>
             <UsageBar
               usedThisMonth={usage.usedThisMonth}
-              monthlyFreeQuota={usage.monthlyFreeQuota}
+              quotaPool={usage.quotaPool}
               usedPct={usage.usedPct}
               blocked={usage.blocked}
               totalRemaining={usage.totalRemaining}
             />
+            {/* §5 (104): ONE pair of numbers, over ONE denominator (the
+                month's allowance plus any top-up). The separate "+N kredit
+                tambahan" line is gone — it was the same contradiction J
+                caught on the Plan page, in raw counts instead of a %. */}
             <p className="text-base">
-              <span className="font-semibold tabular-nums">
-                {usage.usedThisMonth} / {usage.monthlyFreeQuota}
-              </span>{" "}
+              <span className="font-semibold tabular-nums">{usage.usedPct}%</span>{" "}
               <Tri bm="digunakan" zh="已用" en="used" />
               {" · "}
-              <span className="font-semibold tabular-nums">{usage.usedPct}%</span>
-              {usage.extraCredits > 0 && (
-                <>
-                  {" · "}
-                  <span className="font-semibold tabular-nums">+{usage.extraCredits}</span>{" "}
-                  <Tri bm="kredit tambahan" zh="充值额度" en="extra credits" />
-                </>
-              )}
+              <span className="font-semibold tabular-nums">
+                {remainingPct(usage.usedPct)}%
+              </span>{" "}
+              <Tri bm="baki" zh="还剩" en="left" />
             </p>
             {/* K-2: who used what this month. Display names only. */}
             {byPerson.length > 0 && (

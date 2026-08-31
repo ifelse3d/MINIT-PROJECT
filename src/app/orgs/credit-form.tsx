@@ -1,4 +1,6 @@
 import { Tri } from "@/components/language-provider";
+import { computeUsageState } from "@/lib/ai/usage-core";
+import { remainingPct } from "@/lib/quota-display";
 
 // ---------------------------------------------------------------------------
 // AI quota readout — DISPLAY ONLY.
@@ -31,8 +33,16 @@ export function CreditForm({
   monthlyFreeQuota: number;
   usedThisMonth: number;
 }) {
-  const freeLeft = Math.max(0, monthlyFreeQuota - usedThisMonth);
-  const runningLow = freeLeft === 0 || freeLeft <= monthlyFreeQuota / 5;
+  // §5 (104): PERCENTAGES, over the same pool as everywhere else — the
+  // month's allowance PLUS any top-up. This card used to print "0/15" beside
+  // "Extra credits: 91", which is the "0% left · +607%" contradiction J
+  // caught on the Plan page wearing raw counts instead of a percentage.
+  const state = computeUsageState({
+    usedThisMonth,
+    monthlyFreeQuota,
+    extraCredits,
+  });
+  const runningLow = !state.blocked && state.totalRemaining <= monthlyFreeQuota / 5;
 
   return (
     <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm">
@@ -40,19 +50,15 @@ export function CreditForm({
         <Tri bm="AI bulan ini" zh="本月 AI" en="AI this month" />
         {": "}
         <span className="font-medium text-foreground tabular-nums">
-          {usedThisMonth}/{monthlyFreeQuota}
-        </span>
+          {state.usedPct}%
+        </span>{" "}
+        <Tri bm="digunakan" zh="已用" en="used" />
+        {" · "}
+        <span className="font-medium text-foreground tabular-nums">
+          {remainingPct(state.usedPct)}%
+        </span>{" "}
+        <Tri bm="baki" zh="还剩" en="left" />
       </span>
-
-      {extraCredits > 0 && (
-        <span className="text-muted-foreground">
-          <Tri bm="Kredit tambahan" zh="充值额度" en="Extra credits" />
-          {": "}
-          <span className="font-medium text-foreground tabular-nums">
-            {extraCredits}
-          </span>
-        </span>
-      )}
 
       {runningLow && extraCredits === 0 && (
         <span className="text-xs text-muted-foreground">

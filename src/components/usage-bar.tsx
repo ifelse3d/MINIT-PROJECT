@@ -17,13 +17,20 @@ export function usageIsLow(blocked: boolean, totalRemaining: number): boolean {
 
 export function UsageBar({
   usedThisMonth,
-  monthlyFreeQuota,
+  quotaPool,
   usedPct,
   blocked,
   totalRemaining,
 }: {
   usedThisMonth: number;
-  monthlyFreeQuota: number;
+  /**
+   * §5 (work order 104): the bar measures the SAME pool every percentage on
+   * screen measures — the month's allowance plus any top-up. It used to be
+   * the free quota alone, so a topped-up account watched the bar fill to the
+   * end and keep working, which is a meter that lies about the thing it is
+   * for.
+   */
+  quotaPool: number;
   usedPct: number;
   blocked: boolean;
   totalRemaining: number;
@@ -35,7 +42,7 @@ export function UsageBar({
       role="progressbar"
       aria-valuenow={usedThisMonth}
       aria-valuemin={0}
-      aria-valuemax={monthlyFreeQuota}
+      aria-valuemax={quotaPool}
     >
       <div
         className={`h-full rounded-full transition-all ${

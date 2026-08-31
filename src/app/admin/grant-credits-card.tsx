@@ -89,6 +89,14 @@ export function GrantCreditsCard() {
             en="For one organisation. Every grant is written to the audit log; a negative number deducts (floored at 0)."
           />
         </p>
+        {/* §6 (104): what pressing this does, in one sentence. */}
+        <p className="mt-1 text-sm font-medium">
+          <Tri
+            bm="Menekan di sini = kuota pertubuhan itu bertambah (atau berkurang) terus, serta-merta."
+            zh="按下去＝那个机构的额度直接加上（或扣掉），立刻生效。"
+            en="Pressing here = that organisation's allowance goes up (or down) straight away, immediately."
+          />
+        </p>
       </div>
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1 text-sm">

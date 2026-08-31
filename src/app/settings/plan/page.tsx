@@ -139,18 +139,13 @@ export default async function PlanPage() {
                 {remainingPct(usage.usedPct)}%
               </span>{" "}
               <Tri bm="baki" zh="还剩" en="left" />
-              {/* Moved with the §1-13 split: top-up credits were only ever
-                  shown on the old long settings page. Shown as a share of
-                  this org's own pool, same unit as everything else. */}
-              {usage.extraCredits > 0 && usage.monthlyFreeQuota > 0 && (
-                <>
-                  {" · "}
-                  <span className="font-semibold tabular-nums">
-                    +{Math.round((usage.extraCredits / usage.monthlyFreeQuota) * 100)}%
-                  </span>{" "}
-                  <Tri bm="kredit tambahan" zh="充值额度" en="extra credits" />
-                </>
-              )}
+              {/* 🔴 §5 (104): the "+607% kredit tambahan" line is GONE from
+                  the user's page. J: 「607% extra credit 是什麽鬼」— and it
+                  was worse than confusing, because it sat beside "0% left" on
+                  an account that could still do 91 things. Top-ups now ride
+                  INSIDE the two percentages above (usage-core's quotaPool),
+                  so there is one number and it is true. The operator's own
+                  breakdown lives on /admin, not here. */}
             </p>
           )}
         </div>
@@ -159,7 +154,7 @@ export default async function PlanPage() {
           // settings card can no longer disagree about "running low".
           <UsageBar
             usedThisMonth={usage.usedThisMonth}
-            monthlyFreeQuota={usage.monthlyFreeQuota}
+            quotaPool={usage.quotaPool}
             usedPct={usage.usedPct}
             blocked={usage.blocked}
             totalRemaining={usage.totalRemaining}
@@ -202,6 +197,27 @@ export default async function PlanPage() {
                 zh={`已选「${plan.name.zh}」方案 ✓ —— 等待人工开通（价格公布后）。开通之前，上面的用量条量的是「试用」额度（标准的 ${planPctOfStandard(quotas, "trial")}%），所以会比较快用满 —— 这不是出错。`}
                 en={`The ${plan.name.en} plan is chosen ✓ — awaiting manual activation (once prices are announced). Until then the meter above measures the TRIAL pool (${planPctOfStandard(quotas, "trial")}% of Standard), so it can fill up sooner — that is not an error.`}
               />
+              {/* §6 (104), J: 「什麽 manual action 我在我的系統根本沒看到」.
+                  The console panel that DOES the activation has existed since
+                  102 — the sentence just never said where it was. Operators
+                  get the door; everybody else sees the sentence unchanged and
+                  is not told a console exists. */}
+              {operator && (
+                <>
+                  {" "}
+                  <Link
+                    href="/admin#plan"
+                    className="font-semibold underline underline-offset-4"
+                  >
+                    <Tri
+                      bm="Buka di konsol"
+                      zh="去控制台开通"
+                      en="Activate in the console"
+                    />{" "}
+                    →
+                  </Link>
+                </>
+              )}
             </p>
           )}
       </div>

@@ -122,6 +122,16 @@ export function PlanQuotasCard({
             en="How many AI actions per month each plan gets. Every percentage users see converts from these numbers. (Migration 42 must be applied first.)"
           />
         </p>
+        {/* §6 (104): one line of plain speech at the top of the panel. J
+            reads this page to press something, and 「改這裡＝…」 is the
+            sentence that tells him what pressing does. */}
+        <p className="mt-1 text-sm font-medium">
+          <Tri
+            bm="Menukar di sini = kuota atau pelan pertubuhan itu bertukar terus, serta-merta."
+            zh="改这里＝把某个 org 的方案／额度直接换掉，立刻生效。"
+            en="Changing things here = that organisation's plan or allowance is swapped straight away, immediately."
+          />
+        </p>
       </div>
       <div className="grid gap-3 @xl:grid-cols-2">
         {PLAN_IDS.map((id) => (
