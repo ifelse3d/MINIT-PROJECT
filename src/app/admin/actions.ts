@@ -15,6 +15,7 @@
 // ---------------------------------------------------------------------------
 
 import { getSupabaseServer, getSessionUser } from "@/db/supabase-server";
+import { type PlanAdminResult, translatePlanAdminError } from "./plan-errors";
 
 export type GrantResult =
   | {
@@ -41,23 +42,6 @@ export type GrantResult =
 // translate errors. db_behind = migration 42 not applied yet — honest, and
 // nothing happened.
 // ---------------------------------------------------------------------------
-
-export type PlanAdminResult =
-  | { ok: true; message: string }
-  | { ok: false; reason: "no_session" | "not_admin" | "invalid" | "db_behind" | "db" };
-
-function translatePlanAdminError(msg: string): Exclude<PlanAdminResult, { ok: true }> {
-  if (/not a platform admin|insufficient_privilege|42501/i.test(msg)) {
-    return { ok: false, reason: "not_admin" };
-  }
-  if (/could not find|function|PGRST202|schema cache|relation .* does not exist/i.test(msg)) {
-    return { ok: false, reason: "db_behind" };
-  }
-  if (/invalid_parameter_value|out of range|unknown plan|no_data_found|no such organisation/i.test(msg)) {
-    return { ok: false, reason: "invalid" };
-  }
-  return { ok: false, reason: "db" };
-}
 
 const PLAN_IDS = ["trial", "standard", "plus", "hq"] as const;
 

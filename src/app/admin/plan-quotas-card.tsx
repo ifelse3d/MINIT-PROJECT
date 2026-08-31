@@ -11,8 +11,8 @@ import { Tri, useTriText } from "@/components/language-provider";
 import {
   adminSetOrgPlan,
   adminSetPlanQuota,
-  type PlanAdminResult,
 } from "./actions";
+import type { PlanAdminResult } from "./plan-errors";
 
 const PLAN_IDS = ["trial", "standard", "plus", "hq"] as const;
 
@@ -47,6 +47,12 @@ export function PlanQuotasCard({
           "Pangkalan data belum sedia (migrasi 42 belum dijalankan). Tiada apa-apa berubah.",
           "数据库还没准备好（migration 42 还没贴）。什么都没有变。",
           "The database is not ready (migration 42 not applied). Nothing changed.",
+        );
+      case "db_locked":
+        return t(
+          "Pangkalan data menolak: lajur kuota org dikunci. Jalankan migrasi 44 (salin-migration.bat → 44), kemudian cuba sekali lagi. Tiada apa-apa berubah.",
+          "数据库拒绝了：机构额度那一栏被锁着。请先贴 migration 44（salin-migration.bat → 44），再试一次。什么都没有变。",
+          "The database refused: the org quota column is locked. Apply migration 44 (salin-migration.bat → 44), then try again. Nothing changed.",
         );
       case "invalid":
         return t(
