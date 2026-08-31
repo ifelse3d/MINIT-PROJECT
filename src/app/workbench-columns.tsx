@@ -64,14 +64,20 @@ export function WorkbenchColumns({
   }
 
   return (
+    // §1 (work order 109): the home page is one viewport tall now, so this
+    // row has to PASS THAT HEIGHT ON rather than growing with its contents —
+    // `min-h-0` at every level, or the conversation pane inside refuses to
+    // shrink and pushes the composer off the bottom of the screen.
+    // `items-stretch` (not the old `items-start`) is what lets the workbench
+    // column be as tall as the row when the deadlines column is short.
     <div
       className={
         collapsed
-          ? "flex flex-col gap-8"
-          : "flex flex-col gap-8 @4xl:grid @4xl:grid-cols-[minmax(0,1fr)_21rem] @4xl:items-start @4xl:gap-6"
+          ? "flex min-h-0 flex-1 flex-col gap-8"
+          : "flex min-h-0 flex-1 flex-col gap-8 @4xl:grid @4xl:grid-cols-[minmax(0,1fr)_21rem] @4xl:items-stretch @4xl:gap-6"
       }
     >
-      <div className="min-w-0">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {/* The chip lives above the workbench so it is on screen the moment
             the page opens — a way back that needs scrolling is not a way
             back. Desktop only; the phone has the bell. */}
@@ -99,7 +105,9 @@ export function WorkbenchColumns({
       </div>
 
       {!collapsed && (
-        <div className="hidden @4xl:block">
+        // Its own scrollbar: the row is exactly one screen tall, and five
+        // deadlines plus five events is taller than a laptop's remaining room.
+        <div className="v2-scroll hidden min-h-0 overflow-y-auto @4xl:block">
           <div className="mb-2 flex justify-end">
             <button
               type="button"

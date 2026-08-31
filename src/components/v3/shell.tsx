@@ -49,6 +49,7 @@ import {
 } from "@/components/nav-items";
 import { EinvoisBetaBadge } from "@/components/einvois-beta-badge";
 import { useEinvoisOperator, useEinvoisVisible } from "@/lib/einvois-pref";
+import { isChatScreenRoute } from "@/lib/chat-screen";
 import { cn } from "./surfaces";
 import { TopBar } from "./top-bar";
 import { AIDock, useAIDock } from "./ai-dock";
@@ -138,10 +139,30 @@ export function AppShell({
   // THE left column, with its own "back to the app" row (settings-nav.tsx).
   const inSettings = (pathname ?? "").startsWith("/settings");
 
+  // §1 (work order 109, J: 「爲什麽不是放在下面，像 CLAUDE 或者 GPT 這樣」).
+  // THE CHAT SCREEN IS A DIFFERENT SHAPE OF PAGE. Every other route is a
+  // document that the WINDOW scrolls; the home page is a conversation whose
+  // typing box is the floor of the screen. So on that one route the height
+  // chain becomes explicit — the root is exactly one viewport tall, and each
+  // wrapper down to <main> passes that height on (flex-1 + min-h-0, because a
+  // flex child's default min-height:auto refuses to shrink below its content
+  // and the pane inside would push the composer off the bottom instead of
+  // scrolling). The page below then owns its own scrolling region.
+  //
+  // 🔴 `h-dvh`, not `h-screen`: on a phone `vh` is the tallest the viewport
+  // ever gets, so the composer would sit under the address bar until it
+  // retracted. dvh tracks what is actually visible.
+  const chatScreen = isChatScreenRoute(pathname);
+
   return (
     <AppTooltipProvider>
       <DraftsCountContext.Provider value={minutesDraftsCount}>
-      <div className="v2-root v2-safe min-h-screen">
+      <div
+        className={cn(
+          "v2-root v2-safe",
+          chatScreen ? "flex h-dvh flex-col overflow-hidden" : "min-h-screen",
+        )}
+      >
         {/* Desktop icon rail — fixed, full height, ≥1024px. */}
         {!inSettings && <Rail pathname={pathname ?? "/"} showAdmin={showAdmin} />}
 
@@ -155,7 +176,13 @@ export function AppShell({
         )}
 
         {/* One animated offset: the wrapper follows --rail-w (§3.1). */}
-        <div className={cn("rail-anim", !inSettings && "lg:ml-[var(--rail-w)]")}>
+        <div
+          className={cn(
+            "rail-anim",
+            !inSettings && "lg:ml-[var(--rail-w)]",
+            chatScreen && "flex min-h-0 flex-1 flex-col",
+          )}
+        >
           {/* §5.2: the bar is the first child of the offset wrapper — sticky,
               full width of the content column. The docked assistant pushes
               only the CONTENT below (the inner div): the bar keeps the whole
@@ -171,10 +198,24 @@ export function AppShell({
               in phone-width space. Width-sensitive grids below use
               container variants (@md:/@3xl:/…), which measure THIS column. */}
           <div
-            className={cn(dock.dragging ? "" : "transition-[padding] duration-300 ease-out")}
+            className={cn(
+              dock.dragging ? "" : "transition-[padding] duration-300 ease-out",
+              chatScreen && "flex min-h-0 flex-1 flex-col",
+            )}
             style={{ paddingRight: dock.push || undefined }}
           >
-            <main className="@container mx-auto w-full max-w-7xl px-4 pb-24 pt-4 sm:px-6 md:pb-10 md:pt-6">
+            <main
+              className={cn(
+                "@container mx-auto w-full max-w-7xl px-4 sm:px-6",
+                chatScreen
+                  ? // The chat screen's floor is the composer, so the only
+                    // bottom padding it needs is enough to clear the phone's
+                    // own fixed tab bar (min-h-14 + its safe-area padding) —
+                    // not the pb-24 a scrolling document leaves under itself.
+                    "flex min-h-0 flex-1 flex-col overflow-hidden pb-14 pt-2 md:pb-3 md:pt-4"
+                  : "pb-24 pt-4 md:pb-10 md:pt-6",
+              )}
+            >
               {children}
             </main>
           </div>
@@ -183,7 +224,12 @@ export function AppShell({
         {/* Phone tab bar — the same four entries as ever (拍板④). */}
         <TabBar pathname={pathname ?? "/"} />
 
-        {showAiLauncher && (
+        {/* §1 (109): NOT on the chat screen. The floating launcher is
+            "Tanya Minit, on every page" — but the home page IS that
+            conversation, and with the composer now pinned to the bottom of
+            the window the round button sat squarely on top of the Send
+            button (seen in the phone screenshot). One assistant per screen. */}
+        {showAiLauncher && !chatScreen && (
           <AIDock
             dock={dock}
             initialRemaining={aiRemaining}

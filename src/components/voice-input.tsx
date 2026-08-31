@@ -68,10 +68,16 @@ function recognitionLang(uiLang: string): string {
 export function VoiceButton({
   onText,
   className,
+  bare = false,
 }: {
   /** Called with the recognised words (one utterance). */
   onText: (text: string) => void;
   className?: string;
+  /** §1 (work order 109): inside the chat composer this button lives in the
+   *  same little toolbar row as the paperclip, INSIDE the box's own border —
+   *  a second bordered box in there reads as a stray control. Everywhere else
+   *  it stands on its own next to a field and keeps its outline. */
+  bare?: boolean;
 }) {
   const { mode } = useLangs();
   const t = useTriText();
@@ -143,10 +149,14 @@ export function VoiceButton({
           " · " +
           t("percubaan", "试验中", "experimental")
         }
-        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-sm border transition-colors ${
+        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-sm transition-colors ${
+          bare ? "" : "border"
+        } ${
           listening
             ? "border-red-400 bg-red-50 text-red-600 dark:bg-red-400/15"
-            : "border-[color:var(--v2-outline-border)] text-[color:var(--v2-text-soft)] hover:bg-[color:var(--v2-primary-soft)]"
+            : `text-[color:var(--v2-text-soft)] hover:bg-[color:var(--v2-primary-soft)] ${
+                bare ? "" : "border-[color:var(--v2-outline-border)]"
+              }`
         }`}
       >
         {listening ? (

@@ -7,6 +7,7 @@ import { LanguageSwitcher, Tri, useTriText } from "@/components/language-provide
 import { useEinvoisOperator } from "@/lib/einvois-pref";
 import { IconTip } from "@/components/ui/tooltip";
 import { BRAND_NAME } from "@/lib/brand";
+import { isChatScreenRoute } from "@/lib/chat-screen";
 import { NAV_ITEMS, SETTINGS_NAV, type NavItem } from "@/components/nav-items";
 import { ThemeToggle } from "./top-search";
 import { ProfileMenu } from "./profile-menu";
@@ -115,9 +116,35 @@ export function TopBar({
               <Menu className="h-5 w-5" strokeWidth={1.8} />
             </button>
           </IconTip>
-          <h1 className="truncate text-[15px] font-semibold">
+          <h1 className="shrink-0 truncate text-[15px] font-semibold">
             <Tri bm={words.bm} zh={words.zh} en={words.en} />
           </h1>
+          {/* §1 (work order 109), J: 「上面太空了…我圈起來紅色的可以放到上面
+              HOME 旁邊去」. The home page used to open with a 3xl "MinitAI"
+              and its tagline sitting on top of the conversation — a third of
+              the screen spent saying the name of the app the person is
+              already inside. The name moves HERE, beside the page's own name,
+              where a product name belongs. The tagline follows it but only
+              where there is room: below lg the centred search is gone but the
+              phone's own controls are not, and a wrapped strapline in the top
+              bar would be the same waste in a smaller font. */}
+          {isChatScreenRoute(pathname) && (
+            <p className="hidden min-w-0 items-baseline gap-2 sm:flex">
+              <span aria-hidden className="text-[color:var(--v2-text-soft)]">
+                ·
+              </span>
+              <span className="shrink-0 text-[15px] font-semibold text-[color:var(--v2-primary)]">
+                {BRAND_NAME}
+              </span>
+              <span className="hidden truncate text-sm text-[color:var(--v2-text-soft)] xl:inline">
+                <Tri
+                  bm="Dokumen persatuan, tanpa borang."
+                  zh="社团文件，不用填表。"
+                  en="Society paperwork, without forms."
+                />
+              </span>
+            </p>
+          )}
         </div>
 
         {/* Centre: the compact search — absolute, so focus growth overlays

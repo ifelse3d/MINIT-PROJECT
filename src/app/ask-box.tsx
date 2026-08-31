@@ -35,7 +35,6 @@ import {
   Loader2,
   RotateCcw,
   ScrollText,
-  Sparkles,
   X,
 } from "lucide-react";
 import { AiMistakesNote } from "@/components/ai-disclaimer";
@@ -54,7 +53,7 @@ import {
   suggestedQuestionsFor,
 } from "@/lib/prepared-answers";
 import { useEinvoisVisible } from "@/lib/einvois-pref";
-import { AttachIcon, UploadLimitNote } from "@/components/attach-icon";
+import { AttachIcon, UPLOAD_LIMIT_MB, UploadLimitNote } from "@/components/attach-icon";
 import { Button } from "@/components/ui/button";
 import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
 import { prepareUploadForSend } from "@/lib/upload-relay-client";
@@ -99,7 +98,7 @@ import {
 import { isTurnArray } from "@/components/v3/ai-panel";
 import { usePersistentState } from "@/lib/use-persistent-state";
 import { useScopedKey } from "@/lib/storage-scope";
-import { pctOfQuota, remainingPct } from "@/lib/quota-display";
+import { pctOfQuota } from "@/lib/quota-display";
 
 /** §1 (105): the queue's estimate reads in whole minutes — "about 0 minutes"
  *  is not an estimate anybody believes, so it never goes below 1. */
@@ -488,6 +487,20 @@ export function AskBox({
   // §0-3 (102): a RESTORED conversation opens at its newest turn. Scrolling
   // the region (not the page) is safe on hydration — the old "must not yank
   // the page" rule was about full-page scrolling and still holds for it.
+  // §1 (109): the typing box GROWS WITH THE TEXT, Claude-style — one line
+  // at rest, up to about five before it scrolls itself. Two fixed rows cost a
+  // phone 25px of conversation for a box that is empty most of the time, and
+  // a person pasting a paragraph could not see what they had pasted. The
+  // FLOOR does not move while it grows: the pane above gives way, because the
+  // pane is the flexible one and this box is shrink-0.
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+  }, [question]);
+
   const convRegionRef = useRef<HTMLDivElement | null>(null);
   const hydratedScroll = useRef(false);
   useEffect(() => {
@@ -1512,11 +1525,22 @@ export function AskBox({
   }
 
   return (
+    // §1 (work order 109), J: 「爲什麽不是放在下面，像 CLAUDE 或者 GPT 這樣」
+    // and 「上面太空了，把 CHATBOX 弄大」.
+    //
+    // THIS IS NO LONGER A CARD ON A PAGE. It is the screen: a column exactly
+    // as tall as the room the shell gave it, holding a conversation that
+    // scrolls inside itself and a composer that is the floor. The card's own
+    // border and glass are gone with the card — a chat window inside a
+    // violet-outlined box was the "整個設計模板很奇怪" J was looking at.
+    // The border comes back for one second only: while something is being
+    // dragged over it, so the whole screen visibly IS the drop target.
     <section
-      className={`v2-glass-strong rounded-md border-2 p-4 transition-colors sm:p-6 ${
+      data-probe="chat-screen"
+      className={`flex min-h-0 flex-1 flex-col rounded-md border-2 transition-colors ${
         dragActive
-          ? "border-[color:var(--v2-primary)] bg-[color:var(--v2-primary)]/5"
-          : "border-[#a855f7]/40"
+          ? "border-dashed border-[color:var(--v2-primary)] bg-[color:var(--v2-primary)]/5"
+          : "border-transparent"
       }`}
       onDragOver={(e) => {
         if (!hasOrg || busy !== null) return;
@@ -1531,102 +1555,10 @@ export function AskBox({
         void stageFiles(e.dataTransfer.files);
       }}
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-heading text-2xl font-semibold leading-snug">
-          <Sparkles
-            className="mr-1.5 inline h-6 w-6 align-[-3px] text-[color:var(--v2-primary)]"
-            strokeWidth={2}
-          />
-          <Tri
-            bm="Serahkan kepada MinitAI"
-            zh="交给 MinitAI 帮你做"
-            en="Hand it to MinitAI"
-          />
-        </h2>
-        {howItWorks}
-      </div>
-
-      {/* G3-3: the unfinished-drafts reminder, moved off the deleted task
-          card. Only when the count is KNOWN and non-zero — a failed query
-          must never read like "you have none". */}
-      {hasOrg && unfinishedDrafts !== null && unfinishedDrafts > 0 && (
-        <p className="mt-2 text-base text-[color:var(--v2-text-soft)]">
-          ✍️{" "}
-          <Tri
-            bm={`Ada ${unfinishedDrafts} draf minit yang belum siap.`}
-            zh={`您有 ${unfinishedDrafts} 份还没做完的会议记录草稿。`}
-            en={`You have ${unfinishedDrafts} unfinished minutes draft(s).`}
-          />{" "}
-          <Link href="/minutes/drafts" className="underline underline-offset-4">
-            <Tri bm="Sambung" zh="继续做" en="Continue" /> →
-          </Link>
-        </p>
-      )}
-      {/* 2026-07-28 — the long paragraph that used to sit here ("send a photo of
-          it here and MinitAI will work out what it is…") is gone. It explained in
-          words what the two buttons and the question box below it already say,
-          and it read like notes to ourselves rather than something a user needs. */}
-
-      {!hasOrg && (
-        <p className="mt-4 rounded-md border-2 border-amber-300 bg-amber-50 p-4 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
-          <Tri
-            bm="Beritahu MinitAI nama pertubuhan anda dahulu — barulah ia tahu dokumen ini untuk siapa."
-            zh="请先告诉 MinitAI 您机构的名字 —— 它才知道这些文件是属于谁的。"
-            en="Tell MinitAI your organisation's name first — then it knows who these documents belong to."
-          />{" "}
-          <Link href="/orgs" className="underline underline-offset-4">
-            <Tri bm="Buat sekarang" zh="现在填写" en="Do it now" /> →
-          </Link>
-        </p>
-      )}
-
-      {/* --- the one way in (#8, J review 27-evening: photo and file are ONE
-          button; a phone's picker offers the camera when `capture` is off) --- */}
-      <div className="mt-4 flex flex-col gap-3">
-        {turns.length === 0 && staged.length === 0 && busy === null && hasOrg ? (
-          /* EMPTY-STATE HERO (§3): the whole door, big enough to be the
-             point of the page. Click = the same picker; drop works on the
-             whole workbench. */
-          <button
-            type="button"
-            disabled={outOfQuota}
-            onClick={() => fileInput.current?.click()}
-            className="group flex min-h-44 w-full flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed border-[color:var(--v2-primary)]/45 bg-white/50 px-6 py-8 text-center transition-colors hover:border-[color:var(--v2-primary)] hover:bg-[color:var(--v2-primary)]/5 disabled:opacity-50 dark:bg-white/5"
-          >
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[color:var(--v2-primary)]/10 text-[color:var(--v2-primary)] transition-transform group-hover:scale-110">
-              <AttachIcon className="h-7 w-7" />
-            </span>
-            <span className="text-xl font-semibold">
-              <Tri
-                bm="Letak kertas anda di sini"
-                zh="把手上的纸丢进来"
-                en="Drop your paper here"
-              />
-            </span>
-            <span className="max-w-md text-base text-[color:var(--v2-text-soft)]">
-              <Tri
-                bm="Gambar / PDF / fail Office. MinitAI kenal sendiri — nota mesyuarat, lejar derma atau perlembagaan — baca, dan siapkan dokumennya."
-                zh="照片 / PDF / Office 档。MinitAI 自己认得出是会议笔记、捐款账页还是章程 —— 读完直接帮你做成文件。"
-                en="Photo / PDF / Office file. MinitAI works out what it is — meeting notes, a donation ledger or the constitution — reads it, and prepares the documents."
-              />
-            </span>
-            <span className="text-sm text-[color:var(--v2-text-soft)]">
-              <Tri
-                bm="Tekan untuk pilih fail, atau seret masuk. Soalan? Taip di bawah."
-                zh="点击选档，或直接拖进来。有问题？在下面打字问。"
-                en="Tap to choose a file, or drag one in. Got a question? Type below."
-              />
-            </span>
-            {/* D0-3 (拍板 4): the size limit stays at the door, in writing. */}
-            <UploadLimitNote office />
-          </button>
-        ) : null}
-        {/* §0-3 (work order 102): the big Choose-file row that used to render
-            here in conversation state is gone — the paperclip in the composer
-            (Claude-style) is the standing upload door; the hero keeps the big
-            entry for the empty state. */}
-
-        <input
+      {/* The heading row is gone (§1, 109): "交给 MinitAI 帮你做" over a chat
+          window said in large type what the box under it already is, and the
+          product's own name now lives beside "Home" in the top bar. */}
+      <input
           ref={fileInput}
           type="file"
           multiple
@@ -1649,25 +1581,52 @@ export function AskBox({
             scrollbar as the conversation, so nothing that appears can make
             the box move. overscroll-contain keeps a phone from rubber-banding
             the page while flicking the transcript. */}
-        {(turns.length > 0 ||
-          steps.length > 0 ||
-          staged.length > 0 ||
-          askKind !== null ||
-          constitutionGate !== null ||
-          queueGate !== null ||
-          queue !== null ||
-          pickUp !== null ||
-          repeatAsk !== null ||
-          meetingChoice !== null) && (
-          <div
-            ref={convRegionRef}
-            data-probe="conversation-region"
-            // 🔴 h-, not max-h-. A region that GROWS with its content still
-            // moves the composer every time a card appears — smaller than
-            // before, but the same bug. A fixed pane means the box below it
-            // is in the same place at the first card and at the tenth.
-            className="v2-scroll flex h-[46dvh] flex-col gap-3 overflow-y-auto overscroll-contain"
-          >
+        <div
+          ref={convRegionRef}
+          data-probe="conversation-region"
+          // 🔴 §1 (109): ALWAYS HERE, AND IT TAKES WHATEVER THE COMPOSER DOES
+          // NOT. 104 stopped the composer drifting by making this pane a fixed
+          // 46dvh; a fixed pane is still a card inside a scrolling page — the
+          // window scrolled underneath it, and on a phone the box ended up
+          // below the fold (measured before this change: the composer sat at
+          // 738–1117 in an 812px window). `flex-1 min-h-0` instead: the pane is
+          // the leftover, so the composer sits at the same y in an empty
+          // conversation and in a long one, and the window has nothing to
+          // scroll at all. min-h-0 is load-bearing — a flex child defaults to
+          // min-height:auto and would refuse to shrink below its content.
+          className="v2-scroll flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain pb-2"
+        >
+          {/* G3-3: the unfinished-drafts reminder, moved off the deleted task
+              card. Only when the count is KNOWN and non-zero — a failed query
+              must never read like "you have none". §1 (109): it lives INSIDE
+              the pane now, so it scrolls away with the rest instead of
+              standing between the screen and the conversation. */}
+          {hasOrg && unfinishedDrafts !== null && unfinishedDrafts > 0 && (
+            <p className="text-base text-[color:var(--v2-text-soft)]">
+              ✍️{" "}
+              <Tri
+                bm={`Ada ${unfinishedDrafts} draf minit yang belum siap.`}
+                zh={`您有 ${unfinishedDrafts} 份还没做完的会议记录草稿。`}
+                en={`You have ${unfinishedDrafts} unfinished minutes draft(s).`}
+              />{" "}
+              <Link href="/minutes/drafts" className="underline underline-offset-4">
+                <Tri bm="Sambung" zh="继续做" en="Continue" /> →
+              </Link>
+            </p>
+          )}
+
+          {!hasOrg && (
+            <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-4 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+              <Tri
+                bm="Beritahu MinitAI nama pertubuhan anda dahulu — barulah ia tahu dokumen ini untuk siapa."
+                zh="请先告诉 MinitAI 您机构的名字 —— 它才知道这些文件是属于谁的。"
+                en="Tell MinitAI your organisation's name first — then it knows who these documents belong to."
+              />{" "}
+              <Link href="/orgs" className="underline underline-offset-4">
+                <Tri bm="Buat sekarang" zh="现在填写" en="Do it now" /> →
+              </Link>
+            </p>
+          )}
 
         {/* §3: the agent's work, visible while it happens — each step lights
             up, finishes with a tick, and a failure shows exactly where it
@@ -2064,6 +2023,11 @@ export function AskBox({
                 );
               })()}
             </span>
+            {/* §1 (109): the size limit is said HERE — once something is
+                actually attached — and in the paperclip's tooltip. It used to
+                stand under the empty box forever, which is the moment it is
+                least useful and the moment J was looking at. */}
+            <UploadLimitNote office />
           </div>
         )}
 
@@ -2493,15 +2457,76 @@ export function AskBox({
             </div>
           </div>
         )}
-        <div ref={flowEndRef} aria-hidden />
-          </div>
-        )}
-
+        {/* §1 (109): the error belongs INSIDE the pane. Outside it, an error
+            appearing was one more thing that pushed the typing box down at
+            exactly the moment somebody needed to retype something. */}
         {error && (
           <p className="rounded-md border-2 border-red-300 bg-red-50 p-4 text-base font-medium whitespace-pre-line text-red-900 dark:bg-red-400/10 dark:text-red-100">
             {localizeError(error)}
           </p>
         )}
+
+        {/* §1 (109): the month's allowance used to be spelled out in a
+            permanent line under the box. It is now one thing beside "Clear
+            conversation" (102 §0-3③) — EXCEPT when it has run out, which is
+            not a statistic but the reason the box below is dead, so it stays
+            on screen, in the pane, where it cannot move anything. */}
+        {outOfQuota && (
+          <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-4 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+            <Tri
+              bm="Bantuan AI untuk bulan ini sudah habis. Ia bermula semula pada 1 hari bulan depan — semua rekod dan dokumen anda masih boleh dibuka seperti biasa."
+              zh="这个月的 AI 用量已经用完了。下个月 1 号会重新开始 —— 您所有的记录和文件都还能照常打开。"
+              en="This month's AI help is used up. It starts again on the 1st of next month — all your records and documents still open as normal."
+            />{" "}
+            {/* C-3: a used-up meter needs a door, not just a date. */}
+            <Link href="/settings/plan" className="underline underline-offset-4">
+              <Tri bm="Lihat pelan" zh="看方案" en="See the plans" /> →
+            </Link>
+          </p>
+        )}
+
+        {/* §1 (109), J: 「下面的也太奇怪爲什麼要放那些整個設計模板很奇怪」.
+            THE EMPTY STATE IS A SENTENCE, NOT A HOARDING. What stood here was
+            a 176px dashed box saying "drop your paper here" — the largest
+            thing on the page, doing nothing the paperclip under it does not
+            do, and it collapsed the moment anything happened, taking the
+            composer 125px up the screen with it (measured).
+
+            `mt-auto` puts these two quiet lines at the FOOT of the pane, one
+            line above the box they are about; being inside the pane, they can
+            never move it when they go. */}
+        {turns.length === 0 && staged.length === 0 && busy === null && hasOrg && (
+          <div className="mt-auto flex flex-col gap-1 pt-6">
+            <p className="text-base text-[color:var(--v2-text-soft)]">
+              <Tri
+                bm="Seret kertas anda ke mana-mana di skrin ini, atau tekan klip kertas di bawah — gambar, PDF atau fail Office. Ada soalan? Taip sahaja."
+                zh="把手上的纸拖进这个画面的任何地方，或按下面的回形针 —— 照片、PDF、Office 档都行。有问题？直接打字问。"
+                en="Drag your paper anywhere on this screen, or press the paperclip below — photo, PDF or Office file. Got a question? Just type it."
+              />{" "}
+              {howItWorks}
+            </p>
+            {/* The two suggested questions, kept but demoted: small quiet
+                text above the box (§1), not two large buttons under it. They
+                still clear the 44px touch floor — a light control is not a
+                control you have to aim at. */}
+            <div className="flex flex-wrap items-center gap-x-4">
+              {suggestedQuestionsFor(einvoisVisible).map((ex) => (
+                <button
+                  key={ex.en}
+                  type="button"
+                  disabled={busy !== null || outOfQuota}
+                  onClick={() => setQuestion(t(ex.bm, ex.zh, ex.en))}
+                  className="min-h-11 text-left text-sm font-medium text-[color:var(--v2-primary)] underline-offset-4 hover:underline disabled:opacity-50"
+                >
+                  {t(ex.bm, ex.zh, ex.en)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div ref={flowEndRef} aria-hidden />
+        </div>
 
 
         {/* Type a question — or type context for the staged file. Enter sends;
@@ -2527,13 +2552,20 @@ export function AskBox({
             edges, so it reads as the floor of the conversation. */}
         <div
           data-probe="composer"
-          // scroll-mb-24: when a phone browser scrolls the focused box into
-          // view it aligns to the WINDOW's bottom, which the app's own fixed
-          // tab bar then covers — the Send button would sit behind the
-          // navigation. The scroll margin reserves the bar's height.
-          className="-mx-4 flex scroll-mb-24 flex-col gap-2 border-t-2 border-[color:var(--v2-border)] px-4 pb-1 pt-3 sm:-mx-6 sm:px-6">
+          // §1 (109): the floor of the screen. It is the LAST child of a
+          // column that is exactly one viewport tall, so its y is a fact of
+          // the layout rather than something that has to be defended — no
+          // sticky, no fixed, no z-index, nothing to know about the phone's
+          // tab bar. shrink-0 keeps the pane above it giving way, never this.
+          className="flex shrink-0 scroll-mb-24 flex-col gap-1.5 pt-1"
+        >
+        {/* ONE BOX (§1, J: 「把 CHATBOX 弄大」): the typing area, the
+            paperclip and Send read as a single control the way Claude's and
+            GPT's do, instead of three boxes in a row. On a phone the old row
+            wrapped into a 380px-tall stack — nearly half the screen spent on
+            the furniture around an empty text box. */}
         <form
-          className="flex flex-col gap-3 sm:flex-row sm:items-end"
+          className="flex flex-col gap-1 rounded-md border-2 border-input bg-white p-2 transition-colors focus-within:border-[color:var(--v2-primary)]/70 dark:bg-white/5"
           onSubmit={(e) => {
             e.preventDefault();
             if (staged.length > 0) {
@@ -2551,28 +2583,7 @@ export function AskBox({
             } else void send(question);
           }}
         >
-          {/* §0-3 (102): the paperclip — the standing upload door beside the
-              typing area (the hero keeps the big one for the empty state).
-              Same picker, same staging, same intake pipeline. */}
-          <button
-            type="button"
-            aria-label={t(
-              "Lampirkan gambar, PDF atau fail Office",
-              "上传照片 / PDF / Office 档",
-              "Attach a photo, PDF or Office file",
-            )}
-            title={t(
-              "Lampirkan gambar, PDF atau fail Office",
-              "上传照片 / PDF / Office 档",
-              "Attach a photo, PDF or Office file",
-            )}
-            disabled={!hasOrg || busy !== null || outOfQuota}
-            onClick={() => fileInput.current?.click()}
-            className="flex h-12 w-12 shrink-0 items-center justify-center self-end rounded-md border-2 border-input bg-white text-[color:var(--v2-text-soft)] hover:border-[color:var(--v2-primary)]/60 hover:text-[color:var(--v2-primary)] disabled:opacity-50 dark:bg-white/5"
-          >
-            <AttachIcon className="h-6 w-6" />
-          </button>
-          <label className="flex-1">
+          <label className="block">
             <span className="sr-only">
               {t("Soalan anda", "您的问题", "Your question")}
             </span>
@@ -2580,8 +2591,9 @@ export function AskBox({
               // A-1 (work order 27): the "Hand it to AI" task card focuses
               // this box by id — the card is a doorway to HERE, not a page.
               id="minit-ask-input"
+              ref={inputRef}
               value={question}
-              rows={2}
+              rows={1}
               disabled={!hasOrg || busy !== null || outOfQuota}
               onChange={(e) => setQuestion(e.target.value)}
               onKeyDown={(e) => {
@@ -2595,9 +2607,9 @@ export function AskBox({
               placeholder={
                 staged.length > 0
                   ? t(
-                      "Apa-apa yang membantu bacaan — ejaan nama, singkatan, tarikh (pilihan).",
-                      "写点帮助读取的话 —— 名字的写法、缩写、日期（选填）。",
-                      "Anything that helps the reading — name spellings, abbreviations, dates (optional).",
+                      "Nota untuk bacaan (pilihan)",
+                      "写点提示帮助读取（选填）",
+                      "A hint for the reading (optional)",
                     )
                   : t(
                       "cth: Bila saya kena hantar Penyata Tahunan?",
@@ -2605,18 +2617,45 @@ export function AskBox({
                       "e.g. When do I have to file the Annual Return?",
                     )
               }
-              className="w-full resize-y rounded-md border-2 border-input bg-white p-3.5 text-lg leading-snug disabled:opacity-60 dark:bg-white/5"
+              className="w-full resize-none overflow-y-auto bg-transparent px-2 py-1.5 text-lg leading-snug outline-none disabled:opacity-60"
             />
           </label>
+          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1">
+          {/* §0-3 (102): the paperclip — the standing upload door, now inside
+              the box like Claude's. §1 (109): the size limit moved into its
+              tooltip and into the strip that appears once something IS
+              attached; a standing "Photos shrink automatically · up to 12MB"
+              under an empty box was one of the four things J pointed at. */}
+          <button
+            type="button"
+            aria-label={t(
+              "Lampirkan gambar, PDF atau fail Office",
+              "上传照片 / PDF / Office 档",
+              "Attach a photo, PDF or Office file",
+            )}
+            title={t(
+              `Lampirkan gambar, PDF atau fail Office · gambar dikecilkan automatik · maks ${UPLOAD_LIMIT_MB}MB`,
+              `上传照片 / PDF / Office 档 · 照片会自动缩小 · 最大 ${UPLOAD_LIMIT_MB}MB`,
+              `Attach a photo, PDF or Office file · photos shrink automatically · up to ${UPLOAD_LIMIT_MB}MB`,
+            )}
+            disabled={!hasOrg || busy !== null || outOfQuota}
+            onClick={() => fileInput.current?.click()}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-[color:var(--v2-text-soft)] transition-colors hover:bg-[color:var(--v2-primary)]/10 hover:text-[color:var(--v2-primary)] disabled:opacity-50"
+          >
+            <AttachIcon className="h-6 w-6" />
+          </button>
           {/* C-4 (work order 27): speak instead of type — free, browser-side,
               never the AI quota. Renders nothing where unsupported. */}
           {hasOrg && !outOfQuota && (
             <VoiceButton
+              bare
               onText={(text) =>
                 setQuestion((q) => (q.trim() ? `${q.trim()} ${text}` : text))
               }
             />
           )}
+          </div>
           <Button
             type="submit"
             size="lg"
@@ -2641,73 +2680,21 @@ export function AskBox({
               </>
             )}
           </Button>
+          </div>
         </form>
 
         {/* §0-5 (work order 100): the standing three-language "AI can be
-            wrong" line, Anthropic-style, right under the input. §0-3 (102):
-            the size-limit line rides beside it whenever the hero (which
-            carries its own) is off screen. §8 (104): inside the pinned block
-            — the disclaimer belongs to the box it is about. */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          <AiMistakesNote />
-          {!(turns.length === 0 && staged.length === 0 && busy === null && hasOrg) && (
-            <UploadLimitNote office />
-          )}
-        </div>
+            wrong" line, Anthropic-style, right under the input. §1 (109):
+            IT IS THE ONLY THING LEFT UNDER THE BOX — J listed everything else
+            that used to be here (two suggestion buttons, the quota sentence,
+            the size limit) as clutter, and each one has a better home above.
+            This one stays because it is a safety notice, and it is three
+            languages at once because the person reading over the treasurer's
+            shoulder may not share the treasurer's interface language. */}
+        <AiMistakesNote />
         </div>
 
-        {turns.length === 0 && hasOrg && (
-          <div className="flex flex-wrap gap-2">
-            {suggestedQuestionsFor(einvoisVisible).map((ex) => (
-              <button
-                key={ex.en}
-                type="button"
-                disabled={busy !== null || outOfQuota}
-                onClick={() => setQuestion(t(ex.bm, ex.zh, ex.en))}
-                className="min-h-11 rounded-xs border-2 border-[color:var(--v2-accent)]/30 bg-white/70 px-4 text-base font-medium hover:border-[color:var(--v2-accent)]/60 disabled:opacity-50 dark:bg-white/10"
-              >
-                {t(ex.bm, ex.zh, ex.en)}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
 
-      {/* --- what this costs, always visible ------------------------------- */}
-      <p className="mt-5 border-t-2 border-[color:var(--v2-border)] pt-3 text-base text-muted-foreground">
-        {outOfQuota ? (
-          <>
-            <Tri
-              bm="Bantuan AI untuk bulan ini sudah habis. Ia bermula semula pada 1 hari bulan depan — semua rekod dan dokumen anda masih boleh dibuka seperti biasa."
-              zh="这个月的 AI 用量已经用完了。下个月 1 号会重新开始 —— 您所有的记录和文件都还能照常打开。"
-              en="This month's AI help is used up. It starts again on the 1st of next month — all your records and documents still open as normal."
-            />{" "}
-            {/* C-3: a used-up meter needs a door, not just a date. */}
-            <Link href="/settings/plan" className="underline underline-offset-4">
-              <Tri bm="Lihat pelan" zh="看方案" en="See the plans" /> →
-            </Link>
-          </>
-        ) : (
-          /* 0-2 (2026-08-25, J's #14): the AI-path marker stays ("this uses
-             the allowance"), the per-question/per-photo "about X%" promises
-             are gone. The ONE number is the meter — "X% used this month" —
-             always saying what the percentage is OF ("guna / 用了 / used"),
-             because a bare percentage reads as the remaining one. */
-          /* §0-4 (102): percentages only — the "N actions left" count is
-             retired from the display layer (metering unchanged). */
-          <Tri
-            bm={`Soalan dan gambar di sini menggunakan kuota AI bulanan.${
-              usedPct === null ? "" : ` Bulan ini sudah guna ${usedPct}%, baki ${remainingPct(usedPct)}%.`
-            }`}
-            zh={`在这里提问或上传照片会用本月的 AI 用量。${
-              usedPct === null ? "" : `本月已用 ${usedPct}%，还剩 ${remainingPct(usedPct)}%。`
-            }`}
-            en={`Questions and photos here use the monthly AI allowance.${
-              usedPct === null ? "" : ` ${usedPct}% used this month, ${remainingPct(usedPct)}% left.`
-            }`}
-          />
-        )}
-      </p>
     </section>
   );
 }

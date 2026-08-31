@@ -67,8 +67,13 @@ export function ChooseFileLabel({
  * own button label (and its `accept`) already says what kinds of file it
  * takes, so repeating the list next to it was noise.
  */
+/** The size limit in whole MB. Exported because §1 (work order 109) moved the
+ *  same sentence into the composer paperclip's tooltip, and two places saying
+ *  a number must not be two places computing it. */
+export const UPLOAD_LIMIT_MB = Math.round(RELAY_MAX_BYTES / (1024 * 1024));
+
 export function UploadLimitNote({ office = false }: { office?: boolean }) {
-  const mb = Math.round(RELAY_MAX_BYTES / (1024 * 1024));
+  const mb = UPLOAD_LIMIT_MB;
   const formats = office ? "PDF / Word / PowerPoint" : "PDF";
   return (
     <span

@@ -10,7 +10,10 @@
 export function AiMistakesNote({ className = "" }: { className?: string }) {
   return (
     <p
-      className={`text-center text-xs leading-relaxed text-[color:var(--v2-text-soft)] ${className}`}
+      // §1 (109): leading-snug, not -relaxed. This wraps to three lines on a
+      // 375px phone, and on the chat screen every line of it is a line of
+      // conversation somebody does not get to see.
+      className={`text-center text-xs leading-snug text-[color:var(--v2-text-soft)] ${className}`}
     >
       MinitAI boleh silap — sila semak. · AI 会犯错，请核对。 · AI can make
       mistakes — please check.

@@ -42,8 +42,11 @@ export default async function Home() {
   // records these are — but "see how it works" is exactly for this moment.
   if (!active) {
     return (
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 pb-10 pt-6">
-        <Header />
+      // §1 (109): the shell hands this route ONE viewport and no window
+      // scrollbar, so the branch that is not a conversation has to carry its
+      // own — a welcome card taller than a phone screen must still be
+      // readable to its last line.
+      <div className="v2-scroll mx-auto flex w-full max-w-2xl min-h-0 flex-1 flex-col gap-6 overflow-y-auto pb-10 pt-6">
         <div className="v2-glass flex flex-col gap-3 border-2 border-[color:var(--v2-primary)]/40 p-6">
           <p className="text-xl font-semibold">
             <Tri
@@ -105,9 +108,12 @@ export default async function Home() {
   const deadlines = computeStandardDeadlines(todayIso, { agm, orgType: orgFlags.orgType });
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 pb-10">
-      <Header />
-
+    // §1 (109): a chat SCREEN, not a card on a scrolling page. This column is
+    // exactly as tall as the room the shell gave it; the conversation inside
+    // takes whatever is left after the composer, and nothing here scrolls the
+    // window. The big "MinitAI / Society paperwork, without forms." heading
+    // that used to open the page now sits beside "Home" in the top bar.
+    <div className="mx-auto flex w-full max-w-6xl min-h-0 flex-1 flex-col gap-3">
       {/* §0-3 (work order 102, J's ruling): on a phone "Upcoming" is a
           notification bell, not a block — the workbench owns the screen.
           Container variants, not viewport ones (<main> is the @container). */}
@@ -142,21 +148,6 @@ export default async function Home() {
           />
         }
       />
-    </div>
-  );
-}
-
-function Header() {
-  return (
-    <div>
-      <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{BRAND_NAME}</h1>
-      <p className="mt-1 text-lg text-[color:var(--v2-text-soft)]">
-        <Tri
-          bm="Dokumen persatuan, tanpa borang."
-          zh="社团文件，不用填表。"
-          en="Society paperwork, without forms."
-        />
-      </p>
     </div>
   );
 }
