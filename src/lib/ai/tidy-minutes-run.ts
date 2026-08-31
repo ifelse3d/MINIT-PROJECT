@@ -22,8 +22,12 @@ export type TidyRunResult =
   | { ok: true; doc: TidyDocument }
   /** Two attempts and the arithmetic still does not add up. The caller shows
    *  the verbatim layer, which is what it would have shown anyway — a reading
-   *  copy is a convenience, never a prerequisite. */
-  | { ok: false; reason: "coverage" | "invalid" };
+   *  copy is a convenience, never a prerequisite.
+   *
+   *  `detail` carries INDICES ONLY (never a line), so it is safe to record in
+   *  app_errors and safe to print in a probe — and without it "the tidy pass
+   *  refused" is a dead end nobody can act on. */
+  | { ok: false; reason: "coverage" | "invalid"; detail?: string };
 
 export async function runTidyMinutes(opts: {
   provider: VisionJsonProvider;
@@ -40,6 +44,7 @@ export async function runTidyMinutes(opts: {
 
   let repair = "";
   let lastReason: "coverage" | "invalid" = "invalid";
+  let lastDetail = "";
 
   for (let attempt = 0; attempt < 2; attempt++) {
     const raw = await provider.extractJson({
@@ -53,6 +58,10 @@ export async function runTidyMinutes(opts: {
     const parsed = minutesPlanSchema.safeParse(raw);
     if (!parsed.success) {
       lastReason = "invalid";
+      lastDetail = parsed.error.issues
+        .slice(0, 4)
+        .map((i) => i.path.join("."))
+        .join(", ");
       repair = `
 
 YOUR PREVIOUS ANSWER WAS NOT VALID JSON IN THE REQUIRED SHAPE. Answer again with ONLY the JSON described above.`;
@@ -62,6 +71,7 @@ YOUR PREVIOUS ANSWER WAS NOT VALID JSON IN THE REQUIRED SHAPE. Answer again with
     const coverage = checkCoverage(parsed.data, items.length);
     if (!coverage.ok) {
       lastReason = "coverage";
+      lastDetail = `missing [${coverage.missing.join(",")}] twice [${coverage.duplicated.join(",")}] unknown [${coverage.unknown.join(",")}]`;
       // Indices only — never the lines themselves (PDPA: this string can end
       // up in a prompt, and it must carry no page content).
       repair = `
@@ -85,10 +95,11 @@ YOUR PREVIOUS ANSWER DID NOT PLACE EVERY LINE EXACTLY ONCE.${
     const doc = buildTidyDocument(parsed.data, extraction);
     if (!doc) {
       lastReason = "coverage";
+      lastDetail = "buildTidyDocument refused";
       continue;
     }
     return { ok: true, doc };
   }
 
-  return { ok: false, reason: lastReason };
+  return { ok: false, reason: lastReason, detail: lastDetail };
 }
