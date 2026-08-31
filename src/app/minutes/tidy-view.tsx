@@ -211,8 +211,21 @@ export function TidyView({
                   en="MinitAI can arrange this original into something readable: put it in order, fold the same item told on two pages into one, and finish shorthand into full sentences — in the paper's own language. It does NOT re-read the photo and does NOT change the original."
                 />
               </p>
+              {verbatim.length === 0 && (
+                <p className="text-base text-muted-foreground">
+                  <Tri
+                    bm="Belum ada apa-apa keputusan untuk disusun."
+                    zh="还没有可以整理的内容。"
+                    en="There is nothing to arrange yet."
+                  />
+                </p>
+              )}
               <div>
-                <Button type="button" onClick={() => void makeTidy()} disabled={!enabled || busy}>
+                <Button
+                  type="button"
+                  onClick={() => void makeTidy()}
+                  disabled={!enabled || busy || verbatim.length === 0}
+                >
                   {busy ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />{" "}
