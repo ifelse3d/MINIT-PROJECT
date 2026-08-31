@@ -67,6 +67,7 @@ import {
 import { canStageTogether } from "@/lib/multi-page-staging";
 import { mergeMeetingVersions } from "@/lib/extraction-versions";
 import { asksToRedo, readStagedInstruction } from "@/lib/staged-instructions";
+import { findRepeatedReading } from "@/lib/duplicate-pages";
 import { ConstitutionReadEstimate } from "@/components/constitution-read-estimate";
 import {
   forgetOpenJob,
@@ -387,6 +388,25 @@ export function AskBox({
     fileName: string;
     context: string;
     estimate: JobEstimate;
+  } | null>(null);
+  /**
+   * §3 (work order 105): the papers were read as PAGES, nobody said otherwise,
+   * and the readings look like the SAME meeting told twice. The app asks — it
+   * never decides. Taking the offer re-uses the readings already paid for, so
+   * no photo is read again and nothing is charged.
+   */
+  const [repeatAsk, setRepeatAsk] = useState<{
+    matches: number;
+    pageA: number;
+    pageB: number;
+    done: {
+      kind: IntakeKind;
+      page: string;
+      readings: unknown[];
+      label: string;
+      pages: { fileName: string; storagePath: string | null; photoDataUrl: string | null }[];
+      actionsUsed: number;
+    };
   } | null>(null);
   /** Where the running queue has got to — "part 3 of 7". */
   const [queue, setQueue] = useState<{
@@ -888,6 +908,7 @@ export function AskBox({
     setAskKind(null);
     setConstitutionGate(null);
     setMeetingChoice(null);
+    setRepeatAsk(null);
     setSteps([]);
     setBusy("file");
     try {
@@ -1166,6 +1187,32 @@ export function AskBox({
               kind,
               page,
               merged,
+              label: label ?? files[0].name,
+              pages,
+              actionsUsed,
+            },
+          });
+          return; // staged stays — the card's buttons are the next move.
+        }
+      }
+
+      // §3 (105): nobody ticked "different versions" and nobody said so in
+      // words — but the readings look like one meeting written out twice.
+      // ASK. The bar is measured and deliberately set to miss rather than to
+      // nag (src/lib/duplicate-pages.ts), and the offer costs nothing: the
+      // re-merge uses readings that are already paid for.
+      if (kind === "meeting_notes" && !asVersions && readings.length > 1) {
+        const repeat = findRepeatedReading(readings as MeetingNotesExtraction[]);
+        if (repeat) {
+          closeSteps(true);
+          setRepeatAsk({
+            matches: repeat.matches,
+            pageA: Math.min(repeat.shorter, repeat.fuller) + 1,
+            pageB: Math.max(repeat.shorter, repeat.fuller) + 1,
+            done: {
+              kind,
+              page,
+              readings,
               label: label ?? files[0].name,
               pages,
               actionsUsed,
@@ -1610,6 +1657,7 @@ export function AskBox({
           queueGate !== null ||
           queue !== null ||
           pickUp !== null ||
+          repeatAsk !== null ||
           meetingChoice !== null) && (
           <div
             ref={convRegionRef}
@@ -2284,6 +2332,76 @@ export function AskBox({
                 }}
               >
                 <Tri bm="Nanti dulu" zh="先不用" en="Not now" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* §3 (work order 105): read as pages, but they look like ONE meeting
+            written out twice. The app asks; it never decides. Both buttons are
+            free — the readings are already paid for, and neither one opens a
+            photo again. */}
+        {repeatAsk && (
+          <div
+            data-probe="askback-card"
+            data-card="repeat-pages"
+            className="flex flex-col gap-3 rounded-md border-2 border-[color:var(--v2-primary)]/40 bg-white/80 p-4 dark:bg-white/10"
+          >
+            <p className="text-lg font-medium">
+              📄{" "}
+              <Tri
+                bm={`Muka surat ${repeatAsk.pageA} dan ${repeatAsk.pageB} nampak macam DUA VERSI mesyuarat yang sama — ${repeatAsk.matches} perkara yang sama muncul pada kedua-duanya.`}
+                zh={`第 ${repeatAsk.pageA} 张和第 ${repeatAsk.pageB} 张看起来是同一场会的两个版本 —— 有 ${repeatAsk.matches} 件事两边都记了。`}
+                en={`Page ${repeatAsk.pageA} and page ${repeatAsk.pageB} look like TWO VERSIONS of the same meeting — ${repeatAsk.matches} item(s) appear on both.`}
+              />
+            </p>
+            <p className="text-base text-[color:var(--v2-text-soft)]">
+              <Tri
+                bm="Kalau ya, MinitAI guna yang paling lengkap sebagai dokumen dan yang satu lagi hanya menambah apa yang tiada. Tiada gambar dibaca semula — kedua-dua pilihan ini percuma."
+                zh="如果是，MinitAI 就用最完整的那一份当正文，另一份只补它没有的。照片不会重读 —— 这两个选择都不花用量。"
+                en="If so, MinitAI uses the fullest one as the document and lets the other only add what it was missing. No photo is read again — both choices here are free."
+              />
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="lg"
+                disabled={busy !== null}
+                onClick={() => {
+                  const a = repeatAsk.done;
+                  setRepeatAsk(null);
+                  deliverProducts({
+                    kind: a.kind,
+                    page: a.page,
+                    merged: mergeMeetingVersions(a.readings as MeetingNotesExtraction[]),
+                    label: a.label,
+                    pages: a.pages,
+                    actionsUsed: a.actionsUsed,
+                    redoneAsVersions: true,
+                  });
+                }}
+              >
+                ✅ <Tri bm="Ya — guna yang paling lengkap" zh="是，用最详细的那份" en="Yes — use the fullest one" />
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                disabled={busy !== null}
+                onClick={() => {
+                  const a = repeatAsk.done;
+                  setRepeatAsk(null);
+                  deliverProducts({
+                    kind: a.kind,
+                    page: a.page,
+                    merged: a.readings.reduce((acc, r) =>
+                      acc === null ? r : mergeByKind(a.kind, acc, r),
+                    ),
+                    label: a.label,
+                    pages: a.pages,
+                    actionsUsed: a.actionsUsed,
+                  });
+                }}
+              >
+                <Tri bm="Tidak — ini muka surat berlainan" zh="不是，这是不同页" en="No — these are different pages" />
               </Button>
             </div>
           </div>
