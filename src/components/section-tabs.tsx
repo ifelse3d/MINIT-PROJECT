@@ -75,9 +75,9 @@ export function SectionTabs({
                   ? "border-violet-400 bg-violet-100 text-violet-900"
                   : "border-slate-300 bg-slate-100 text-slate-600";
           return (
-            <li key={tab.href} className="flex shrink-0 items-center gap-1">
+            <li key={tab.href} className="flex shrink-0 items-center gap-0.5 md:gap-1">
               {i > 0 && (
-                <span aria-hidden className="h-0.5 w-2 shrink-0 rounded-full bg-slate-300" />
+                <span aria-hidden className="h-0.5 w-1 shrink-0 rounded-full bg-slate-300 md:w-2" />
               )}
               <Link
                 href={tab.href}
@@ -90,7 +90,7 @@ export function SectionTabs({
                 // WIDTH — text-sm and a tighter gap below md. Three steps at
                 // text-base wrapped onto two rows on a 375px phone, and a
                 // two-storey step rail above a document reads as two rails.
-                className={`inline-flex min-h-11 shrink-0 items-center gap-1 whitespace-nowrap rounded-xs border-2 px-2.5 text-sm font-medium md:min-h-9 ${tone} ${
+                className={`relative inline-flex min-h-11 shrink-0 items-center gap-1 whitespace-nowrap rounded-xs border-2 px-2 text-sm font-medium md:min-h-9 md:px-2.5 ${tone} ${
                   // The page you are ON is the one thing this rail must make
                   // unmissable — colour alone cannot do it, because two tabs can
                   // legitimately share a colour.
@@ -108,34 +108,46 @@ export function SectionTabs({
                   <Lock aria-hidden className="size-4 shrink-0" strokeWidth={2.4} />
                 )}
                 {tab.status === "needs-you" && typeof tab.count === "number" && tab.count > 0 && (
-                  // D-4 (work order 31, 客⑩): a solid badge that SAYS what the
+                  // D-4 (work order 31, 客⑧): a solid badge that SAYS what the
                   // number is. The old faint circle with a bare digit read as
                   // decoration, not as "3 things are waiting for you".
-                  <span className="rounded-xs bg-amber-700 px-1.5 py-0.5 text-sm font-bold text-white dark:bg-amber-400 dark:text-black">
-                    {/* G3-4 (work order 68, J #8): "1 to check" read as
-                        jargon — say it the way a person would.
-                        §3 (109): the full sentence is what pushed this rail
-                        onto a second row on a phone. Below md it says the
-                        same thing in fewer words — still a WORDED count, not
-                        the bare digit D-4 threw out. Only one of the two is
-                        in the accessibility tree at a time (md:hidden is
-                        display:none), so a screen reader reads one count,
-                        never both. */}
-                    <span className="md:hidden">
-                      {t(
-                        `${tab.count} perlu`,
-                        `${tab.count} 项要看`,
-                        `${tab.count} to do`,
-                      )}
+                  //
+                  // §3 (work order 109, J: 「不要在手機上換行變兩層」): the
+                  // WORDS are what wrapped the rail — measured on the old
+                  // build, three pills and two worded badges took THREE rows
+                  // and 181px on a 375px phone. There is no wording short
+                  // enough, so below md the count moves to the pill's CORNER
+                  // where it costs no width at all: solid amber on the edge,
+                  // not the faint grey circle D-4 threw out. The sentence
+                  // stays in the accessibility tree at every width (sr-only),
+                  // so nothing is lost by not printing it.
+                  <>
+                    <span
+                      aria-hidden
+                      className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-700 px-1 text-[11px] font-bold text-white md:hidden dark:bg-amber-400 dark:text-black"
+                    >
+                      {tab.count}
                     </span>
-                    <span className="hidden md:inline">
+                    <span
+                      aria-hidden
+                      className="hidden rounded-xs bg-amber-700 px-1.5 py-0.5 text-sm font-bold text-white md:inline dark:bg-amber-400 dark:text-black"
+                    >
+                      {/* G3-4 (work order 68, J #8): "1 to check" read as
+                          jargon — say it the way a person would. */}
                       {t(
                         `${tab.count} menunggu anda`,
                         `${tab.count} 项等你确认`,
                         `${tab.count} waiting for you`,
                       )}
                     </span>
-                  </span>
+                    <span className="sr-only">
+                      {t(
+                        `${tab.count} menunggu anda`,
+                        `${tab.count} 项等你确认`,
+                        `${tab.count} waiting for you`,
+                      )}
+                    </span>
+                  </>
                 )}
               </Link>
             </li>

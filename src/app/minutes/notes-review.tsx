@@ -349,7 +349,10 @@ export function NotesReview() {
                   draft and a document, and that difference is legal. What
                   changed is that you can now READ THROUGH IT: 40% → 22% ink,
                   and a thinner frame. */}
-              <span className="rotate-[-18deg] select-none rounded border-2 border-red-400/25 px-6 py-2 text-4xl font-black tracking-widest text-red-500/[0.22]">
+              <span
+                data-probe="draf-stamp"
+                className="rotate-[-18deg] select-none rounded border-2 border-red-400/25 px-6 py-2 text-4xl font-black tracking-widest text-red-500/[0.22]"
+              >
                 DRAF
               </span>
             </span>
