@@ -138,9 +138,16 @@ async function measure(page) {
     const el =
       document.querySelector('[data-probe="composer"]') ??
       document.querySelector("#minit-ask-input")?.closest("form");
+    // Scoped to <main> on purpose: the LEFT RAIL is also a
+    // ".v2-scroll.overflow-y-auto", and on the old build — which had no
+    // conversation region until a card appeared — the loose fallback
+    // measured the sidebar and recorded a 731px "conversation area" for an
+    // empty screen. The state-3 numbers were always the real thing (both
+    // builds have the region by then); this stops the empty-state row of the
+    // JSON being a number about the wrong element.
     const region =
       document.querySelector('[data-probe="conversation-region"]') ??
-      document.querySelector(".v2-scroll.overflow-y-auto");
+      document.querySelector("main .v2-scroll.overflow-y-auto");
     const r = el ? el.getBoundingClientRect() : null;
     const rr = region ? region.getBoundingClientRect() : null;
     return {
