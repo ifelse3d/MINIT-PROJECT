@@ -22,6 +22,7 @@ import {
   rosterNameSubstitutions,
 } from "@/lib/roster-names";
 import { useMinutes } from "./minutes-store";
+import { TidyView } from "./tidy-view";
 
 // ---------------------------------------------------------------------------
 // /minutes/document — the finished document, saving it, and the values to paste
@@ -265,6 +266,12 @@ export function MinutesDocument() {
 
   return (
     <>
+      {/* §2 (work order 105): the two layers, above the Malay filing copy.
+          「正式版」is the readable arrangement of what the paper says;
+          「原文（逐字）」is what the paper says. The filing document below is
+          built from the verbatim layer, as it always was. */}
+      <TidyView extraction={extraction} enabled={!nothingYet} />
+
       <PageSection
         step={4}
         titleBm="Minit siap (Bahasa Malaysia)"

@@ -50,6 +50,14 @@ export const AI_ACTIONS = [
   // the org's own event/minutes records. One draft, one action; the facts
   // come from the database, the model only words them.
   "draft_activity_report",
+  // §2 (work order 105, J 2026-08-31 night): the TIDY PASS — the already
+  // extracted verbatim lines re-arranged into a reading copy (ordered,
+  // cross-page duplicates merged, shorthand finished into sentences, in the
+  // paper's own language). Text in, text out, no image: the cheap kind of
+  // call. It is charged because it reaches the vendor, and it is REFUNDED
+  // when the arrangement fails its own arithmetic — the person then still
+  // has the verbatim layer, which was never at risk.
+  "tidy_minutes",
 ] as const;
 
 export type AiAction = (typeof AI_ACTIONS)[number];
