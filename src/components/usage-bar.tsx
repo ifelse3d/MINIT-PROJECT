@@ -45,7 +45,7 @@ export function UsageBar({
       aria-valuemax={quotaPool}
     >
       <div
-        className={`h-full rounded-full transition-all ${
+        className={`h-full rounded-full transition-[width] duration-[var(--dur)] ease-[var(--ease-out)] ${
           blocked ? "bg-red-600" : low ? "bg-amber-500" : "bg-green-600"
         }`}
         style={{ width: `${usedPct}%` }}

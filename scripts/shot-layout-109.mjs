@@ -279,6 +279,35 @@ async function run() {
 
       measured[label] = { s1, s2, s3, s4 };
 
+      // ---- §4: the arrival animation, and the setting that turns it down --
+      // Cards used to teleport into a pane that is often already scrolled.
+      // The check is on the COMPUTED style rather than on a screenshot: an
+      // animation is a thing a machine can read, and a still frame is not.
+      if (label === "desktop") {
+        const named = await page.evaluate(
+          () =>
+            getComputedStyle(document.querySelector('[data-probe="product-card"]'))
+              .animationName,
+        );
+        check("§4: a finished card arrives with an animation", named === "minit-enter", named);
+        await page.emulateMediaFeatures([
+          { name: "prefers-reduced-motion", value: "reduce" },
+        ]);
+        const reduced = await page.evaluate(
+          () =>
+            getComputedStyle(document.querySelector('[data-probe="product-card"]'))
+              .animationName,
+        );
+        check(
+          "§4: prefers-reduced-motion keeps the fade and drops the movement",
+          reduced === "minit-enter-still",
+          reduced,
+        );
+        await page.emulateMediaFeatures([
+          { name: "prefers-reduced-motion", value: "no-preference" },
+        ]);
+      }
+
       // ---- the four assertions for this width ----------------------------
       check(
         `${label}: the composer is whole and on screen in all four states`,

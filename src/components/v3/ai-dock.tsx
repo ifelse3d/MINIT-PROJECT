@@ -27,7 +27,7 @@
 // ---------------------------------------------------------------------------
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import { AIPanel } from "./ai-panel";
 
@@ -181,6 +181,14 @@ export function AIDock({
   initialQuota?: number | null;
   blocked: boolean;
 }) {
+  // 🔴 §4 (work order 109): a person who has asked their system for less
+  // motion still gets the panel — it just APPEARS instead of sliding in from
+  // the edge. Reduced motion means fewer and gentler, not none: the fade
+  // stays, because it is what says something opened. globals.css already
+  // does this for the Radix sheets and the rail; the assistant was the one
+  // moving thing in the app that ignored the setting.
+  const reduceMotion = useReducedMotion();
+
   const { open, setOpen, width, isDesktop, dragging, startResize, nudgeWidth } =
     dock;
 
@@ -228,10 +236,14 @@ export function AIDock({
           (isDesktop ? (
             <motion.aside
               key="ai-rail"
-              initial={{ x: 32, opacity: 0 }}
+              initial={{ x: reduceMotion ? 0 : 32, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
-              exit={{ x: 32, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 320, damping: 34 }}
+              exit={{ x: reduceMotion ? 0 : 32, opacity: 0 }}
+              transition={
+                reduceMotion
+                  ? { duration: 0.12 }
+                  : { type: "spring", stiffness: 320, damping: 34 }
+              }
               // NO backdrop element at all: the page behind stays clickable,
               // scrollable and un-dimmed. z-30 keeps it above page cards but
               // UNDER the sticky top bar (z-40); top-14 = the bar's h-14, so
@@ -293,10 +305,14 @@ export function AIDock({
                 className="fixed inset-0 z-40 bg-transparent"
               />
               <motion.div
-                initial={{ opacity: 0, y: 24 }}
+                initial={{ opacity: 0, y: reduceMotion ? 0 : 24 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 24 }}
-                transition={{ type: "spring", stiffness: 320, damping: 32 }}
+                exit={{ opacity: 0, y: reduceMotion ? 0 : 24 }}
+                transition={
+                  reduceMotion
+                    ? { duration: 0.12 }
+                    : { type: "spring", stiffness: 320, damping: 32 }
+                }
                 className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-md p-3"
               >
                 {/* K3 (work order 82): the sheet takes ALL the room under the

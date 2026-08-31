@@ -321,6 +321,22 @@
   --topbar-h: 56px;
   --subnav-w: 240px;
 
+  /* --- motion (work order 109 §4) ---------------------------------------
+     Curves and durations were hand-typed at each call site — four
+     near-identical easings and five durations across the app — so nothing
+     could be tuned in one place and nothing quite matched. These are the
+     names to reach for from here on. The built-in CSS easings are too weak
+     to read as deliberate; --ease-out is the strong one, and it is the
+     default for anything entering or leaving, because it starts fast and
+     the fast part is the part somebody is watching.
+     🔴 UI motion stays under 300ms. Anything slower is a decision, not a
+     default, and needs a reason written next to it. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --dur-press: 120ms;   /* the answer to a finger — must feel instant */
+  --dur-fast: 150ms;    /* hovers, colour, small state */
+  --dur: 200ms;         /* things arriving and leaving */
+
   position: relative;
   min-height: 100vh;
   color: var(--v2-text);
@@ -723,5 +739,58 @@ input[type="checkbox"] {
   [data-slot="sheet-overlay"] {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+
+/* --- Things arriving in the conversation (work order 109 §4) -------------
+   THE ONE ANIMATION THIS APP ACTUALLY NEEDED. The home screen is a chat: the
+   reply, the ask-back card and the finished document all TELEPORT into a pane
+   that is often already scrolled, and a thing that appears without moving is
+   a thing you can miss. 180ms of fade plus 6px of rise says "this is new",
+   and it is over before it can be in the way. It is also the only kind of
+   motion §4 asks for: the kind that says the system is doing something.
+
+   🔴 Transform and opacity ONLY: both are composited, so a mid-range phone
+   animates them without touching layout or paint. Never animate the height of
+   a card that is arriving — that reflows the whole pane every frame.
+
+   `both` holds the first frame before the animation starts, so nothing can
+   flash at full opacity for one frame on a slow device. */
+@keyframes minit-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Reduced motion is the same arrival with the MOVEMENT taken out — fewer and
+   gentler, not none: the fade still tells you something appeared. */
+@keyframes minit-enter-still {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+[data-probe="conversation-region"] [data-probe="askback-card"],
+[data-probe="conversation-region"] [data-probe="product-card"],
+[data-probe="conversation-region"] [data-probe="queue-progress"],
+[data-probe="conversation-region"] .minit-enter {
+  animation: minit-enter 180ms var(--ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-probe="conversation-region"] [data-probe="askback-card"],
+  [data-probe="conversation-region"] [data-probe="product-card"],
+  [data-probe="conversation-region"] [data-probe="queue-progress"],
+  [data-probe="conversation-region"] .minit-enter {
+    animation: minit-enter-still 120ms var(--ease-out) both;
   }
 }

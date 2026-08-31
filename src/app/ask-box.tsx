@@ -265,7 +265,7 @@ function ProductCard({
       data-kind={parcel.kind}
       disabled={disabled}
       onClick={onOpen}
-      className="group flex w-full items-center gap-3 rounded-md border-2 border-[color:var(--v2-primary)]/35 bg-white/85 p-3.5 text-left transition-all hover:-translate-y-0.5 hover:border-[color:var(--v2-primary)]/70 hover:shadow-[var(--v2-shadow-soft)] disabled:opacity-60 dark:bg-white/10"
+      className="group flex w-full items-center gap-3 rounded-md border-2 border-[color:var(--v2-primary)]/35 bg-white/85 p-3.5 text-left transition-[transform,border-color,box-shadow] duration-[var(--dur-fast)] ease-[var(--ease-out)] hover:-translate-y-0.5 hover:border-[color:var(--v2-primary)]/70 hover:shadow-[var(--v2-shadow-soft)] active:scale-[0.995] disabled:opacity-60 dark:bg-white/10"
     >
       <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-sm bg-[color:var(--v2-primary)]/10 text-[color:var(--v2-primary)]">
         {icon}
@@ -1688,14 +1688,14 @@ export function AskBox({
               turn.role === "user" ? (
                 <p
                   key={i}
-                  className="self-end rounded-md rounded-br-md bg-[color:var(--v2-primary-fill)] px-4 py-3 text-lg text-white sm:max-w-[80%]"
+                  className="minit-enter self-end rounded-md rounded-br-md bg-[color:var(--v2-primary-fill)] px-4 py-3 text-lg text-white sm:max-w-[80%]"
                 >
                   {turn.text}
                 </p>
               ) : (
                 <div
                   key={i}
-                  className="self-start rounded-md rounded-bl-md border-2 border-[color:var(--v2-border)] bg-white/80 px-4 py-3 sm:max-w-[85%] dark:bg-white/10"
+                  className="minit-enter self-start rounded-md rounded-bl-md border-2 border-[color:var(--v2-border)] bg-white/80 px-4 py-3 sm:max-w-[85%] dark:bg-white/10"
                 >
                   <p className="text-lg whitespace-pre-line">{turn.text}</p>
                   {turn.button && (
@@ -1793,7 +1793,7 @@ export function AskBox({
                 sign that anything is coming was the small word on the send
                 button. */}
             {busy === "chat" && (
-              <div className="self-start rounded-md rounded-bl-md border-2 border-[color:var(--v2-border)] bg-white/80 px-4 py-3 sm:max-w-[85%] dark:bg-white/10">
+              <div className="minit-enter self-start rounded-md rounded-bl-md border-2 border-[color:var(--v2-border)] bg-white/80 px-4 py-3 sm:max-w-[85%] dark:bg-white/10">
                 <p className="text-lg">
                   ⏳{" "}
                   <Tri
@@ -2230,7 +2230,7 @@ export function AskBox({
               aria-valuemax={100}
             >
               <div
-                className="h-full rounded-full bg-[color:var(--v2-primary)] transition-all"
+                className="h-full rounded-full bg-[color:var(--v2-primary)] transition-[width] duration-[var(--dur)] ease-[var(--ease-out)]"
                 style={{ width: `${queue.percent}%` }}
               />
             </div>
