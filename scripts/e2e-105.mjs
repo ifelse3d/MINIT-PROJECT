@@ -125,7 +125,7 @@ const READ_SHORT = {
     meeting_venue: field("Dewan Contoh"),
     attendees: [],
     resolutions: [
-      { text: field("Lim Guat Kioy ganti - Lee Moy") },
+      { text: field("Ooi Bee Huay ganti - Chan Mei") },
       { text: field("Bawa kerusi tambahan") },
     ],
     figures: [],
@@ -138,7 +138,7 @@ const READ_FULL = {
   extraction: {
     ...READ_SHORT.extraction,
     resolutions: [
-      { text: field("Agenda 2.1 diganti Lee Moy (Lim Guat Kior)") },
+      { text: field("Agenda 2.1 diganti Chan Mei (Ooi Bee Huar)") },
       { text: field("Ucapan Pengerusi dan aluan kepada semua yang hadir") },
       { text: field("Laporan kewangan dibentangkan oleh Bendahari") },
     ],

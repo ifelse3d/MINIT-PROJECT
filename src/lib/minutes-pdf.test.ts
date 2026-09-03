@@ -46,13 +46,13 @@ describe("minutesPdfLines", () => {
   // §4-⑤ (work order 100, 真件 B): the particulars block prints aligned.
   it("promotes a RUN of Label: value lines to an aligned kv block", () => {
     const md = [
-      "Nama: Teh Kim Hoo",
+      "Nama: Tan Kim Loo",
       "No. Kad Pengenalan: 661102-09-5089",
       "Alamat: 19, Lorong 2, Taman Perlis, Perlis",
       "Pekerjaan: Operator Jentera (Backhoe)",
     ].join("\n");
     expect(minutesPdfLines(md)).toEqual([
-      { kind: "kv", label: "Nama", value: "Teh Kim Hoo" },
+      { kind: "kv", label: "Nama", value: "Tan Kim Loo" },
       { kind: "kv", label: "No. Kad Pengenalan", value: "661102-09-5089" },
       { kind: "kv", label: "Alamat", value: "19, Lorong 2, Taman Perlis, Perlis" },
       { kind: "kv", label: "Pekerjaan", value: "Operator Jentera (Backhoe)" },

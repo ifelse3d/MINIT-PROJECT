@@ -18,7 +18,7 @@ describe("hasCjk", () => {
 
   it("no longer flags fullwidth symbols or CJK punctuation alone", () => {
     expect(hasCjk("，")).toBe(false);
-    expect(hasCjk("2 ＃mes. agung p.p. Hong Tao － 18/7/26")).toBe(false);
+    expect(hasCjk("2 ＃mes. agung p.p. Sin Hup － 18/7/26")).toBe(false);
     expect(hasCjk("。、「」『』　！？；：")).toBe(false);
   });
 
@@ -37,9 +37,9 @@ describe("normalizeFullwidth", () => {
   });
 
   it("normalizes the J example so the guard stops flagging it", () => {
-    const line = "2 ＃mes. agung p.p. Hong Tao － 18/7/26";
+    const line = "2 ＃mes. agung p.p. Sin Hup － 18/7/26";
     const normalized = normalizeFullwidth(line);
-    expect(normalized).toBe("2 #mes. agung p.p. Hong Tao - 18/7/26");
+    expect(normalized).toBe("2 #mes. agung p.p. Sin Hup - 18/7/26");
     expect(cjkSnippets(normalized)).toEqual([]);
   });
 
@@ -104,7 +104,7 @@ describe("cjkSnippets", () => {
   });
 
   it("does not flag a line whose only 'Chinese' is a fullwidth symbol", () => {
-    expect(cjkSnippets("2 ＃mes. agung p.p. Hong Tao － 18/7/26")).toEqual([]);
+    expect(cjkSnippets("2 ＃mes. agung p.p. Sin Hup － 18/7/26")).toEqual([]);
   });
 
   // The organisation's REGISTERED name prints verbatim everywhere — a

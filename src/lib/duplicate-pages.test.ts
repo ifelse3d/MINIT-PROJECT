@@ -30,11 +30,11 @@ describe("findRepeatedReading — §3 (105), the app noticing on its own", () =>
     // has three decisions and one of them is the minit's, written by another
     // hand — the word order differs and a name is spelled differently.
     const note = reading([
-      "Lim Guat Kioy ganti - Lee Moy",
+      "Ooi Bee Huay ganti - Chan Mei",
       "Bawa kerusi",
     ]);
     const minit = reading([
-      "Agenda 2.1 diganti Lee Moy (Lim Guat Kior)",
+      "Agenda 2.1 diganti Chan Mei (Ooi Bee Huar)",
       "Ucapan Pengerusi dan aluan kepada semua",
       "Laporan kewangan dibentangkan oleh Bendahari",
     ]);

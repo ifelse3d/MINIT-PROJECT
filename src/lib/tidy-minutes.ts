@@ -18,8 +18,8 @@
 //
 //   * checkCoverage    — every line placed exactly once (nothing vanishes)
 //   * checkLatinNamesWhole — every name-shaped Latin run of a source survives
-//                        ON ITS OWN WORD BOUNDARIES ("Teh Kim Hooi" is not
-//                        "Teh Kim Hoo")
+//                        ON ITS OWN WORD BOUNDARIES ("Tan Kim Looi" is not
+//                        "Tan Kim Loo")
 //   * checkKeptFacts   — every Chinese run (≥2 chars) and every number of a
 //                        source survives into the paragraph it became
 //   * checkNumbers     — and no number appears that no source had
@@ -182,7 +182,7 @@ export function checkNumbers(
 /**
  * 🔴 A NAME MUST SURVIVE WHOLE, NOT AS A PREFIX. checkLatinNames() asks
  * whether the run appears in the sentence at all, which is right for step 3
- * and NOT ENOUGH here: "Teh Kim Hoo" is a substring of "Teh Kim Hooi", so a
+ * and NOT ENOUGH here: "Tan Kim Loo" is a substring of "Tan Kim Looi", so a
  * name with one letter added passes a plain containment test while naming a
  * different person. This pass may only finish a sentence, so it can afford
  * the stricter rule — the run must stand on its own word boundaries.

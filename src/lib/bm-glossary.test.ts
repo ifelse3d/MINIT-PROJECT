@@ -56,18 +56,18 @@ describe("glossaryTermSubstitutions", () => {
   });
 
   it("leaves an unknown name flagged rather than guessing at it", () => {
-    const subs = glossaryTermSubstitutions("动议 叶俊成，附议 何淑仪");
+    const subs = glossaryTermSubstitutions("动议 张伟杰，附议 王丽华");
     const applied = applyNameSubstitutions(
-      "动议 叶俊成，附议 何淑仪",
+      "动议 张伟杰，附议 王丽华",
       subs.map((s) => ({ ...s, count: 0 })),
     );
-    expect(applied).toContain("叶俊成");
-    expect(applied).toContain("何淑仪");
+    expect(applied).toContain("张伟杰");
+    expect(applied).toContain("王丽华");
     expect(applied).toContain("Usul");
   });
 
   it("tells a Malaysian Chinese name from ordinary words", () => {
-    for (const name of ["叶俊成", "何淑仪", "苏明伟", "林志强", "陈秀玲", "黄明", "欧阳志伟"]) {
+    for (const name of ["张伟杰", "王丽华", "刘国华", "林志强", "陈秀玲", "黄明", "欧阳志伟"]) {
       expect(looksLikeChineseName(name), name).toBe(true);
     }
     for (const word of ["上届", "没变", "点开始", "感谢大家去年帮忙", "会议室", "银行", "原"]) {
@@ -92,8 +92,8 @@ describe("splitFlaggedLines", () => {
     "- 助学金: RM3,000.00",
     "- 上年结存: RM7,680.00",
     "- 收入：会员: RM1,200.00",
-    "Minit mesyuarat penggal lalu (15/3/2025) disahkan tanpa sebarang pindaan, dicadangkan oleh 叶俊成 dan disokong oleh 何淑仪.",
-    "Pemeriksa kira-kira, 苏明伟, mengesahkan bahawa akaun tiada masalah.",
+    "Minit mesyuarat penggal lalu (15/3/2025) disahkan tanpa sebarang pindaan, dicadangkan oleh 张伟杰 dan disokong oleh 王丽华.",
+    "Pemeriksa kira-kira, 刘国华, mengesahkan bahawa akaun tiada masalah.",
   ];
   const subs = glossaryTermSubstitutions(LINES.join("\n"));
 
@@ -106,7 +106,7 @@ describe("splitFlaggedLines", () => {
 
   it("asks the human for the NAMES only, one row each", () => {
     const { nameTokens } = splitFlaggedLines(LINES, subs);
-    expect(nameTokens).toEqual(["叶俊成", "何淑仪", "苏明伟"]);
+    expect(nameTokens).toEqual(["张伟杰", "王丽华", "刘国华"]);
   });
 
   // J's third screenshot: 上届, 原, 没变, 感谢大家去年帮忙, 点开始 were all
@@ -124,10 +124,10 @@ describe("splitFlaggedLines", () => {
   it("filling a name replaces the NAME, not the sentence it sits in", () => {
     const sentence = LINES[4];
     const out = applyNameSubstitutions(sentence, [
-      { from: "叶俊成", to: "YAP CHOON SENG", count: 0 },
+      { from: "张伟杰", to: "TEO WEE KIAT", count: 0 },
     ]);
-    expect(out).toContain("YAP CHOON SENG");
-    expect(out).toContain("disokong oleh 何淑仪");
+    expect(out).toContain("TEO WEE KIAT");
+    expect(out).toContain("disokong oleh 王丽华");
     expect(out).toContain("Minit mesyuarat penggal lalu (15/3/2025)");
   });
 
@@ -139,11 +139,11 @@ describe("splitFlaggedLines", () => {
 
   it("never puts the same name in the human list twice", () => {
     // Terms come from the same text in real use, so 主席 is covered here too.
-    const text = ["主席 苏明伟", "Pemeriksa 苏明伟"];
+    const text = ["主席 刘国华", "Pemeriksa 刘国华"];
     const { nameTokens } = splitFlaggedLines(
       text,
       glossaryTermSubstitutions(text.join(String.fromCharCode(10))),
     );
-    expect(nameTokens).toEqual(["苏明伟"]);
+    expect(nameTokens).toEqual(["刘国华"]);
   });
 });

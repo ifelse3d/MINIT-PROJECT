@@ -282,7 +282,7 @@ function eventTitle(text: string, dateMatch: string, timeMatch: string): string 
 // ---------------------------------------------------------------------------
 // Replacement resolutions — the 换届 signal (work order 68 §1-10).
 //
-// J's real sample: "Agenda 2.1: Lim Guat Kiong ganti - Lee Moy". E1 read
+// A shorthand sample of the same shape: "Agenda 2.1: Ooi Bee Huang ganti - Chan Mei". E1 read
 // people only from the STRUCTURED office_bearers rows, so a replacement
 // written as a resolution produced no card. The literal signal is explicit
 // enough to act on (拍板 2's 寧缺勿濫 stands — see the guards below):
@@ -294,7 +294,7 @@ function eventTitle(text: string, dateMatch: string, timeMatch: string): string 
 //
 // GUARDS: both sides must yield a name; the OUTGOING name must already be on
 // the roster (that is what makes it a replacement and tells us the position);
-// the incoming name must not. "diganti Lee Moy" WITHOUT "oleh" is ambiguous
+// the incoming name must not. "diganti Chan Mei" WITHOUT "oleh" is ambiguous
 // about direction and deliberately not matched. Removal itself stays a
 // human's act on /members — the card only proposes the ADDITION and shows
 // who it replaces (same display the structured cards already have).

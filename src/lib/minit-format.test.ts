@@ -25,7 +25,7 @@ describe("enumerator handling (the double-numbering fix, §1-1)", () => {
     expect(ownEnumeratorOf("12 Ogos 2026 perarakan")).toBeNull();
     expect(ownEnumeratorOf("10.30 PM bersurai")).toBeNull();
     expect(ownEnumeratorOf("33 orang hadir")).toBeNull();
-    expect(ownEnumeratorOf("2.1 diganti Lee Moy")).toBeNull(); // own_no's job, not stripping's
+    expect(ownEnumeratorOf("2.1 diganti Chan Mei")).toBeNull(); // own_no's job, not stripping's
   });
 
   it("strips only the enumerator, keeping the content exactly", () => {

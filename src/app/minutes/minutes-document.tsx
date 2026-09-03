@@ -227,8 +227,8 @@ export function MinutesDocument() {
   );
 
   // §2 second pass (116, J 8/31): the flagged list mixed two jobs. Money
-  // lines (助学金, 上年结存, 收入:会员) sat next to real names (叶俊成,
-  // 何淑仪, 苏明伟), every one of them asking a human for "the spelling on the
+  // lines (助学金, 上年结存, 收入:会员) sat next to person names (张伟杰,
+  // 王丽华, 刘国华), every one of them asking a human for "the spelling on the
   // identity card". The glossary lines are now folded behind the button and
   // the table keeps only what a person genuinely has to spell — keyed on the
   // Chinese RUN, not the line, so filling in a name no longer replaces the

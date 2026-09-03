@@ -326,15 +326,15 @@ describe("findTimeInText", () => {
 // ---------------------------------------------------------------------------
 // G3-9 (work order 68 s1-10): the explicit replacement resolution.
 // Golden case: the margin note on J's real printed sample, "Agenda 2.1:
-// Lim Guat Kiong ganti - Lee Moy" (fictional roster around it).
+// Ooi Bee Huang ganti - Chan Mei" (fictional roster around it).
 // ---------------------------------------------------------------------------
 
 describe("findReplacementInText", () => {
   it("reads the golden case: A ganti - B", async () => {
     const { findReplacementInText } = await import("@/lib/minutes-suggestions");
     expect(
-      findReplacementInText("Agenda 2.1: Lim Guat Kiong ganti - Lee Moy"),
-    ).toEqual({ newName: "Lim Guat Kiong", oldName: "Lee Moy" });
+      findReplacementInText("Agenda 2.1: Ooi Bee Huang ganti - Chan Mei"),
+    ).toEqual({ newName: "Ooi Bee Huang", oldName: "Chan Mei" });
   });
 
   it("reads menggantikan, the passive oleh form, and the zh forms", async () => {
@@ -343,9 +343,9 @@ describe("findReplacementInText", () => {
       newName: "Aminah",
       oldName: "Rosnah",
     });
-    expect(findReplacementInText("Lee Moy digantikan oleh Lim Guat Kiong")).toEqual({
-      newName: "Lim Guat Kiong",
-      oldName: "Lee Moy",
+    expect(findReplacementInText("Chan Mei digantikan oleh Ooi Bee Huang")).toEqual({
+      newName: "Ooi Bee Huang",
+      oldName: "Chan Mei",
     });
     expect(findReplacementInText("陈丽花 接替 王美美 出任财政")).toEqual({
       newName: "陈丽花",
@@ -360,36 +360,36 @@ describe("findReplacementInText", () => {
   it("refuses the direction-ambiguous bare diganti and nameless text", async () => {
     const { findReplacementInText } = await import("@/lib/minutes-suggestions");
     // No "oleh": which way does it run? Not our guess to make.
-    expect(findReplacementInText("Agenda 2.1 diganti Lee Moy")).toBeNull();
+    expect(findReplacementInText("Agenda 2.1 diganti Chan Mei")).toBeNull();
     expect(findReplacementInText("usul ganti alamat surat-menyurat")).toBeNull();
   });
 });
 
 describe("deriveSuggestions - the replacement card", () => {
   const roster = [
-    { personName: "Lee Moy", position: "AJK" },
+    { personName: "Chan Mei", position: "AJK" },
     { personName: "Tan Ah Kow", position: "Pengerusi" },
   ];
 
   it("proposes the incoming person with the outgoing person's position", () => {
     const cards = derive(
       extraction({
-        resolutions: [resolution("Agenda 2.1: Lim Guat Kiong ganti - Lee Moy")],
+        resolutions: [resolution("Agenda 2.1: Ooi Bee Huang ganti - Chan Mei")],
       }),
       { roster },
     );
     const member = cards.find((c) => c.type === "add_member") as MemberSuggestion;
     expect(member).toBeDefined();
-    expect(member.personName).toBe("Lim Guat Kiong");
+    expect(member.personName).toBe("Ooi Bee Huang");
     expect(member.position).toBe("AJK");
-    expect(member.replaces).toEqual(["Lee Moy"]);
+    expect(member.replaces).toEqual(["Chan Mei"]);
     expect(member.termStartIso).toBe("2026-08-29");
   });
 
   it("stays silent when the outgoing name is not on the roster (not our replacement to invent)", () => {
     const cards = derive(
       extraction({
-        resolutions: [resolution("Lim Guat Kiong ganti - Lee Moy")],
+        resolutions: [resolution("Ooi Bee Huang ganti - Chan Mei")],
       }),
       { roster: [{ personName: "Tan Ah Kow", position: "Pengerusi" }] },
     );
@@ -399,12 +399,12 @@ describe("deriveSuggestions - the replacement card", () => {
   it("stays silent when the incoming person is already on the roster", () => {
     const cards = derive(
       extraction({
-        resolutions: [resolution("Lim Guat Kiong ganti - Lee Moy")],
+        resolutions: [resolution("Ooi Bee Huang ganti - Chan Mei")],
       }),
       {
         roster: [
-          { personName: "Lee Moy", position: "AJK" },
-          { personName: "Lim Guat Kiong", position: "Bendahari" },
+          { personName: "Chan Mei", position: "AJK" },
+          { personName: "Ooi Bee Huang", position: "Bendahari" },
         ],
       },
     );

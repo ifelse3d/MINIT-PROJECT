@@ -136,8 +136,8 @@ describe("sameItem — two hands writing the same fact", () => {
   it("matches the real pair the containment rule misses", () => {
     expect(
       sameItem(
-        "3 Agenda 2.1 diganti Lee Moy (Lim Guat Kior)",
-        "Lim Guat Kioy ganti - Lee Moy",
+        "3 Agenda 2.1 diganti Chan Mei (Ooi Bee Huar)",
+        "Ooi Bee Huay ganti - Chan Mei",
       ),
     ).toBe(true);
   });

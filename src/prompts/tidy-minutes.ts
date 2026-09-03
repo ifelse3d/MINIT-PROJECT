@@ -57,7 +57,7 @@ YOU MAY DO EXACTLY FOUR THINGS. Nothing else.
 2. MERGE WHAT IS THE SAME ITEM TWICE. The same agenda item often appears on two pages — a scribbled note of it and a typed-up version of it. When two lines are two tellings of ONE thing, write ONE item and give it BOTH indices in "source". Keep the FULLER telling's wording; the shorter one contributes only what the fuller one is missing.
    🔴 Two items that merely mention the same person, the same amount or the same date are NOT the same item. If you are not sure, DO NOT merge — a duplicate a person can delete is recoverable; a decision you deleted is not.
 
-3. FINISH THE SENTENCE. A line written in shorthand becomes a complete sentence that reads like minutes. "lanti Ajk seong. Teh Kim Hoo" becomes a proper sentence appointing Teh Kim Hoo as one committee member.
+3. FINISH THE SENTENCE. A line written in shorthand becomes a complete sentence that reads like minutes. "lanti Ajk seong. Tan Kim Loo" becomes a proper sentence appointing Tan Kim Loo as one committee member.
    🔴 IN ITS OWN LANGUAGE. A Malay line is completed in Malay, a Chinese line in Chinese, an English line in English. A line that mixes them is completed in whichever language most of its words are in. YOU ARE NOT TRANSLATING. A document that changes language between the paper and the file is a different document.
    🔴 FINISHING A SENTENCE IS NOT ADDING A FACT. You may add the grammar a sentence needs — a verb, a connective, a preposition. You may not add who, how much, when, or what was decided.
 

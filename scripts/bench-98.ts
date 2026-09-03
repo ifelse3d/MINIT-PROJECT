@@ -69,7 +69,7 @@ const SAMPLES = path.join(ROOT, "eval", "reports", "samples-real");
 const OUT = path.join(ROOT, "eval", "reports", "bench-98");
 
 // The real society's name as printed on 真件 A/B — local files only (A3).
-const ORG_NAME = "Pertubuhan Pengajian Tao ( Hong Tao ) Perlis";
+const ORG_NAME = "Pertubuhan Pengajian Tao ( Sin Hup ) Perlis";
 
 const ALL_MODELS = [
   "gemini:gemini-3.5-flash-lite", // baseline (current AI_MODEL_EXTRACT)

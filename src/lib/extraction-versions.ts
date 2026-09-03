@@ -119,8 +119,8 @@ function contentTokens(text: string): string[] {
  *
  * 🔴 WHY ARM 3 EXISTS AND WHY THE BAR IS WHERE IT IS. Measured on J's own two
  * papers (probe-versions-104): the one line that really is the same item told
- * twice — "3 Agenda 2.1 diganti Lee Moy (Lim Guat Kior)" and "Lim Guat Kioy
- * ganti - Lee Moy" — shares 0.67 of the shorter line's words, while the best
+ * twice — "3 Agenda 2.1 diganti Chan Mei (Ooi Bee Huar)" and "Ooi Bee Huay
+ * ganti - Chan Mei" — shares 0.67 of the shorter line's words, while the best
  * match for either genuinely-different line scores 0.11 and 0.00. Arm 2 misses
  * the pair because neither string contains the other: two hands wrote the same
  * fact in a different order, and one of them spelled a name differently.

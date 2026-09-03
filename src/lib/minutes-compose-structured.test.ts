@@ -222,8 +222,8 @@ describe("checkLatinNames — Latin names must survive a Chinese document", () =
 
   it("protects capitalised name runs even without an honorific", async () => {
     const { latinNameRuns } = await import("@/lib/minutes-compose");
-    expect(latinNameRuns("Lim Guat Kiong ganti Lee Moy")).toEqual(
-      expect.arrayContaining(["Lim Guat Kiong", "Lee Moy"]),
+    expect(latinNameRuns("Ooi Bee Huang ganti Chan Mei")).toEqual(
+      expect.arrayContaining(["Ooi Bee Huang", "Chan Mei"]),
     );
   });
 });

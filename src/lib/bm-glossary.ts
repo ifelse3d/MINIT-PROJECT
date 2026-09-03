@@ -123,7 +123,7 @@ const CJK_RUN = /[㐀-䶿一-鿿]+/g;
 // of asking what is ordinary, ask what looks like a person.
 //
 // A Malaysian Chinese personal name is two to four characters opening with one
-// of a closed set of surnames. 叶俊成, 何淑仪, 苏明伟, 林志强 pass; 上届,
+// of a closed set of surnames. 张伟杰, 王丽华, 刘国华, 林志强 pass; 上届,
 // 没变, 点开始 fail on the surname; 感谢大家去年帮忙 fails on length.
 // A miss sends the run to the BM rewrite, which is itself forbidden from
 // translating names (draft-minutes.ts) — so a missed name is not a lost name.
@@ -161,7 +161,7 @@ export type FlaggedSplit = {
    * The Chinese runs that read as PEOPLE — one row each in the mapping table.
    * Keyed on the RUN, not the line: the table used to key on the whole line,
    * so typing an IC name against
-   * "…dicadangkan oleh 叶俊成 dan disokong oleh 何淑仪." replaced THE WHOLE
+   * "…dicadangkan oleh 张伟杰 dan disokong oleh 王丽华." replaced THE WHOLE
    * SENTENCE with that name. Per run, the sentence survives, only the name is
    * swapped, and the roster pre-fill starts matching — it never could match a
    * roster name against a whole line.

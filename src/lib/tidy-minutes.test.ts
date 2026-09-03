@@ -71,13 +71,13 @@ describe("§2-2 #1 — the order is the model's to choose", () => {
 describe("§2-2 #2 — two tellings of one item become one paragraph", () => {
   it("counts what merging folded away", () => {
     const e = extractionOf([
-      "3 Agenda 2.1 diganti Lee Moy",
-      "Lee Moy ganti",
+      "3 Agenda 2.1 diganti Chan Mei",
+      "Chan Mei ganti",
       "Pindaan alamat",
     ]);
     const doc = buildTidyDocument(
       plan([
-        { source: [0, 1], text: "3 Agenda 2.1 diganti Lee Moy" },
+        { source: [0, 1], text: "3 Agenda 2.1 diganti Chan Mei" },
         { source: 2, text: "Pindaan alamat" },
       ]),
       e,
@@ -102,12 +102,12 @@ describe("§2-2 #2 — two tellings of one item become one paragraph", () => {
 
 describe("§2-2 #3 — shorthand becomes a sentence, in its own language", () => {
   it("accepts a finished Malay sentence that keeps every name", () => {
-    const e = extractionOf(["lanti Ajk seong. Teh Kim Hoo"]);
+    const e = extractionOf(["lanti Ajk seong. Tan Kim Loo"]);
     const doc = buildTidyDocument(
       plan([
         {
           source: 0,
-          text: "Mesyuarat melantik Teh Kim Hoo sebagai seorang Ahli Jawatankuasa.",
+          text: "Mesyuarat melantik Tan Kim Loo sebagai seorang Ahli Jawatankuasa.",
         },
       ]),
       e,
@@ -119,9 +119,9 @@ describe("§2-2 #3 — shorthand becomes a sentence, in its own language", () =>
   it("🔴 a finished sentence that respells a name falls back to the line", () => {
     // A changed character is a different person, and this document names who
     // is responsible for what.
-    const e = extractionOf(["lanti Ajk seong. Teh Kim Hoo"]);
+    const e = extractionOf(["lanti Ajk seong. Tan Kim Loo"]);
     const doc = buildTidyDocument(
-      plan([{ source: 0, text: "Mesyuarat melantik Teh Kim Hooi sebagai AJK." }]),
+      plan([{ source: 0, text: "Mesyuarat melantik Tan Kim Looi sebagai AJK." }]),
       e,
     )!;
     expect(doc.sections[0].items[0].verbatimFallback).toBe(true);
@@ -202,7 +202,7 @@ describe("🔴 the locked list — money, dates, IC and receipt numbers", () => 
     const texts = [
       "Derma RM 3,500.00 daripada 陈明发 pada 12/5/2026",
       "Resit no. R-000241 dikeluarkan",
-      "K/P 880101-14-5501 direkodkan untuk Teh Kim Hoo",
+      "K/P 880101-14-5501 direkodkan untuk Tan Kim Loo",
     ];
     const e = extractionOf(texts);
     const doc = buildTidyDocument(

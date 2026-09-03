@@ -206,7 +206,7 @@ eval 对外口径。**
   **锁死清单用形状守**：整理 pass 只拿得到决议那几行，金额/名册/日期/地点
   **它根本看不到**。再用五道用数的检查守剩下那一个欄位（coverage 少一条
   **整份退**／数字不准生也不准掉／中文串要活着／**拉丁人名要落在词界上**
-  ——`Teh Kim Hooi` 不算 `Teh Kim Hoo`，`includes` 抓不到多一个字母的名字／
+  ——`Tan Kim Looi` 不算 `Tan Kim Loo`，`includes` 抓不到多一个字母的名字／
   决议语气通过不通过延后三态锁死）。过不了 → 那一段**退回逐字**并挂
   「照原文显示」，卡片上方说有几段。
 - **§3 读完后侦测重复页**：`src/lib/duplicate-pages.ts`（7 支测试）。
@@ -1404,7 +1404,7 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
 
 **🔴 下一场就是 108 号单（品质急救：不准编、不准丢）。**
 它已经被 109、113 两场各推后一次了，而「正式文件把人物关系写反」
-（`Teh Kim Hoo ditugaskan untuk melantik…`——把**被委任的人**写成
+（`Tan Kim Loo ditugaskan untuk melantik…`——把**被委任的人**写成
 **去委任别人的人**）那一份**就是会送 eROSES 的那一份**，现在还在线上。
 109 与 113 两场都一个 prompt 都没动，108 要动的东西原封不动等着。
 
@@ -1516,8 +1516,8 @@ RESPONSIVE：J 若再圈破版，贴 46 号单同段 PROMPT 继续。
   只看正面例子的话，这个门槛会以「在真件上验过」的名义上线，然后对每一份
   正常的两页 minit 乱问。加一条「两行长度要相当（短÷长 ≥ 0.5）」就分开了
   （误判是 59↔294、43↔95、85↔476 字元；真重复是 29↔41）。
-- ⚠ **`includes` 抓不到「多一个字母的名字」。** `"…Teh Kim Hooi…"
-  .includes("Teh Kim Hoo")` 是 **true**——名字被改了却验不出来。要验人名
+- ⚠ **`includes` 抓不到「多一个字母的名字」。** `"…Tan Kim Looi…"
+  .includes("Tan Kim Loo")` 是 **true**——名字被改了却验不出来。要验人名
   必须检查**词界**（前后不是字母）。中文没有词界，而且正常句子本来就会把
   词吃进更长的串里（「小小班」在「小小班主持由…」里），所以中文那边只能
   验「原本有的还在不在」，不能验「有没有被改」——这一条要在画面上讲清楚
@@ -1579,7 +1579,7 @@ RESPONSIVE：J 若再圈破版，贴 46 号单同段 PROMPT 继续。
   另外把断言在 `SHOT_TAG=before` 时降级成「量测不是闸」，不然 before 那
   一轮自己就 exit 1。
 - ⚠ **「同一件事的两个版本」不能靠 `includes` 判重。** 两只手写同一件事，
-  词序会不同、名字会拼错（真件：`Lim Guat Kior` vs `Lim Guat Kioy`）。
+  词序会不同、名字会拼错（真件：`Ooi Bee Huar` vs `Ooi Bee Huay`）。
   门槛要从真资料量出来再写死，并把量到的数字写进注解（0.67 vs 0.11/0.00）
   ——不然下一个人不知道能不能动它。
 
@@ -2355,5 +2355,5 @@ J 手贴 migration 的步骤：记事本开档 → `Ctrl+A` `Ctrl+C` → Supabas
 - 🔴 **陷阱：eval 的 `case-04-minutes-mixed` 會飄。** 本場兩次跑：
   第一次 117/126 invented 1（那筆金額被同時寫進 resolutions），
   第二次 117/125 invented 0（＝基準）。看到 case-04 的 invented 先重跑一次再查。
-- 🔴 **108 號單仍未執行**：`Teh Kim Hoo ditugaskan untuk melantik...`
+- 🔴 **108 號單仍未執行**：`Tan Kim Loo ditugaskan untuk melantik...`
   （draft-minutes 的三選一標籤逼模型編出施事者）still live。
