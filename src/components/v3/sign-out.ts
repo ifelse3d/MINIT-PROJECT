@@ -13,5 +13,6 @@ export async function signOutToLogin(): Promise<void> {
   // theme, language) survive — they are the device's, not the account's.
   clearMinitLocalData();
   await getSupabaseBrowser().auth.signOut();
+  // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full navigation on purpose (122 §5): the server must see the changed session cookie
   window.location.assign("/login");
 }

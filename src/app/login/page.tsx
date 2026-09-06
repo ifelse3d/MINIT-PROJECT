@@ -211,6 +211,7 @@ export default function LoginPage() {
           return;
         }
         // Full navigation so the server sees the new session cookie.
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full navigation on purpose (122 §5): the server must see the changed session cookie
         window.location.assign("/");
       } else {
         const { data, error } = await supabase.auth.signUp({
@@ -256,6 +257,7 @@ export default function LoginPage() {
           // "registration worked, now sign in" — a full navigation so the
           // server never sees the discarded session cookie.
           await supabase.auth.signOut();
+          // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full navigation on purpose (122 §5): the server must see the changed session cookie
           window.location.assign("/login?registered=1");
         } else {
           // Email confirmation is ON in this Supabase project.

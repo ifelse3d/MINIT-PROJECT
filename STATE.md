@@ -2269,7 +2269,10 @@ RESPONSIVE：J 若再圈破版，贴 46 号单同段 PROMPT 继续。
 - **`service_role` 被刻意挡在 `minit_admin.*` 外面。**
 - ⚠️ **client component 里「存完再送出」，mount 当下的 state 是旧的。**
 - **`AI_MODEL_*` 的值没有冒号会被静静忽略。** `npm run check:ai` 抓这个。
-- **npm 漏洞剩 2 个（exceljs/uuid）刻意不修。** 等上游。
+- **npm 漏洞剩 2 个（exceljs/uuid）刻意不修。** 等上游。（9/7 122 场实况：
+  曾涨到 6 个，`npm audit fix` 不加 `--force` 修掉 4 个 dev 套件的
+  ——browserslist／fast-uri／qs／xmldom——又回到这 2 个；**每月看一次
+  `npm audit`，涨了就先不加 `--force` 修。**）
 - **「从来没有程式写入过的表」清单**：剩 `extractions`/`einvois_packs`/
   `paste_packs`/`qa_log`/`reminders`/`rsvps` 仍无写入端。
 

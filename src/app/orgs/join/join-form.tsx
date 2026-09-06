@@ -27,6 +27,7 @@ export function JoinForm() {
   useEffect(() => {
     if (!state.ok) return;
     clearStashedInviteCode();
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full navigation on purpose (122 §5): the server must see the changed session cookie
     const t = setTimeout(() => window.location.assign("/"), 1200);
     return () => clearTimeout(t);
   }, [state.ok]);

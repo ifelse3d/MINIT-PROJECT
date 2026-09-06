@@ -196,7 +196,10 @@ export default function ResetPasswordPage() {
                   Same reason /login uses window.location.assign after sign-in. */}
               <button
                 type="button"
-                onClick={() => window.location.assign("/")}
+                onClick={() => {
+                  // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full navigation on purpose (122 §5): the server must see the changed session cookie
+                  window.location.assign("/");
+                }}
                 className="flex w-full items-center justify-center rounded-md bg-[color:var(--v2-primary-fill)] p-3.5 text-base font-semibold text-white"
               >
                 <Tri bm="Teruskan" zh="继续" en="Continue" />
