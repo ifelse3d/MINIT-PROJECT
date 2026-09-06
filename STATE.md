@@ -28,9 +28,9 @@ e2e-money 20/20 · e2e-minutes 20/20 · e2e-roles 15/15（第一次 1 FAIL＝测
 真钱 US$0.00（零 vendor 呼叫）。**
 **⚠ `shot-layout-109`／`shot-cards-113` 跑不起来——不是本场弄坏的：116 场的
 `e506618` 刻意删了它们等的 `meeting-choice` 卡；117 报告没跑过它们。要重教。**
-**🔴 🔴 J 的三件事（123 号报告开头有一步一步）：①贴 migration 45；②生一把
-`RECEIPT_SIGNING_SECRET` 加进 Vercel 与 `.env.local`；③双击 `push-cabang.bat`
-（本场 7 支 commit）。三件都「没做不会坏」。
+**✅ J 的三件事 9/7 02:48 全做完（我实查）：①migration 45 探针 APPLIED；②`RECEIPT_SIGNING_SECRET`
+在 Vercel Production 清单里（值我没看）；③8 支已 push，线上 40 秒后换新版——
+`curl -sI /login` 四个 header 都在、无 X-Powered-By，/privacy 26／/terms 11、第三方表四行齐。**
 🔴 118 号单（正式文件把人物关系写反）**还是**没跑——下一场还是它。
 §1 法律页那张表（122 §1-1＋123 §1 补的「责任上限」一格）J 欠填，不催。**
 
@@ -40,8 +40,8 @@ e2e-money 20/20 · e2e-minutes 20/20 · e2e-roles 15/15（第一次 1 FAIL＝测
 
 > **已上线**：https://minit-project.vercel.app —— 开工实测 main==origin/main==`6fa0ba4`
 > （113／116 的 commit 都已推）、migration 1–43 APPLIED（44 无探针；45 本场新写、NOT YET）。
-> **122 号场 7 支 commit 等 J push-cabang.bat**；**一支新 migration（45）等 J 贴**；
-> **一个新环境变数（`RECEIPT_SIGNING_SECRET`）等 J 加**——三件都是「没做不会坏」。
+> **122 号场 8 支 commit 已 push、已上线**（9/7 02:48 实查）；**migration 45 已贴（APPLIED）**；
+> **`RECEIPT_SIGNING_SECRET` 已在 Vercel Production**（J 本机 `.env.local` 是否也加了：J 说加了，我不看值）。
 
 ### 这一场做了什么（122 号场 ✅，123 号报告——体检小修包）
 
@@ -1360,17 +1360,18 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
 
 ### 🔴 J 的事（2026-09-07 凌晨，122 场收工版）
 
-0. **双击 push-cabang.bat**——122 号场 **7 支** commit 等推。
-   ~~113 场 4 支~~ ~~116 场~~ 已推 ✓（开工实测 main==origin/main）。
+0. ~~**双击 push-cabang.bat**——122 号场 8 支~~ 已推 ✓、已上线 ✓（9/7 02:48 实查）。
    上线后看三件：① `curl -sI https://minit-project.vercel.app/login` 多四行 header、
    没有 `X-Powered-By`；② 双击 `status.bat`，E 段印 307→/login、/login 200、
    /privacy 剩 26、/terms 剩 11；③ `/privacy` 第 6 节表格有 Google／OpenAI／
    Supabase／Vercel 四行。
-1. 🔴 **贴 migration 45**（`20260923000000_charge_ai_action.sql`，免费额度原子扣款）。
+1. ~~🔴 **贴 migration 45**~~ 已贴 ✓（探针 APPLIED）。**下一步是真扣款对帐**：随便让 AI 读一次，
+   `/settings/plan` 应正常掉一格——J 有空看一眼。原文：（`20260923000000_charge_ai_action.sql`，免费额度原子扣款）。
    `salin-migration.bat` 选 45 → Supabase SQL Editor → RUN。**没贴不会坏**（程式
    自动走旧路）；贴完随便让 AI 读一次，`/settings/plan` 应正常掉一格；
    `npm run check:migrations` 那行从 NOT YET 变 APPLIED。（123 号报告开头①）
-2. 🔴 **加 `RECEIPT_SIGNING_SECRET`**：PowerShell 跑
+2. ~~🔴 **加 `RECEIPT_SIGNING_SECRET`**~~ Vercel 已加 ✓（清单里看得到，值没看）。**J 说 `.env.local` 也加了；
+   下一场开工 `grep -c RECEIPT_SIGNING_SECRET .env.local` 查证（只数行，不看值）。** 原步骤：PowerShell 跑
    `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`，
    Vercel → Settings → Environment Variables 加一条＋Redeploy；`.env.local` 加同一行。
    **没做不会坏**（还在用 service key 签）；做了之后已印的 4 张收据 QR 照样验得过。
