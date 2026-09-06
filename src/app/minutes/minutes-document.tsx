@@ -15,7 +15,6 @@ import {
   type EInvoisAuditStatus,
 } from "@/lib/einvois-governance";
 import { formatRm } from "@/lib/minit-format";
-import { minutesStructure } from "@/lib/minutes-compose";
 import { MINUTES_LANGUAGES, type MinutesLang } from "@/lib/minutes-lang";
 import {
   applyNameSubstitutions,
@@ -23,7 +22,7 @@ import {
 } from "@/lib/roster-names";
 import { glossaryTermSubstitutions, splitFlaggedLines } from "@/lib/bm-glossary";
 import { useMinutes } from "./minutes-store";
-import { TidyView } from "./tidy-view";
+import { ItemSources } from "./item-sources";
 
 // ---------------------------------------------------------------------------
 // /minutes/document — the finished document, saving it, and the values to paste
@@ -138,12 +137,6 @@ export function MinutesDocument() {
   const router = useRouter();
   const t = useTriText();
   const [einvoisVisible] = useEinvoisVisible();
-  // §4-①: the "tidy into standard format" pass only makes sense on a document
-  // that HAS a structure to keep (a printed/typed minit read by G1).
-  const hasStructure = useMemo(
-    () => minutesStructure(extraction) !== null,
-    [extraction],
-  );
 
   // e-INVOIS AUDIT TRAIL (work order 94). Every judgement here is arithmetic
   // over values a human already confirmed — no vendor call, nothing invented.
@@ -300,11 +293,11 @@ export function MinutesDocument() {
 
   return (
     <>
-      {/* §2 (work order 105): the two layers, above the Malay filing copy.
-          「正式版」is the readable arrangement of what the paper says;
-          「原文（逐字）」is what the paper says. The filing document below is
-          built from the verbatim layer, as it always was. */}
-      <TidyView extraction={extraction} enabled={!nothingYet} />
+      {/* 118 §2 (J 8/31 第 22 條): the 「正式版／原文」 card that stood here
+          from 105 to 117 is gone. Its strict rules now live in the document
+          prompt and in code (minutes-guards.ts); its one real job — the way
+          back from any line to the words the paper carried — is ItemSources,
+          inside the document section below. */}
 
       <PageSection
         step={4}
@@ -412,25 +405,11 @@ export function MinutesDocument() {
                     />
                   )}
                 </Button>
-                {/* §4-① (work order 100): a structured document assembles
-                    free — this button is the PAID pass that expands
-                    shorthand into standard minit prose (速記展開), guards
-                    unchanged. The price is on the button (house rule). */}
-                {hasStructure && (
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    onClick={() => writeWithAi(true)}
-                    disabled={draftBusy}
-                  >
-                    ✨{" "}
-                    <Tri
-                      bm="Kemas ke format standard (1 tindakan AI)"
-                      zh="整理成标准版式（用 1 次 AI 额度）"
-                      en="Tidy into the standard format (1 AI action)"
-                    />
-                  </Button>
-                )}
+                {/* 118 §2/§4: the "Tidy into the standard format (1 AI
+                    action)" button that stood here went with the tidy
+                    line. The route's `polish` flag it pressed still exists
+                    (buildPhraseWork keeps its tests); nothing on screen
+                    reaches it today. */}
                 <span className="text-sm text-muted-foreground">
                   {/* 0-2: path marker only — no "about X%" promise. */}
                   <Tri
@@ -527,22 +506,34 @@ export function MinutesDocument() {
                   </Button>
                 </div>
               )}
-              {photoOpen !== null && (
-                <PhotoLightbox
-                  pages={photoPages.map((p) => ({
-                    name: p.name,
-                    src: p.dataUrl || null,
-                  }))}
-                  index={photoOpen}
-                  onIndex={setPhotoOpen}
-                  onClose={() => setPhotoOpen(null)}
-                />
-              )}
             </div>
           ) : (
             <pre className="min-h-[60dvh] rounded-md border-2 border-input bg-white/80 p-4 text-base whitespace-pre-wrap dark:bg-white/5">
               {shownDocument}
             </pre>
+          )}
+          {/* 118 §2-3: from any line of the document, one look back at the
+              words the paper carried and where they were read. This is the
+              path the removed 「正式版／原文」 card used to provide. */}
+          {!isSample && (
+            <ItemSources
+              extraction={extraction}
+              photoCount={photoPages.length}
+              onOpenPage={photoPages.length > 0 ? (p) => setPhotoOpen(p) : undefined}
+            />
+          )}
+          {/* The full-screen viewer for the original pages — shared by the
+              button above the editor and the per-line links in ItemSources. */}
+          {photoOpen !== null && photoPages.length > 0 && (
+            <PhotoLightbox
+              pages={photoPages.map((p) => ({
+                name: p.name,
+                src: p.dataUrl || null,
+              }))}
+              index={photoOpen}
+              onIndex={setPhotoOpen}
+              onClose={() => setPhotoOpen(null)}
+            />
           )}
           <div className="flex flex-col gap-3">
             {isSample && (

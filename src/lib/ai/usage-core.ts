@@ -57,6 +57,8 @@ export const AI_ACTIONS = [
   // call. It is charged because it reaches the vendor, and it is REFUNDED
   // when the arrangement fails its own arithmetic — the person then still
   // has the verbatim layer, which was never at risk.
+  // 118 §2: the tidy pass is gone (no route charges this any more). The code
+  // stays in the list so the ai_usage rows it wrote in 105–117 still parse.
   "tidy_minutes",
 ] as const;
 

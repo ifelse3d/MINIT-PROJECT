@@ -175,6 +175,27 @@ the committee list a society files with the Registrar, and a person given a
 task for one day has not been elected to anything. Name such sections after the
 work ("Pembahagian Tugas", "Tugasan Perarakan").
 
+=== THE LOCKED LIST — copied character for character, never rewritten ===
+(118 §2: these rules used to live in a separate "formal version" pass. They
+now live HERE, on the document itself, because the document is what a
+society signs and files — and every one of them is checked by code.)
+* every amount of money, exactly as written, with its currency and digits;
+* every date and every time, exactly as written;
+* every person's name, EXACTLY as spelled — a changed letter is a different
+  person, and the check is on WHOLE WORDS: "Tan Kim Looi" is not "Tan Kim Loo";
+* every identity-card number and every receipt number, digit for digit;
+* the SUBSTANCE of every decision: approved stays approved, not approved
+  stays not approved, deferred stays deferred — never soften, never harden,
+  never resolve an open item;
+* nobody is added, no amount is added, no date is added, no doer is added.
+FINISHING A SENTENCE IS NOT ADDING A FACT. You may add the grammar a
+sentence needs — a verb, a connective, a preposition. You may not add who,
+how much, when, or what was decided.
+LEAVE THE GAPS AS GAPS. Where the line does not say something, your sentence
+does not say it either. Never write "the meeting agreed" over a line that
+only records that something was discussed; an honest gap is always better
+than a fluent guess.
+
 === HOW TO PHRASE text ===
 Write it as a COMPLETE SENTENCE of formal minutes prose, not as a note
 fragment or point-form entry: state the duty or decision, then the person or
@@ -308,6 +329,27 @@ JSON, and nothing else:
 Each listed index appears EXACTLY ONCE in your answer — no index skipped, no
 index repeated, no index invented. Your answer is rejected and sent back if
 this does not hold.
+
+=== THE LOCKED LIST — copied character for character, never rewritten ===
+(118 §2: these rules used to live in a separate "formal version" pass. They
+now live HERE, on the document itself, because the document is what a
+society signs and files — and every one of them is checked by code.)
+* every amount of money, exactly as written, with its currency and digits;
+* every date and every time, exactly as written;
+* every person's name, EXACTLY as spelled — a changed letter is a different
+  person, and the check is on WHOLE WORDS: "Tan Kim Looi" is not "Tan Kim Loo";
+* every identity-card number and every receipt number, digit for digit;
+* the SUBSTANCE of every decision: approved stays approved, not approved
+  stays not approved, deferred stays deferred — never soften, never harden,
+  never resolve an open item;
+* nobody is added, no amount is added, no date is added, no doer is added.
+FINISHING A SENTENCE IS NOT ADDING A FACT. You may add the grammar a
+sentence needs — a verb, a connective, a preposition. You may not add who,
+how much, when, or what was decided.
+LEAVE THE GAPS AS GAPS. Where the line does not say something, your sentence
+does not say it either. Never write "the meeting agreed" over a line that
+only records that something was discussed; an honest gap is always better
+than a fluent guess.
 
 === HOW TO PHRASE ===
 - COMPLETE content: every sentence of the original paragraph is carried into

@@ -9,14 +9,15 @@
 //   ② §1-3 a file attached in the chat box plus J'S OWN SENTENCE
 //         (「這兩張是一樣的，只是有另外放出來講解。更詳細的」) produces a NEW
 //         finished card, without reading anything again.
-//   ③ §2-3 the record page's two tabs — 正式版 and 原文（逐字） — and the ↩
-//         from a tidied paragraph back to the exact line it came from.
+//   ③ 118 §2-3 the document page's WAY HOME — every line the document is
+//         built from is listed with where the AI read it (the 正式版／原文
+//         tabs of 105 §2-3 are gone since 118; this is what survived them).
 //
-// 🔴 NO VENDOR CALL, NO MONEY. /api/intake and /api/tidy-minutes are
-// INTERCEPTED and answered with canned readings, so the REAL client code runs
-// the REAL flows without paying a vendor to re-read documents whose READING is
-// not what is under test here. ① talks to /api/job/* for real, because the
-// queue's bookkeeping is exactly what is under test.
+// 🔴 NO VENDOR CALL, NO MONEY. /api/intake is INTERCEPTED and answered with
+// canned readings, so the REAL client code runs the REAL flows without paying
+// a vendor to re-read documents whose READING is not what is under test here.
+// ① talks to /api/job/* for real, because the queue's bookkeeping is exactly
+// what is under test.
 //
 // ⏳ ① NEEDS MIGRATION 43 (ai_jobs). Until J has pasted it the route answers
 // "not ready" by design and the door falls back to the single-request read —
@@ -145,27 +146,6 @@ const READ_FULL = {
   },
 };
 
-/** What /api/tidy-minutes would answer for the typed minutes ③ confirms. */
-const CANNED_TIDY = {
-  tidy: {
-    sections: [
-      {
-        heading: "Agenda",
-        items: [
-          {
-            text: "Mesyuarat mencatat ucapan Pengerusi.",
-            source: [0],
-            verbatimFallback: false,
-          },
-        ],
-      },
-    ],
-    unresolved: [],
-    fallbacks: 0,
-    merged: 0,
-  },
-};
-
 async function run() {
   await ensureUser();
   const hasJobs = await jobsTableExists();
@@ -198,14 +178,6 @@ async function run() {
         status: 200,
         contentType: "application/json",
         body: JSON.stringify(body),
-      });
-      return;
-    }
-    if (url.includes("/api/tidy-minutes") && req.method() === "POST") {
-      void req.respond({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(CANNED_TIDY),
       });
       return;
     }
@@ -305,7 +277,9 @@ async function run() {
     await page.screenshot({ path: path.join(REPORTS, "e2e105-chat-instruction.png") });
 
     // -----------------------------------------------------------------------
-    // ③ §2-3 — the record page's two tabs, and the way back from a paragraph.
+    // ③ 118 §2-3 — the document page's way home: one row per line, each
+    // saying where the AI read it. (The two tabs this used to test went
+    // with the tidy line in 118 §2.)
     // -----------------------------------------------------------------------
     await page.evaluate(() => {
       const b = [...document.querySelectorAll("button, a")].find((x) =>
@@ -317,42 +291,28 @@ async function run() {
     await page.goto(`${BASE}/minutes/document`, { waitUntil: "networkidle2" });
     await new Promise((r) => setTimeout(r, 1200));
 
-    const tidyTab = await page.$('[data-probe="tab-tidy"]');
-    const verbTab = await page.$('[data-probe="tab-verbatim"]');
-    check("③ the record page carries both tabs", tidyTab !== null && verbTab !== null);
     check(
-      "🔴 ③ the page says eROSES / download / confirm use the VERBATIM layer",
-      (await page.evaluate(() => document.body.innerText)).includes("原文（逐字）"),
+      "③ the 正式版／原文 tabs are GONE (118 §2 — no formal-version card any more)",
+      (await page.$('[data-probe="tab-tidy"]')) === null &&
+        (await page.$('[data-probe="tab-verbatim"]')) === null,
     );
-
-    await page.click('[data-probe="tab-verbatim"]');
-    await new Promise((r) => setTimeout(r, 300));
+    const sourceRows = await page.$$('[data-probe="item-source"]');
+    // READ_SHORT (2 lines) + READ_FULL (3 lines), read as pages of one meeting.
     check(
-      "③ the verbatim tab shows the lines as they were read",
-      (await page.$('[data-probe="verbatim-pane"]')) !== null,
+      "🔴 ③ every line the document is built from is listed with its source",
+      sourceRows.length === 5,
+      `rows=${sourceRows.length}`,
     );
-    await page.screenshot({ path: path.join(REPORTS, "e2e105-tab-verbatim.png") });
-
-    await page.click('[data-probe="tab-tidy"]');
-    await new Promise((r) => setTimeout(r, 300));
-    await page.evaluate(() => {
-      const b = [...document.querySelectorAll("button")].find((x) =>
-        /整理出正式版/.test(x.textContent || ""),
-      );
-      b?.click();
-    });
-    await page.waitForFunction(
-      () => document.querySelector('[data-probe="tidy-source"]') !== null,
-      { timeout: 20000 },
-    );
-    check("③ the formal version came out with a way back on every paragraph", true);
-    await page.click('[data-probe="tidy-source"]');
-    await new Promise((r) => setTimeout(r, 300));
+    const bodyText = await page.evaluate(() => document.body.innerText);
     check(
-      "🔴 ③ one tap opens the exact verbatim line the paragraph came from",
-      (await page.evaluate(() => document.body.innerText)).includes("原文，一字不改"),
+      "③ each row says where the AI read it",
+      bodyText.includes("AI 读到的位置") && bodyText.includes("每一条读自哪里"),
     );
-    await page.screenshot({ path: path.join(REPORTS, "e2e105-tab-tidy.png") });
+    check(
+      "③ the ambiguous shorthand line is shown as written, not resolved",
+      bodyText.includes("Agenda 2.1 diganti Chan Mei (Ooi Bee Huar)"),
+    );
+    await page.screenshot({ path: path.join(REPORTS, "e2e105-item-sources.png") });
 
     // -----------------------------------------------------------------------
     // ① §1 — the queue survives the tab closing.

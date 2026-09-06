@@ -226,6 +226,28 @@ describe("checkLatinNames — Latin names must survive a Chinese document", () =
       expect.arrayContaining(["Ooi Bee Huang", "Chan Mei"]),
     );
   });
+
+  // 118 §2 — carried over from the retired tidy pass (105 §2), whose
+  // whole-word rule had to outlive the file it was born in.
+  it("🔴 a name must survive WHOLE — 'Tan Kim Looi' is not 'Tan Kim Loo'", async () => {
+    const { checkLatinNames, containsWholeLatinRun } = await import("@/lib/minutes-compose");
+    const src = "lanti Ajk seorg. Tan Kim Loo";
+    expect(containsWholeLatinRun("Melantik Tan Kim Looi sebagai AJK.", "Tan Kim Loo")).toBe(false);
+    expect(containsWholeLatinRun("Melantik Ajk seorang iaitu Tan Kim Loo.", "Tan Kim Loo")).toBe(true);
+    expect(
+      checkLatinNames([{ source: 0, text: "Melantik Tan Kim Looi sebagai AJK." }], [src]).altered,
+    ).toEqual([0]);
+    expect(
+      checkLatinNames([{ source: 0, text: "Melantik Ajk seorang iaitu Tan Kim Loo." }], [src]).ok,
+    ).toBe(true);
+    // A Chinese honorific glued on is not a letter — "Tan Kim Loo先生" is whole.
+    expect(containsWholeLatinRun("秘书 Tan Kim Loo先生", "Tan Kim Loo")).toBe(true);
+  });
+
+  it("address shorthand around a name is furniture, not part of the name", async () => {
+    const { latinNameRuns } = await import("@/lib/minutes-compose");
+    expect(latinNameRuns("Tan Kim Loo 800101-07-1234. 8, Lrg 3 Tmn Aman,")).toEqual(["Tan Kim Loo"]);
+  });
 });
 
 describe("the PDF reads the meeting-title line", () => {
