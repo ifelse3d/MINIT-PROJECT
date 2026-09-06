@@ -21,7 +21,12 @@ type Call = { table: string; op: string; payload?: unknown; filters: string[] };
 
 const calls: Call[] = [];
 /** Set to an error to simulate a database WITHOUT the refunded_at column. */
-let updateError: { message: string } | null = null;
+let updateError: { message: string; code?: string } | null = null;
+/** 122 §3: whether migration 45's functions exist in the fake database.
+ *  Default false = the old path, which is what the tests above were written
+ *  against and what a database behind the migration still runs. */
+let rpcAvailable = false;
+const rpcCalls: { fn: string; args: unknown }[] = [];
 
 function builder(table: string, op: string, payload?: unknown) {
   const call: Call = { table, op, payload, filters: [] };
@@ -59,6 +64,19 @@ function builder(table: string, op: string, payload?: unknown) {
 }
 
 const fakeClient = {
+  rpc(fn: string, args: unknown) {
+    rpcCalls.push({ fn, args });
+    if (!rpcAvailable) {
+      return Promise.resolve({
+        data: null,
+        error: {
+          code: "PGRST202",
+          message: `Could not find the function public.${fn} in the schema cache`,
+        },
+      });
+    }
+    return Promise.resolve({ data: true, error: null });
+  },
   from(table: string) {
     return {
       update: (payload: unknown) => builder(table, "update", payload),
@@ -80,7 +98,9 @@ const { refundUsage } = await import("./usage");
 describe("refundUsage", () => {
   beforeEach(() => {
     calls.length = 0;
+    rpcCalls.length = 0;
     updateError = null;
+    rpcAvailable = false;
   });
 
   it("stamps refunded_at instead of deleting the row", async () => {
@@ -117,6 +137,42 @@ describe("refundUsage", () => {
 
     const ops = calls.filter((c) => c.table === "ai_usage").map((c) => c.op);
     expect(ops).toEqual(["update", "delete"]);
+  });
+
+  // 122 §3 (2026-09-07): the delete fallback is for ONE error only.
+  it("deletes on 42703 (undefined column) by code, not just by wording", async () => {
+    updateError = { code: "42703", message: "column does not exist" };
+    await refundUsage(7, { rowId: 42, spentCredit: false });
+    const ops = calls.filter((c) => c.table === "ai_usage").map((c) => c.op);
+    expect(ops).toEqual(["update", "delete"]);
+  });
+
+  it("does NOT delete the row — and its cost — on any other error", async () => {
+    // A network blip while stamping used to erase the cost record along with
+    // the refund. The row must stay; the failure is recorded instead.
+    updateError = { code: "57014", message: "canceling statement due to statement timeout" };
+    await refundUsage(7, { rowId: 42, spentCredit: false });
+    const ops = calls.filter((c) => c.table === "ai_usage").map((c) => c.op);
+    expect(ops).toEqual(["update"]);
+    expect(calls.some((c) => c.op === "delete")).toBe(false);
+    // and it was reported, not swallowed
+    expect(calls.some((c) => c.table === "app_errors" && c.op === "insert")).toBe(true);
+  });
+
+  it("gives a spent credit back through refund_ai_credit once migration 45 is in", async () => {
+    rpcAvailable = true;
+    await refundUsage(7, { rowId: 42, spentCredit: true });
+    expect(rpcCalls).toEqual([{ fn: "refund_ai_credit", args: { p_org_id: 7 } }]);
+    // no read-then-write on orgs any more
+    expect(calls.some((c) => c.table === "orgs")).toBe(false);
+  });
+
+  it("falls back to the read-then-write credit refund while 45 is not applied", async () => {
+    rpcAvailable = false;
+    await refundUsage(7, { rowId: 42, spentCredit: true });
+    expect(rpcCalls[0]?.fn).toBe("refund_ai_credit");
+    const orgUpdate = calls.find((c) => c.table === "orgs" && c.op === "update");
+    expect(orgUpdate?.payload).toEqual({ extra_credits: 4 });
   });
 });
 

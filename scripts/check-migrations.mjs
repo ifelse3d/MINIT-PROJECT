@@ -193,6 +193,24 @@ for (const [label, table, column] of probes) {
   );
 }
 
+// 2026-09-07 (migration 45, work order 122 §3): the atomic AI charge adds two
+// FUNCTIONS and no column, so the RPC is the probe. Only refund_ai_credit is
+// called, with org 0 — no such org, so the UPDATE touches zero rows and the
+// function simply returns false. 🔴 NEVER probe charge_ai_action: on a real
+// org it would charge a real action. 404/PGRST202 = 45 has not run.
+{
+  const r = await fetch(`${url}/rest/v1/rpc/refund_ai_credit`, {
+    method: "POST",
+    headers: { ...headers, "Content-Type": "application/json" },
+    body: JSON.stringify({ p_org_id: 0 }),
+  });
+  const text = await r.text();
+  const ok = (r.status === 200 || r.status === 204) && !/PGRST202/.test(text);
+  console.log(
+    `${ok ? "[ APPLIED  ]" : "[ NOT YET  ]"} ${"20260923000000 charge_ai_action / refund_ai_credit (122 §3)".padEnd(46)} rpc/refund_ai_credit${ok ? "" : "   " + text.slice(0, 120).replace(/s+/g, " ")}`,
+  );
+}
+
 // 2026-08-20: two of the migrations add NO column that PostgREST can see, so
 // "everything above says APPLIED" does NOT mean every file ran. Saying so out
 // loud, in the same idiom as npm run status, is cheaper than someone

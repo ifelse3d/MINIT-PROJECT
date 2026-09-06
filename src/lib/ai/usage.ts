@@ -17,13 +17,17 @@ import "server-only";
 import { getSupabase } from "@/db/supabase";
 import { getSupabaseServer, getSessionUser } from "@/db/supabase-server";
 import { getActiveOrg, type ActiveOrg } from "@/lib/active-org";
+import { captureAppError } from "@/lib/app-errors";
 import { can, permissionError, type Capability } from "@/lib/roles";
 import type { TokenUsage } from "./provider";
 import {
   AI_RATE_WINDOW_SECONDS,
   aiRateLimitPerMin,
+  chargeRpcOutcome,
   computeUsageState,
   decideCharge,
+  isMissingColumnError,
+  isMissingRpcError,
   isRateLimited,
   QUOTA_BLOCKED_MESSAGE,
   QuotaExceededError,
@@ -130,6 +134,47 @@ export async function checkAndRecordUsage(
   // burst that trips it never touches the credit-spend path at all.
   await assertNotRateLimited(orgId);
 
+  // K-2 (work order 27): which MEMBER triggered the action — best-effort.
+  // Metering must never depend on knowing the person; a failed lookup, or a
+  // database behind migration 25 (no user_id column), still meters the org.
+  let userId: string | null = null;
+  try {
+    userId = (await getSessionUser())?.id ?? null;
+  } catch {
+    userId = null;
+  }
+
+  // 122 §3 (migration 45): count + decide + insert in ONE SQL function under
+  // a per-org lock, so two requests on the last free action cannot both get
+  // through. D8: until J has pasted 45 the function is not there, PostgREST
+  // answers PGRST202, and the old path below runs exactly as before.
+  const atomic = await admin.rpc("charge_ai_action", {
+    p_org_id: orgId,
+    p_action: action,
+    p_user_id: userId,
+    p_start: startUtc,
+    p_end: endUtc,
+  });
+  if (!atomic.error) {
+    const outcome = chargeRpcOutcome(atomic.data);
+    if (outcome?.kind === "charged") {
+      return { rowId: outcome.rowId, spentCredit: outcome.spentCredit };
+    }
+    if (outcome?.kind === "blocked") {
+      throw new QuotaExceededError(computeUsageState(outcome.snapshot));
+    }
+    // Unrecognised shape: the function raised nothing and we understood
+    // nothing — fall through to the old path, which is self-contained.
+  } else if (!isMissingRpcError(atomic.error)) {
+    // The function exists and RAISED: it wrote nothing (the transaction
+    // rolled back), so the old path is safe to run — but this is not the
+    // "migration not applied yet" case, so it is worth a line in app_errors.
+    void captureAppError("checkAndRecordUsage", new Error(atomic.error.message), {
+      orgId,
+      code: atomic.error.code ?? "charge_ai_action",
+    });
+  }
+
   const [orgRes, countRes] = await Promise.all([
     admin
       .from("orgs")
@@ -170,15 +215,6 @@ export async function checkAndRecordUsage(
     }
   }
 
-  // K-2 (work order 27): which MEMBER triggered the action — best-effort.
-  // Metering must never depend on knowing the person; a failed lookup, or a
-  // database behind migration 25 (no user_id column), still meters the org.
-  let userId: string | null = null;
-  try {
-    userId = (await getSessionUser())?.id ?? null;
-  } catch {
-    userId = null;
-  }
   let { data: row, error } = await admin
     .from("ai_usage")
     .insert(userId ? { org_id: orgId, action, user_id: userId } : { org_id: orgId, action })
@@ -240,29 +276,47 @@ export async function refundUsage(
       .eq("id", charge.rowId)
       .eq("org_id", orgId);
     if (error) {
-      // D8: schema first, code second — but a tree running against a database
-      // where 20260821000000 has not been applied yet must still refund, or
-      // the column's absence silently starts charging people for calls that
-      // never happened. Falls back to the old behaviour, and stops doing so the
-      // moment the migration lands.
-      await admin
-        .from("ai_usage")
-        .delete()
-        .eq("id", charge.rowId)
-        .eq("org_id", orgId);
+      if (isMissingColumnError(error)) {
+        // D8: schema first, code second — but a tree running against a
+        // database where 20260821000000 has not been applied yet must still
+        // refund, or the column's absence silently starts charging people for
+        // calls that never happened. Falls back to the old behaviour, and
+        // stops doing so the moment the migration lands.
+        await admin
+          .from("ai_usage")
+          .delete()
+          .eq("id", charge.rowId)
+          .eq("org_id", orgId);
+      } else {
+        // 122 §3: ANY other error used to take the delete branch too, and a
+        // network blip during the stamp erased the cost record with the
+        // refund. Now the row (and its cost) stays; the failed refund is
+        // recorded so it can be seen, not silently turned into a delete.
+        void captureAppError("refundUsage", new Error(error.message), {
+          orgId,
+          code: error.code ?? "refund_stamp",
+        });
+      }
     }
     if (charge.spentCredit) {
-      // Give the credit back (plain increment; ties out with the stamp).
-      const { data: org } = await admin
-        .from("orgs")
-        .select("extra_credits")
-        .eq("id", orgId)
-        .maybeSingle();
-      if (org) {
-        await admin
+      // Give the credit back. 122 §3: as a SQL increment (migration 45) so
+      // two refunds landing together cannot lose one; before the migration
+      // is applied, the old read-then-write.
+      const { error: rpcError } = await admin.rpc("refund_ai_credit", {
+        p_org_id: orgId,
+      });
+      if (rpcError && isMissingRpcError(rpcError)) {
+        const { data: org } = await admin
           .from("orgs")
-          .update({ extra_credits: (org.extra_credits ?? 0) + 1 })
-          .eq("id", orgId);
+          .select("extra_credits")
+          .eq("id", orgId)
+          .maybeSingle();
+        if (org) {
+          await admin
+            .from("orgs")
+            .update({ extra_credits: (org.extra_credits ?? 0) + 1 })
+            .eq("id", orgId);
+        }
       }
     }
   } catch {

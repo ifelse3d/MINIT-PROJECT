@@ -3,10 +3,13 @@ import {
   AI_ACTIONS,
   aiRateLimitPerMin,
   ASK_INTENT_COSTS,
+  chargeRpcOutcome,
   computeUsageState,
   decideCharge,
   DEFAULT_AI_RATE_LIMIT_PER_MIN,
   isAiAction,
+  isMissingColumnError,
+  isMissingRpcError,
   isRateLimited,
   QuotaExceededError,
   RATE_LIMITED_MESSAGE,
@@ -327,5 +330,81 @@ describe("§5 — percentages include the top-up", () => {
         }
       }
     }
+  });
+});
+
+// 122 §3 (2026-09-07): the atomic charge's decoder and the two error
+// classifiers that decide "old path or new" and "delete or keep".
+describe("chargeRpcOutcome (migration 45 decoder)", () => {
+  const charged = {
+    row_id: 77,
+    spent_credit: false,
+    blocked: false,
+    used_this_month: 3,
+    monthly_free_quota: 15,
+    extra_credits: 0,
+  };
+
+  it("reads a charged row, whether PostgREST wraps it in an array or not", () => {
+    expect(chargeRpcOutcome([charged])).toEqual({ kind: "charged", rowId: 77, spentCredit: false });
+    expect(chargeRpcOutcome(charged)).toEqual({ kind: "charged", rowId: 77, spentCredit: false });
+    expect(chargeRpcOutcome([{ ...charged, spent_credit: true }])).toEqual({
+      kind: "charged",
+      rowId: 77,
+      spentCredit: true,
+    });
+  });
+
+  it("turns a blocked answer into the snapshot the QuotaExceededError needs", () => {
+    const blocked = {
+      row_id: null,
+      spent_credit: false,
+      blocked: true,
+      used_this_month: 15,
+      monthly_free_quota: 15,
+      extra_credits: 0,
+    };
+    expect(chargeRpcOutcome([blocked])).toEqual({
+      kind: "blocked",
+      snapshot: { usedThisMonth: 15, monthlyFreeQuota: 15, extraCredits: 0 },
+    });
+    // and that snapshot really does compute to "blocked"
+    const out = chargeRpcOutcome([blocked]);
+    expect(out?.kind === "blocked" && computeUsageState(out.snapshot).blocked).toBe(true);
+  });
+
+  it("answers null — take the old path — for anything it does not recognise", () => {
+    expect(chargeRpcOutcome(null)).toBeNull();
+    expect(chargeRpcOutcome([])).toBeNull();
+    expect(chargeRpcOutcome({})).toBeNull();
+    expect(chargeRpcOutcome([{ ...charged, row_id: null }])).toBeNull();
+    expect(chargeRpcOutcome([{ ...charged, row_id: 0 }])).toBeNull();
+    expect(chargeRpcOutcome([{ ...charged, used_this_month: "3" }])).toBeNull();
+    expect(chargeRpcOutcome([{ ...charged, blocked: "no" }])).toBeNull();
+  });
+});
+
+describe("isMissingRpcError / isMissingColumnError", () => {
+  it("recognises PostgREST's 'function not found' by code or by wording", () => {
+    expect(isMissingRpcError({ code: "PGRST202", message: "x" })).toBe(true);
+    expect(
+      isMissingRpcError({
+        code: null,
+        message: "Could not find the function public.charge_ai_action(...) in the schema cache",
+      }),
+    ).toBe(true);
+    expect(isMissingRpcError({ code: "P0002", message: "no such organisation" })).toBe(false);
+    expect(isMissingRpcError(null)).toBe(false);
+  });
+
+  it("only 42703 (or the column named as missing) may turn a refund into a delete", () => {
+    expect(isMissingColumnError({ code: "42703", message: "column does not exist" })).toBe(true);
+    expect(isMissingColumnError({ message: 'column "refunded_at" does not exist' })).toBe(true);
+    expect(
+      isMissingColumnError({ message: "Could not find the 'refunded_at' column of 'ai_usage' in the schema cache" }),
+    ).toBe(true);
+    expect(isMissingColumnError({ code: "57014", message: "canceling statement due to statement timeout" })).toBe(false);
+    expect(isMissingColumnError({ message: "fetch failed" })).toBe(false);
+    expect(isMissingColumnError(undefined)).toBe(false);
   });
 });

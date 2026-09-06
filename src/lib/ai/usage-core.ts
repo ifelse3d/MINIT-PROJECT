@@ -302,3 +302,97 @@ export const QUOTA_BLOCKED_MESSAGE = {
   zh: "这个月的 AI 用量已经用完了。下个月 1 号会自动重新开始。在这之前，您所有的记录、收据和文件都还能照常打开和下载，只是不能再让 AI 读新的照片。想现在增加用量，请联系帮您安装 Minit 的人。",
   en: "This month's AI help has all been used. It starts again on the 1st of next month. Until then all your records, receipts and documents still open and download as normal — only reading new photos is paused. To add more now, contact whoever set Minit up for your organisation.",
 } as const;
+
+// --- the atomic charge (migration 45, work order 122 §3) ---------------------
+//
+// checkAndRecordUsage used to COUNT this month's rows, decide here in
+// decideCharge, then INSERT — with nothing holding the org still in between,
+// so two requests arriving on the last free action both got through. The
+// count + decision + insert now happen inside ONE SQL function under a
+// per-org advisory lock (public.charge_ai_action). This decoder is the pure
+// half: it turns whatever PostgREST hands back into a decision the route can
+// act on, and answers null for anything it does not recognise — null means
+// "take the old path", never "charge anyway".
+
+/** One row of charge_ai_action's result, as PostgREST returns it. */
+export type ChargeRpcRow = {
+  row_id: number | null;
+  spent_credit: boolean;
+  blocked: boolean;
+  used_this_month: number;
+  monthly_free_quota: number;
+  extra_credits: number;
+};
+
+export type ChargeRpcOutcome =
+  | { kind: "charged"; rowId: number; spentCredit: boolean }
+  | { kind: "blocked"; snapshot: UsageSnapshot };
+
+function isFiniteInt(v: unknown): v is number {
+  return typeof v === "number" && Number.isInteger(v);
+}
+
+/**
+ * Decode the RPC's answer. A set-returning function comes back as an array
+ * of one row; a bare object is accepted too. Anything malformed → null, so a
+ * half-applied migration or a PostgREST quirk falls back to the old
+ * count-then-insert path instead of either crashing or silently charging.
+ */
+export function chargeRpcOutcome(data: unknown): ChargeRpcOutcome | null {
+  const row = Array.isArray(data) ? data[0] : data;
+  if (typeof row !== "object" || row === null) return null;
+  const r = row as Partial<ChargeRpcRow>;
+  if (
+    typeof r.blocked !== "boolean" ||
+    !isFiniteInt(r.used_this_month) ||
+    !isFiniteInt(r.monthly_free_quota) ||
+    !isFiniteInt(r.extra_credits)
+  ) {
+    return null;
+  }
+  if (r.blocked) {
+    return {
+      kind: "blocked",
+      snapshot: {
+        usedThisMonth: r.used_this_month,
+        monthlyFreeQuota: r.monthly_free_quota,
+        extraCredits: r.extra_credits,
+      },
+    };
+  }
+  if (!isFiniteInt(r.row_id) || r.row_id <= 0 || typeof r.spent_credit !== "boolean") {
+    return null;
+  }
+  return { kind: "charged", rowId: r.row_id, spentCredit: r.spent_credit };
+}
+
+/**
+ * "The function is not in this database yet" — PostgREST's PGRST202, or the
+ * schema-cache wording it uses for the same thing. D8: the migration may
+ * land after the code, and until it does the old path must run unchanged.
+ * Any OTHER error is also a reason to fall back (the function raised, so it
+ * wrote nothing) — but it is reported, because it is not expected.
+ */
+export function isMissingRpcError(error: {
+  code?: string | null;
+  message?: string | null;
+} | null | undefined): boolean {
+  if (!error) return false;
+  if (error.code === "PGRST202") return true;
+  return /could not find the function|schema cache/i.test(error.message ?? "");
+}
+
+/**
+ * Postgres 42703 = undefined_column. The ONLY error that may turn a failed
+ * refunded_at stamp into a row DELETE (the pre-migration fallback). Anything
+ * else — a network blip, a timeout — must leave the row and its cost alone.
+ */
+export function isMissingColumnError(error: {
+  code?: string | null;
+  message?: string | null;
+} | null | undefined): boolean {
+  if (!error) return false;
+  if (error.code === "42703") return true;
+  return /refunded_at/.test(error.message ?? "") &&
+    /does not exist|schema cache|could not find/i.test(error.message ?? "");
+}
