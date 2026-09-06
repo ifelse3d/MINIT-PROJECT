@@ -256,6 +256,20 @@ console.log(`
           pgvector EXTENSION. If it did not run, check by eye:
             select extname from pg_extension where extname = 'vector';
 
+          20260922000000_fix_set_org_plan.sql (migration 44, 118 §7-2) only
+          REPLACES the body of admin_set_org_plan — no column, and 🔴 NEVER
+          probe it by calling it: a call on a real org would really change
+          that org's plan. PostgREST cannot show a function's body, so this
+          one is eyes only. The fix is the transaction-local escape hatch
+          the privileged-columns trigger documents; confirm it is in the
+          body that is actually installed:
+
+            select prosrc like '%allow_privileged_org_update%'
+              from pg_proc where proname = 'admin_set_org_plan';
+                                                  → must be true
+          (false = migration 42's original body is still installed and the
+          console's "Change plan" button still fails for every org.)
+
           20260823000000_cari_minit_rpc.sql IS probed now (the line above,
           rpc/cari_minit) — but the probe can only prove the function EXISTS.
           It cannot see how the function was declared, and that second fact is

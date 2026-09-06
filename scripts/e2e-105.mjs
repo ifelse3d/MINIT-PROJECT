@@ -288,6 +288,38 @@ async function run() {
       b?.click();
     });
     await new Promise((r) => setTimeout(r, 2500));
+    // The document page shows a document only once every field is reviewed
+    // (and attendance is settled) — the same gate a person walks through.
+    await page.goto(`${BASE}/minutes`, { waitUntil: "networkidle2" });
+    await page.waitForFunction(
+      () => [...document.querySelectorAll("button")].some((b) => /一键确认|sahkan .* kuning|Everything is fine/i.test(b.textContent || "")),
+      { timeout: 15000 },
+    );
+    await page.evaluate(() => {
+      const b = [...document.querySelectorAll("button")].find((x) =>
+        /一键确认|sahkan .* kuning|Everything is fine/i.test(x.textContent || ""),
+      );
+      b?.click();
+    });
+    await new Promise((r) => setTimeout(r, 800));
+    // Proof for the report: the agent's sentence and the ask-back cards at
+    // the end of step 1 (118 §3/§6).
+    {
+      const el = await page.$('[data-probe="agent-check-in"]');
+      if (el) {
+        await el.evaluate((n) => n.scrollIntoView({ block: "center" }));
+        await new Promise((r) => setTimeout(r, 300));
+        await el.screenshot({ path: path.join(REPORTS, "e2e105-check-in-step1.png") });
+      }
+    }
+    await page.goto(`${BASE}/minutes/attendance`, { waitUntil: "networkidle2" });
+    await page.evaluate(() => {
+      const b = [...document.querySelectorAll("button")].find((x) =>
+        /稍后补上|kemudian|insert the attendance later/i.test(x.textContent || ""),
+      );
+      b?.click();
+    });
+    await new Promise((r) => setTimeout(r, 800));
     await page.goto(`${BASE}/minutes/document`, { waitUntil: "networkidle2" });
     await new Promise((r) => setTimeout(r, 1200));
 
@@ -312,6 +344,20 @@ async function run() {
       "③ the ambiguous shorthand line is shown as written, not resolved",
       bodyText.includes("Agenda 2.1 diganti Chan Mei (Ooi Bee Huar)"),
     );
+    // 118 §3/§6: the two 'ganti' lines can each be read two ways — the agent
+    // says so at the end of the step, and asks, in plain words, with nothing
+    // pre-selected and no quota spent.
+    const checkIn = await page.$('[data-probe="agent-check-in"]');
+    const uncertain = checkIn ? await checkIn.evaluate((n) => n.getAttribute("data-uncertain")) : null;
+    check("🔴 ③ the agent says it is unsure about the two 'ganti' lines", uncertain === "2", `uncertain=${uncertain}`);
+    const cards = await page.$$('[data-card="ask-back"]');
+    check("③ one ask-back card per two-way line, none pre-answered", cards.length === 2, `cards=${cards.length}`);
+    check("③ the card asks in plain words", bodyText.includes("这一条有两种读法"));
+    if (checkIn) {
+      await checkIn.evaluate((n) => n.scrollIntoView({ block: "center" }));
+      await new Promise((r) => setTimeout(r, 300));
+      await checkIn.screenshot({ path: path.join(REPORTS, "e2e105-check-in-step3.png") });
+    }
     await page.screenshot({ path: path.join(REPORTS, "e2e105-item-sources.png") });
 
     // -----------------------------------------------------------------------

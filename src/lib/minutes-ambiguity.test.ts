@@ -97,6 +97,15 @@ describe("§3 — what is NOT a question (亂問一樣是病)", () => {
     expect(findAmbiguities(["Melantik seorang AJK baharu pada mesyuarat akan datang"])).toEqual([]);
   });
 
+  it("④ as the reader actually spelled it — 'seong.' and a lowercase middle name — still asks", () => {
+    const a = findAmbiguities(["4. lanti AJK seong. Tan kim Loo 800101 07 1234 . 8, Lrg 3 Tmn Aman,"]);
+    expect(a).toHaveLength(1);
+    expect(a[0].kind).toBe("appointment");
+    expect(a[0].readings[0].value).toBe(
+      "4. Melantik Tan kim Loo sebagai seorang Ahli Jawatankuasa. 800101 07 1234 . 8, Lrg 3 Tmn Aman,",
+    );
+  });
+
   it("the other real shape from the printed page — 'A ganti - B' — IS asked about", () => {
     const a = findAmbiguities(["Ooi Bee Huay ganti - Chan Mei"]);
     expect(a).toHaveLength(1);

@@ -65,14 +65,43 @@ function namesIn(text: string): { name: string; at: number }[] {
 
 // --- shape 1: 「lanti Ajk seorg. <name>」 ------------------------------------
 
+/** The shorthand as a pen (and a reader of a pen) actually spells it —
+ *  "seorg.", "seong." (the real page), "seorang", "sorg". */
 const APPOINT_SHORTHAND =
-  /\b(lanti|lantik|melantik)\b[^\n]*?\b(seorg|seorang|sorg|s\/org)\b\.?\s*(?:iaitu\s+)?/i;
+  /\b(lanti|lantik|melantik)\b[^\n]*?\b(seorg|seong|seorang|sorg|s\/org)\b\.?\s*(?:iaitu\s+)?/i;
+
+/** The name right after the shorthand: up to four words of letters, a
+ *  lowercase middle word allowed ("Tan kim Loo" is how the real page was
+ *  read), stopping at a digit or punctuation; trailing Malay function words
+ *  are not part of a name. */
+const NAME_AFTER = /^\s*([A-Za-z][A-Za-z'.-]*(?:\s+[A-Za-z][A-Za-z'.-]*){0,3})/;
+const NOT_A_NAME_WORD = new Set([
+  "sebagai", "untuk", "dan", "di", "ke", "pada", "yang", "bagi", "dengan",
+  "ajk", "ahli", "jawatankuasa", "baru", "baharu", "iaitu", "mesyuarat",
+  "agung", "pengerusi", "naib", "setiausaha", "bendahari", "akan", "datang",
+]);
+
+/** 寧缺勿濫: the run stops at the first word that is not a name's, must
+ *  start with a capital, and must be at least two words — a single word or
+ *  a genre phrase ("Ahli Jawatankuasa", "AJK baharu") is not a person. */
+function nameAfter(after: string): { name: string; at: number } | null {
+  const m = NAME_AFTER.exec(after);
+  if (!m) return null;
+  const words: string[] = [];
+  for (const w of m[1].split(/\s+/)) {
+    if (NOT_A_NAME_WORD.has(w.toLowerCase())) break;
+    words.push(w);
+  }
+  if (words.length < 2 || !/^[A-Z]/.test(words[0])) return null;
+  const name = words.join(" ");
+  return { name, at: after.indexOf(name) };
+}
 
 function appointment(text: string): Ambiguity["readings"] | null {
   const m = APPOINT_SHORTHAND.exec(text);
   if (!m) return null;
   const after = text.slice(m.index + m[0].length);
-  const who = namesIn(after)[0];
+  const who = namesIn(after)[0] ?? nameAfter(after);
   if (!who || who.at > 2) return null; // the name must follow the shorthand
   const prefix = text.slice(0, m.index);
   const rest = after.slice(who.at + who.name.length).replace(/^[\s.,;:]+/, "");
