@@ -281,11 +281,18 @@ async function run() {
       // submit action confirmed), the admin's server render just needs a
       // moment. Poll with a hard ceiling instead: a real regression still
       // fails after 15s, only the timing noise is absorbed.
+      // 122 场 (2026-09-07): the poll above re-NAVIGATED on every miss, and
+      // the snapshot was taken the instant networkidle2 fired — measured
+      // 2087ms — while the pending list (a client-side loadExpenses after
+      // hydration) landed at 2351ms. Each retry reset that race, so five
+      // tries failed five times on a page that showed the claim 0.26s later.
+      // One navigation, then WAIT for the text: a real regression still
+      // fails after 15s, and a quarter-second of hydration no longer does.
+      await a.goto(`${BASE}/money/expenses`, { waitUntil: "networkidle2" });
       let adminSees = false;
-      for (let i = 0; i < 5 && !adminSees; i++) {
-        await a.goto(`${BASE}/money/expenses`, { waitUntil: "networkidle2" });
+      for (let i = 0; i < 60 && !adminSees; i++) {
         adminSees = (await bodyText(a)).includes("等您处理");
-        if (!adminSees) await sleep(3000);
+        if (!adminSees) await sleep(250);
       }
       check("W-2 the admin sees the pending claim", adminSees);
       if (adminSees) {
