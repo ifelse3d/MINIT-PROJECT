@@ -36,6 +36,9 @@ export type DraftMinutesPromptParams = {
     altered: number[];
     /** Sources a MERGED line lost a name or figure from (checkMergedFacts). */
     dropped?: number[];
+    /** 118 §1: sources whose line was given a DOER or a DECISION the item
+     *  never carried (checkInventedAgent). */
+    invented?: number[];
   };
 };
 
@@ -71,7 +74,7 @@ JSON, and nothing else:
   "sections": [
     {
       "heading": "Section heading, in ${language}",
-      "items": [ { "source": 0, "kind": "perbincangan" | "keputusan" | "tindakan", "text": "the item, phrased for a minutes document, in ${language}" } ]
+      "items": [ { "source": 0, "kind"?: "keputusan" | "tindakan", "text": "the item, phrased for a minutes document, in ${language}" } ]
     }
   ],
   "unresolved": [ { "source": 0, "text": "..." } ]
@@ -80,14 +83,43 @@ JSON, and nothing else:
 "source" is ONE index — or a LIST of indices, [3, 4, 5], when one line of the
 document covers several items (see MERGING LIKE ITEMS below).
 
-"kind" says what the line RECORDS, and the document prints the matching formal
-label (Perbincangan / Keputusan / Tindakan) in front of it:
-- "keputusan"    — the meeting decided or agreed something.
-- "tindakan"     — a task or duty was assigned to a named person or group.
-- "perbincangan" — something was discussed, reported or noted, with no decision
-                   and no assignment. When unsure, use "perbincangan".
-"kind" changes only the label; it must not change the text. Items in
-"unresolved" take no "kind".
+"kind" is OPTIONAL, and it is EARNED BY THE WORDS ON THE PAGE — never by
+your reading of them. The document prints a formal label (Keputusan /
+Tindakan) in front of a line only when the item ITSELF carries the words:
+- "keputusan" ONLY when the item's own text says a decision was taken —
+  memutuskan, diputuskan, lulus, diluluskan, bersetuju, dipersetujui, 通过,
+  決定/决定, 議決/议决, approved, agreed, decided.
+- "tindakan"  ONLY when the item itself names WHO and WHAT THEY ARE TO DO —
+  a person or group, plus a task that is THEIRS to carry out (ditugaskan,
+  diminta, bertanggungjawab, 负责, 委派, a duty-roster line like
+  "游行队伍带头：嘉益、柔依").
+- Otherwise OMIT "kind" and write the item as one plain line. There is no
+  third label: "something was discussed" is not a label, it is the absence
+  of one.
+A label the words do not earn is removed by code; a label never changes the
+text. Items in "unresolved" take no "kind".
+
+=== NO DOER THE PAGE DID NOT NAME (checked by code) ===
+A note usually states a task without saying who does it, and Bahasa Malaysia
+lets you write it that way too. THE RULE, IN ONE SENTENCE: if the item does
+not say who does something, your sentence does not say who does it either.
+- "X ditugaskan untuk…", "X diminta…", "X diarahkan…", "X bertanggungjawab…",
+  "X akan menguruskan…", "Mesyuarat memutuskan agar X…", "Mesyuarat bersetuju
+  supaya X…" are FORBIDDEN unless the item itself carries the corresponding
+  words (tugas, minta, arah, tanggungjawab, memutuskan, bersetuju, 负责,
+  委派, 安排…). Never supply a doer to make a sentence grammatical.
+- An appointment is not an assignment. "lanti Ajk seorg. Tan Kim Loo"
+  records that Tan Kim Loo IS APPOINTED as one committee member —
+  "Melantik Ajk seorang iaitu Tan Kim Loo." Writing "Tan Kim Loo ditugaskan
+  untuk melantik seorang Ahli Jawatankuasa" turns the person being
+  appointed into the person doing the appointing: the worst thing this
+  document can do, and the reason this rule exists.
+- The same for a decision: an item that does not say the meeting decided
+  or agreed is not written as "Mesyuarat memutuskan/bersetuju…". Record what
+  the line records; the label, if any, is earned separately (above).
+- When a line can be read two ways (who replaced whom, who appointed whom),
+  keep the ambiguity: write it as it stands, expanded only in spelling, and
+  never pick a reading.
 
 === THE RULE THAT IS CHECKED BY CODE ===
 Every index from 0 to ${resolutionTexts.length - 1} must appear EXACTLY ONCE
@@ -151,14 +183,15 @@ detail, in formal ${language}, ending with a full stop.
 SHORTHAND IS EXPANDED; FACTS ARE NEVER ADDED. A telegraphic note is written
 out as the full formal sentence it abbreviates. Worked example: the item
 "5 lanti AJK baru. Tan Mei Lee 800101-07-1234 - 8, Lrg 3 Tmn Aman" becomes
-"Mesyuarat bersetuju melantik Tan Mei Lee (No. K/P: 800101-07-1234),
-beralamat di 8, Lorong 3, Taman Aman, sebagai Ahli Jawatankuasa baharu." —
-the abbreviations written in full (lanti → melantik, mes. agung → mesyuarat
-agung, Lrg → Lorong, Tmn → Taman), every digit copied exactly, nothing new.
+"Melantik Tan Mei Lee (No. K/P: 800101-07-1234), beralamat di 8, Lorong 3,
+Taman Aman, sebagai Ahli Jawatankuasa baharu." — the abbreviations written
+in full (lanti → melantik, mes. agung → mesyuarat agung, Lrg → Lorong, Tmn →
+Taman), every digit copied exactly, nothing new. Note what is NOT there: no
+"Mesyuarat bersetuju" (the note never said the meeting agreed), no doer.
 Expanding an abbreviation is WORDING, which is your job; adding anything the
-note does not carry (a date, a reason, an honorific, a second person) is
-INVENTION — never do that. A shorthand word you cannot confidently expand
-stays exactly as written.
+note does not carry (a date, a reason, an honorific, a second person, a
+doer, a decision) is INVENTION — never do that. A shorthand word you cannot
+confidently expand stays exactly as written.
 
 The notes mix Bahasa Malaysia, Chinese and English on one page. THE ORDINARY
 WORDS COME OUT IN ${language.toUpperCase()}; ONLY THE NAMES KEEP THEIR OWN
@@ -212,6 +245,12 @@ function repairProblems(repair: NonNullable<DraftMinutesPromptParams["repair"]>)
       ? `MERGED AWAY (a merged line lost this item's name or number — a merged ` +
         `line must still contain every name and every figure of every index in ` +
         `its "source" list): ${repair.dropped.join(", ")}`
+      : "",
+    repair.invented?.length
+      ? `INVENTED A DOER OR A DECISION (your sentence says WHO does something, ` +
+        `or that the meeting decided/agreed, and the item itself carries no such ` +
+        `words — write the line without a doer and without a verdict, expanded ` +
+        `only in spelling): ${repair.invented.join(", ")}`
       : "",
   ]
     .filter(Boolean)
@@ -292,13 +331,21 @@ this does not hold.
   start of the rewritten line, unchanged.
 - SHORTHAND IS EXPANDED; FACTS ARE NEVER ADDED. A telegraphic paragraph
   ("5 lanti AJK baru. Tan Mei Lee 800101-07-1234 - 8, Lrg 3 Tmn Aman") is
-  written out as the full formal sentence it abbreviates ("Mesyuarat
-  bersetuju melantik Tan Mei Lee (No. K/P: 800101-07-1234), beralamat di
-  8, Lorong 3, Taman Aman, sebagai Ahli Jawatankuasa baharu.") — common
-  abbreviations in full (lanti → melantik, mes. agung → mesyuarat agung,
-  Lrg → Lorong, Tmn → Taman), every digit exact, and NOTHING the paragraph
-  does not carry (no date, no reason, no honorific, no second person). A
-  shorthand word you cannot confidently expand stays exactly as written.
+  written out as the full formal sentence it abbreviates ("Melantik Tan
+  Mei Lee (No. K/P: 800101-07-1234), beralamat di 8, Lorong 3, Taman Aman,
+  sebagai Ahli Jawatankuasa baharu.") — common abbreviations in full
+  (lanti → melantik, mes. agung → mesyuarat agung, Lrg → Lorong, Tmn →
+  Taman), every digit exact, and NOTHING the paragraph does not carry (no
+  date, no reason, no honorific, no second person, no doer, no "Mesyuarat
+  bersetuju"). A shorthand word you cannot confidently expand stays exactly
+  as written.
+- NO DOER THE PARAGRAPH DID NOT NAME (checked by code). If the paragraph
+  does not say who does something, your sentence does not say who does it
+  either: "X ditugaskan untuk…", "X diminta…", "Mesyuarat memutuskan agar…"
+  are forbidden unless the paragraph carries those words. "lanti Ajk seorg.
+  Tan Kim Loo" is Tan Kim Loo BEING appointed ("Melantik Ajk seorang iaitu
+  Tan Kim Loo."), never Tan Kim Loo appointing someone. A line that can be
+  read two ways is written as it stands — you never pick a reading.
 - Do not add anything that is not in the paragraph you were given.${glossaryBlock}`;
 
   if (!repair) return base;

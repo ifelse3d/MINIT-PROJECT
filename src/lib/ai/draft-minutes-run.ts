@@ -9,6 +9,7 @@ import {
   type MinutesPlan,
 } from "@/lib/minutes-compose";
 import { writesInChinese, type MinutesLang } from "@/lib/minutes-lang";
+import { checkInventedAgent, enforceKinds } from "@/lib/minutes-guards";
 import type { TokenUsage, VisionJsonProvider } from "./provider";
 
 // ---------------------------------------------------------------------------
@@ -95,8 +96,16 @@ export async function runDraftMinutesPlan(opts: {
     const altered = [...new Set([...names.altered, ...latin.altered])].sort(
       (a, b) => a - b,
     );
-    if (coverage.ok && altered.length === 0 && merged.ok) {
-      return { ok: true, plan: parsedPlan.data };
+    // 118 §1: a doer or a verdict the item never carried is invention —
+    // J's own note ④ came out as "<name> ditugaskan untuk melantik…", the
+    // person being appointed written as the appointer. Sent back once, like
+    // every other miss; on a second miss the plain template wins.
+    const agent = checkInventedAgent(parsedPlan.data, resolutionTexts);
+    if (coverage.ok && altered.length === 0 && merged.ok && agent.ok) {
+      // 118 §1-1: labels are EARNED by the words on the page, checked here
+      // — an unearned one is dropped, never fatal (a label only ever
+      // changes the prefix, so dropping it costs nobody their document).
+      return { ok: true, plan: enforceKinds(parsedPlan.data, resolutionTexts) };
     }
     repair = {
       missing: coverage.missing,
@@ -104,6 +113,7 @@ export async function runDraftMinutesPlan(opts: {
       unknown: coverage.unknown,
       altered,
       dropped: merged.dropped,
+      invented: agent.invented,
     };
   }
   return { ok: false, repair };
@@ -196,19 +206,23 @@ export async function runPhraseMinutesItems(opts: {
     const altered = [...new Set([...names.altered, ...latin.altered])].sort(
       (a, b) => a - b,
     );
+    // 118 §1-3: the same no-invented-doer rule as the arranging loop — this
+    // pass rewrites paragraphs too, and has the same temptation.
+    const agent = checkInventedAgent(pseudoPlan, allTexts);
 
     if (
       missing.length === 0 &&
       duplicated.length === 0 &&
       unknown.length === 0 &&
-      altered.length === 0
+      altered.length === 0 &&
+      agent.ok
     ) {
       return {
         ok: true,
         phrased: new Map(parsed.data.items.map((it) => [it.source, it.text])),
       };
     }
-    repair = { missing, duplicated, unknown, altered };
+    repair = { missing, duplicated, unknown, altered, invented: agent.invented };
   }
   return { ok: false };
 }
