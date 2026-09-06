@@ -28,6 +28,9 @@ export type DraftMinutesPromptParams = {
   lang?: MinutesLang;
   /** The organisation's own vocabulary, already formatted (src/lib/glossary.ts). */
   glossaryBlock?: string;
+  /** 118 §3: items a person has not yet chosen a reading for (or chose to
+   *  keep as written). Written EXACTLY as they stand; code enforces it. */
+  verbatimIndices?: number[];
   /** Appended when a first attempt failed the coverage check (rule 7). */
   repair?: {
     missing: number[];
@@ -55,12 +58,24 @@ export function draftMinutesPrompt({
   resolutionTexts,
   lang = "bm",
   glossaryBlock = "",
+  verbatimIndices = [],
   repair,
 }: DraftMinutesPromptParams): string {
   const language = LANGUAGE_NAME[lang];
   const numbered = resolutionTexts
     .map((t, i) => `${i}: ${t}`)
     .join("\n");
+  const asWritten =
+    verbatimIndices.length === 0
+      ? ""
+      : `
+
+=== COPIED AS WRITTEN — a person has not yet chosen the reading ===
+Items ${verbatimIndices.join(", ")} can each be read two ways (who replaced
+whom, who was appointed), and nobody has said which reading is meant. Write
+each of them EXACTLY as it stands — its own words, its own spelling, no
+label, no doer — and place it in the section where it belongs. Code replaces
+anything else you write for these items with the original line.`;
 
   const base = `You are organising the confirmed contents of a Malaysian society's meeting notes into the structure of a formal set of minutes, to be written in ${language}. A human has already verified every item below; your job is to decide how they should be ARRANGED and how each should be PHRASED — not to decide what is true.
 
@@ -236,7 +251,7 @@ into new words (writing 青班 when the page wrote 青/小/小小班 fails the
 character check).
 
 Do not add a fact that is not in the items you were given. A line's "source"
-must list exactly the items that line covers — nothing folded in silently.${glossaryBlock}`;
+must list exactly the items that line covers — nothing folded in silently.${asWritten}${glossaryBlock}`;
 
   if (!repair) return base;
 

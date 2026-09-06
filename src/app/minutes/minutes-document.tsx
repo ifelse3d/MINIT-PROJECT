@@ -22,6 +22,7 @@ import {
 } from "@/lib/roster-names";
 import { glossaryTermSubstitutions, splitFlaggedLines } from "@/lib/bm-glossary";
 import { useMinutes } from "./minutes-store";
+import { AskBackCards } from "./ask-back-cards";
 import { ItemSources } from "./item-sources";
 
 // ---------------------------------------------------------------------------
@@ -512,6 +513,10 @@ export function MinutesDocument() {
               {shownDocument}
             </pre>
           )}
+          {/* 118 §3: the same questions as on the review step — a line with
+              two readings stays verbatim in the document above until one is
+              chosen here or there. */}
+          <AskBackCards />
           {/* 118 §2-3: from any line of the document, one look back at the
               words the paper carried and where they were read. This is the
               path the removed 「正式版／原文」 card used to provide. */}

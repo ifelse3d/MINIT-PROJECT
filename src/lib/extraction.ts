@@ -196,6 +196,13 @@ export const resolutionSchema = z.object({
   section_no: z.string().max(20).optional().catch(undefined),
   section_title: z.string().max(200).optional().catch(undefined),
   own_no: z.string().max(20).optional().catch(undefined),
+  /**
+   * 118 §3: a person looked at a line that can be read two ways (see
+   * src/lib/minutes-ambiguity.ts) and said "keep it as written". Never set
+   * by the model — the ask-back card sets it; the document then carries the
+   * line verbatim and stops asking. Optional + catch: old data has no key.
+   */
+  as_written: z.boolean().optional().catch(undefined),
 });
 
 export const figureSchema = z.object({

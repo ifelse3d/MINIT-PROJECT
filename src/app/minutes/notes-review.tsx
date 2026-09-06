@@ -14,6 +14,7 @@ import { EMPTY_MEETING_FACTS, type KnownMeetingFacts } from "@/lib/meeting-facts
 import { MEETING_TYPES, meetingTypeUiLabelTri } from "@/lib/meeting-types";
 import { formatRm } from "@/lib/minutes-draft";
 import { parseRmToCents } from "@/lib/receipts";
+import { AskBackCards } from "./ask-back-cards";
 import { BeforeReading } from "./before-reading";
 import { DiscussSection } from "./discuss-section";
 import { FieldRow } from "./field-row";
@@ -1275,6 +1276,9 @@ export function NotesReview() {
           total={groups.resolutions.total}
           defaultOpen={firstUnfinishedHere === "resolutions"}
         >
+          {/* 118 §3: the lines MinitAI can read two ways, asked in plain
+              words, no reading pre-selected, no quota. */}
+          <AskBackCards />
           {/* #30: grouped by kind when the model (or a human) labelled the
               lines; a wholly unlabelled extraction renders exactly as the old
               flat list. The row's index into extraction.resolutions is kept,

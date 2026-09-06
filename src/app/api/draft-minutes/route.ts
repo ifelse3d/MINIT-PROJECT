@@ -20,6 +20,7 @@ import { glossaryAllowedRuns, glossaryPromptBlockForWriting } from "@/lib/glossa
 import { loadGlossary } from "@/lib/glossary-server";
 import { isMinutesLang, type MinutesLang } from "@/lib/minutes-lang";
 import { normalizeFullwidth } from "@/lib/bm-guard";
+import { verbatimIndices } from "@/lib/minutes-ambiguity";
 import { ROUTE_AI_DEADLINE_MS } from "@/lib/ai/http";
 import { vendorFailureResponse } from "@/lib/ai/vendor-failure";
 
@@ -130,9 +131,19 @@ export async function POST(req: Request) {
     //   * some paragraphs need the target language → ONE charged action;
     //     the model phrases those paragraphs in place, checked by counting.
     // ------------------------------------------------------------------
+    // 118 §3: lines that can be read two ways stay EXACTLY as written until a
+    // person picks a reading (or says "keep it as written"). Both paths below
+    // honour the same list — the structured one by never sending those
+    // paragraphs to be phrased, the arranging one inside the loop.
+    const locked = verbatimIndices(extraction);
+
     const structure = minutesStructure(extraction);
     if (structure) {
-      const work = buildPhraseWork(extraction, lang, { polish });
+      const allWork = buildPhraseWork(extraction, lang, { polish });
+      const work = {
+        ...allWork,
+        items: allWork.items.filter((it) => !locked.includes(it.index)),
+      };
       if (work.items.length === 0) {
         const markdown = finishMd(composeStructuredMinutesMd(extraction, composeOpts));
         return NextResponse.json({ markdown, provider: "structure" });
@@ -212,6 +223,7 @@ export async function POST(req: Request) {
         lang,
         glossaryBlock,
         allowedRuns,
+        verbatimIndices: locked,
         onUsage,
         deadlineAt,
       });

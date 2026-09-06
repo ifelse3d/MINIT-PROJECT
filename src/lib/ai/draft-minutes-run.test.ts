@@ -142,6 +142,41 @@ describe("🔴 不准編 — the arranging loop", () => {
   });
 });
 
+describe("🔴 §3 — until a person chooses, the document carries the line as written", () => {
+  it("a reading the model picked for ③ is replaced by the original words, and the prompt said so", async () => {
+    const resolved = {
+      sections: [
+        {
+          heading: "Perkara Mesyuarat",
+          items: GOOD_PLAN.sections[0].items.map((it) =>
+            it.source === 2
+              ? { source: 2, kind: "keputusan", text: "Chan Mei menggantikan Ooi Bee Huar bagi Agenda 2.1." }
+              : it,
+          ),
+        },
+      ],
+      unresolved: [],
+    };
+    const provider = scripted([resolved]);
+    const run = await runDraftMinutesPlan({
+      provider,
+      resolutionTexts: ITEMS,
+      lang: "bm",
+      verbatimIndices: [2, 3],
+    });
+    expect(run.ok).toBe(true);
+    if (!run.ok) return;
+    expect(provider.prompts[0]).toContain("COPIED AS WRITTEN");
+    expect(provider.prompts[0]).toMatch(/Items 2, 3 can each be read two ways/);
+    const md = composeMinutesMd(run.plan, extraction, opts);
+    expect(md).toContain("Agenda 2.1 diganti Chan Mei (Ooi Bee Huar)");
+    expect(md).not.toContain("Chan Mei menggantikan Ooi Bee Huar");
+    expect(md).not.toContain("Keputusan:");
+    // ④ too — the model's honest sentence still yields to the original line.
+    expect(md).toContain("lanti AJK seorg. Tan Kim Loo");
+  });
+});
+
 describe("🔴 不准編 — the phrase-in-place loop", () => {
   it("rejects a paragraph rewritten with an invented doer, accepts the honest rewrite", async () => {
     const items = [{ index: 3, text: ITEMS[3] }];

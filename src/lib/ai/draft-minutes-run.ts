@@ -10,6 +10,7 @@ import {
 } from "@/lib/minutes-compose";
 import { writesInChinese, type MinutesLang } from "@/lib/minutes-lang";
 import { checkInventedAgent, enforceKinds } from "@/lib/minutes-guards";
+import { verbatimForAmbiguous } from "@/lib/minutes-ambiguity";
 import type { TokenUsage, VisionJsonProvider } from "./provider";
 
 // ---------------------------------------------------------------------------
@@ -40,6 +41,10 @@ export async function runDraftMinutesPlan(opts: {
   lang: MinutesLang;
   glossaryBlock?: string;
   allowedRuns?: string[];
+  /** 118 §3: usable-resolution indices the document carries AS WRITTEN —
+   *  lines with two readings nobody has chosen between yet. The prompt is
+   *  told; the plan is corrected afterwards regardless. */
+  verbatimIndices?: number[];
   onUsage?: (usage: TokenUsage) => void;
   deadlineAt?: number;
   /** Per-attempt vendor timeout override. The routes leave it default; the
@@ -53,6 +58,7 @@ export async function runDraftMinutesPlan(opts: {
     lang,
     glossaryBlock = "",
     allowedRuns = [],
+    verbatimIndices = [],
     onUsage,
     deadlineAt,
     timeoutMs,
@@ -61,7 +67,7 @@ export async function runDraftMinutesPlan(opts: {
   let repair: Parameters<typeof draftMinutesPrompt>[0]["repair"];
   for (let attempt = 0; attempt < 2; attempt++) {
     const raw = await provider.extractJson({
-      prompt: draftMinutesPrompt({ resolutionTexts, lang, glossaryBlock, repair }),
+      prompt: draftMinutesPrompt({ resolutionTexts, lang, glossaryBlock, verbatimIndices, repair }),
       onUsage,
       deadlineAt,
       timeoutMs,
@@ -105,7 +111,15 @@ export async function runDraftMinutesPlan(opts: {
       // 118 §1-1: labels are EARNED by the words on the page, checked here
       // — an unearned one is dropped, never fatal (a label only ever
       // changes the prefix, so dropping it costs nobody their document).
-      return { ok: true, plan: enforceKinds(parsedPlan.data, resolutionTexts) };
+      // 118 §3: a line nobody has chosen a reading for is the line itself.
+      return {
+        ok: true,
+        plan: verbatimForAmbiguous(
+          enforceKinds(parsedPlan.data, resolutionTexts),
+          resolutionTexts,
+          verbatimIndices,
+        ),
+      };
     }
     repair = {
       missing: coverage.missing,
