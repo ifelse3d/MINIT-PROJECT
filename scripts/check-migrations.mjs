@@ -8,7 +8,7 @@
 // The .env.local path used to be hardcoded to C:/dev/minit, which would have
 // silently checked the OLD database from inside the new tree. It is now
 // resolved relative to this file.
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const envPath = fileURLToPath(new URL("../.env.local", import.meta.url));
@@ -216,6 +216,9 @@ for (const [label, table, column] of probes) {
 // loud, in the same idiom as npm run status, is cheaper than someone
 // concluding the database is complete when two files never executed.
 // 2026-08-21: eleven files became thirteen (refunded_at, pgvector).
+// 2026-09-07 (122 §4-3): the counts are read from the folder, not typed in.
+const fileCount = readdirSync(fileURLToPath(new URL("../supabase/migrations", import.meta.url)))
+  .filter((f) => f.endsWith(".sql")).length;
 console.log(`
 [ 人眼 ]  These two cannot be probed through PostgREST - they add a trigger and
           a function in a non-public schema, not a column. Confirm by eye in the
@@ -242,10 +245,12 @@ console.log(`
             select prosrc like '%case when length(v_seq::text)%'
               from pg_proc where proname = 'issue_receipts';
 
-          Fourteen migration files. The probes above cover eleven of them
-          (some probe two different columns of the same migration, on purpose:
-          20260822000000 touches two tables and a half-run migration is worth
-          catching).
+          ${probes.length} column probes plus the RPC probes above, for the
+          ${fileCount} migration files in supabase/migrations/ (some probe two
+          different columns of the same migration, on purpose: 20260822000000
+          touches two tables and a half-run migration is worth catching). The
+          files that add only a trigger, a function body or a default are the
+          ones listed in this section.
 
           One more thing 20260822000000 needs that no probe can see: the
           pgvector EXTENSION. If it did not run, check by eye:

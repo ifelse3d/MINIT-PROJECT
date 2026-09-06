@@ -44,12 +44,16 @@ call npm run check:ai
 echo.
 echo  ============================================
 echo   SIAP / DONE.
-echo   Di atas sepatutnya tertulis:
-echo   The above should say:
-echo     classify  -^> openai:gpt-5-nano
-echo     chat      -^> openai:gpt-5-nano
-echo     extract   -^> gemini:gemini-3.5-flash-lite
-echo     long_doc  -^> gemini:gemini-3.5-flash-lite
+echo   Baris bertanda hijau di atas ialah jawapan sebenar.
+echo   The green-ticked lines above are the real answer.
+echo   Empat baris di bawah hanya gambaran September 2026 - kalau lain
+echo   sikit, ikut yang di atas.
+echo   The four lines below are only a September 2026 snapshot - if they
+echo   differ, the lines above win.
+echo     AI_MODEL_CLASSIFY  -^> openai:gpt-5-nano
+echo     AI_MODEL_CHAT      -^> openai:gpt-5.6-luna
+echo     AI_MODEL_EXTRACT   -^> gemini:gemini-3.5-flash-lite
+echo     AI_MODEL_LONG_DOC  -^> gemini:gemini-3.5-flash-lite
 echo.
 echo   Kalau ada yang tertulis gemini untuk classify/chat,
 echo   If classify/chat still say gemini,

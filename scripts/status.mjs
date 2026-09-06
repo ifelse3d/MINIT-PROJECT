@@ -24,7 +24,9 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
-const CHAMPION = String.raw`C:\dev\minit-champion-overnight-20260813`;
+// The live deployment. Section E asks it directly — nothing about "online" is
+// printed from memory (122 §4-1, 2026-09-07).
+const LIVE = "https://minit-project.vercel.app";
 
 // Plain ASCII, no colour codes. A double-clicked .bat on a machine where ANSI
 // is off prints the escape sequences literally, and "[32mOK[0m" is worse
@@ -89,6 +91,22 @@ async function dbHas(table, select = "*") {
   }
 }
 
+/** Ask the live deployment. Returns null when it cannot be reached at all —
+ *  the caller prints [ 人眼 ] for that, never a guess. redirect: "manual" so a
+ *  307 is SEEN, not silently followed. */
+async function live(pathname) {
+  try {
+    const res = await fetch(LIVE + pathname, {
+      redirect: "manual",
+      signal: AbortSignal.timeout(15000),
+    });
+    const text = await res.text();
+    return { status: res.status, location: res.headers.get("location") ?? "", text };
+  } catch {
+    return null;
+  }
+}
+
 async function geminiAlive() {
   const key = env.GEMINI_API_KEY;
   if (!key) return { alive: false, models: 0 };
@@ -115,10 +133,10 @@ console.log(new Date().toLocaleString("en-GB", { timeZone: "Asia/Kuala_Lumpur" }
 
 // --- A. git -----------------------------------------------------------------
 console.log(head("A · GIT —— 东西上到 GitHub 了没有"));
-for (const [label, cwd] of [
-  ["minit    ", ROOT],
-  ["champion ", CHAMPION],
-]) {
+// 2026-09-07 (122 §4-1): the champion tree (a 2026-08-13 overnight copy) was
+// still listed here. Nobody has touched it since 8/21; asking about it was
+// noise. One tree.
+for (const [label, cwd] of [["minit    ", ROOT]]) {
   const branch = git(["rev-parse", "--abbrev-ref", "HEAD"], cwd);
   const upstream = git(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], cwd);
   if (!upstream) {
@@ -196,12 +214,21 @@ const six = [
     has("src/app/members/members-form.tsx", "readPastedWithAi"), "", ""],
   ["② 单一机构不讲「切换」", has("src/components/v3/org-chip.tsx", "soleOrg"),
     "v3/org-chip.tsx 没有 soleOrg 分支", ""],
-  ["③ 缺 IC 姓名的人数", has("src/app/members/page.tsx", "missingOfficial"),
-    "members/page.tsx 没有 missingOfficial",
-    "只做了「数」这一半。「申报前挡下来」没做 —— 没有地方可以挂，见 STATE 第 6 节"],
-  ["④ Save as draft", has("src/app/minutes/actions.ts", "saveMinutesDraft") ||
-    has("src/lib/minutes-draft.ts", "saveMinutesDraft"),
-    "还没开始 · 约一天 · 很可能要一支 migration", ""],
+  // 2026-09-07 (122 §4-1): both probes below pointed at names the code no
+  // longer has, and printed "没做" for two finished things (121 §2-4).
+  //   ③ the COUNT lives in src/lib/paste-pack.ts (missingOfficial); the
+  //     "refuse before filing" half is D48's hard gate on the members page
+  //     (ErosesGapsBanner + the form's refusal, work order 89).
+  //   ④ drafts: src/app/minutes/draft-actions.ts saveDraft() + the
+  //     minutes_drafts table (migration 20260911000000) — the "very likely a
+  //     migration" it once predicted is the one it now checks for.
+  ["③ 缺 IC 姓名的人数", has("src/lib/paste-pack.ts", "missingOfficial") &&
+    has("src/app/members/page.tsx", "ErosesGapsBanner"),
+    "paste-pack.ts 没有 missingOfficial，或 members/page.tsx 没有 ErosesGapsBanner",
+    "两半都在：paste-pack 数缺的人，名册页 D48 在申报前挡下来（缺 IC 姓名/州属/上任日期的行标黄，表单拒收）"],
+  ["④ Save as draft", has("src/app/minutes/draft-actions.ts", "export async function saveDraft") &&
+    (await dbHas("minutes_drafts", "client_key")) === true,
+    "draft-actions.ts 没有 saveDraft，或 minutes_drafts 表不在库里（migration 20260911000000）", ""],
   ["⑤ 邀请成员 P1-1", (await dbHas("invites", "id")) === true,
     "invites 表不在库里 —— migration 20260902000000_invites_and_org_type 还没套", ""],
   ["⑥ ai_usage 分到人", (await dbHas("ai_usage", "user_id")) === true,
@@ -212,25 +239,39 @@ for (const [label, done, undoneNote, doneCaveat] of six) {
   if (done && doneCaveat) console.log("         ⚠ " + doneCaveat);
 }
 
-// --- E. competition ---------------------------------------------------------
-console.log(head("E · 竞赛证据 —— 这才是会变成分数的东西"));
-let shots = [];
-try {
-  shots = fs
-    .readdirSync(path.join(ROOT, "competition", "screenshots"))
-    .filter((f) => f.toLowerCase() !== "readme.md");
-} catch {
-  /* folder missing */
+// --- E. online ---------------------------------------------------------------
+// 2026-09-07 (122 §4-1): this section used to be "竞赛证据" plus a countdown to
+// a deadline that had already passed, and every line in it was printed from
+// memory. Now it ASKS the live site: the home page must redirect to /login,
+// /login must answer 200, and the two public legal pages must not still be
+// showing [[…]] template placeholders (121 §2-1 — a reader, a judge or a
+// lawyer opening /privacy saw the fill-in-the-blanks).
+console.log(head("E · 线上 —— " + LIVE + " 现在真的怎么样"));
+{
+  const home = await live("/");
+  if (home === null) {
+    console.log(eye("连不上线上（网络？Vercel？）—— 这一节全部跳过，自己开浏览器看"));
+  } else {
+    const toLogin = (home.status === 307 || home.status === 308 || home.status === 302) &&
+      /\/login/.test(home.location);
+    console.log(mark(toLogin, `首页 /  →  ${home.status}${home.location ? " → " + home.location : ""}（没登入应该被送去 /login）`));
+    const login = await live("/login");
+    console.log(mark(login?.status === 200, `/login  →  ${login ? login.status : "连不上"}（应该 200）`));
+    for (const p of ["/privacy", "/terms"]) {
+      const page = await live(p);
+      if (page === null || page.status !== 200) {
+        console.log(no(`${p}  →  ${page ? page.status : "连不上"}（应该 200）`));
+        continue;
+      }
+      // The RSC payload inside <script> repeats the whole text several times
+      // over; only the rendered HTML is what a reader sees. Strip scripts,
+      // THEN count — the result equals the count in legal/*.md exactly.
+      const rendered = page.text.replace(/<script[\s\S]*?<\/script>/gi, "");
+      const n = (rendered.match(/\[\[/g) ?? []).length;
+      console.log(mark(n === 0, n === 0
+        ? `${p}  →  200，没有 [[…]] 佔位符`
+        : `${p}  →  200，但法律页还有 ${n} 个 [[…]] 没填（legal/*.md → npm run legal:sync → push）`));
+    }
+  }
 }
-console.log(mark(shots.length > 0, `competition/screenshots/ —— ${shots.length} 张（README 不算）`));
-console.log(eye("Live URL（Vercel）—— https://minit-project.vercel.app 已上线（2026-08-27 验证过）。\n" +
-  "             push 后线上像旧版？两个坑都记在 STATE 第 6 节 8-27 段：\n" +
-  "             ① Deployment Blocked（非 ifelse3d 署名/推送）② build cache 端出旧 CSS。\n" +
-  "             剩下的人工活：把这个 URL 写进竞赛材料"));
-console.log(eye("利害关系人访谈 —— 补 Commercial 那 25 分（现在 5/25，五项最低），不用写程式"));
-console.log(eye("真实手写 eval —— 现在是必跑的：填了词库的 org 走的不是量到 95.2% 的那支 prompt"));
-
-const daysLeft = Math.ceil((new Date("2026-08-31T23:59:00+08:00") - Date.now()) / 86400000);
-console.log(head(`⏳ 距离竞赛截止 2026-08-31 23:59 MYT 还有 ${daysLeft} 天`));
-console.log("   程式码已经是「可以交」的水准。再多的功能都不会变成分数。");
 console.log("");
