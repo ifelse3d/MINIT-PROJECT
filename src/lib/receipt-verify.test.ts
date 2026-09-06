@@ -3,6 +3,7 @@ import {
   buildReceiptVerifyUrl,
   signReceiptVerify,
   verifyReceiptVerify,
+  verifyReceiptVerifyAny,
 } from "./receipt-verify";
 import { signContinuation } from "./constitution-continuation";
 
@@ -82,5 +83,39 @@ describe("receipt verify token", () => {
     );
     const url = new URL(buildReceiptVerifyUrl("https://example.com", token));
     expect(url.searchParams.get("t")).toBe(token);
+  });
+});
+
+// 122 §2 (2026-09-07): the signing secret moved from the service-role key to a
+// dedicated RECEIPT_SIGNING_SECRET. The paper already printed carries tokens
+// signed under the OLD secret, and those must keep verifying for as long as
+// the paper exists — so the verifier takes a list and tries each.
+describe("verifyReceiptVerifyAny (secret rotation without dark QRs)", () => {
+  const OLD = "service-role-key-the-old-signer";
+  const NEW = "dedicated-receipt-signing-secret";
+  const claim = { orgId: 15, receiptNo: "MIN-2026-0003" };
+
+  it("verifies a token signed under either secret in the list", () => {
+    const signedOld = signReceiptVerify(claim, OLD);
+    const signedNew = signReceiptVerify(claim, NEW);
+    expect(verifyReceiptVerifyAny(signedOld, [NEW, OLD])).toEqual(claim);
+    expect(verifyReceiptVerifyAny(signedNew, [NEW, OLD])).toEqual(claim);
+  });
+
+  it("does not care about the order of the list", () => {
+    const signedOld = signReceiptVerify(claim, OLD);
+    expect(verifyReceiptVerifyAny(signedOld, [OLD, NEW])).toEqual(claim);
+    expect(verifyReceiptVerifyAny(signedOld, [NEW, OLD])).toEqual(claim);
+  });
+
+  it("rejects a token signed under a secret that is NOT in the list", () => {
+    const stray = signReceiptVerify(claim, "some-other-deployment");
+    expect(verifyReceiptVerifyAny(stray, [NEW, OLD])).toBeNull();
+  });
+
+  it("verifies nothing against an empty list or blank secrets", () => {
+    const signedNew = signReceiptVerify(claim, NEW);
+    expect(verifyReceiptVerifyAny(signedNew, [])).toBeNull();
+    expect(verifyReceiptVerifyAny(signedNew, [""])).toBeNull();
   });
 });

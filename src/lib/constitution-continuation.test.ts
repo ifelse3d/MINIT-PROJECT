@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   signContinuation,
   verifyContinuation,
+  verifyContinuationAny,
   type ConstitutionContinuation,
 } from "./constitution-continuation";
 
@@ -81,5 +82,31 @@ describe("constitution continuation token", () => {
       "utf8",
     ).toString("base64url");
     expect(verifyContinuation(`${forged}.${sig}`, SECRET, NOW)).toBeNull();
+  });
+});
+
+// 122 §2 (2026-09-07): same list-of-secrets verifier as the receipt token,
+// so a redeploy that introduces RECEIPT_SIGNING_SECRET mid-read does not
+// strand a chain that started under the service-role key.
+describe("verifyContinuationAny", () => {
+  const c: ConstitutionContinuation = {
+    rowId: 9,
+    orgId: 15,
+    pagesLeft: 3,
+    pagesDone: 5,
+    exp: NOW + 60_000,
+  };
+
+  it("verifies under whichever listed secret signed it, in any order", () => {
+    const old = signContinuation(c, "old-secret");
+    expect(verifyContinuationAny(old, ["new-secret", "old-secret"], NOW)).toEqual(c);
+    expect(verifyContinuationAny(old, ["old-secret", "new-secret"], NOW)).toEqual(c);
+  });
+
+  it("still enforces expiry and rejects unlisted secrets", () => {
+    const old = signContinuation(c, "old-secret");
+    expect(verifyContinuationAny(old, ["new-secret"], NOW)).toBeNull();
+    expect(verifyContinuationAny(old, ["new-secret", "old-secret"], c.exp)).toBeNull();
+    expect(verifyContinuationAny(old, [], NOW)).toBeNull();
   });
 });

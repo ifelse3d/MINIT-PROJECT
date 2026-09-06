@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { primarySigningSecret } from "@/lib/signing-secret";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
 import { receiptPdfBodySchema } from "@/lib/document-request";
 import { buildReceiptPdf } from "@/lib/receipt-pdf";
@@ -48,7 +49,9 @@ function verifyUrlFor(
   orgId: number,
   receiptNo: string,
 ): string | undefined {
-  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+  // 122 §2: the dedicated RECEIPT_SIGNING_SECRET when set, else the
+  // service-role key as before — see src/lib/signing-secret.ts.
+  const secret = primarySigningSecret();
   if (secret === "") return undefined;
   const token = signReceiptVerify({ orgId, receiptNo }, secret);
   return buildReceiptVerifyUrl(requestOrigin(request), token);

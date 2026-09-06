@@ -78,6 +78,25 @@ function isPositiveInt(v: unknown): v is number {
  * charged read", never an exception — a stale token is an ordinary event
  * (a tab left open), not an attack to report.
  */
+/**
+ * verifyContinuation against EVERY secret in the list (work order 122 §2).
+ * A continuation lives thirty minutes, so the window in which a token signed
+ * under the old secret meets a deployment on the new one is small — but it
+ * exists (a redeploy mid-read), and the answer to it is a fresh CHARGED read,
+ * which is exactly the case this list is cheap insurance against.
+ */
+export function verifyContinuationAny(
+  token: string,
+  secrets: readonly string[],
+  now: number = Date.now(),
+): ConstitutionContinuation | null {
+  for (const secret of secrets) {
+    const c = verifyContinuation(token, secret, now);
+    if (c) return c;
+  }
+  return null;
+}
+
 export function verifyContinuation(
   token: string,
   secret: string,

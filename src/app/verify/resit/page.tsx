@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getSupabase } from "@/db/supabase";
-import { verifyReceiptVerify } from "@/lib/receipt-verify";
+import { verifyReceiptVerifyAny } from "@/lib/receipt-verify";
+import { verifySigningSecrets } from "@/lib/signing-secret";
 import { dayIsoMalaysia } from "@/lib/history";
 import { formatRm } from "@/lib/minutes-draft";
 
@@ -50,9 +51,12 @@ type LookupOutcome =
   | { state: "try_later" };
 
 async function lookup(token: string | undefined): Promise<LookupOutcome> {
-  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
-  if (!token || secret === "") return { state: "not_issued" };
-  const claim = verifyReceiptVerify(token, secret);
+  // 122 §2: every secret this deployment has ever signed with, newest
+  // first — a QR printed before RECEIPT_SIGNING_SECRET existed still
+  // verifies under the service-role key it was signed with.
+  const secrets = verifySigningSecrets();
+  if (!token || secrets.length === 0) return { state: "not_issued" };
+  const claim = verifyReceiptVerifyAny(token, secrets);
   if (!claim) return { state: "not_issued" };
 
   // Service-role read, pinned to the signed (org, number) pair. 🔴 NEVER add

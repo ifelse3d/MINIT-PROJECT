@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { primarySigningSecret, verifySigningSecrets } from "@/lib/signing-secret";
 import { captureAppError } from "@/lib/app-errors";
 import {
   docKindOfUpload,
@@ -36,7 +37,7 @@ import {
 import {
   CONTINUATION_TTL_MS,
   signContinuation,
-  verifyContinuation,
+  verifyContinuationAny,
 } from "@/lib/constitution-continuation";
 import {
   EXTRACT_ATTEMPT_TIMEOUT_MS,
@@ -111,14 +112,17 @@ const ALLOWED_MIME = new Set([
 ]);
 
 /**
- * The continuation token's HMAC secret. The service-role key is already the
- * one secret every deployment must have, is never sent anywhere, and here it
- * only ever feeds an HMAC — the derived signature reveals nothing about it.
- * Empty (a broken deployment) simply disables continuations: the client then
- * falls back to charging each segment, which is honest, never free.
+ * The continuation token's HMAC secret — 122 §2: RECEIPT_SIGNING_SECRET
+ * when set, the service-role key otherwise (src/lib/signing-secret.ts).
+ * Either way it only ever feeds an HMAC — the derived signature reveals
+ * nothing about it. Empty (a broken deployment) simply disables
+ * continuations: the client then falls back to charging each segment,
+ * which is honest, never free. Verification tries every secret the
+ * deployment has signed with, so a redeploy mid-read does not strand a
+ * chain that started under the old one.
  */
 function continuationSecret(): string {
-  return process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+  return primarySigningSecret();
 }
 
 /** What both branches below must agree on before the vendor is called. */
@@ -234,7 +238,7 @@ export async function POST(req: Request) {
           { status: 403 },
         );
       }
-      const token = verifyContinuation(continuationToken, continuationSecret());
+      const token = verifyContinuationAny(continuationToken, verifySigningSecrets());
       // Stale, forged, someone else's org, or a segment bigger than the
       // declared budget: all one answer. 409 tells the browser to start a
       // FRESH (charged) read — never to retry the same request.

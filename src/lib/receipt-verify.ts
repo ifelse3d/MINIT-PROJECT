@@ -107,6 +107,25 @@ export function verifyReceiptVerify(
   return { orgId: r.o, receiptNo: r.n };
 }
 
+/**
+ * Same as verifyReceiptVerify, but tries EVERY secret in the list until one
+ * verifies (work order 122 §2). This is what lets the signing secret move
+ * from the service-role key to a dedicated RECEIPT_SIGNING_SECRET without a
+ * single printed QR going dark: the page verifies against both, newest
+ * first. Order does not change the answer — a token only ever verifies
+ * under the one secret it was signed with. An empty list verifies nothing.
+ */
+export function verifyReceiptVerifyAny(
+  token: string,
+  secrets: readonly string[],
+): ReceiptVerifyClaim | null {
+  for (const secret of secrets) {
+    const claim = verifyReceiptVerify(token, secret);
+    if (claim) return claim;
+  }
+  return null;
+}
+
 /** The path the QR points at (also the page's route — one constant). */
 export const RECEIPT_VERIFY_PATH = "/verify/resit";
 
