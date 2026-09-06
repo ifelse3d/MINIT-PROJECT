@@ -80,9 +80,10 @@ Untuk berfungsi, Minit menghantar data kepada pembekal berikut:
 
 | Pembekal | Untuk apa | Lokasi |
 |---|---|---|
-| **[[Google — Gemini API]]** | membaca foto tulisan tangan, menjana draf | Luar negara |
-| **[[Supabase]]** | pangkalan data dan storan fail | **[[region — SAHKAN]]** |
-| **[[Vercel]]** | hos aplikasi web | Luar negara |
+| **Google — Gemini API** | membaca foto tulisan tangan, menjana draf | Luar negara |
+| **OpenAI** | mengelaskan jenis muat naik, pembantu sembang | Luar negara |
+| **Supabase** | pangkalan data dan storan fail | **[[region — SAHKAN]]** |
+| **Vercel** | hos aplikasi web | Luar negara |
 
 Pemindahan ke luar negara dilakukan atas dasar **[[dasar undang-undang —
 SAHKAN DENGAN PEGUAM]]**, selaras dengan Garis Panduan Pemindahan Data
@@ -207,9 +208,10 @@ To function, Minit sends data to the following providers:
 
 | Provider | Purpose | Location |
 |---|---|---|
-| **[[Google — Gemini API]]** | reading handwriting, generating drafts | Outside Malaysia |
-| **[[Supabase]]** | database and file storage | **[[region — CONFIRM]]** |
-| **[[Vercel]]** | web application hosting | Outside Malaysia |
+| **Google — Gemini API** | reading handwriting, generating drafts | Outside Malaysia |
+| **OpenAI** | classifying uploads, the chat assistant | Outside Malaysia |
+| **Supabase** | database and file storage | **[[region — CONFIRM]]** |
+| **Vercel** | web application hosting | Outside Malaysia |
 
 Transfers outside Malaysia are made on the basis of **[[legal basis — CONFIRM
 WITH A LAWYER]]**, consistent with the 2025 Cross-Border Personal Data
