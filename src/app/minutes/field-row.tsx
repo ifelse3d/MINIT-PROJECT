@@ -71,9 +71,10 @@ export function FieldRow({
   editor?: FieldEditor;
   onConfirm: () => void;
   onEdit: (value: string) => void;
-  /** See EditableField.onMarkAbsent — the escape hatch for a fact that was
-   *  never written down. Without it a `missing` field blocks saving forever and
-   *  the only way out is for the human to invent a value. */
+  /** The escape hatch for a fact that was never written down. Without it a
+   *  `missing` field blocks saving forever and the only way out is for the
+   *  human to invent a value. (Inherited from the retired EditableField
+   *  component — deleted 2026-09-07, 122 §6, nothing imported it.) */
   onMarkAbsent?: () => void;
   /** G2 (拍板 7 後半): one-tap replacements computed by CODE from the
    *  society's own roster — e.g. the AI read "陈讲师" and the roster has a

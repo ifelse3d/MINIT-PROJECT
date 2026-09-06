@@ -54,7 +54,7 @@ Three rules govern every AI call:
    of the source document it came from and a confidence rating: `confirmed` / `check` / `missing`.
    Our evaluation counts invented values as a separate metric that must be zero.
 2. **No language model performs financial arithmetic.** Receipt numbering, register totals and
-   cash-custody state are deterministic TypeScript covered by **1,398 passing unit tests**. The model
+   cash-custody state are deterministic TypeScript covered by **1,452 passing unit tests**. The model
    extracts quantities; code computes money.
 3. **A named human confirms every output** before any official document is generated, and each document
    carries an audit line recording who confirmed it and when. Draft outputs are watermarked.
