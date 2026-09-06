@@ -1573,6 +1573,53 @@ export function NotesReview() {
                 })
               }
             />
+            {/* 118 §5-1: the particulars a page carries beside an
+                appointment (No. K/P, alamat, pekerjaan). The reader was
+                copying them all along; nothing on screen showed them, so an
+                IC bound for eROSES went unchecked and unprinted. Rows only
+                when the page HAD one — never a demand on a page that did
+                not. */}
+            {(
+              [
+                ["ic_no", "No. K/P", "身份证号", "IC number"],
+                ["address", "Alamat", "地址", "Address"],
+                ["occupation", "Pekerjaan", "职业", "Occupation"],
+              ] as const
+            ).map(([key, bm, zh, en]) => {
+              const f = b[key];
+              if (!f) return null;
+              const who = b.person_name.value || t(`jawatan ${i + 1}`, `职位 ${i + 1}`, `position ${i + 1}`);
+              return (
+                <FieldRow
+                  key={key}
+                  labelBm={`${who} — ${bm}`}
+                  labelZh={`${who} — ${zh}`}
+                  labelEn={`${who} — ${en}`}
+                  field={f}
+                  onConfirm={() =>
+                    updateField((e) => {
+                      const g = e.office_bearers[i][key];
+                      if (g) confirm(g);
+                      return e;
+                    })
+                  }
+                  onEdit={(v) =>
+                    updateField((e) => {
+                      const g = e.office_bearers[i][key];
+                      if (g) edit(g, v);
+                      return e;
+                    })
+                  }
+                  onMarkAbsent={() =>
+                    updateField((e) => {
+                      const g = e.office_bearers[i][key];
+                      if (g) markAbsent(g);
+                      return e;
+                    })
+                  }
+                />
+              );
+            })}
             </DeletableRow>
           ))}
           <AddRowButton

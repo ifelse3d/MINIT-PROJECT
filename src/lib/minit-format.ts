@@ -98,7 +98,16 @@ export type MinitDocModel = {
   agendaTable?: { no: string; title: string }[];
   sections: MinitSection[];
   figures?: { description: string; amountText: string }[];
-  officeBearers?: { position: string; name: string }[];
+  /** 118 §5-1: the particulars a printed appointment carries (No. K/P,
+   *  alamat, pekerjaan) print beside the name — they are what eROSES asks
+   *  for, and the reader was already copying them. Absent = nothing. */
+  officeBearers?: {
+    position: string;
+    name: string;
+    icNo?: string;
+    address?: string;
+    occupation?: string;
+  }[];
   unresolved?: string[];
   /** Verbatim adjournment sentence ("Mesyuarat ditangguhkan pada 10.30 PM").
    *  Absent = the language's standard closing line. */
@@ -150,21 +159,53 @@ const FORMAT_LABELS: Record<
     agendaHeading: string;
     /** Structured section heading: "Agenda 1: Ucapan Pengerusi". */
     sectionHeading: (no: string, title: string) => string;
+    /** 118 §5-1: the labels of a bearer's particulars. */
+    icNo: string;
+    address: string;
+    occupation: string;
   }
 > = {
   bm: {
     agendaHeading: "Agenda",
     sectionHeading: (no, title) => `Agenda ${no}: ${title}`,
+    icNo: "No. K/P",
+    address: "Alamat",
+    occupation: "Pekerjaan",
   },
   zh: {
     agendaHeading: "议程",
     sectionHeading: (no, title) => `议程 ${no}：${title}`,
+    icNo: "身份证号",
+    address: "地址",
+    occupation: "职业",
   },
   en: {
     agendaHeading: "Agenda",
     sectionHeading: (no, title) => `Agenda ${no}: ${title}`,
+    icNo: "IC no.",
+    address: "Address",
+    occupation: "Occupation",
   },
 };
+
+/**
+ * 118 §5-1: " (No. K/P: …; Alamat: …; Pekerjaan: …)" after a bearer's name —
+ * only the particulars that exist, in the document's language, copied
+ * exactly. Empty when there are none. Shared by the formal composer and the
+ * free template preview so the two never disagree.
+ */
+export function bearerParticulars(
+  lang: MinutesLang,
+  b: { icNo?: string; address?: string; occupation?: string },
+): string {
+  const F = FORMAT_LABELS[lang];
+  const parts = [
+    b.icNo ? `${F.icNo}: ${b.icNo}` : "",
+    b.address ? `${F.address}: ${b.address}` : "",
+    b.occupation ? `${F.occupation}: ${b.occupation}` : "",
+  ].filter(Boolean);
+  return parts.length === 0 ? "" : ` (${parts.join("; ")})`;
+}
 
 /**
  * The formal meeting-title line under the letterhead —
@@ -298,7 +339,9 @@ export function renderMinitMd(model: MinitDocModel): string {
   const bearers = model.officeBearers ?? [];
   if (bearers.length > 0) {
     out.push(`## ${L.officeBearers}`, "");
-    bearers.forEach((b) => out.push(`- ${b.position}: ${b.name}`));
+    bearers.forEach((b) =>
+      out.push(`- ${b.position}: ${b.name}${bearerParticulars(lang, b)}`),
+    );
     out.push("");
   }
 

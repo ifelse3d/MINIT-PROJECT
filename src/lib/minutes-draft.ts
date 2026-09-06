@@ -1,7 +1,7 @@
 import type { MeetingNotesExtraction } from "@/lib/extraction";
 import { meetingTypeLabel } from "@/lib/meeting-types";
 import { draftedByLine } from "@/lib/brand";
-import { formatRm } from "@/lib/minit-format";
+import { bearerParticulars, formatRm } from "@/lib/minit-format";
 import { composeStructuredMinutesMd, minutesStructure } from "@/lib/minutes-compose";
 import { normalizeFullwidth } from "@/lib/bm-guard";
 
@@ -131,7 +131,17 @@ function renderMinutesDraftBmRaw(
   );
   if (bearers.length > 0) {
     lines.push("## PEMEGANG JAWATAN", "");
-    bearers.forEach((b) => lines.push(`- ${b.position.value}: ${b.person_name.value}`));
+    const present = (f?: { value: string; confidence: string }) =>
+      f && f.confidence !== "missing" && f.value !== "" ? f.value : undefined;
+    bearers.forEach((b) =>
+      lines.push(
+        `- ${b.position.value}: ${b.person_name.value}${bearerParticulars("bm", {
+          icNo: present(b.ic_no),
+          address: present(b.address),
+          occupation: present(b.occupation),
+        })}`,
+      ),
+    );
     lines.push("");
   }
 

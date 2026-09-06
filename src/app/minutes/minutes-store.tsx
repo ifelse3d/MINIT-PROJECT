@@ -1220,7 +1220,14 @@ export function MinutesProvider({
       ...e.attendees.map((a) => a.name),
       ...e.resolutions.map((r) => r.text),
       ...e.figures.flatMap((f) => [f.description, f.amount_cents]),
-      ...e.office_bearers.flatMap((b) => [b.position, b.person_name]),
+      ...e.office_bearers.flatMap((b) => [
+        b.position,
+        b.person_name,
+        // 118 §5-1: an IC bound for eROSES is reviewed like any other leaf.
+        ...(b.ic_no ? [b.ic_no] : []),
+        ...(b.address ? [b.address] : []),
+        ...(b.occupation ? [b.occupation] : []),
+      ]),
     ] as { confidence: string }[];
   }, []);
 
@@ -1255,7 +1262,13 @@ export function MinutesProvider({
       // printed that unverified amount into a document carrying the Hard Rule 8
       // audit line. Money is the one thing that must never slip through.
       ...extraction.figures.flatMap((f) => [f.description, f.amount_cents]),
-      ...extraction.office_bearers.flatMap((b) => [b.position, b.person_name]),
+      ...extraction.office_bearers.flatMap((b) => [
+        b.position,
+        b.person_name,
+        ...(b.ic_no ? [b.ic_no] : []),
+        ...(b.address ? [b.address] : []),
+        ...(b.occupation ? [b.occupation] : []),
+      ]),
     ];
     // Anything not explicitly confirmed still counts as outstanding —
     // "missing" (red) fields must block saving just like "check" (amber)
@@ -1328,7 +1341,13 @@ export function MinutesProvider({
         extraction.figures.flatMap((f) => [f.description, f.amount_cents]),
       ),
       bearers: count(
-        extraction.office_bearers.flatMap((b) => [b.position, b.person_name]),
+        extraction.office_bearers.flatMap((b) => [
+          b.position,
+          b.person_name,
+          ...(b.ic_no ? [b.ic_no] : []),
+          ...(b.address ? [b.address] : []),
+          ...(b.occupation ? [b.occupation] : []),
+        ]),
       ),
     };
   }, [extraction]);

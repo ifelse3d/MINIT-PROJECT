@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { plausibleAttendeeName } from "@/lib/attendee-sanity";
 import { MEETING_TYPES } from "@/lib/meeting-types";
 
 // Re-exported so the many existing importers of `MEETING_TYPES` from this file
@@ -395,6 +396,13 @@ export function parseMeetingNotesExtraction(raw: unknown) {
       delete e[key];
     }
   }
+  // 118 §5-2: an attendee the reader made of a scrap ("as") is erased, so a
+  // page with no attendance list comes out with NONE — the honest answer,
+  // and the one the attendance page already knows how to ask about. Human
+  // rows (a typed name, a ticked roster entry) always pass this test.
+  e.attendees = e.attendees.filter(
+    (a) => a.name.confidence === "missing" || plausibleAttendeeName(a.name.value),
+  );
   return parsed;
 }
 
