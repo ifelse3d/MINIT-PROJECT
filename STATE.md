@@ -5,38 +5,68 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-09-07 凌晨（MYT）· Fable 5.1（122 号场：体检小修包——法律页＋三个真 BUG＋小债）**
-**🔴 本场（122 号场）状态一句话（123 号报告）：121 体检点名的三个真 BUG 都修了，
-给 J 双击的脚本不再说谎，四个安全 header 上了，法律页第三方清单补齐——
-但 J 表格没填的 37 个 `[[…]]` 还在线上。**
-①收据 QR／章程续读 token 的 HMAC 改用专用 `RECEIPT_SIGNING_SECRET`
-（`src/lib/signing-secret.ts`：没设退回 service key、验证时新旧两把逐一试，
-已印的 QR 照样验得过）；②免费额度扣款搬进 **migration 45** 的
-`charge_ai_action()`（per-org advisory lock，count＋decide＋insert 一次做完），
-`usage.ts` 先试 RPC、PGRST202 走旧路一字不改（D8）；③退款只认 42703 才删列，
-其他错保留成本纪录＋记 `app_errors`；credit 退还改 SQL 加法。
-`status.mjs` E 段改成真的去问线上（307→/login、/login 200、法律页数 `[[`——
-要先剥 `<script>` 再数，否则 RSC payload 把 32 数成 327）；③④两个探针改对；
-`check-ai.bat` 尾巴改现行分流。`next.config.ts` 四个 header＋无 X-Powered-By
-（本机 curl 实证）；Next 16.3.4；`npm audit` 6→2；死档 8 个删；README 1,452；
-`.env.example` 补两段；D52。
-**🔴 `src/prompts/` 一个 byte 没动（`git diff --stat 6fa0ba4..HEAD -- src/prompts/` 空）。**
-**测过：tsc 0 · eslint 20（19 错 1 警，逐字同基准；16.3.4 新 lint 规则曾推到 25，
-五处刻意的整页导航加了带理由的 disable）· vitest 1452（+21）· build ✓ ·
-e2e-money 20/20 · e2e-minutes 20/20 · e2e-roles 15/15（第一次 1 FAIL＝测试自己的
-264ms 竞态，改成等文字后全绿）· e2e-105 14/14 · page errors 全 0 ·
-真钱 US$0.00（零 vendor 呼叫）。**
-**⚠ `shot-layout-109`／`shot-cards-113` 跑不起来——不是本场弄坏的：116 场的
-`e506618` 刻意删了它们等的 `meeting-choice` 卡；117 报告没跑过它们。要重教。**
-**✅ J 的三件事 9/7 02:48 全做完（我实查）：①migration 45 探针 APPLIED；②`RECEIPT_SIGNING_SECRET`
-在 Vercel Production 清单里（值我没看）；③8 支已 push，线上 40 秒后换新版——
-`curl -sI /login` 四个 header 都在、无 X-Powered-By，/privacy 26／/terms 11、第三方表四行齐。**
-🔴 118 号单（正式文件把人物关系写反）**还是**没跑——下一场还是它。
-§1 法律页那张表（122 §1-1＋123 §1 补的「责任上限」一格）J 欠填，不催。**
+**最后更新：2026-09-07 清晨（MYT）· Fable 5.1（118 号场：品质急救二轮——108 剩六节＋行话百分比）**
+**🔴 本场（118 号场）状态一句话（124 号报告）：正式文件不会再把人写反——
+三选一标签拆掉、「原文没说谁做就不准写谁做」改成程式检查、歧义一律举手不准编、
+Formal 卡整条删、额度全改百分比、IC／地址印出来、agent 在精灵里每一步说一句话。
+J 两张真件本机从头跑过：③④举手、①②⑤没问、两句错话零出现、migration 45 真的在扣（7 次呼叫 7 列）。**
+①`src/prompts/draft-minutes.ts`（两支）：`Keputusan`／`Tindakan` 只在原文有那些字才挂、没有第三个标签；
+整段「NO DOER THE PAGE DID NOT NAME」；tidy 的锁死清单整套搬进来；「COPIED AS WRITTEN」段告知歧义条照原文。
+②`src/lib/minutes-guards.ts`（纯）：`enforceKinds` 剥没挣到的标签；`checkInventedAgent` 抓发明的施事者／裁决、
+消失的否决／延后，退回模型一次再犯整份退纯模板；`checkLatinNames` 改整字比对（`Tan Kim Looi`≠`Tan Kim Loo`）。
+③`src/lib/minutes-ambiguity.ts`（纯，固定输入测试）：只认 `lanti Ajk seorg./seong. <名>` 与 `A diganti B`／`A ganti - B`
+两个形状，两种读法写成整句；`resolutions[].as_written` 记「照原文保留」；`verbatimForAmbiguous` 在回圈里强制、
+结构化路不送那几段去改写。UI：`ask-back-cards.tsx`（🙋 卡，不预选、不花额度）、`agent-check-in.tsx`（每步结尾一句）、
+`item-sources.tsx`（文件页每条「读自哪里」＋看原稿）。tidy 线七档全删（prompt／route／view／run／lib＋测试／probe／按钮）。
+④`AiQuotaProvider`（根 layout，quotaPool）＋`costPhrase`：六处「1 AI action」改「大约用本月额度的 X%」；
+`formatDateShort` 统一卡片日期；`ui-jargon.test.ts` grep 原始码守住。
+⑤IC／地址：读取一直读到了，是画面与成文层没印——核对页加三行、`bearerParticulars` 印进 PEMEGANG JAWATAN；
+`attendee-sanity.ts` 把 `1. as` 这种碎片在 parse 抹掉。⑥`check-migrations.mjs` 44 进「人眼」段；**D53**。
+**测过：tsc 0 · eslint 20（逐字同基准）· vitest 1473（+21）· build ✓ · e2e-money 20/20 · e2e-minutes 20/20 ·
+e2e-roles 15/15 · e2e-105 16/16（③ 改验 way-home＋check-in＋两张卡）· shot-minutes-109 8/8 ·
+会议记录 eval 117/125 · 93.6% · invented 0（一次过，与基准逐格同）· 真钱 US$0.071（授权 ≤1.00）。**
+**⚠ `shot-layout-109`／`shot-cards-113` 仍坏（116 欠的），本场没碰。**
+🔴 **8 支 commit 在本机（＋122 场那 1 支 docs），等 J `push-cabang.bat`；没有新 migration、没有新 env。**
+法律页 37 个 `[[` 照旧等 J 填表。**
 
 ---
 
-## 🌙 现在在哪里（2026-09-07 凌晨，122 号场收工）
+## 🌙 现在在哪里（2026-09-07 清晨，118 号场收工）
+
+> **已上线**：https://minit-project.vercel.app —— 线上是 122 场的版本（9/7 02:48 实查）；
+> 本机 `main` 领先 origin **9 支**（118 场 8 支＋122 场 1 支 docs），`git status -sb` 实查工作树干净。
+> migration 1–45 全 APPLIED（44 无探针，本场加了人眼 SQL；45 本场真扣款对帐过）。
+
+### 这一场做了什么（118 号场 ✅，124 号报告——品质急救二轮）
+
+- **Stage 1 拆标签＋不准编**：prompt 两支改「有才挂」＋「原文没说谁做就不准写谁做」；prompt 自己的范例把
+  `Mesyuarat bersetuju melantik…` 改成 `Melantik…`（那个 bersetuju 就是原文没有的裁决）。
+  `minutes-guards.ts` 两支守门＋17 支测试；**「不准编」回归**（`draft-minutes-run.test.ts`）用假模型照 8/31
+  线上那样回错句，走真回圈：第二次 prompt 带 `INVENTED A DOER OR A DECISION … 2, 3`，成品不含那两句。
+  顺手修 `latinNameRuns`：地址缩写／敬称在 run 两端是家具（`Tmn Aman` 不是人；prompt 自己的范例以前过不了自己的名字检查）。
+- **Stage 2 锁搬过来、卡拿掉**：锁死清单进两支 prompt；整字比对搬进 `checkLatinNames`；tidy 七档删光；
+  `ItemSources` 接手「翻回原文」；e2e-105 ③ 改验它。107 §8 那条残自动消失。
+- **Stage 3 举手**：`minutes-ambiguity.ts` 两个形状；卡三语、两读法整句、「都不是，我自己打」、「照原文保留」、
+  「不用额度」一句；文件层两条路都强制原文。真件跑完才发现读取端拼成 `seong.`＋名字中间小写——补形状＋测试。
+- **Stage 4 百分比＋行话**：`AiQuotaProvider`／`useAiCost`／`costPhrase`；六处换；`formatDateShort`；
+  `ui-jargon.test.ts`。`draft` 一词只剩产品自己的「未完成草稿」概念（三语人话），保留。
+- **Stage 5 抄录**：IC／地址根因＝**从来没人印**（extraction 里一直有）；核对页三行＋文件印；
+  `plausibleAttendeeName` 抹碎片，`Jumlah hadir` 不从 `as` 算出 1。
+- **Stage 6 agent 在场**：`AgentCheckIn` 三步；Discuss 入口改鈕＋「每问一次大约用 X%」；只数不改。
+- **Stage 7**：44 人眼 SQL；D53；STATE 覆写；45 对帐（探针 org：0%→47%，7 列＝7 次呼叫，`app_errors` 0）。
+
+### 本场没做的（照实留残，下一场的料）
+
+- 法律页 37 个 `[[`（等 J 填 122 §1 表＋123 §1 补的「责任上限」格）。
+- **重教 `shot-layout-109`／`shot-cards-113`**（116 欠的，一小场）；之后才谈 eslint 19→0。
+- 成品 `## Agenda 2.1:` 空标题、`1 (1)` 双编号——8/31 私密报告的 lint 三洞（那份「待编号」施工单第 5 条），本单没排。
+- 文件正文 `Tarikh:` 仍印 ISO（`2026-03-15`）；§4-3 改的是卡片，正式文件格式没动（要动要过 lint 与 eval:quality）。
+- 举手侦测只认两个形状；第三个形状出现时**加形状＋加固定输入测试**，不要改成问模型。
+- 手机 69px、浮动面板回纹针、深页估价 %、加人卡预填、章程／Office 走排队、控制台包、harness 两件——照 120 HANDOFF／123 §9 排后面。
+
+---
+
+## 上一场：体检小修包场（2026-09-07 凌晨，122 号场，123 号报告）
 
 > **已上线**：https://minit-project.vercel.app —— 开工实测 main==origin/main==`6fa0ba4`
 > （113／116 的 commit 都已推）、migration 1–43 APPLIED（44 无探针；45 本场新写、NOT YET）。
@@ -78,6 +108,23 @@ e2e-money 20/20 · e2e-minutes 20/20 · e2e-roles 15/15（第一次 1 FAIL＝测
 
 ---
 
+
+## 上一场：116 場（2026-08-31 深夜）——兩件擋路的事（117 號報告；原本補在檔尾，118 場搬上來）
+
+- **多場會議偵測整個拿掉**（`other_meetings` 從 prompt/schema/merge/versions/ask-box
+  全部移除）。它在 J 的兩張真件上兩戰兩敗，誤判的都是「決議裡的未來日期」
+  （18/7/26 的 AGM、17/10/2026 的慈善晚宴），每次誤判都丟掉一條決議。
+  取捨已由 J 拍板：真的兩場寫在一張紙上會讀成一份，人在 step 3 看得到改得動。
+- **BM 語言關新增 `src/lib/bm-glossary.ts`**：標準社團／會計用語對照表，
+  免費按鈕一次填好普通詞語。**表裡沒有名字 ⇒ 結構上碰不到人名**；
+  比對前先把名冊名字／機構註冊名／簽名人挖空。
+- 🔴 **陷阱：eval 的 `case-04-minutes-mixed` 會飄。** 本場兩次跑：
+  第一次 117/126 invented 1（那筆金額被同時寫進 resolutions），
+  第二次 117/125 invented 0（＝基準）。看到 case-04 的 invented 先重跑一次再查。
+- 🔴 **108 號單仍未執行**：`Tan Kim Loo ditugaskan untuk melantik...`
+  （draft-minutes 的三選一標籤逼模型編出施事者）still live。
+
+---
 
 ## 上一场：首页入口卡场（2026-08-31 深夜，113 号场，115 号报告）
 
@@ -1358,26 +1405,16 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
   真 HEIC 大图在真手机浏览器上的行为（helper 的 HEIC 退路只有单元测试）；
   围栏真挡下（未决 #1 照旧）；真 vendor 合并写作（D37 旧项）。
 
-### 🔴 J 的事（2026-09-07 凌晨，122 场收工版）
+### 🔴 J 的事（2026-09-07 清晨，118 场收工版）
 
-0. ~~**双击 push-cabang.bat**——122 号场 8 支~~ 已推 ✓、已上线 ✓（9/7 02:48 实查）。
-   上线后看三件：① `curl -sI https://minit-project.vercel.app/login` 多四行 header、
-   没有 `X-Powered-By`；② 双击 `status.bat`，E 段印 307→/login、/login 200、
-   /privacy 剩 26、/terms 剩 11；③ `/privacy` 第 6 节表格有 Google／OpenAI／
-   Supabase／Vercel 四行。
-1. ~~🔴 **贴 migration 45**~~ 已贴 ✓（探针 APPLIED）。**下一步是真扣款对帐**：随便让 AI 读一次，
-   `/settings/plan` 应正常掉一格——J 有空看一眼。原文：（`20260923000000_charge_ai_action.sql`，免费额度原子扣款）。
-   `salin-migration.bat` 选 45 → Supabase SQL Editor → RUN。**没贴不会坏**（程式
-   自动走旧路）；贴完随便让 AI 读一次，`/settings/plan` 应正常掉一格；
-   `npm run check:migrations` 那行从 NOT YET 变 APPLIED。（123 号报告开头①）
-2. ~~🔴 **加 `RECEIPT_SIGNING_SECRET`**~~ Vercel 已加 ✓（清单里看得到，值没看）。**J 说 `.env.local` 也加了；
-   下一场开工 `grep -c RECEIPT_SIGNING_SECRET .env.local` 查证（只数行，不看值）。** 原步骤：PowerShell 跑
-   `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`，
-   Vercel → Settings → Environment Variables 加一条＋Redeploy；`.env.local` 加同一行。
-   **没做不会坏**（还在用 service key 签）；做了之后已印的 4 张收据 QR 照样验得过。
-   （123 号报告开头②）
+0. 🔴 **双击 `push-cabang.bat`**——118 号场 8 支＋122 场 1 支 docs（`git status -sb` 实查 ahead 9）。
+   没有新 migration、没有新 env。上线后自己丢一次真件：step 1 结尾应看到「🤖 我这里有 N 个地方不确定」＋
+   🙋 卡；`lanti Ajk seorg.` 那条会问你两种读法；正式文件里不会再有 `ditugaskan untuk melantik`。
+1. ~~贴 migration 45~~ 已贴 ✓、**真扣款已对帐 ✓**（118 §7-4：探针 org 0%→47%，7 次呼叫 7 列，`app_errors` 0）——你不用再读一张照片验它。
+2. ~~加 `RECEIPT_SIGNING_SECRET`~~ Vercel ✓；`.env.local` ✓（118 开工 `grep -c` = 1，只数行）。
 3. **填 122 单 §1 那张表**（＋123 §1 补的「责任上限」一格）——填了再开半小时场。不催。
-4. ~~贴 migration 43~~ 已贴 ✓（121 体检实证 1–43 APPLIED）。44 无探针，118 §7-2 补。
+4. （可选）migration 44 到底套没套，一句 SQL 看一眼（`npm run check:migrations` 尾段「人眼」有印）：
+   `select prosrc like '%allow_privileged_org_update%' from pg_proc where proname = 'admin_set_org_plan';` → 要 true。
 
 
 ### ❓ 未决问题
@@ -1423,28 +1460,41 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
 
 ### ⏭ 下一个 session 从哪开始
 
-**🔴 下一场还是 118 号单（品质急救二轮：108 剩六节＋行话百分比）。**
-它已被 109、113、116、122 四场各推后一次；「正式文件把人物关系写反」
-（`Tan Kim Loo ditugaskan untuk melantik…`）那一份**就是会送 eROSES 的那一份**，
-现在还在线上。122 场一个 prompt 都没动，118 要动的东西原封不动等着。
-⚠ 118 单 §7-3 写「D51」会撞号——**本场已写 D52，118 接着写 D53**。
+**118 号场（品质急救二轮 ✅）做完**（124 号报告；之前：122 号=123 号、116 号=117 号、113 号=115 号、109 号=110 号）。
+「正式文件把人物关系写反」这条从 108 起拖了五场，**本场结案**；线上要等 J push。
 
-**122 号场（体检小修包 ✅）做完**（123 号报告；之前：116 号=117 号、113 号=115 号、
-109 号=110 号、105 号=107 号）。
-122 之后的候选：**重教 `shot-layout-109`／`shot-cards-113`**（116 删了它们等的
-`meeting-choice` 卡，两支都跑不起来；一小场）；然后才是 **eslint 19→0**（独立一场，
-`useSyncExternalStore` 逐档改）；**法律页清零场**（等 J 表格）；
-**② 单一机构不讲「切换」**（`status.mjs` 唯一还红的一条，`org-chip.tsx` 没有
-soleOrg 分支）；**44 探针**（118 §7-2）。
-**等 J 反馈的**：贴 45；加 `RECEIPT_SIGNING_SECRET`；push；填 §1 表；
-排队上线走一次（含关分页再回来）；正式版看一眼值不值得存；100 场两个验收案；
-bench 模型拍板；eval 口径拍板；真 undang-undang 重传；tester 清单（73/77 号）；
-MyInvois 模板原档（未决 #12）。
+118 之后的候选（照 120 HANDOFF／123 §9 的序）：**重教 `shot-layout-109`／`shot-cards-113`**（116 删了它们等的
+`meeting-choice` 卡，一小场）→ **eslint 19→0**（独立一场，`useSyncExternalStore` 逐档改）→ **法律页清零场**（等 J 表格）→
+8/31 私密报告的「五件事」（财政对帐纯函式、请假≠出席、主席／记录员进签名栏、lint 三洞、`claude-sonnet-5` temperature 一行）
+——那份单在 `C:\dev\_私密-真件測試-20260831\施工單-真件測試抓到的五件事（待編號）.md`，**编号后搬进 `_J-要做的事`**，
+里面每一条都写了用虚构资料重现的方法，开工不需要真件。
+**等 J 反馈的**：push；填 §1 表；排队上线走一次（含关分页再回来）；bench 模型拍板；eval 口径拍板；
+真 undang-undang 重传；tester 清单（73/77 号）；MyInvois 模板原档（未决 #12）。
 
 ---
 
 
 ## 6. 已知陷阱（踩过的，别再踩）
+
+### 2026-09-07 清晨新增（118 号品质急救二轮场）
+
+- **「每一行都要挂一个标签」这种 prompt 结构会逼模型编事实。** 三选一标签＋马来文行动句的文法＝
+  被委任的人变成去委任别人的人。任何「必填的分类」都先问一句：填不出来的时候模型会怎么办？
+  答案是「编一个」的，就改成「有才填」，再用碼剥掉没挣到的。
+- **prompt 自己的范例要过自己的检查。** `Mesyuarat bersetuju melantik…` 那个范例本身就在教发明裁决；
+  `Tmn Aman` 让 `latinNameRuns` 要求地址缩写逐字活着——两个都是几周没人发现的自打脸。改 prompt 时把范例丢进 guard 跑一次。
+- **歧义侦测要写成碼、验收要用固定输入。** 「③④必问、①②⑤不准问」只有碼做得到每次一样；
+  形状少而窄（两个），宁缺勿滥。第三个形状来了：加形状＋加固定输入测试，不要改成问模型。
+- **真件跑完再看一次拼法。** 读取端把 `seorg.` 读成 `seong.`、名字中间小写（`Tan kim Loo`），虚名测试用的是「干净」拼法，
+  第一轮真件④没举手。手写件的验收永远要跑一次真件，不能只跑虚名固定输入。
+- **「读到了」和「印出来了」是两件事。** IC／地址在 extraction 里躺了两周，画面与成文层都没映射那几个 key。
+  schema 加 optional 欄位时，同一支 commit 里 grep 谁会读它——没人读的欄位等于没读到。
+- **探针把产品自己的红框当错误。** BM 语言关的框也是 `border-red`；写「等错误框」的 waitFor 要排除已知的产品框。
+  第二张纸前要清掉首页对话（`chat.home*`），不然上一张的成品卡会被当成这一张的。
+- **`.next/types` 会记住已删的 route。** 删 API route 后 `tsc` 报 `validator.ts` 找不到模块——`rm -rf .next/types .next/dev/types`
+  或重 build，不是代码错。
+- **bash heredoc 里的 Python 改档，非 ASCII 与 `\b` 之类的转义会静静不匹配。** 本场两次「assert old in s」失败都是这个；
+  用 Write 工具写 UTF-8 的 .py 再执行，或直接用 Edit。
 
 ### 2026-09-07 凌晨新增（122 号体检小修场）
 
@@ -2340,7 +2390,7 @@ J 手贴 migration 的步骤：记事本开档 → `Ctrl+A` `Ctrl+C` → Supabas
 | 位置 | 放什么 |
 |---|---|
 | 根目录 | `CLAUDE.md`（规则）· `STATE.md`（这份）· `BUILD_PLAN.md` · `PROMPTS.md` · `DEPLOY.md`（⚠ 过期，上线照 `docs/上线与截图-给J的步骤.md`）· `README.md` · `AGENTS.md` |
-| `docs/` | `DECISIONS.md`（D1–**D51**；D50=交接状态长在收入记录上、D51=Home＝agent 工作台＋两级改动制）· `agent-soul.md`（SOUL 人话版，与 src/prompts/agent-soul.ts 同改）· `功能盤點-計劃vs實作.md` · `产品缺口盘点.md` · `上线与截图-给J的步骤.md` · `换模型手册.md` · `AI-API-选型与成本.md` · 其余照旧 |
+| `docs/` | `DECISIONS.md`（D1–**D53**；D51=Home＝agent 工作台＋两级改动制、D52=repo 公开虚名铁律＋签章 secret、D53=正式文件不准编：标签靠字挣／不准写没写的施事者／歧义举手／Formal 卡删）· `agent-soul.md`（SOUL 人话版，与 src/prompts/agent-soul.ts 同改）· `功能盤點-計劃vs實作.md` · `产品缺口盘点.md` · `上线与截图-给J的步骤.md` · `换模型手册.md` · `AI-API-选型与成本.md` · 其余照旧 |
 | 品牌 | `src/lib/brand.ts`（BRAND_NAME="MinitAI"，D23）· **紫色**（D24）：logo 原图 `scripts/assets/minit-logo.png`、向量版 `src/components/brand-logo.tsx` · 重生图标：`node scripts/brand-icons.mjs` · tokens 都在 `globals.css` 的 `.v2-root` |
 | 定价／毛利 | `src/lib/unit-economics.ts` + `npm run economics`（价目表查证日 `PRICES_CHECKED_ON`） |
 | AI 分流设定 | `.env.example` 的 AI 段 + `npm run check:ai` |
@@ -2378,18 +2428,3 @@ J 手贴 migration 的步骤：记事本开档 → `Ctrl+A` `Ctrl+C` → Supabas
 3. **不要新增 `YYYY-MM-DD-下一个session从这里开始.md`**
 4. 完整过程报告值得留就放 `docs/archive/`，这里留一行指路
 5. **写「现在是什么」，不要写「上一版写错了，其实是什么」。** 同一件事只留一个说法。
-
-## 116 場（2026-08-31 深夜）——兩件擋路的事
-
-- **多場會議偵測整個拿掉**（`other_meetings` 從 prompt/schema/merge/versions/ask-box
-  全部移除）。它在 J 的兩張真件上兩戰兩敗，誤判的都是「決議裡的未來日期」
-  （18/7/26 的 AGM、17/10/2026 的慈善晚宴），每次誤判都丟掉一條決議。
-  取捨已由 J 拍板：真的兩場寫在一張紙上會讀成一份，人在 step 3 看得到改得動。
-- **BM 語言關新增 `src/lib/bm-glossary.ts`**：標準社團／會計用語對照表，
-  免費按鈕一次填好普通詞語。**表裡沒有名字 ⇒ 結構上碰不到人名**；
-  比對前先把名冊名字／機構註冊名／簽名人挖空。
-- 🔴 **陷阱：eval 的 `case-04-minutes-mixed` 會飄。** 本場兩次跑：
-  第一次 117/126 invented 1（那筆金額被同時寫進 resolutions），
-  第二次 117/125 invented 0（＝基準）。看到 case-04 的 invented 先重跑一次再查。
-- 🔴 **108 號單仍未執行**：`Tan Kim Loo ditugaskan untuk melantik...`
-  （draft-minutes 的三選一標籤逼模型編出施事者）still live。
