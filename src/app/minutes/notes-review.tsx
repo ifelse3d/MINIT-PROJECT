@@ -14,7 +14,8 @@ import { EMPTY_MEETING_FACTS, type KnownMeetingFacts } from "@/lib/meeting-facts
 import { MEETING_TYPES, meetingTypeUiLabelTri } from "@/lib/meeting-types";
 import { formatRm } from "@/lib/minutes-draft";
 import { parseRmToCents } from "@/lib/receipts";
-import { AskBackCards } from "./ask-back-cards";
+import { AgentCheckIn } from "./agent-check-in";
+import { AskBackCards, useOpenQuestionCount } from "./ask-back-cards";
 import { BeforeReading } from "./before-reading";
 import { DiscussSection } from "./discuss-section";
 import { FieldRow } from "./field-row";
@@ -222,6 +223,9 @@ export function NotesReview() {
     resumeDraft,
     deleteCloudDraft,
   } = useMinutes();
+  // 118 §6: what the agent says at the end of this step — the count of
+  // lines it can read two ways (118 §3). Code, not a vendor call.
+  const openQuestions = useOpenQuestionCount();
 
   // -------------------------------------------------------------------------
   // ⑥ THE PAGE QUEUE (work order 89). Pick N files → they read one after
@@ -1276,9 +1280,6 @@ export function NotesReview() {
           total={groups.resolutions.total}
           defaultOpen={firstUnfinishedHere === "resolutions"}
         >
-          {/* 118 §3: the lines MinitAI can read two ways, asked in plain
-              words, no reading pre-selected, no quota. */}
-          <AskBackCards />
           {/* #30: grouped by kind when the model (or a human) labelled the
               lines; a wholly unlabelled extraction renders exactly as the old
               flat list. The row's index into extraction.resolutions is kept,
@@ -1632,6 +1633,13 @@ export function NotesReview() {
         </StepGroup>
 
           </div>
+        )}
+
+        {/* 118 §6: the agent speaks at the end of the step — how many
+            lines it is unsure about, with the ask-back cards (118 §3)
+            right here, and nothing changed without a person's tap. */}
+        {isReal && !nothingYet && (
+          <AgentCheckIn uncertain={openQuestions} cards={<AskBackCards />} />
         )}
 
         <NextStepLink

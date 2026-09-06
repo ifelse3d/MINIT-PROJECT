@@ -23,7 +23,8 @@ import {
 } from "@/lib/roster-names";
 import { glossaryTermSubstitutions, splitFlaggedLines } from "@/lib/bm-glossary";
 import { useMinutes } from "./minutes-store";
-import { AskBackCards } from "./ask-back-cards";
+import { AgentCheckIn } from "./agent-check-in";
+import { AskBackCards, useOpenQuestionCount } from "./ask-back-cards";
 import { ItemSources } from "./item-sources";
 
 // ---------------------------------------------------------------------------
@@ -139,6 +140,9 @@ export function MinutesDocument() {
   const router = useRouter();
   const t = useTriText();
   const [einvoisVisible] = useEinvoisVisible();
+  // 118 §6: the agent's sentence under the document — how many lines are
+  // still carried as written because they can be read two ways.
+  const openQuestions = useOpenQuestionCount();
 
   // e-INVOIS AUDIT TRAIL (work order 94). Every judgement here is arithmetic
   // over values a human already confirmed — no vendor call, nothing invented.
@@ -514,10 +518,12 @@ export function MinutesDocument() {
               {shownDocument}
             </pre>
           )}
-          {/* 118 §3: the same questions as on the review step — a line with
-              two readings stays verbatim in the document above until one is
-              chosen here or there. */}
-          <AskBackCards />
+          {/* 118 §3/§6: the same questions as on the review step — a line
+              with two readings stays verbatim in the document above until
+              one is chosen here or there — under the agent's own sentence. */}
+          {isReal && (
+            <AgentCheckIn uncertain={openQuestions} cards={<AskBackCards />} />
+          )}
           {/* 118 §2-3: from any line of the document, one look back at the
               words the paper carried and where they were read. This is the
               path the removed 「正式版／原文」 card used to provide. */}

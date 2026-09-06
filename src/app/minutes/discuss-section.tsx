@@ -209,18 +209,26 @@ export function DiscussSection({ section }: { section: DiscussSectionKind }) {
   return (
     <div className="mt-3 border-t pt-3">
       {!open ? (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="text-base text-muted-foreground underline underline-offset-4"
-        >
-          💬{" "}
-          {t(
-            `Bincang ${label.bm} dengan AI (setiap hantaran ${cost.bm})`,
-            `跟 AI 讨论${label.zh}（每问一次${cost.zh}）`,
-            `Discuss ${label.en} with the AI (each message ${cost.en})`,
-          )}
-        </button>
+        /* 118 §6-2 (108 §7-2): a VISIBLE entry, not a line of small
+           underlined text. The price rides beside it in the org's own
+           percentage (118 §4). */
+        <div className="flex flex-wrap items-center gap-3">
+          <Button type="button" variant="outline" size="lg" onClick={() => setOpen(true)}>
+            💬{" "}
+            {t(
+              `Bincang ${label.bm} dengan AI`,
+              `跟 AI 讨论${label.zh}`,
+              `Discuss ${label.en} with the AI`,
+            )}
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            {t(
+              `setiap hantaran ${cost.bm}`,
+              `每问一次${cost.zh}`,
+              `each message ${cost.en}`,
+            )}
+          </span>
+        </div>
       ) : (
         <div className="flex flex-col gap-3">
           <p className="text-base font-medium">

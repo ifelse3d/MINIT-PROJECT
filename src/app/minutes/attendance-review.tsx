@@ -12,6 +12,7 @@ import { FieldRow } from "./field-row";
 import { DeletableRow } from "./row-controls";
 import { RosterPicker } from "./roster-picker";
 import { useMinutes } from "./minutes-store";
+import { AgentCheckIn } from "./agent-check-in";
 import { attendeeIdentityKey } from "@/lib/attendee-identity";
 
 // ---------------------------------------------------------------------------
@@ -298,6 +299,9 @@ export function AttendanceReview() {
         <>
           {/* 1 · The ones that need you, first. */}
           {ordered.needsYou.length > 0 && (
+            <div id="attendance-needs-you" className="scroll-mt-28" />
+          )}
+          {ordered.needsYou.length > 0 && (
             <div className="flex flex-col gap-2">
               <div className="flex flex-wrap items-center gap-3">
                 <h3 className="text-lg font-semibold">
@@ -493,6 +497,19 @@ export function AttendanceReview() {
           save gate looking done. The D30 escape hatch stays, but it has to
           be pressed, not passed. Not a dead control: the box says exactly
           what unlocks the step (CLAUDE.md rule 13). */}
+      {/* 118 §6: the agent speaks at the end of the step — the names it
+          read but is not sure of are the amber rows above; the button jumps
+          to them. Nothing is confirmed on its behalf. */}
+      {!nothingYet && !isSample && (
+        <AgentCheckIn
+          uncertain={batchCount}
+          onHandleNow={() =>
+            document
+              .getElementById("attendance-needs-you")
+              ?.scrollIntoView({ behavior: "smooth", block: "start" })
+          }
+        />
+      )}
       {attendanceUnsettled && !nothingYet ? (
         <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-base font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
           <Tri
