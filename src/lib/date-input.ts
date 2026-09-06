@@ -102,3 +102,16 @@ export function formatDateLong(iso: string, lang: "bm" | "zh" | "en"): string {
   if (lang === "zh") return `${y}年${m}月${d}日`;
   return `${d} ${MONTH_NAMES[lang][m - 1]} ${y}`;
 }
+
+/**
+ * 118 §4-3 (108 §5): the COMPACT form for lists and chips — day first, the
+ * way a Malaysian writes a date by hand ("17/10/2026"), and the way the
+ * notes themselves carry dates. One card used to show "2026-03-15" next to
+ * "17/10/2026"; every date a person reads now goes through this file.
+ * Not a date → unchanged (prints, never repairs).
+ */
+export function formatDateShort(iso: string): string {
+  if (!isIsoDate(iso)) return iso;
+  const [y, m, d] = iso.split("-").map(Number);
+  return `${d}/${m}/${y}`;
+}

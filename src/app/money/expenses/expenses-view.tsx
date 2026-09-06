@@ -10,7 +10,8 @@
 //     v1 has NO notifications, and the page says so honestly ("上來看");
 //   * the auditor: sees the book, touches nothing.
 //
-// The photo path reads ONE receipt/invoice (1 AI action, said on the button)
+// The photo path reads ONE receipt/invoice (one metered action, said on the
+// button as a share of the org's monthly allowance — 118 §4)
 // and PRE-FILLS the form — the human confirms every field by saving, and the
 // row is tagged source "photo" for the auditor. Typing is free and tagged
 // "manual". Money parsing is parseRmToCents only (Hard Rule 2).
@@ -20,6 +21,8 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
+import { useAiCost } from "@/components/ai-quota-provider";
+import { costPhrase } from "@/lib/quota-display";
 import { uploadErrorMessage } from "@/lib/shrink-photo";
 import { prepareUploadForSend } from "@/lib/upload-relay-client";
 import { PageSection } from "@/components/page-section";
@@ -158,6 +161,8 @@ export function ExpensesView({ role }: { role: string }) {
 
   // --- the photo reader (pre-fills the form; the human confirms by saving) --
   const [reading, setReading] = useState(false);
+  // 118 §4: the read button prices itself in the org's own percentage.
+  const readCost = costPhrase(useAiCost(1));
   const [readNote, setReadNote] = useState<string | null>(null);
 
   // B-5④: the ledger page's "this is spending" answer sends its photo here.
@@ -462,9 +467,9 @@ export function ExpensesView({ role }: { role: string }) {
                     }}
                   >
                     <Tri
-                      bm="Baca resit ini (1 tindakan AI)"
-                      zh="读取这张单据（用 1 次 AI 额度）"
-                      en="Read this receipt (1 AI action)"
+                      bm={`Baca resit ini (${readCost.bm})`}
+                      zh={`读取这张单据（${readCost.zh}）`}
+                      en={`Read this receipt (${readCost.en})`}
                     />
                   </Button>
                   <Button variant="ghost" onClick={() => setHandedPhoto(null)}>

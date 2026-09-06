@@ -5,6 +5,7 @@ import { Check, Undo2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmedAction } from "@/components/confirm-delete";
+import { formatDateShort } from "@/lib/date-input";
 import { Tri, useTriText } from "@/components/language-provider";
 import { URGENCY_BADGE, URGENCY_CARD } from "@/lib/activity-labels";
 import {
@@ -262,9 +263,9 @@ export function UpcomingSidebar({
                 <ConfirmedAction
                   body={
                     <Tri
-                      bm={`Padam acara "${ev.title}" (${ev.dateIso})? Tidak boleh dibatalkan.`}
-                      zh={`要删除活动「${ev.title}」（${ev.dateIso}）吗？删了就无法复原。`}
-                      en={`Delete the event "${ev.title}" (${ev.dateIso})? This cannot be undone.`}
+                      bm={`Padam acara "${ev.title}" (${formatDateShort(ev.dateIso)})? Tidak boleh dibatalkan.`}
+                      zh={`要删除活动「${ev.title}」（${formatDateShort(ev.dateIso)}）吗？删了就无法复原。`}
+                      en={`Delete the event "${ev.title}" (${formatDateShort(ev.dateIso)})? This cannot be undone.`}
                     />
                   }
                   onConfirm={() => onRemove(ev.id)}
@@ -286,7 +287,7 @@ export function UpcomingSidebar({
                 )}
               </div>
               <div className="text-sm tabular-nums">
-                {ev.dateIso}
+                {formatDateShort(ev.dateIso)}
                 {ev.timeText && ` · ${ev.timeText}`} ·{" "}
                 {past
                   ? t("sudah berlalu", "已过", "past")

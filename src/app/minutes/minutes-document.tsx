@@ -14,6 +14,7 @@ import {
   checkFinancialResolution,
   type EInvoisAuditStatus,
 } from "@/lib/einvois-governance";
+import { formatDateShort } from "@/lib/date-input";
 import { formatRm } from "@/lib/minit-format";
 import { MINUTES_LANGUAGES, type MinutesLang } from "@/lib/minutes-lang";
 import {
@@ -1097,7 +1098,7 @@ export function MinutesDocument() {
             <div className="min-w-40 flex-1">
               <div className="font-medium">{r.title || <em>—</em>}</div>
               <div className="text-sm text-muted-foreground">
-                {r.dateIso || <Tri bm="tiada tarikh" zh="没有日期" en="no date" />}
+                {r.dateIso ? formatDateShort(r.dateIso) : <Tri bm="tiada tarikh" zh="没有日期" en="no date" />}
                 {r.timeText && ` · ${r.timeText}`}
               </div>
             </div>

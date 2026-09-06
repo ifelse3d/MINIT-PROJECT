@@ -22,6 +22,27 @@ export function pctOfQuota(actions: number, quota: number | null | undefined): n
   return Math.min(100, Math.max(1, Math.round((actions / quota) * 100)));
 }
 
+/**
+ * 118 §4 (J 8/31 第 20 條③): the cost sentence a button prints — "about X%
+ * of the monthly allowance" — in the three languages, from a percentage
+ * pctOfQuota() worked out. null (pool unknown) names NO number: the sentence
+ * still says the button spends allowance, and never says "1 AI action".
+ */
+export function costPhrase(pct: number | null): { bm: string; zh: string; en: string } {
+  if (pct === null) {
+    return {
+      bm: "guna kuota AI",
+      zh: "用 AI 额度",
+      en: "uses AI allowance",
+    };
+  }
+  return {
+    bm: `kira-kira ${pct}% kuota bulanan`,
+    zh: `大约用本月额度的 ${pct}%`,
+    en: `about ${pct}% of the monthly allowance`,
+  };
+}
+
 /** What is LEFT of the monthly pool, 0–100, from the spent share. */
 export function remainingPct(usedPct: number | null | undefined): number | null {
   if (usedPct == null || !Number.isFinite(usedPct)) return null;

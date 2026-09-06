@@ -1,5 +1,7 @@
 import { Paperclip } from "lucide-react";
 import { Tri } from "@/components/language-provider";
+import { useAiCost } from "@/components/ai-quota-provider";
+import { costPhrase } from "@/lib/quota-display";
 import { RELAY_MAX_BYTES } from "@/lib/upload-relay";
 
 // ---------------------------------------------------------------------------
@@ -89,15 +91,16 @@ export function UploadLimitNote({ office = false }: { office?: boolean }) {
   );
 }
 
-/** The cost line that used to be crammed into a button's own label. */
-export function UsesOneAiAction() {
+/** The cost line that used to be crammed into a button's own label.
+ *  118 §4: it speaks the org's own percentage ("about 7% of the monthly
+ *  allowance"), never "1 AI action"; with the pool unknown it names no
+ *  number. `actions` for a button that spends more than one. */
+export function UsesOneAiAction({ actions = 1 }: { actions?: number }) {
+  const phrase = costPhrase(useAiCost(actions));
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
   return (
     <span className="text-sm text-[color:var(--v2-text-soft)]">
-      <Tri
-        bm="Guna 1 tindakan AI"
-        zh="用 1 次 AI 额度"
-        en="Uses 1 AI action"
-      />
+      <Tri bm={cap(phrase.bm)} zh={cap(phrase.zh)} en={cap(phrase.en)} />
     </span>
   );
 }

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tri, useLangs, useLocalizedError, useTriText } from "@/components/language-provider";
+import { useAiCost } from "@/components/ai-quota-provider";
+import { costPhrase } from "@/lib/quota-display";
 import { joinUserError, USER_ERRORS } from "@/lib/user-errors";
 import type { DiscussSectionKind } from "@/prompts/discuss-minutes";
 import { useMinutes, type TextLikeField } from "./minutes-store";
@@ -65,6 +67,8 @@ export function DiscussSection({ section }: { section: DiscussSectionKind }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [exchange, setExchange] = useState<Exchange | null>(null);
+  // 118 §4: the price in the org's own percentage, never "1 AI action".
+  const cost = costPhrase(useAiCost(1));
 
   // Sample/empty workspaces have nothing to discuss — and must not spend.
   if (!isReal) return null;
@@ -212,9 +216,9 @@ export function DiscussSection({ section }: { section: DiscussSectionKind }) {
         >
           💬{" "}
           {t(
-            `Bincang ${label.bm} dengan AI (1 tindakan AI setiap hantaran)`,
-            `跟 AI 讨论${label.zh}（发一次用 1 次 AI 额度）`,
-            `Discuss ${label.en} with the AI (1 AI action per message)`,
+            `Bincang ${label.bm} dengan AI (setiap hantaran ${cost.bm})`,
+            `跟 AI 讨论${label.zh}（每问一次${cost.zh}）`,
+            `Discuss ${label.en} with the AI (each message ${cost.en})`,
           )}
         </button>
       ) : (
@@ -290,9 +294,9 @@ export function DiscussSection({ section }: { section: DiscussSectionKind }) {
                 <Tri bm="AI berfikir…" zh="AI 思考中…" en="AI is thinking…" />
               ) : (
                 <Tri
-                  bm="Hantar (1 tindakan AI)"
-                  zh="发送（用 1 次 AI 额度）"
-                  en="Send (1 AI action)"
+                  bm={`Hantar (${cost.bm})`}
+                  zh={`发送（${cost.zh}）`}
+                  en={`Send (${cost.en})`}
                 />
               )}
             </Button>

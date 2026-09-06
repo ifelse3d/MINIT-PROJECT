@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Tri, useTriText } from "@/components/language-provider";
 import { URGENCY_BADGE, URGENCY_CARD } from "@/lib/activity-labels";
+import { formatDateShort } from "@/lib/date-input";
 import {
   daysBetween,
   daysLeftParts,
@@ -113,7 +114,7 @@ export function HomeUpcoming({ deadlines, todayIso }: { deadlines: Deadline[]; t
                   href="/calendar"
                   className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border-2 border-sky-300 bg-sky-50/80 p-3 backdrop-blur transition-[transform,border-color] duration-[var(--dur-fast)] ease-[var(--ease-out)] hover:-translate-y-0.5 hover:border-sky-400"
                 >
-                  <span className="text-base font-bold tabular-nums">{ev.dateIso}</span>
+                  <span className="text-base font-bold tabular-nums">{formatDateShort(ev.dateIso)}</span>
                   <span className="min-w-40 flex-1 text-sm font-medium leading-snug">
                     {ev.title}
                     {ev.timeText && <span className="text-muted-foreground"> · {ev.timeText}</span>}

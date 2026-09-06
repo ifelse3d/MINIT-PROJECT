@@ -15,6 +15,7 @@ import { getUsage } from "@/lib/ai/usage";
 import { countUnfinishedMinutesDrafts } from "@/lib/home-stats";
 import { readNeedsEinvois } from "@/lib/einvois-server";
 import { EinvoisProvider } from "@/lib/einvois-pref";
+import { AiQuotaProvider } from "@/components/ai-quota-provider";
 import { StorageScopeProvider } from "@/lib/storage-scope";
 import { isOperatorEmail } from "@/lib/admin-gate";
 import { AppShell } from "@/components/v3/shell";
@@ -158,6 +159,10 @@ export default async function RootLayout({
               {/* D49: the e-Invois beta gate rides the SAME operator boolean
                   as the Ops-console row — one answer to "who is the operator". */}
               <EinvoisProvider orgValue={needsEinvois} operator={showAdmin}>
+              {/* 118 §4: the monthly pool, once, so every button that spends
+                  can say "about X%" instead of "1 AI action" — the SAME
+                  denominator the Plan page and the home box already use. */}
+              <AiQuotaProvider quota={usage?.quotaPool ?? null}>
                 {/* AppShell picks the chrome for the route: full shell everywhere,
                     bare (language switcher only) on /login. */}
                 <AppShell
@@ -171,6 +176,7 @@ export default async function RootLayout({
                 >
                   {children}
                 </AppShell>
+              </AiQuotaProvider>
               </EinvoisProvider>
             </LanguageProvider>
           </AppearanceProvider>

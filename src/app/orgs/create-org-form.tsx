@@ -906,9 +906,9 @@ export function CreateOrgForm({
                 <Button asChild size="lg" variant="outline">
                   <Link href={AFTER_CREATE_WITH_FILE}>
                     <Tri
-                      bm="Teruskan tanpa bacaan"
+                      bm="Teruskan dahulu, baca kemudian"
                       zh="先不读，继续下一步"
-                      en="Continue without the reading"
+                      en="Continue for now, read it later"
                     />{" "}
                     →
                   </Link>

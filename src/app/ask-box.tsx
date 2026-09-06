@@ -53,6 +53,7 @@ import {
   suggestedQuestionsFor,
 } from "@/lib/prepared-answers";
 import { useEinvoisVisible } from "@/lib/einvois-pref";
+import { formatDateShort } from "@/lib/date-input";
 import { AttachIcon, UPLOAD_LIMIT_MB, UploadLimitNote } from "@/components/attach-icon";
 import { Button } from "@/components/ui/button";
 import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
@@ -1402,12 +1403,14 @@ export function AskBox({
     const costZh = costPct === null ? "" : `这次用了大约 ${costPct}% 的本月用量。`;
     const costEn = costPct === null ? "" : ` Used about ${costPct}% of the monthly quota.`;
     const m = kind === "meeting_notes" ? (merged as MeetingNotesExtraction) : null;
-    const dateBit = m?.meeting_date.value ? ` (${m.meeting_date.value})` : "";
+    // 118 §4-3: the date reads the way the paper writes it (17/10/2026),
+    // never the storage form beside a hand-written one on the same card.
+    const dateBit = m?.meeting_date.value ? ` (${formatDateShort(m.meeting_date.value)})` : "";
     const reportText =
       kind === "meeting_notes"
         ? t(
             `Siap. Saya baca nota itu dan sediakan minit mesyuarat${dateBit} — ${m!.resolutions.length} perkara.${moneyRows > 0 ? ` Saya juga ternampak ${moneyRows} baris wang — kad kedua di bawah kalau mahu rekod sekali.` : ""}${costBm} Buka kad untuk semak; apa-apa nak ubah, beritahu saya di halaman itu.`,
-            `做好了。笔记读完，会议记录${dateBit ? `（${m!.meeting_date.value}）` : ""}整理出 ${m!.resolutions.length} 条内容。${moneyRows > 0 ? `我还看到 ${moneyRows} 笔钱 —— 想一起记账就点第二张卡。` : ""}${costZh}点卡片进去核对；要改哪里，进去后直接跟我说。`,
+            `做好了。笔记读完，会议记录${dateBit ? `（${formatDateShort(m!.meeting_date.value)}）` : ""}整理出 ${m!.resolutions.length} 条内容。${moneyRows > 0 ? `我还看到 ${moneyRows} 笔钱 —— 想一起记账就点第二张卡。` : ""}${costZh}点卡片进去核对；要改哪里，进去后直接跟我说。`,
             `Done. I read the notes and prepared the meeting minutes${dateBit} — ${m!.resolutions.length} items.${moneyRows > 0 ? ` I also spotted ${moneyRows} money line(s) — the second card records them if you want.` : ""}${costEn} Open the card to check; tell me there if anything needs changing.`,
           )
         : t(
