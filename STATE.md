@@ -5,47 +5,81 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-08-31 深夜（MYT）· Opus 5（113 号场：首页入口卡场——ALL IN ONE）**
-**🔴 本场（113 号场）状态一句话（115 号报告）：首页空的时候，中间那块大留白
-变成六张可以按的卡。**
-一张卡＝一件真的工作：`开会的笔记`／`收到的钱`／`章程 Undang-Undang Tubuh`／
-`刚开完会`（直接开麦克风）／`问一句`（常问的几题折进去，点了就送出）／
-`接着做（N 份还没做完）`（只有真的有才出现，加重）。
-**卡 1–3 的重点不是「开档案选择器」，是「人已经说了这是什么纸」**——
-`/api/intake` 直接跳过 classify 那一步：**每次少扣一个 AI 动作，
-也少一次分类猜错的机会**（`actionsUsed = (forcedKind ? 0 : 1) + files.length`）。
-**直接拖进来、不按卡的照旧分类**（有一条断言专门守这件事）。
-卡片长在**对话区【里面】**（104 §8＋109 §1 治过两次的病，这次没复发）：
-四个状态 × 三种宽度实测输入框 y 座标**逐字同 109**
-（桌机 730–885／1920 宽 910–1065／手机 578–751），
-对话区 **604／784／447px 一格没掉**。
-送出第一则之后整组卡**淡出＋高度收合到真正的 0**（实测第一版残留 34px，
-真凶是「有 padding 的 grid item 只会收到自己的 padding 为止」——
-已改成外层裸、内层带间距）；`清除对话` 之后卡回来。
-收起来的时候 `inert`，Tab 和读屏都到不了。
-顺手（§3）：输入框上方那段四行操作说明 → 一句「有什么要处理的？」，
-拖放提示只在**真的在拖**的时候才出现；顶上那行「您有 N 份还没做完」
-不再单独占一列（变成第 6 张卡）。
-**🔴 一个 prompt 都没动——`git diff src/prompts/` 空、
-`git diff --stat f74cdf3..HEAD -- src/prompts/` 空（整场对照 109 收工点一个 byte 都没动）。**
-**测过：tsc 0 · eslint 20（基准逐字同）· vitest 1413（+15）· build ✓ ·
-三条 e2e 全绿 · e2e-105 全绿 ·
-新 shot-cards-113 34 条全 PASS（六张卡的落点／kind 真的传出去／收合与回来／
-四状态×三宽度）· 既有 shot-layout-109（20）· shot-minutes-109（8）·
-shot-workbench-104 · shot-queue-105 全 PASS ·
-品质 eval 3/3 PASS 0 findings US$0.0030（与 105/109 基准同）·
-全场真钱 US$0.0030（授权 ≤0.30）。**
-**🔴 🔴 J 的一件事：双击 `push-cabang.bat`（本场 4 支 commit）。
-没有新 migration、没有新环境变数。上线后看三件：①首页空的时候中间有六张卡；
-②按「开会的笔记」再选照片，扣的用量应该比以前少一点（少一次分类）；
-③打了第一句话之后卡片收起来，`清除对话` 之后回来。
-🔴 108 号单（品质急救：不准编、不准丢）**还是**没跑过——「正式文件把人物关系
-写反」那件事还在线上等它，**下一场就是它**。旧拍板照旧欠：bench 模型、
-eval 对外口径。**
+**最后更新：2026-09-07 凌晨（MYT）· Fable 5.1（122 号场：体检小修包——法律页＋三个真 BUG＋小债）**
+**🔴 本场（122 号场）状态一句话（123 号报告）：121 体检点名的三个真 BUG 都修了，
+给 J 双击的脚本不再说谎，四个安全 header 上了，法律页第三方清单补齐——
+但 J 表格没填的 37 个 `[[…]]` 还在线上。**
+①收据 QR／章程续读 token 的 HMAC 改用专用 `RECEIPT_SIGNING_SECRET`
+（`src/lib/signing-secret.ts`：没设退回 service key、验证时新旧两把逐一试，
+已印的 QR 照样验得过）；②免费额度扣款搬进 **migration 45** 的
+`charge_ai_action()`（per-org advisory lock，count＋decide＋insert 一次做完），
+`usage.ts` 先试 RPC、PGRST202 走旧路一字不改（D8）；③退款只认 42703 才删列，
+其他错保留成本纪录＋记 `app_errors`；credit 退还改 SQL 加法。
+`status.mjs` E 段改成真的去问线上（307→/login、/login 200、法律页数 `[[`——
+要先剥 `<script>` 再数，否则 RSC payload 把 32 数成 327）；③④两个探针改对；
+`check-ai.bat` 尾巴改现行分流。`next.config.ts` 四个 header＋无 X-Powered-By
+（本机 curl 实证）；Next 16.3.4；`npm audit` 6→2；死档 8 个删；README 1,452；
+`.env.example` 补两段；D52。
+**🔴 `src/prompts/` 一个 byte 没动（`git diff --stat 6fa0ba4..HEAD -- src/prompts/` 空）。**
+**测过：tsc 0 · eslint 20（19 错 1 警，逐字同基准；16.3.4 新 lint 规则曾推到 25，
+五处刻意的整页导航加了带理由的 disable）· vitest 1452（+21）· build ✓ ·
+e2e-money 20/20 · e2e-minutes 20/20 · e2e-roles 15/15（第一次 1 FAIL＝测试自己的
+264ms 竞态，改成等文字后全绿）· e2e-105 14/14 · page errors 全 0 ·
+真钱 US$0.00（零 vendor 呼叫）。**
+**⚠ `shot-layout-109`／`shot-cards-113` 跑不起来——不是本场弄坏的：116 场的
+`e506618` 刻意删了它们等的 `meeting-choice` 卡；117 报告没跑过它们。要重教。**
+**🔴 🔴 J 的三件事（123 号报告开头有一步一步）：①贴 migration 45；②生一把
+`RECEIPT_SIGNING_SECRET` 加进 Vercel 与 `.env.local`；③双击 `push-cabang.bat`
+（本场 7 支 commit）。三件都「没做不会坏」。
+🔴 118 号单（正式文件把人物关系写反）**还是**没跑——下一场还是它。
+§1 法律页那张表（122 §1-1＋123 §1 补的「责任上限」一格）J 欠填，不催。**
 
 ---
 
-## 🌙 现在在哪里（2026-08-31 深夜，113 号场收工）
+## 🌙 现在在哪里（2026-09-07 凌晨，122 号场收工）
+
+> **已上线**：https://minit-project.vercel.app —— 开工实测 main==origin/main==`6fa0ba4`
+> （113／116 的 commit 都已推）、migration 1–43 APPLIED（44 无探针；45 本场新写、NOT YET）。
+> **122 号场 7 支 commit 等 J push-cabang.bat**；**一支新 migration（45）等 J 贴**；
+> **一个新环境变数（`RECEIPT_SIGNING_SECRET`）等 J 加**——三件都是「没做不会坏」。
+
+### 这一场做了什么（122 号场 ✅，123 号报告——体检小修包）
+
+- **Stage 1 法律页**：`legal/privacy-notice-BM-EN.md` 第三方表格 BM／EN 拆括号、
+  **加 OpenAI**（classify／chat 真的走它，`npm run check:ai` 实证）；Anthropic 有 key
+  无路由，不列。`legal:sync` 重生 `src/legal/documents.ts`。**剩 37 个 `[[`**
+  （privacy 26／terms 11，含 DRAFT 横幅 3 个）——J 表格没填。守门测试等清零再装。
+- **Stage 2 签章密钥**：新 `src/lib/signing-secret.ts`；`verifyReceiptVerifyAny`／
+  `verifyContinuationAny` 纯函式＋12 条测试；三处路由改用；`.env.example` 加段。
+- **Stage 3 原子扣款**：`supabase/migrations/20260923000000_charge_ai_action.sql`
+  （`charge_ai_action`＋`refund_ai_credit`，security definer、service_role only）；
+  `usage-core.ts` 抽 `chargeRpcOutcome`／`isMissingRpcError`／`isMissingColumnError`
+  ＋测试；`usage-refund.test.ts` 假 client 学会 `rpc()`，加四条；
+  `check-migrations.mjs` 45 探针只探 `refund_ai_credit`（永不探 `charge_ai_action`）；
+  `salin-migration.bat` 45。
+- **Stage 4 脚本**：`status.mjs`（③④探针、E 段线上化、法律页探针、去 champion／倒数）、
+  `check-ai.bat`、`check-migrations.mjs` 尾段数字从资料夹数。
+- **Stage 5 依赖与 header**：`npm audit fix`、Next 16.3.4、`next.config.ts` 四 header＋
+  `poweredByHeader:false`；5 处 `window.location.assign` 加带理由的 eslint-disable。
+- **Stage 6**：删 `editable-field.tsx`＋5 张模板 svg＋`login-bg.jpg`＋`r1-demo/`；
+  README 1,452；`.env.example` 加 `AI_RATE_LIMIT_PER_MIN`／`SENTRY_DSN`；
+  `docs/DECISIONS.md` **D52**；`.claude/launch.json` 加 `minit-start`。
+- **顺手**：`e2e-roles.mjs` W-2 那条改成一次导航后等文字（原来每次重试都重新导航，
+  把 264ms 的补水竞态重置五次）。
+
+### 本场没做的（照实留残，下一场的料）
+
+- §1 J 没填的 37 个 `[[`（122 单表还**漏了**条款第 7 条「责任上限」那格）。
+- §7 eslint 19 错**没动**：多数是 SSR 补水的 `useEffect(()=>setX(load()),[])`，
+  改 lazy initializer 会 hydration 不一致＝行为变；正解 `useSyncExternalStore`，
+  一档一档改＋各跑截图，是独立一场；且该跑的截图脚本本身过期（下一条）。
+- **`shot-layout-109`／`shot-cards-113` 要重教到 116 之后的流程**（116 欠的）。
+- 线上 header、45 套上后的真扣款、`RECEIPT_SIGNING_SECRET` 有设时的真签验——等 J。
+
+---
+
+
+## 上一场：首页入口卡场（2026-08-31 深夜，113 号场，115 号报告）
 
 > **已上线**：https://minit-project.vercel.app —— **109 场的 6 支 J 已推**
 > （开工实测 main==origin/main、工作树乾净）。
@@ -1324,40 +1358,26 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
   真 HEIC 大图在真手机浏览器上的行为（helper 的 HEIC 退路只有单元测试）；
   围栏真挡下（未决 #1 照旧）；真 vendor 合并写作（D37 旧项）。
 
-### 🔴 J 的事（2026-08-31 深夜，113 场收工版）
+### 🔴 J 的事（2026-09-07 凌晨，122 场收工版）
 
-0. **双击 push-cabang.bat（最要紧）**——113 号场 **4 支** commit 等推。
-   ~~109 场 6 支~~ 已推 ✓。没有新 migration、没有新环境变数。
-   上线后看三件：①首页空的时候中间有六张卡；②按「开会的笔记」再选照片，
-   扣的用量应该比以前少一点（少一次分类）；③打第一句话之后卡片收起来，
-   `清除对话` 之后回来。
-1. ~~**双击 push-cabang.bat（最要紧）**——105 号场 **14 支** commit 等推。~~
-   ~~104 场 10 支~~ 已推 ✓。
-2. 🔴🔴 **贴 migration 43**（`20260921000000_ai_jobs.sql`，排队慢慢读那张表）。
-   `salin-migration.bat` 选 43，或直接开档 Ctrl+A / Ctrl+C，贴进 Supabase →
-   SQL Editor → New query → RUN，看到「Success. No rows returned」就好了。
-   **没贴＝排队整条休眠**：长档案照旧读不完，讯息叫人拆小 PDF——就是 105
-   之前的行为，**不会坏、不会乱扣钱**；贴完自动生效，不用改设定。
-   （107 号报告 §6 有逐步。）
-3. **上线走一次排队**：首页丢一份 **12 页以上**的 PDF → 看报价卡（几页／
-   几批／几 % ）→ 按「开始读」→ 看进度条「第 N／M 批」→ **中途关掉分页**，
-   再打开首页，应该有一张黄卡问「要接着读吗（已读的页不会重扣）」。
-   再开一份会议记录 → 「做好的记录」→ 最上面那张卡的 **📑 正式版**。
-4. **两个名字要自己改回来**（工作场不动线上资料）：org **#369**「Persatuan」、
-   org **#91**「…Cawangan Klang, dan selepas ini」——两个都是本场修掉的
-   regex 咬到的伤口。改法：切到那个机构 → **设定 → 机构 → 「改机构的名字」**
-   （这个框是本场新加的；在那之前那一页只印名字，没有控制项）。
-5. **104 的新岔路还没走过**：`/orgs/new` → 「我有章程」→ 丢一份章程 →
-   看名字栏是不是完整的注册名；再看 **Plan 页那一行**还剩多少 %
-   （不该再出现「0% left」旁边挂「+607%」）。
-6. 100 场两个验收案照旧欠一试：对 agent 说「TESTER3 换了电话」、org197
-   孤儿条归位。
-7. **两个一句话拍板照旧**：①bench 模型（101 §3）；②eval 对外口径
-   93.6–95.2% 区间（101 §5）。
-8. 旧账照旧：收据 QR 真机一扫（87 场欠）；Vercel 的
-   `NEXT_PUBLIC_CONTACT_EMAIL`；MyInvois 模板（未决 #12）；真
-   undang-undang 重传；tester 清单（73/77 号）；54 号 GUIDE 设 Supabase
-   邮件。
+0. **双击 push-cabang.bat**——122 号场 **7 支** commit 等推。
+   ~~113 场 4 支~~ ~~116 场~~ 已推 ✓（开工实测 main==origin/main）。
+   上线后看三件：① `curl -sI https://minit-project.vercel.app/login` 多四行 header、
+   没有 `X-Powered-By`；② 双击 `status.bat`，E 段印 307→/login、/login 200、
+   /privacy 剩 26、/terms 剩 11；③ `/privacy` 第 6 节表格有 Google／OpenAI／
+   Supabase／Vercel 四行。
+1. 🔴 **贴 migration 45**（`20260923000000_charge_ai_action.sql`，免费额度原子扣款）。
+   `salin-migration.bat` 选 45 → Supabase SQL Editor → RUN。**没贴不会坏**（程式
+   自动走旧路）；贴完随便让 AI 读一次，`/settings/plan` 应正常掉一格；
+   `npm run check:migrations` 那行从 NOT YET 变 APPLIED。（123 号报告开头①）
+2. 🔴 **加 `RECEIPT_SIGNING_SECRET`**：PowerShell 跑
+   `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`，
+   Vercel → Settings → Environment Variables 加一条＋Redeploy；`.env.local` 加同一行。
+   **没做不会坏**（还在用 service key 签）；做了之后已印的 4 张收据 QR 照样验得过。
+   （123 号报告开头②）
+3. **填 122 单 §1 那张表**（＋123 §1 补的「责任上限」一格）——填了再开半小时场。不催。
+4. ~~贴 migration 43~~ 已贴 ✓（121 体检实证 1–43 APPLIED）。44 无探针，118 §7-2 补。
+
 
 ### ❓ 未决问题
 
@@ -1402,43 +1422,55 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
 
 ### ⏭ 下一个 session 从哪开始
 
-**🔴 下一场就是 108 号单（品质急救：不准编、不准丢）。**
-它已经被 109、113 两场各推后一次了，而「正式文件把人物关系写反」
-（`Tan Kim Loo ditugaskan untuk melantik…`——把**被委任的人**写成
-**去委任别人的人**）那一份**就是会送 eROSES 的那一份**，现在还在线上。
-109 与 113 两场都一个 prompt 都没动，108 要动的东西原封不动等着。
+**🔴 下一场还是 118 号单（品质急救二轮：108 剩六节＋行话百分比）。**
+它已被 109、113、116、122 四场各推后一次；「正式文件把人物关系写反」
+（`Tan Kim Loo ditugaskan untuk melantik…`）那一份**就是会送 eROSES 的那一份**，
+现在还在线上。122 场一个 prompt 都没动，118 要动的东西原封不动等着。
+⚠ 118 单 §7-3 写「D51」会撞号——**本场已写 D52，118 接着写 D53**。
 
-**113 号场（首页入口卡场 ✅）做完**（115 号报告；之前：109 号=110 号、
-105 号=107 号、104 号=106 号、102 号=103 号、100 号=101 号、97 号=99 号）。
-113 之后的候选：**手机那 69px**（铃铛移进上方 app bar 56px＋安全告示压两行
-13px）——拿到之后首页第三排卡片就上来了，对话区也到 1.34×；
-`问一句` 想凑到三四题得先在 `prepared-answers.ts` 补免费答案。
-
-**（旧）105 号场（底座场：排队背景工＋会议记录两层＋侦测重复页 ✅）做完**
-（107 号报告；之前：104 号=106 号、102 号=103 号、100 号=101 号、97 号=99 号）。
-🔴 **migration 43（`ai_jobs`）是唯一 NOT YET，等 J 亲手贴**；
-**105 场 14 支 commit 等 J push**。
-**下一场最该做的一件事：排队链路的第一次真跑**——J 贴完 43 之后，丢一份真的
-12 页 PDF，把 `ai_jobs` 那一列的 `batches_done / pages_done / actions_charged`
-三个数字对一次帐（工作场做不了这一步：D8 不准对线上 DB 跑 migration，
-所以本场只验到切页／扣费算式／状态机／四张卡／软性拒绝）。
-其他候选：**整理 pass 的拒绝率**（实测 4 次 3 成 1 拒）与**合併分组偶尔怪**
-（107 §7-3，故意没硬加规矩）；**正式版存进 minutes_docs**（要再一支 migration，
-先让 J 用过再说）；**章程改走新底座**（目前故意不动，107 §7-6）；
-**④后半小包**（加人卡预填 ic/地址/职业＋州属从地址带出）；
-**90 号单剩下的一半**（右下角浮动面板还没有回纹针）；
-**% 长尾小包**（深页估价行全换 %，103 §7 留残）；agent 对话额度/定价重设计
-（讨论场议题）；RLS 下一阶段。
-**等 J 反馈的**：🔴 贴 migration 43；排队上线走一次（含关分页再回来）；
-正式版看一眼值不值得存；104 的新岔路走一次；#369／#91 两个名字自己改回来；
-100 场两个验收案（换电话/孤儿条）；bench 模型拍板；eval 口径拍板；
-真 undang-undang 重传；tester 清单（73/77 号）；MyInvois 模板原档
-（未决 #12）。竞赛 8/31 截止已过内部 cutoff，材料 J 自己定，**不催**。
-RESPONSIVE：J 若再圈破版，贴 46 号单同段 PROMPT 继续。
+**122 号场（体检小修包 ✅）做完**（123 号报告；之前：116 号=117 号、113 号=115 号、
+109 号=110 号、105 号=107 号）。
+122 之后的候选：**重教 `shot-layout-109`／`shot-cards-113`**（116 删了它们等的
+`meeting-choice` 卡，两支都跑不起来；一小场）；然后才是 **eslint 19→0**（独立一场，
+`useSyncExternalStore` 逐档改）；**法律页清零场**（等 J 表格）；
+**② 单一机构不讲「切换」**（`status.mjs` 唯一还红的一条，`org-chip.tsx` 没有
+soleOrg 分支）；**44 探针**（118 §7-2）。
+**等 J 反馈的**：贴 45；加 `RECEIPT_SIGNING_SECRET`；push；填 §1 表；
+排队上线走一次（含关分页再回来）；正式版看一眼值不值得存；100 场两个验收案；
+bench 模型拍板；eval 口径拍板；真 undang-undang 重传；tester 清单（73/77 号）；
+MyInvois 模板原档（未决 #12）。
 
 ---
 
+
 ## 6. 已知陷阱（踩过的，别再踩）
+
+### 2026-09-07 凌晨新增（122 号体检小修场）
+
+- **公开页没登入墙，体检要 curl `/privacy`／`/terms` 数 `[[`。** 这两页是全站唯二
+  不登入就看得到的正文；三周里没人从外面看过一眼，评审／律师打开就是范本括号。
+  `status.mjs` E 段现在自动数。**数之前先剥 `<script>`**：Next 的 RSC payload 把
+  正文重复序列化好几遍，直接数是 327／146，剥完才是 32／11（＝md 里的数）。
+- **给 J 双击的 .bat 的「预期输出」要跟程式一起改。** `check-ai.bat` 尾巴写着
+  chat→gpt-5-nano，102 场换成 gpt-5.6-luna 时没人改它，J 对照会以为有错；
+  `status.mjs` 的探针找的函式名早改掉，把做完的事印成「没做」。
+  改路由／改函式名的 commit 要 grep 一次 `*.bat` 与 `scripts/status.mjs`。
+- **截图／e2e 脚本等的 DOM 卡片被后来的场刻意删掉时，删的那场要一起重教脚本。**
+  116 的 `e506618` 删了 `data-card="meeting-choice"`，`shot-layout-109`／
+  `shot-cards-113` 从那天起就跑不起来，117 报告没跑它们、没人知道。
+  `git grep` 那个 `data-card`／`data-probe` 在 `scripts/` 里有没有人等它。
+- **puppeteer `networkidle2` 之后立刻拍快照，抓不到 client-side 补水的内容；
+  重试时不要重新导航。** e2e-roles W-2 量到 idle 2087ms、内容 2351ms；原来的
+  五次重试每次 `goto` 都把竞态重置。一次导航、bounded 等文字。
+- **`npm update next` 会顺带升 `eslint-config-next`，新 lint 规则会让基准漂。**
+  16.3.4 加了 `no-location-assign-relative-destination`（20→25）。行为不准变：
+  刻意的整页导航（cookie 换过要让伺服器看到）加带理由的 disable，不改代码。
+- **`git rm` 过的删除会留在 index 里，下一个只 `git add` 单档的 commit 会把它们
+  一起带走。** 本场就发生了一次（e2e 修正那支 commit 夹了 10 个删除），
+  没 push 前 `reset --soft` 重做。commit 前看 `git status --short` 的 `D` 行。
+- **README 的测试数字用「收工这棵树真跑的数」，不是「开工时的数」。**
+  README 跟这棵树一起 push，写开工数等于 push 一个已知过期的数。
+
 
 ### 2026-08-31 深夜新增（113 号入口卡场）
 
