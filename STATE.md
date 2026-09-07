@@ -5,8 +5,56 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**最后更新：2026-09-07 清晨（MYT）· Fable 5.1（118 号场：品质急救二轮——108 剩六节＋行话百分比）**
-**🔴 本场（118 号场）状态一句话（124 号报告）：正式文件不会再把人写反——
+**最后更新：2026-09-08 凌晨（MYT）· Fable 5.1（125 号场：真件八件——人名不准音译、出席人数、签名栏、财政对帐、三小洞、sonnet、lint 三洞、真纸 bench）**
+**🔴 本场（125 号场）状态一句话（126 号报告）：J 9/7 晚线上亲手抓到的八件全落地、全是码守——
+华文人名变拼音退回模型（`checkChineseNamesSurvive`）；人数句由码算、人点「对」（`parseHeadcount`＋`attendance_confirmed` 满足 D30，请假≠出席）；
+抬头主席／记录员进签名栏、职位印 BM、不印 `( Pengerusi )`；财政 7,680＋13,600−10,150≠11,590 由 TypeScript 算出 460、只问不改；
+散会只印一次、Tempat／KEWANGAN／职位自动套词汇表；sonnet-5 不送 temperature；lint 加三洞；真纸 bench 五颗模型各读两次（J 挑，.env 没动）。**
+①`minutes-guards.ts`：`chineseNameRuns`／`checkChineseNamesSurvive`（两字段只在成品长出拉丁名才算）／`droppedChineseNames`（文件页最后一道网，只列不挡）；两条回圈 `ROMANISED OR DROPPED A NAME`。
+②`headcount.ts`（固定形状）、`attendance-gate.ts`（client＋server 同一支 `attendanceRecorded`）、`minutes-ambiguity.ts` 第三形状 `headcountQuestion`、
+`headcount-card.tsx`；契约新 `apologies`／`attendance_confirmed`；parse 把请假名从 attendees 剔掉；成文 `Kehadiran:`＋`Jumlah hadir`＋`TIDAK HADIR (DENGAN MAAF)`；paste-pack 先取确认值。
+③`signatories.ts`（抬头 `主席：甲　记录：乙` 由码读，check）、`signatureRole`（记录→SETIAUSAHA、副职照原样、BM 下不印华文）、`chairSlot` 删。
+④`financial-reconcile.ts`（整数分；四样缺一不查；平＝不说）、figures `role`、`figures_mismatch_noted`、`reconcile-card.tsx`、成品一行该语言注记、`eval:quality` 新两案＋`reconcile` 期望。
+⑤`sameLine`＋两条 composer 在原文行层去重散会；`applyBmGlossary`（人名围起来、换掉的词之间补空格）套 Tempat／KEWANGAN／职位／PENUTUP；prompt 加划掉字／散会只进 adjournment；check-in 改「这一步没有要问你的」。
+⑥`anthropic.ts` `acceptsTemperature`＋吃 `timeoutMs`。⑦`lintMinitMd` 三码。⑧`scripts/bench-real-pages.ts`（不含真资料；`--document` 成品探针）；e2e 四支吃 `E2E_BASE`；**D54**。
+**测过：tsc 0 · eslint 20（逐字同基准）· vitest 1564（+91）· build ✓×2 · e2e-money 20/20 · e2e-minutes 20/20 · e2e-roles 15/15（第一次 W-2 一条 flake，单跑全过）· e2e-105 16/16 ·
+`eval:quality` 5/5 · **会议记录 eval 最后一轮 117/125 · 93.6% · invented 0（与基准逐格同）**——跑了四轮：第 1、3 轮 case-01 掉四分（「抬头主席／秘书进签名栏」规矩让模型把他们搬出 office_bearers），
+补到 OFFICE BEARERS 段「那一行永远也进 office_bearers，签名栏只是复制」后回来；第 3 轮 case-04 飘 1 个 invented（117 §3 已知），依单子重跑＝0。真钱本场 **US$1.14**（授权 ≤2.00；bench 子额 0.99 压线）。**
+**真纸 B 本机重跑成品：三个华文名仍是华文、`Jumlah hadir: 52 orang`、签名栏两名都在、对帐 460、散会一次、KEWANGAN 零华文（读取端 `晚晚宴` 那个字除外）。**
+**真纸 bench 一句话：flash-lite 两次读同一张纸 64% 格子一样、便宜快；terra 79% 但一读 US$0.05–0.07；luna 65% 且 11,600 读成 1,600；gemini-3.5-flash 撞输出上限；sonnet-5 见 126 §8。
+🔴 换任何一颗都要连 route 20 秒墙＋`EXTRACT_OUTPUT_CEILING` 一起改。J 看完私密夹 `_test-results\125\` 再拍板。**
+**⚠ `shot-layout-109`／`shot-cards-113` 仍坏（116 欠的），本场没碰。真纸 A 印刷页 `Agenda 2.1` 子标题被读取端吃掉（lint 现在抓到），另排。**
+🔴 **13 支 commit 在本机（12 支 code＋1 支 docs），`git status -sb` 实查 `[ahead 13]`、工作树干净；没有新 migration、没有新 env、.env 没动。**
+法律页 37 个 `[[` 照旧等 J 填表。
+
+---
+
+## 🌙 现在在哪里（2026-09-08 凌晨，125 号场收工）
+
+> **已上线**：https://minit-project.vercel.app —— 线上仍是 122 场的版本；本机 `main` 领先 origin **13 支**（全是 125 场），工作树干净。
+> migration 1–45 全 APPLIED（本场没新 migration）。**真钱本场 US$1.14（授权 ≤2.00，没超；逐笔在 126 号报告 §9）。**
+
+### 这一场做了什么（125 号场 ✅，126 号报告——真件八件）
+
+- 见檔頭 ①–⑧；每 Stage 一支 commit（`304fbf4`…`52f236b`）。D54 写了（`docs/DECISIONS.md`）。
+- 本场踩的雷（新增）：Bash heredoc 里写 `\n`／`\\n` 会被工具层拆成真换行——含转义的代码一律用 Write／Edit；
+  给 prompt 加「X 也进 Y」这种规矩时要在 **X 原来那一段**同时写「X 仍进原字段，Y 只是复制」，只在 Y 那段讲不够——模型读到「每个事实只住一个字段」就把 X 搬家（eval case-01 两次掉四分）；
+  两支 bench 同一秒启动会写同一个表档名（已加随机尾巴）；bench 硬停是每读前查，跨线那读会跑完（sonnet 一读 US$0.14）；
+  真纸 bench 必须能覆写每次呼叫的超时，不然慢模型在 route 的 20 秒墙内一次都看不到；port 3000 可能被 J 别的项目占着，e2e 用 `E2E_BASE`。
+
+### 本场没做的（照实留残，下一场的料）
+
+- 法律页 37 个 `[[`（等 J 填 122 §1 表＋责任上限格）。
+- 重教 `shot-layout-109`／`shot-cards-113`（116 欠的）；之后 eslint 19→0。
+- 读取端吃掉印刷页子标题（`## Agenda 2.1:` 空标题，lint 抓到）；划掉字误读（`晚晚宴`）prompt 挡不住——换模型的题目。
+- 换模型＝J 看完 bench 拍板，连 route 20 秒墙／输出上限一起改；`check:ai` 没跑。
+- 文件正文 `Tarikh:` 仍 ISO；手机 69px 等照 120 HANDOFF 排后面；e2e-roles W-2 偶发 flake。
+
+---
+
+## 上一场：118 号场（2026-09-07 清晨，124 号报告——品质急救二轮）
+
+**118 号场状态一句话（124 号报告）：正式文件不会再把人写反——
 三选一标签拆掉、「原文没说谁做就不准写谁做」改成程式检查、歧义一律举手不准编、
 Formal 卡整条删、额度全改百分比、IC／地址印出来、agent 在精灵里每一步说一句话。
 J 两张真件本机从头跑过：③④举手、①②⑤没问、两句错话零出现、migration 45 真的在扣（7 次呼叫 7 列）。**
