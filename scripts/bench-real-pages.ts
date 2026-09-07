@@ -29,7 +29,10 @@
  *     --out <dir>                    where the table and raw JSON go (required)
  *     --models spec,spec             provider:model list (default: the five below)
  *     --runs N                       reads per model per page (default 2)
- *     --max-usd X                    hard stop on REAL accumulated cost (default 1.00)
+ *     --max-usd X                    hard stop on REAL accumulated cost (default 1.00) —
+ *                                    checked BEFORE each read, so the read that
+ *                                    crosses the line still completes (a sonnet-5
+ *                                    read cost US$0.14 once; budget with that in mind)
  *     --timeout-ms N                 per-read vendor timeout (default 60000 — the
  *                                    live route allows 20s; the time column says
  *                                    whether a model would fit it)
@@ -356,7 +359,10 @@ async function draftDocument(extraction: Extraction, orgName: string, onUsage: (
 async function main() {
   loadEnvLocal();
   const args = parseArgs(process.argv.slice(2));
-  const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+  // Second-resolution plus a random tail: two benches launched in the same
+  // second wrote the same table file once (the sonnet run overwrote the
+  // document probe's table) — never again.
+  const ts = `${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}-${Math.random().toString(16).slice(2, 6)}`;
   const outDir = path.resolve(args.out);
   const rawDir = path.join(outDir, `raw-${ts}`);
   const orgName = "PERSATUAN CONTOH";
