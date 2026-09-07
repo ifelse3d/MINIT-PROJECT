@@ -16,7 +16,11 @@ import { Tri } from "@/components/language-provider";
 //
 //   "I am not sure about N things here. Sort them out now?"   — with the
 //   ask-back cards (118 §3) right under it, or a jump to the rows it marked;
-//   "I understood everything in this step."                    — otherwise.
+//   "Nothing I need to ask you on this step."                  — otherwise.
+//
+// 125 §5-1: the second sentence used to say "I understood everything in this
+// step". It had not — it had counted its open questions and found none,
+// which is all it knows. It now claims exactly that and nothing more.
 //
 // 🔴 It NEVER edits anything by itself (100 §0, the two-tier rule stands):
 // every card below is a question a person answers with a tap; the sentence
@@ -59,9 +63,9 @@ export function AgentCheckIn({
           />
         ) : (
           <Tri
-            bm="Langkah ini saya faham semuanya."
-            zh="这一步我都看得懂。"
-            en="I understood everything in this step."
+            bm="Tiada apa yang perlu saya tanya pada langkah ini."
+            zh="这一步没有要问你的。"
+            en="Nothing I need to ask you on this step."
           />
         )}
       </p>

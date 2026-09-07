@@ -111,6 +111,38 @@ export function glossaryTermSubstitutions(
   return out;
 }
 
+/**
+ * 125 §5-4: the glossary APPLIED to a fixed passage of a BM document — the
+ * venue, a figure's description, a bearer's position, the closing line —
+ * passages that never go through the AI, so nobody should have to press
+ * "write the BM version" and then "fill in the ordinary words" to get
+ * 会议室 → Bilik Mesyuarat. Only terms in the table are swapped; every
+ * string in `protect` (the roster's names, the bearers' and signatories'
+ * names, the registered organisation name) is fenced off first and comes
+ * back untouched, so a term sitting inside a person's name can never claim
+ * it. Chinese that the table does not know stays — the BM guard's job.
+ */
+export function applyBmGlossary(text: string, protect: readonly string[] = []): string {
+  if (!/[㐀-䶿一-鿿]/.test(text)) return text;
+  // Fence the protected strings behind private-use placeholders.
+  const fenced: string[] = [];
+  let work = text;
+  for (const p of [...protect].map((s) => s.trim()).filter((s) => s !== "").sort((a, b) => b.length - a.length)) {
+    if (!work.includes(p)) continue;
+    const token = `${fenced.length}`;
+    fenced.push(p);
+    work = work.split(p).join(token);
+  }
+  const terms = [...BM_GLOSSARY].sort((a, b) => b[0].length - a[0].length);
+  for (const [from, to] of terms) {
+    if (work.includes(from)) work = work.split(from).join(to);
+  }
+  fenced.forEach((p, i) => {
+    work = work.split(`${i}`).join(p);
+  });
+  return work;
+}
+
 /** A CJK run — the unit a human actually supplies a spelling for. */
 const CJK_RUN = /[㐀-䶿一-鿿]+/g;
 

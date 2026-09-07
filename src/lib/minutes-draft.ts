@@ -1,4 +1,5 @@
 import { headcountForDocument } from "@/lib/attendance-gate";
+import { applyBmGlossary } from "@/lib/bm-glossary";
 import type { MeetingNotesExtraction } from "@/lib/extraction";
 import { meetingTypeLabel } from "@/lib/meeting-types";
 import { draftedByLine } from "@/lib/brand";
@@ -78,8 +79,21 @@ function renderMinutesDraftBmRaw(
   if (e.meeting_date.confidence !== "missing" && e.meeting_date.value !== "") {
     lines.push(`Tarikh: ${e.meeting_date.value}`);
   }
+  // 125 §5-4: the fixed passages of this BM template — venue, figure labels,
+  // bearer positions — get the glossary applied (the same rule as the formal
+  // composer); every person's name and the org name are fenced off first.
+  const protect = [
+    opts.orgName,
+    opts.confirmedBy?.name ?? "",
+    ...e.attendees.map((a) => a.name.value),
+    ...(e.apologies ?? []).map((a) => a.name.value),
+    ...e.office_bearers.map((b) => b.person_name.value),
+    e.prepared_by?.person_name.value ?? "",
+    e.endorsed_by?.person_name.value ?? "",
+  ];
+  const fixed = (t: string) => applyBmGlossary(t, protect);
   if (e.meeting_venue.confidence !== "missing" && e.meeting_venue.value !== "") {
-    lines.push(`Tempat: ${e.meeting_venue.value}`);
+    lines.push(`Tempat: ${fixed(e.meeting_venue.value)}`);
   }
   lines.push("");
 
@@ -139,7 +153,7 @@ function renderMinutesDraftBmRaw(
   if (figures.length > 0) {
     lines.push("## KEWANGAN", "");
     figures.forEach((f) =>
-      lines.push(`- ${f.description.value}: ${formatRm(f.amount_cents.value as number)}`)
+      lines.push(`- ${fixed(f.description.value)}: ${formatRm(f.amount_cents.value as number)}`)
     );
     // 125 §4-3: the same acknowledged-mismatch note the formal document prints.
     const note = figuresNoteFor(e, "bm");
@@ -159,7 +173,7 @@ function renderMinutesDraftBmRaw(
       f && f.confidence !== "missing" && f.value !== "" ? f.value : undefined;
     bearers.forEach((b) =>
       lines.push(
-        `- ${b.position.value}: ${b.person_name.value}${bearerParticulars("bm", {
+        `- ${fixed(b.position.value)}: ${b.person_name.value}${bearerParticulars("bm", {
           icNo: present(b.ic_no),
           address: present(b.address),
           occupation: present(b.occupation),

@@ -94,7 +94,8 @@ describe("🔴 125 §2-5 — Jumlah hadir comes from the confirmed count", () =>
       figures_mismatch_noted: true,
     };
     const md = composeMinutesMd(plan, e, opts);
-    expect(md).toContain("- 银行: RM11,590.00");
+    // 125 §5-4: the label came out in BM by the glossary; the amount is exact.
+    expect(md).toContain("- Bank: RM11,590.00");
     expect(md).toContain("Nota: angka di atas disalin seperti tertulis; baki yang dikira RM11,130.00 berbeza daripada baki tertulis RM11,590.00 sebanyak RM460.00");
     expect(renderMinutesDraftBm(e, { orgName: "PERSATUAN CONTOH" })).toContain("Nota: angka di atas");
     // Not acknowledged → no note (the review step is still asking).

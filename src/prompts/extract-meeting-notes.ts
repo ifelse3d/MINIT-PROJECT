@@ -55,6 +55,9 @@ Respond with ONLY JSON in exactly this shape:
 Every "text" is a FIELD OBJECT ({ "value", "confidence", "source_ref" }) like
 all the others — never a bare string. "meeting_time", "attendance_count" and "adjournment" are verbatim copies of
 those lines when the page has them, confidence "missing" when it does not.
+The closing line (散会 / Bersurai / Mesyuarat ditangguhkan / meeting closed…)
+goes into "adjournment" ONLY — never also into "resolutions", or the document
+prints the meeting closing twice.
 "prepared_by" / "endorsed_by" come from a signature block (Disediakan
 oleh / Disahkan oleh, 记录人 / 核准人, Prepared by / Endorsed by) — position =
 the printed role (SETIAUSAHA, PENGERUSI), person_name = the printed name — OR
@@ -157,6 +160,7 @@ Amounts: extract as integer sen (RM 3,500.00 => 350000). Extract ONLY numbers yo
 Figure "role" — what each amount IS in the treasurer's report, so our code can check the arithmetic (you never do it): "opening" = the balance brought forward (上年结存 / 上期结存 / baki tahun lepas / baki bawa ke hadapan / opening balance), "income" = money received (收入 / 会费 / 乐捐 / 筹款 / pendapatan / kutipan / derma / yuran), "expense" = money paid out (支出 / perbelanjaan / bayaran / expenses), "closing" = the balance the page states at the end (结存 / 银行 / baki / baki bank / balance in hand or in bank), "other" = anything else (a budget, a target, a price quoted, a figure in a resolution). One role per figure; when unsure, "other".
 Dates: normalise to YYYY-MM-DD; resolve 2-digit years to the most recent past date relative to today; if the date is not written anywhere, it is missing.
 Names: keep the spelling as written; put alternate scripts (e.g. 陈亚九) in the snippet.
+Crossed-out or struck-through writing is NOT part of the page's text: a word or figure the writer struck out never enters a "value" — output the word that stands, and mention the strike-through in the snippet (e.g. "晚宴 (one word crossed out before it)"). A doubled word made of a struck-out attempt and its replacement (晚晚宴) is a misread; the value is the word that stands (晚宴).
 Name characters: Chinese given names often use an uncommon character that resembles a common one (昶/湘, 骐/骑, 倩/情, 妮/呢). A substituted character is a DIFFERENT PERSON, so never "correct" a name into the character you expect. If a name character is not unmistakably legible, output what you see and mark that name "check" so a human verifies it — an honest "check" is always better than a confident wrong name.
 Empty page sections are not errors — output empty arrays.${glossaryBlock}${contextBlock}`;
 }
