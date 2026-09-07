@@ -133,10 +133,19 @@ export function applyBmGlossary(text: string, protect: readonly string[] = []): 
     fenced.push(p);
     work = work.split(p).join(token);
   }
+  // Each swapped term is bracketed while the others are swapped, then a
+  // space is put wherever a bracket touches a letter, a digit or another
+  // bracket: 慈善晚宴筹款 must read "Jamuan amal kutipan derma", not
+  // "Jamuan amalkutipan derma" (found on J's real page, 125 §8).
   const terms = [...BM_GLOSSARY].sort((a, b) => b[0].length - a[0].length);
   for (const [from, to] of terms) {
-    if (work.includes(from)) work = work.split(from).join(to);
+    if (work.includes(from)) work = work.split(from).join(`⁅${to}⁆`);
   }
+  work = work
+    .replace(/([A-Za-z0-9])⁅/g, "$1 ⁅")
+    .replace(/⁆([A-Za-z0-9])/g, "⁆ $1")
+    .replace(/⁆⁅/g, "⁆ ⁅")
+    .replace(/[⁅⁆]/g, "");
   fenced.forEach((p, i) => {
     work = work.split(`${i}`).join(p);
   });

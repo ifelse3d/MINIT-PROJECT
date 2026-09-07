@@ -84,6 +84,7 @@ const { verbatimIndices } =
 const { droppedChineseNames } =
   require("../src/lib/minutes-guards") as typeof import("../src/lib/minutes-guards");
 const { cjkSnippets } = require("../src/lib/bm-guard") as typeof import("../src/lib/bm-guard");
+const { applyBmGlossary } = require("../src/lib/bm-glossary") as typeof import("../src/lib/bm-glossary");
 const { lintMinitMd } = require("../src/lib/minit-format") as typeof import("../src/lib/minit-format");
 /* eslint-enable @typescript-eslint/no-require-imports */
 
@@ -324,8 +325,16 @@ async function draftDocument(extraction: Extraction, orgName: string, onUsage: (
   const dropped = droppedChineseNames(sources, markdown, [orgName]);
   const kewangan = markdown.split(/^## /m).find((s) => s.startsWith("KEWANGAN")) ?? "";
   const adj = e.adjournment && e.adjournment.confidence !== "missing" ? e.adjournment.value : "";
-  const adjCore = adj.replace(/[^0-9A-Za-z㐀-䶿一-鿿]/g, "");
-  const adjCount = adjCore === "" ? 0 : (markdown.replace(/[^0-9A-Za-z㐀-䶿一-鿿]/g, "").split(adjCore).length - 1);
+  // PENUTUP prints the closing line with the glossary applied (散会 →
+  // Bersurai), so the count looks for either spelling.
+  const core = (s: string) => s.replace(/[^0-9A-Za-z㐀-䶿一-鿿]/g, "");
+  const adjCore = core(adj);
+  const adjCoreBm = core(applyBmGlossary(adj, [orgName]));
+  const flat = core(markdown);
+  const adjCount =
+    adjCore === ""
+      ? 0
+      : flat.split(adjCore).length - 1 + (adjCoreBm !== adjCore ? flat.split(adjCoreBm).length - 1 : 0);
   const checks = {
     path: path_,
     "Chinese names of the page all still in Chinese (droppedChineseNames)": dropped.length === 0 ? "PASS" : `FAIL — dropped: ${dropped.length}`,

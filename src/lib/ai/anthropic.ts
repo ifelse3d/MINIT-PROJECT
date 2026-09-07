@@ -117,7 +117,12 @@ export function createAnthropicProvider(model: string): VisionJsonProvider {
       maxOutputTokens,
       temperature,
       onUsage,
+      timeoutMs,
     }: VisionJsonRequest): Promise<unknown> {
+      // 125 §8: the per-request override the other two providers honour —
+      // the real-page bench could not see claude-sonnet-5 at all because
+      // every read hit this file's own 45s wall.
+      const requestTimeoutMs = timeoutMs ?? REQUEST_TIMEOUT_MS;
       const key = process.env.ANTHROPIC_API_KEY;
       if (!key) {
         throw new Error(
@@ -158,7 +163,7 @@ export function createAnthropicProvider(model: string): VisionJsonProvider {
         if (BACKOFF_MS[attempt]) await sleep(BACKOFF_MS[attempt]);
 
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+        const timer = setTimeout(() => controller.abort(), requestTimeoutMs);
 
         try {
           const res = await fetch(API_URL, {
@@ -226,11 +231,11 @@ export function createAnthropicProvider(model: string): VisionJsonProvider {
             isAbort || err.message.includes("fetch failed") || err.message.includes("ECONN");
           if (worthRetrying && attempt < MAX_ATTEMPTS - 1) {
             lastError = isAbort
-              ? new Error(`Anthropic timed out after ${REQUEST_TIMEOUT_MS}ms`)
+              ? new Error(`Anthropic timed out after ${requestTimeoutMs}ms`)
               : err;
             continue;
           }
-          throw isAbort ? new Error(`Anthropic timed out after ${REQUEST_TIMEOUT_MS}ms`) : err;
+          throw isAbort ? new Error(`Anthropic timed out after ${requestTimeoutMs}ms`) : err;
         } finally {
           clearTimeout(timer);
         }

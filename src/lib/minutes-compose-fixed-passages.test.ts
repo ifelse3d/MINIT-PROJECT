@@ -92,6 +92,12 @@ describe("🔴 125 §5-4 — the fixed passages get the glossary, names never", 
     expect(applyBmGlossary("Dewan Contoh")).toBe("Dewan Contoh");
     // Digits in the text are not mistaken for a fence token.
     expect(applyBmGlossary("散会 12.30pm 0", ["王丽华"])).toBe("Bersurai 12.30pm 0");
+    // Two terms glued on the page come out as two words (found on J's page:
+    // "Jamuan amalkutipan derma").
+    expect(applyBmGlossary("慈善晚宴筹款")).toBe("Jamuan amal kutipan derma");
+    expect(applyBmGlossary("晚宴收入")).toBe("Jamuan malam Pendapatan");
+    expect(applyBmGlossary("银行结存")).toBe("Bank Baki");
+    expect(applyBmGlossary("RM9150晚宴")).toBe("RM9150 Jamuan malam");
   });
 
   it("the formal BM document: venue, figure labels, positions and the closing line come out in BM; 张伟杰 stays beside his position", () => {
