@@ -445,7 +445,13 @@ export type MinitLintFinding = {
     | "content_lost"
     | "forbidden_content"
     /** 125 §4: the quality eval's reconciliation expectation was not met. */
-    | "reconcile_unexpected";
+    | "reconcile_unexpected"
+    /** 125 §7 (8/31 private report, the lint's three holes): an agenda
+     *  heading with a number and no title; a line numbered twice as
+     *  "N (N)"; the same agenda title heading two sections. */
+    | "agenda_heading_empty"
+    | "duplicate_numbering"
+    | "agenda_repeated";
   detail: string;
 };
 
@@ -489,6 +495,37 @@ export function lintMinitMd(
     // "Bil.: ____ / 2026" and dates are not enumerations; only flag body lines.
     if (DOUBLE.test(l) && !/^\s*\d{4}-\d{2}-\d{2}/.test(l)) {
       findings.push({ code: "double_numbering", detail: l.trim().slice(0, 80) });
+    }
+  }
+
+  // 125 §7 — the three holes the 8/31 real run fell through.
+  // (a) "## Agenda 2.1:" with nothing after the colon: a sub-heading whose
+  //     title was lost. Both the BM/EN "Agenda N:" and the zh "议程 N：" forms.
+  const AGENDA_HEADING = /^##\s+(?:Agenda|议程)\s+(\S+?)\s*[:：]\s*(.*)$/;
+  const titlesSeen = new Map<string, number>();
+  for (const l of lines) {
+    const m = AGENDA_HEADING.exec(l.trim());
+    if (!m) continue;
+    const title = m[2].trim();
+    if (title === "") {
+      findings.push({ code: "agenda_heading_empty", detail: l.trim().slice(0, 80) });
+      continue;
+    }
+    // (c) the same agenda title heading two sections.
+    const key = title.toLowerCase().replace(/\s+/g, " ");
+    titlesSeen.set(key, (titlesSeen.get(key) ?? 0) + 1);
+  }
+  for (const [title, n] of titlesSeen) {
+    if (n > 1) findings.push({ code: "agenda_repeated", detail: `"${title.slice(0, 60)}" ×${n}` });
+  }
+  // (b) "1 (1) …" — a line's own number followed at once by the same number
+  //     in brackets (the page's enumerator survived beside ours). Bracket
+  //     forms of the SAME or a DIFFERENT number both count; a bracket that
+  //     is not a number ("(a)", "(RM)") does not.
+  const DUP_NUMBERING = /^\s*(\d{1,3}(?:\.\d{1,3})*)\s+\((\d{1,3}(?:\.\d{1,3})*)\)\s+\S/;
+  for (const l of lines) {
+    if (DUP_NUMBERING.test(l)) {
+      findings.push({ code: "duplicate_numbering", detail: l.trim().slice(0, 80) });
     }
   }
 
