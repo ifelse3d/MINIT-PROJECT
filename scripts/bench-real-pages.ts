@@ -30,6 +30,9 @@
  *     --models spec,spec             provider:model list (default: the five below)
  *     --runs N                       reads per model per page (default 2)
  *     --max-usd X                    hard stop on REAL accumulated cost (default 1.00)
+ *     --timeout-ms N                 per-read vendor timeout (default 60000 — the
+ *                                    live route allows 20s; the time column says
+ *                                    whether a model would fit it)
  *     --document                     also draft the document with the CURRENT
  *                                    write model from run 1 of the current
  *                                    extract model (the 收工 probe), per paper
@@ -120,13 +123,15 @@ type Args = {
   models: string[];
   runs: number;
   maxUsd: number;
+  /** Per-read vendor timeout (default 60s — see readPage). */
+  timeoutMs: number;
   document: boolean;
   dryRun: boolean;
   yes: boolean;
 };
 
 function parseArgs(argv: string[]): Args {
-  const a: Args = { papers: [], out: "", models: DEFAULT_MODELS, runs: 2, maxUsd: 1, document: false, dryRun: false, yes: false };
+  const a: Args = { papers: [], out: "", models: DEFAULT_MODELS, runs: 2, maxUsd: 1, timeoutMs: 60_000, document: false, dryRun: false, yes: false };
   for (let i = 0; i < argv.length; i++) {
     const v = argv[i];
     const next = () => argv[++i] ?? "";
@@ -139,6 +144,7 @@ function parseArgs(argv: string[]): Args {
     else if (v === "--models") a.models = next().split(",").map((s) => s.trim()).filter(Boolean);
     else if (v === "--runs") a.runs = Math.max(1, Number(next()) || 2);
     else if (v === "--max-usd") a.maxUsd = Number(next()) || 1;
+    else if (v === "--timeout-ms") a.timeoutMs = Math.max(5_000, Number(next()) || 60_000);
     else if (v === "--document") a.document = true;
     else if (v === "--dry-run") a.dryRun = true;
     else if (v === "--yes") a.yes = true;
@@ -204,7 +210,7 @@ type Read = {
   vendorCalls: number;
 };
 
-async function readPage(provider: Provider, file: string, orgName: string): Promise<Read> {
+async function readPage(provider: Provider, file: string, orgName: string, timeoutMs: number): Promise<Read> {
   const started = Date.now();
   let cost: number | null = 0;
   let calls = 0;
@@ -213,7 +219,10 @@ async function readPage(provider: Provider, file: string, orgName: string): Prom
     cost = cost === null || u.costMicros === null ? null : cost + u.costMicros;
   };
   const prompt = extractMeetingNotesPrompt({ orgName, todayIso: new Date().toISOString().slice(0, 10) });
-  const req = { prompt, imageBase64: readFileSync(file).toString("base64"), mimeType: mimeOf(file), onUsage };
+  // A slower model needs longer than the live route's 20s wall to be SEEN at
+  // all (gemini-3.5-flash timed out six times for six on the first run);
+  // whether it fits the live walls is reported by the time column.
+  const req = { prompt, imageBase64: readFileSync(file).toString("base64"), mimeType: mimeOf(file), onUsage, timeoutMs };
   const attempt = async (p: string) => {
     const raw = await provider.extractJson({ ...req, prompt: p });
     return parseMeetingNotesExtraction(raw);
@@ -378,7 +387,7 @@ async function main() {
       for (let run = 1; run <= args.runs; run++) {
         if (stop()) { console.log(`  🛑 hard stop: US$${(spentMicros / 1e6).toFixed(3)} reached`); break; }
         process.stdout.write(`  ${model} · ${pg.paper} p${pg.page} · run ${run} … `);
-        const read = await readPage(provider, pg.file, orgName);
+        const read = await readPage(provider, pg.file, orgName, args.timeoutMs);
         if (read.costMicros === null) unpriced = true; else spentMicros += read.costMicros;
         console.log(read.ok ? `ok ${(read.elapsedMs / 1000).toFixed(1)}s ${read.costMicros === null ? "cost ?" : `US$${(read.costMicros / 1e6).toFixed(4)}`}` : `FAILED (${read.error})`);
         rows.push({ paper: pg.paper, page: pg.page, model, run, read });
