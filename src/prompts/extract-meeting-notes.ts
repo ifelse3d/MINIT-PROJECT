@@ -65,9 +65,13 @@ from the meeting's HEADER when it names them: a line such as 「主席：甲　�
 or "Pengerusi: … / Setiausaha: …" gives endorsed_by = the person after
 主席 / 主持 / Pengerusi / Chairman and prepared_by = the person after 记录 /
 記錄 / 秘书 / Setiausaha / Secretary / Minuted by, each with the role word as
-written and that line as the source_ref. No signature block and no such
-header line = both fields missing; never fill them with any other name on
-the page. "section_no", "section_title" and
+written and that line as the source_ref. This is a COPY for the signature
+block and MOVES nothing: the same line still fills "office_bearers" when it
+names the society's standing positions (Pengerusi / Setiausaha …), and the
+same people still count as "attendees" when the page lists them as present —
+exactly as before. No signature block and no such header line = both fields
+missing; never fill them with any other name on the page. "section_no",
+"section_title" and
 "own_no" are OPTIONAL structure markers — see DOCUMENT STRUCTURE below; omit
 them on pages that have no numbered sections.
 

@@ -1017,6 +1017,36 @@ J 8/31：「可以收掉了，因為不需要了，左邊也有 sidebar 可以�
 - **精靈裡 agent 在場（§6）。** 每一步結尾一句人話（「我這裡有 N 個地方不確定，現在處理嗎？」／
   「這一步我都看得懂」），舉手卡就在那句話下面；Discuss 入口改成看得見的鈕。**它只數不改**（D51 兩級制不動）。
 
+### D54 — 出席人數由碼從人數句算、由人確認，AI 不算；人名不准音譯由碼守；帳對不上只問不改（2026-09-08，125 號單；D53 的延伸）
+
+**病歷（J 2026-09-07 晚線上親手抓到）。** 同一張常年大會手稿，本機成品華文名保留，線上成品
+`Cadangan oleh <拼音>, disokong oleh <拼音>`——三個名字被模型編成拼音，prompt 從 8/19 起就寫著 never romanised。
+`attendance_count` 兩次都讀對 `理事12人,请假2人(甲,乙),会员40人`，沒有人把它變成數字；步驟 2 逼 J 打一個名字，
+成品 `Jumlah hadir: 1 orang`，進 eROSES 的 Bilangan Ahli Hadir 是假的。財政九個數字讀對，7,680＋13,600−10,150＝11,130≠11,590，差 460 沒人講。
+
+- **prompt 講過的規矩不算數，碼擋住的才算（D53 靈魂延續）。** 人名音譯就是活例子。`checkChineseNamesSurvive`
+  是 `checkNames` 的反方向：詞彙表詞與「開頭是姓的日常詞」先挖掉，剩下 2–4 字姓開頭的段是人，成品裡少一個就退回模型一次
+  （`ROMANISED OR DROPPED A NAME`），再犯整份退純模板（純模板照原文抄，音譜不了）。兩字段只在成品長出原文沒有的拉丁名時才算
+  （周会／许可／曾任是詞不是人——誤殺對的文件比漏抓糟）。文件頭最後一道網 `droppedChineseNames` 只列不擋。
+- **出席人數：碼算、人確認、AI 不算（§2）。** `parseHeadcount` 只認固定形狀（中／BM／EN 各幾種），请假／缺席／tidak hadir／apologies
+  後面的數字**不算出席**、括號裡的名字進 `apologies`。步驟 2 卡問「我算出 52 人出席，對嗎？」［對］［不對，我自己填］，不預選、不預填、不花額度；
+  形狀認不得＝第三個舉手形狀（`headcountQuestion`），只問「這句寫幾個人出席？」。人答的數字寫 `attendance_confirmed`——
+  **它滿足 D30**（不再逼人打名字），成品 `Kehadiran: <原句>`＋`Jumlah hadir: N orang`＋`TIDAK HADIR (DENGAN MAAF)` 名單，
+  eROSES 的 Bilangan Ahli Hadir 先取確認值、名單長度後備；`attendanceRecorded()` 一支函式，client 與 server action 同源。
+  parse 時 `apologies` 裡的人從 `attendees` 剔掉（8/31 把兩個請假的當唯一出席者那一次）。
+- **簽名欄（§3）。** 抬頭 `主席：甲　记录：乙`／`Pengerusi: … Setiausaha: …` 由碼讀（`signatoriesFromLines`，check、來源是那一行），
+  prompt 只是也講一次；職位一律印文件語言的標籤（`signatureRole`：记录→SETIAUSAHA），BM 簽名欄下不印華文；
+  沒人簽就是空白底線＋職位標籤，**不印 `( Pengerusi )`**（它像一個名字的格）。不准拿登入者名字冒充。
+- **財政對帳（§4）。** `reconcileFigures` 整數分：上期＋收入−支出 vs 紙上結存；四樣缺一＝不查；平＝**一句話都不說**；
+  不平＝核對頁一張卡兩顆鈕，**兩顆都不改數字**：「我讀錯了，我來改」只捲到那幾行；「數字沒錯，紙上本來就這樣」寫
+  `figures_mismatch_noted`，成品 KEWANGAN 底下多**一行**該語言的註記。figures 多 `role`（opening／income／expense／closing／other）由模型標、碼算。
+- **固定段落自動套詞彙表（§5-4）。** Tempat／KEWANGAN 描述／PEMEGANG JAWATAN 職位／PENUTUP 這些不經 AI 的段落，
+  BM 成品直接跑 `applyBmGlossary`——表裡有的詞才換，人名／機構名先用私用區字元圍起來不碰。散會句與最後一條決議同文只印一次
+  （比對的是**原文行**，因為模型改寫後的句子跟 verbatim 的 PENUTUP 不同字）。
+- **agent 只准說它知道的（§5-1）。** 「這一步我都看得懂」改成「這一步沒有要問你的」——它數過問題等於零，就只有這麼多。
+- **模型換不換是 J 看完真紙 bench 才拍板（18③）。** `scripts/bench-real-pages.ts` 每顆各讀兩次同一張真紙，
+  表只寫進私密夾，.env 不動。
+
 ---
 
 *Drafted by Minit's build assistant · 2026-07-29 · D9–D13 appended 2026-08-25 · D14–D15 appended 2026-08-25 (Stage B/C) · D16 appended 2026-08-25 (Stage D) · D17 appended 2026-08-27 (work order 27, the overnight sprint) · D18–D21 appended 2026-08-27 (work order 31 §0, J's post-launch rulings) · D22–D23 appended 2026-08-27 (work order 32 §0, launch-day feedback rulings) · D24–D25 appended 2026-08-27 (the afternoon rulings: violet redesign + BM guard) · D26–D28 appended 2026-08-27 (the launch-evening 20-point list) · D29–D32 appended 2026-08-28 (the two-review session: prompt unfreeze, attendance gate, funds page, record-to-DB) · D33–D35 appended 2026-08-28 (J's §6 answers + the new seven: PdpaNote deleted, per-part AI discussion, minutes named/printable/editable/photo-linked) · D36–D37 appended 2026-08-28 evening (the eight-item round: save lands on the finished document, saved workspaces clear themselves, AI may merge like items under checkMergedFacts) · D38–D40 appended 2026-08-28 (the design pass: one five-step radius scale shifted a notch, the canvas gradient that was being painted and covered, the four rebuilt home cards and the sign-in brand panel) · D41–D42 appended 2026-08-28 (J's review of it: no piggy bank and a standing check on imagery for every community, and one brand mark that both the page and the icon files are generated from) · D43–D44 appended 2026-08-28 night (no black buttons — the primary token is brand purple; and the free fence: lifetime 5 documents · 20 receipts · 20 pages · 3 clean downloads, watermarked previews, clean files only through counted doors) · D45 appended 2026-08-30 (work order 81: the A6 exception — a constitution upload costs the fence min(actual pages, 5), charged once per document even when read in segments) · D46 appended 2026-08-30 (work order 87: the receipt-verify QR page's three hard lines — token-only lookup, repeat only what the paper prints, never read as certifying the society) · D47–D48 appended 2026-08-30 night (work order 89: the constitution read is priced by pages — blocks of five to page 20, per page after — with the charge following the read; and the committee's eROSES-required fields hard-gate both the form and the filing, with the transliteration risk noted) · D49 appended 2026-08-30 late night (work order 94: the whole e-Invois surface goes operator-only BETA — one gate in the provider, fail-closed pages and API, the free layer follows, one BETA pill — and the partner pack's financial_resolutions field lands with every judgement in deterministic code) · D50 appended 2026-08-30 late night (work order 97: cash hand-over is to become a state on the income records, not a standalone page — the sidebar row goes now, the engine and route stay) · D51 appended 2026-08-31 (work order 100: the home page IS the agent workbench — cards deleted, loosened/locked lines written into agent-soul.ts verbatim, the two-tier change rule with a fail-closed audit trail, the standing three-language AI-mistakes line, and orphan clauses get proposed homes) · D52 appended 2026-09-07 (work order 122: the repo is public — real names never enter the tree, fictional ones only; and the receipt/continuation HMAC moves to a dedicated RECEIPT_SIGNING_SECRET that falls back to the service key when unset and verifies against both) · D53 appended 2026-09-07 (work order 118: the formal document may not invent — labels are earned by the page's words, no doer or verdict the page did not carry, two-way lines raise a hand and stay verbatim until a person chooses, the formal-version card is gone and its locks live on the document, costs read as percentages, an appointment's IC/address is printed, a name-shaped scrap is not an attendee, and the agent speaks at the end of every step without editing)*
