@@ -197,8 +197,9 @@ describe("renderMinitMd — the list (whiteboard / free notes) form", () => {
     expect(md).toContain("1.2 Keputusan: 同吉 5位");
   });
 
-  it("uses the blank chair slot when nobody recorded the endorser", () => {
-    expect(md).toContain("( Pengerusi )");
+  it("125 §3: nobody recorded the endorser → a blank line with the chair's role, never a '( Pengerusi )' name slot", () => {
+    expect(md).not.toContain("( Pengerusi )");
+    expect(md).toContain("Disahkan oleh,\n\n" + "_".repeat(40) + "\nPENGERUSI");
   });
 });
 

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { plausibleAttendeeName } from "@/lib/attendee-sanity";
 import { parseHeadcount } from "@/lib/headcount";
+import { signatoriesFromLines } from "@/lib/signatories";
 import { MEETING_TYPES } from "@/lib/meeting-types";
 
 // Re-exported so the many existing importers of `MEETING_TYPES` from this file
@@ -449,6 +450,31 @@ export function parseMeetingNotesExtraction(raw: unknown) {
     e.attendees = e.attendees.filter((a) => !onLeave.has(a.name.value.trim()));
   }
   if (apologies.length > 0 || e.apologies !== undefined) e.apologies = apologies;
+  // 125 §3: a header line 「主席：甲　记录：乙」 names the signatories when the
+  // page has no signature block — read by code from the page's own lines
+  // (src/lib/signatories.ts), marked "check" for a person to glance at,
+  // sourced to the line. Never overwrites what the reader found; never the
+  // signed-in user's name.
+  if (!e.prepared_by || !e.endorsed_by) {
+    const lines: { text: string; location: string }[] = [];
+    for (const r of e.resolutions) {
+      if (r.text.confidence === "missing" || r.text.value === "") continue;
+      const location = r.text.source_ref?.location ?? "photo";
+      lines.push({ text: r.text.value, location });
+      if (r.text.source_ref?.snippet) lines.push({ text: r.text.source_ref.snippet, location });
+    }
+    const found = signatoriesFromLines(lines.map((l) => l.text));
+    const bearer = (s: { name: string; role: string; line: string }) => {
+      const location = lines.find((l) => l.text.trim() === s.line)?.location ?? "photo";
+      const ref = (snippet: string) => ({ location, snippet });
+      return {
+        position: { value: s.role, confidence: "check" as const, source_ref: ref(s.line) },
+        person_name: { value: s.name, confidence: "check" as const, source_ref: ref(s.line) },
+      };
+    };
+    if (!e.endorsed_by && found.chair) e.endorsed_by = bearer(found.chair);
+    if (!e.prepared_by && found.secretary) e.prepared_by = bearer(found.secretary);
+  }
   return parsed;
 }
 

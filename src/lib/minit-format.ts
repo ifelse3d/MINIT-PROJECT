@@ -215,6 +215,31 @@ export function bearerParticulars(
   return parts.length === 0 ? "" : ` (${parts.join("; ")})`;
 }
 
+const CJK_ANY_CHAR = /[㐀-䶿一-鿿豈-﫿]/;
+
+/**
+ * 125 §3: the role printed under a signature, in the document's language.
+ * A page's own role word (主席 / 记录 / Setiausaha / Chairman) maps to the
+ * genre's label; an unknown role prints as written, upper-cased — except
+ * that Chinese never prints under a BM or English signature (undefined,
+ * and the caller falls back to the slot's standard role).
+ */
+export function signatureRole(lang: MinutesLang, role?: string): string | undefined {
+  const r = (role ?? "").trim();
+  if (r === "") return undefined;
+  const R = LABELS[lang].roles;
+  // A deputy is not the office-holder: "Penolong Setiausaha" / 副主席 print
+  // as written, never collapsed into the principal's label.
+  const deputy = /(penolong|naib|assistant|deputy|vice|副)/i.test(r);
+  if (!deputy) {
+    if (/(主席|主持|pengerusi|chair)/i.test(r)) return R.chair;
+    if (/(记录|記錄|秘书|秘書|setiausaha|secretar|minuted|dicatat)/i.test(r)) return R.secretary;
+    if (/(财政|財政|bendahari|treasurer)/i.test(r)) return R.treasurer;
+  }
+  if (lang !== "zh" && CJK_ANY_CHAR.test(r)) return undefined;
+  return r.toUpperCase();
+}
+
 /**
  * The formal meeting-title line under the letterhead —
  * "MESYUARAT AGUNG TAHUNAN 2026" — from the type LABEL the caller already
@@ -380,17 +405,20 @@ export function renderMinitMd(model: MinitDocModel): string {
   // ("Mesyuarat ditangguhkan pada 10.30 PM"), the standard line otherwise.
   out.push(`## ${L.penutup}`, "", model.adjournment?.trim() || L.closing, "");
 
-  // Signature block. Roles print under the names when known (sample A:
-  // SETIAUSAHA under the preparer, PENGERUSI under the endorser); the
-  // endorsement name stays a labelled blank when nobody recorded it, and an
-  // unconfirmed preview's empty preparer prints as a blank slot, not "(  )".
+  // Signature block. Roles print under the names in the DOCUMENT'S language
+  // (125 §3: a page's 「记录」 prints as SETIAUSAHA under a BM signature —
+  // signatureRole); the endorsement stays a blank line with the chair's
+  // role under it when nobody recorded the endorser (never "( Pengerusi )",
+  // which read as a name slot), and an unconfirmed preview's empty preparer
+  // prints as a blank slot, not "(  )".
   out.push(L.preparedBy, "", SIGNATURE_LINE);
   if (model.preparedBy.name.trim() !== "") out.push(`( ${model.preparedBy.name} )`);
-  if (model.preparedBy.role) out.push(model.preparedBy.role.toUpperCase());
+  const preparedRole = signatureRole(lang, model.preparedBy.role) ?? L.roles.secretary;
+  out.push(preparedRole);
   out.push("", L.endorsedBy, "", SIGNATURE_LINE);
   const endorseName = model.endorsedBy?.name?.trim();
-  out.push(endorseName ? `( ${endorseName} )` : L.chairSlot);
-  if (model.endorsedBy?.role) out.push(model.endorsedBy.role.toUpperCase());
+  if (endorseName) out.push(`( ${endorseName} )`);
+  out.push(signatureRole(lang, model.endorsedBy?.role) ?? L.roles.chair);
   out.push("");
 
   if (model.audit) {

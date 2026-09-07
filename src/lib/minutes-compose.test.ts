@@ -403,10 +403,12 @@ describe("composeMinutesMd — the formal template (Stage D)", () => {
     expect(md).toContain("Disediakan oleh,");
     expect(md).toContain("( shi hui )");
     expect(md).toContain("Disahkan oleh,");
-    // The endorsement slot is a labelled BLANK — Minit does not know who the
-    // chairperson is and must not guess.
-    expect(md).toContain("( Pengerusi )");
-    expect(md).not.toContain("( Pengerusi ) shi hui");
+    // The endorsement slot is a BLANK line with the role under it — Minit does
+    // not know who the chairperson is and must not guess (125 §3: no
+    // "( Pengerusi )" placeholder, which read as a name).
+    expect(md).not.toContain("( Pengerusi )");
+    expect(md).toContain("PENGERUSI");
+    expect(md).not.toContain("PENGERUSI shi hui");
     expect(md.trimEnd()).toMatch(
       new RegExp(`Drafted by ${BRAND_NAME}, confirmed by shi hui on 2026-08-19$`),
     );

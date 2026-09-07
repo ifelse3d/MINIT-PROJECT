@@ -77,7 +77,10 @@ type Labels = {
   /** D-1: the signature block. */
   preparedBy: string;
   endorsedBy: string;
-  chairSlot: string;
+  /** 125 §3: the signature block's role labels in the document's language —
+   *  a Chinese 「记录」 never prints under a BM signature; a page that named
+   *  nobody prints the role under a blank line, never "( Pengerusi )". */
+  roles: { chair: string; secretary: string; treasurer: string };
   /** D-2: printed under the letterhead of every NON-BM document. BM is the
    *  filing language; the others are reading copies and must say so. */
   translationNote?: string;
@@ -117,7 +120,7 @@ export const LABELS: Record<MinutesLang, Labels> = {
     closing: "Mesyuarat ditangguhkan.",
     preparedBy: "Disediakan oleh,",
     endorsedBy: "Disahkan oleh,",
-    chairSlot: "( Pengerusi )",
+    roles: { chair: "PENGERUSI", secretary: "SETIAUSAHA", treasurer: "BENDAHARI" },
   },
   zh: {
     title: "会议记录",
@@ -145,7 +148,7 @@ export const LABELS: Record<MinutesLang, Labels> = {
     closing: "会议到此结束。",
     preparedBy: "记录人：",
     endorsedBy: "核准人：",
-    chairSlot: "（主席）",
+    roles: { chair: "主席", secretary: "秘书", treasurer: "财政" },
     translationNote:
       "翻译本 —— 非呈报用 / Terjemahan — bukan untuk difailkan",
   },
@@ -176,7 +179,7 @@ export const LABELS: Record<MinutesLang, Labels> = {
     closing: "The meeting was adjourned.",
     preparedBy: "Prepared by,",
     endorsedBy: "Endorsed by,",
-    chairSlot: "( Chairperson )",
+    roles: { chair: "CHAIRPERSON", secretary: "SECRETARY", treasurer: "TREASURER" },
     translationNote:
       "Translation — not for filing / Terjemahan — bukan untuk difailkan",
   },

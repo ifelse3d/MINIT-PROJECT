@@ -55,10 +55,16 @@ Respond with ONLY JSON in exactly this shape:
 Every "text" is a FIELD OBJECT ({ "value", "confidence", "source_ref" }) like
 all the others — never a bare string. "meeting_time", "attendance_count" and "adjournment" are verbatim copies of
 those lines when the page has them, confidence "missing" when it does not.
-"prepared_by" / "endorsed_by" come ONLY from a signature block (Disediakan
-oleh / Disahkan oleh, 记录人 / 核准人, Prepared by / Endorsed by): position =
-the printed role (SETIAUSAHA, PENGERUSI), person_name = the printed name. No
-signature block = both fields missing. "section_no", "section_title" and
+"prepared_by" / "endorsed_by" come from a signature block (Disediakan
+oleh / Disahkan oleh, 记录人 / 核准人, Prepared by / Endorsed by) — position =
+the printed role (SETIAUSAHA, PENGERUSI), person_name = the printed name — OR
+from the meeting's HEADER when it names them: a line such as 「主席：甲　记录：乙」
+or "Pengerusi: … / Setiausaha: …" gives endorsed_by = the person after
+主席 / 主持 / Pengerusi / Chairman and prepared_by = the person after 记录 /
+記錄 / 秘书 / Setiausaha / Secretary / Minuted by, each with the role word as
+written and that line as the source_ref. No signature block and no such
+header line = both fields missing; never fill them with any other name on
+the page. "section_no", "section_title" and
 "own_no" are OPTIONAL structure markers — see DOCUMENT STRUCTURE below; omit
 them on pages that have no numbered sections.
 
