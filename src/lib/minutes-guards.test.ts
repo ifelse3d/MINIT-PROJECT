@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { checkInventedAgent, earnedKind, enforceKinds } from "./minutes-guards";
+import {
+  checkChineseNamesSurvive,
+  checkInventedAgent,
+  chineseNameRuns,
+  droppedChineseNames,
+  earnedKind,
+  enforceKinds,
+} from "./minutes-guards";
 import { minutesPlanSchema } from "./minutes-compose";
 
 // ---------------------------------------------------------------------------
@@ -160,5 +167,129 @@ describe("🔴 §1-2 no doer the page did not name", () => {
   it("English and Chinese doers are caught the same way", () => {
     expect(checkInventedAgent(one(0, "Tan Kim Loo is tasked to appoint a committee member."), [APPOINT]).ok).toBe(false);
     expect(checkInventedAgent(one(0, "Tan Kim Loo 被委派去委任一名理事。"), [APPOINT]).ok).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 125 §1 — a Chinese name survives in Chinese. J's AGM minutes, 2026-09-07 on
+// the live site: "动议 张伟杰, 附议 王丽华" came out as "Cadangan oleh <pinyin>,
+// disokong oleh <pinyin>". Fictional names throughout (A3).
+// ---------------------------------------------------------------------------
+
+describe("🔴 125 §1 — chineseNameRuns: what counts as a person", () => {
+  it("finds the names after the motion words are blanked", () => {
+    expect(chineseNameRuns("动议 张伟杰, 附议 王丽华")).toEqual(["张伟杰", "王丽华"]);
+    expect(chineseNameRuns("查账员 刘国华 说没问题")).toEqual(["刘国华"]);
+    expect(chineseNameRuns("主席：张伟杰　记录：王丽华")).toEqual(["张伟杰", "王丽华"]);
+  });
+
+  it("glossary vocabulary is never a person", () => {
+    expect(chineseNameRuns("主席感谢大家")).toEqual([]);
+    expect(chineseNameRuns("晚宴 RM9150")).toEqual([]);
+    expect(chineseNameRuns("上年结存 7,680, 收入: 会费 13,600, 支出 10,150, 银行 11,590")).toEqual([]);
+    expect(chineseNameRuns("查账员说没问题, 通过")).toEqual([]);
+  });
+
+  it("everyday words that open on a surname character are not people either", () => {
+    expect(chineseNameRuns("游行队伍带头：嘉益、柔依")).toEqual([]);
+    expect(chineseNameRuns("谢谢大家去年帮忙")).toEqual([]);
+    expect(chineseNameRuns("顾问团 周年晚宴 余额 许多 曾经 董事会 马来西亚")).toEqual([]);
+  });
+
+  it("the organisation's own glossary terms are blanked too", () => {
+    expect(chineseNameRuns("陈氏宗祠 会议", ["陈氏宗祠"])).toEqual([]);
+    expect(chineseNameRuns("陈氏宗祠 会议")).toEqual(["陈氏宗祠"]);
+  });
+});
+
+describe("🔴 125 §1 — checkChineseNamesSurvive", () => {
+  const one = (source: number | number[], text: string) => ({
+    sections: [{ items: [{ source, text }] }],
+    unresolved: [],
+  });
+  const MOTION = "动议 张伟杰, 附议 王丽华";
+
+  it("🔴 the sentence J saw: both names romanised → the index comes back", () => {
+    expect(
+      checkChineseNamesSurvive(one(0, "Cadangan oleh Tan Kim Loo, disokong oleh Chan Mei."), [MOTION]),
+    ).toEqual({ ok: false, romanised: [0] });
+  });
+
+  it("the honest sentence keeps the characters → passes", () => {
+    expect(
+      checkChineseNamesSurvive(one(0, "Usul dicadangkan oleh 张伟杰, disokong oleh 王丽华."), [MOTION]).ok,
+    ).toBe(true);
+  });
+
+  it("one of two names dropped is still a miss", () => {
+    expect(
+      checkChineseNamesSurvive(one(0, "Usul dicadangkan oleh 张伟杰 dan disokong."), [MOTION]).ok,
+    ).toBe(false);
+  });
+
+  it("glossary words translated to BM are not names — fully BM output passes", () => {
+    expect(
+      checkChineseNamesSurvive(one(0, "Pengerusi mengucapkan terima kasih kepada semua."), ["主席感谢大家"]).ok,
+    ).toBe(true);
+    expect(
+      checkChineseNamesSurvive(one(0, "Jamuan malam: RM9,150."), ["晚宴 RM9150"]).ok,
+    ).toBe(true);
+    expect(
+      checkChineseNamesSurvive(one(0, "Juruaudit menyatakan tiada masalah; diluluskan."), ["查账员说没问题, 通过"]).ok,
+    ).toBe(true);
+  });
+
+  it("a Latin name on the page is not this guard's business (checkLatinNames has it)", () => {
+    expect(
+      checkChineseNamesSurvive(one(0, "Melantik Tan Kim Loo sebagai AJK."), ["lanti AJK seorg. Tan Kim Loo"]).ok,
+    ).toBe(true);
+  });
+
+  it("a two-character run is demanded only when a Latin name grew in its place", () => {
+    // 周会 is a word; translating it is right.
+    expect(checkChineseNamesSurvive(one(0, "Mesyuarat mingguan pada hari Sabtu."), ["周会 星期六"]).ok).toBe(true);
+    // 陈明 is a person, and "Chen Ming" appeared from nowhere.
+    expect(checkChineseNamesSurvive(one(0, "Chen Ming membawa kerusi."), ["陈明 带椅子"]).ok).toBe(false);
+  });
+
+  it("a merged item: the name may sit anywhere in the merged text; a source that lost its name is reported", () => {
+    expect(
+      checkChineseNamesSurvive(one([1, 2], "Pengangkutan: 张伟杰; sarapan: 王丽华."), ["x", "交通：张伟杰", "早餐：王丽华"]).ok,
+    ).toBe(true);
+    expect(
+      checkChineseNamesSurvive(one([1, 2], "Pengangkutan: 张伟杰; sarapan: Chan Mei."), ["x", "交通：张伟杰", "早餐：王丽华"]),
+    ).toEqual({ ok: false, romanised: [2] });
+  });
+
+  it("the org's glossary terms are blanked before the test", () => {
+    expect(
+      checkChineseNamesSurvive(one(0, "Mesyuarat di Tokong Chan."), ["陈氏宗祠 会议"], ["陈氏宗祠"]).ok,
+    ).toBe(true);
+  });
+});
+
+describe("125 §1-3 — droppedChineseNames, the document page's last net", () => {
+  const SOURCES = ["动议 张伟杰, 附议 王丽华", "查账员 刘国华 说没问题"];
+
+  it("lists the page's names the document no longer carries, once each, in page order", () => {
+    const doc = "Cadangan oleh Tan Kim Loo, disokong oleh 王丽华.\nJuruaudit Ooi Bee Huang menyatakan tiada masalah.";
+    expect(droppedChineseNames(SOURCES, doc)).toEqual(["张伟杰", "刘国华"]);
+  });
+
+  it("a document that kept every name lists nothing", () => {
+    expect(droppedChineseNames(SOURCES, "Usul oleh 张伟杰, disokong oleh 王丽华. Juruaudit 刘国华.")).toEqual([]);
+  });
+
+  it("a name replaced by its KNOWN identity-card spelling is not a loss", () => {
+    const doc = "Usul oleh TAN WEI JIE, disokong oleh 王丽华. Juruaudit 刘国华.";
+    expect(droppedChineseNames(SOURCES, doc, [], (n) => (n === "张伟杰" ? "TAN WEI JIE" : ""))).toEqual([]);
+    // …but a spelling that is NOT in the document does not excuse it.
+    expect(droppedChineseNames(SOURCES, "Usul oleh Zhang W. J.", [], (n) => (n === "张伟杰" ? "TAN WEI JIE" : ""))).toEqual([
+      "张伟杰", "王丽华", "刘国华",
+    ]);
+  });
+
+  it("protected text (org name, roster, signer) is never a candidate", () => {
+    expect(droppedChineseNames(["陈氏宗祠 主席致词"], "Ucapan Pengerusi.", ["陈氏宗祠"])).toEqual([]);
   });
 });

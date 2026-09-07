@@ -9,7 +9,11 @@ import {
   type MinutesPlan,
 } from "@/lib/minutes-compose";
 import { writesInChinese, type MinutesLang } from "@/lib/minutes-lang";
-import { checkInventedAgent, enforceKinds } from "@/lib/minutes-guards";
+import {
+  checkChineseNamesSurvive,
+  checkInventedAgent,
+  enforceKinds,
+} from "@/lib/minutes-guards";
 import { verbatimForAmbiguous } from "@/lib/minutes-ambiguity";
 import type { TokenUsage, VisionJsonProvider } from "./provider";
 
@@ -107,7 +111,14 @@ export async function runDraftMinutesPlan(opts: {
     // person being appointed written as the appointer. Sent back once, like
     // every other miss; on a second miss the plain template wins.
     const agent = checkInventedAgent(parsedPlan.data, resolutionTexts);
-    if (coverage.ok && altered.length === 0 && merged.ok && agent.ok) {
+    // 125 §1: a Chinese personal name must come out in its own characters —
+    // the live model romanised three names the prompt told it not to
+    // (2026-09-07). checkNames sees Chinese that appeared; this sees Chinese
+    // that vanished. Skipped for zh output like checkNames, for its reason.
+    const survive = writesInChinese(lang)
+      ? { ok: true, romanised: [] as number[] }
+      : checkChineseNamesSurvive(parsedPlan.data, resolutionTexts, allowedRuns);
+    if (coverage.ok && altered.length === 0 && merged.ok && agent.ok && survive.ok) {
       // 118 §1-1: labels are EARNED by the words on the page, checked here
       // — an unearned one is dropped, never fatal (a label only ever
       // changes the prefix, so dropping it costs nobody their document).
@@ -128,6 +139,7 @@ export async function runDraftMinutesPlan(opts: {
       altered,
       dropped: merged.dropped,
       invented: agent.invented,
+      romanised: survive.romanised,
     };
   }
   return { ok: false, repair };
@@ -223,20 +235,32 @@ export async function runPhraseMinutesItems(opts: {
     // 118 §1-3: the same no-invented-doer rule as the arranging loop — this
     // pass rewrites paragraphs too, and has the same temptation.
     const agent = checkInventedAgent(pseudoPlan, allTexts);
+    // 125 §1: the same no-romanised-name rule as the arranging loop.
+    const survive = writesInChinese(lang)
+      ? { ok: true, romanised: [] as number[] }
+      : checkChineseNamesSurvive(pseudoPlan, allTexts, allowedRuns);
 
     if (
       missing.length === 0 &&
       duplicated.length === 0 &&
       unknown.length === 0 &&
       altered.length === 0 &&
-      agent.ok
+      agent.ok &&
+      survive.ok
     ) {
       return {
         ok: true,
         phrased: new Map(parsed.data.items.map((it) => [it.source, it.text])),
       };
     }
-    repair = { missing, duplicated, unknown, altered, invented: agent.invented };
+    repair = {
+      missing,
+      duplicated,
+      unknown,
+      altered,
+      invented: agent.invented,
+      romanised: survive.romanised,
+    };
   }
   return { ok: false };
 }

@@ -42,6 +42,9 @@ export type DraftMinutesPromptParams = {
     /** 118 §1: sources whose line was given a DOER or a DECISION the item
      *  never carried (checkInventedAgent). */
     invented?: number[];
+    /** 125 §1: sources whose Chinese personal name did not survive in
+     *  characters — romanised or dropped (checkChineseNamesSurvive). */
+    romanised?: number[];
   };
 };
 
@@ -287,6 +290,13 @@ function repairProblems(repair: NonNullable<DraftMinutesPromptParams["repair"]>)
         `or that the meeting decided/agreed, and the item itself carries no such ` +
         `words — write the line without a doer and without a verdict, expanded ` +
         `only in spelling): ${repair.invented.join(", ")}`
+      : "",
+    repair.romanised?.length
+      ? `ROMANISED OR DROPPED A NAME (a person's name the item wrote in Chinese ` +
+        `characters is not in your sentence in those exact characters — you spelled ` +
+        `it in letters, or left it out. Copy the name in its Chinese characters, ` +
+        `character for character, never in pinyin or any romanisation, whatever ` +
+        `language the document is in): ${repair.romanised.join(", ")}`
       : "",
   ]
     .filter(Boolean)

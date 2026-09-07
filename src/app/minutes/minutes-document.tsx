@@ -22,6 +22,8 @@ import {
   rosterNameSubstitutions,
 } from "@/lib/roster-names";
 import { glossaryTermSubstitutions, splitFlaggedLines } from "@/lib/bm-glossary";
+import { droppedChineseNames } from "@/lib/minutes-guards";
+import { usableResolutions } from "@/lib/minutes-compose";
 import { useMinutes } from "./minutes-store";
 import { AgentCheckIn } from "./agent-check-in";
 import { AskBackCards, useOpenQuestionCount } from "./ask-back-cards";
@@ -250,7 +252,36 @@ export function MinutesDocument() {
     nameSubs.find((s) => s.from === snippet.trim()) ?? null;
   const mappedValue = (snippet: string) =>
     nameMap[snippet] ?? rosterFor(snippet)?.to ?? "";
-  const filledRows = split.nameTokens
+
+  // 125 §1-3: THE LAST NET. The document-layer guard (checkChineseNamesSurvive)
+  // sends a romanised name back to the model; if it slips through anyway —
+  // or a person's own edit lost one — the names the PAGE wrote in characters
+  // that the BM document no longer carries are listed here too, keyed on the
+  // original characters, so they can be spelled from the identity card
+  // instead of from the model's pinyin. A name the roster or the person has
+  // already mapped to a spelling that IS in the document is not flagged:
+  // that is the honest replacement, not a loss. Read-only: never blocks
+  // saving (the BM guard's own count does that), never edits anything.
+  const droppedNames = useMemo(
+    () =>
+      docLang === "bm" && isReal && allReviewed
+        ? droppedChineseNames(
+            usableResolutions(extraction).map((r) => r.text.value),
+            shownDocument,
+            [...filingRoster.map((m) => m.name), documentOrgName, documentSigner],
+            (name) =>
+              nameMap[name] ??
+              rosterNameSubstitutions(shownDocument, filingRoster).find((s) => s.from === name)?.to ??
+              "",
+          )
+        : [],
+    [docLang, isReal, allReviewed, extraction, shownDocument, filingRoster, documentOrgName, documentSigner, nameMap],
+  );
+  const tableNames = [
+    ...split.nameTokens,
+    ...droppedNames.filter((n) => !split.nameTokens.includes(n)),
+  ];
+  const filledRows = tableNames
     .map((s) => ({ from: s, to: mappedValue(s).trim() }))
     .filter((r) => r.to !== "" && r.to !== r.from);
 
@@ -560,16 +591,41 @@ export function MinutesDocument() {
             {/* THE BM GUARD: saving is blocked while Chinese remains in the
                 BM document, and the person chooses the way out (J 8/27:
                 「先問 user 要 AI 幫忙還是 user 自己改」). */}
-            {bmOffenders.length > 0 && (
+            {(bmOffenders.length > 0 || droppedNames.length > 0) && (
               <div className="flex flex-col gap-3 rounded-md border-2 border-red-300 bg-red-50 p-4 dark:bg-red-400/10">
-                <p className="text-base font-semibold text-red-900 dark:text-red-100">
-                  🛑{" "}
-                  <Tri
-                    bm={`Dokumen Bahasa Malaysia ini masih mengandungi ${bmOffenders.length} baris berbahasa Cina — eROSES memerlukan Bahasa Malaysia sepenuhnya.`}
-                    zh={`这份要交 eROSES 的马来文文件里还有 ${bmOffenders.length} 行华语 —— eROSES 要全马来文。`}
-                    en={`This Bahasa Malaysia document still contains ${bmOffenders.length} line(s) of Chinese — eROSES requires full Bahasa Malaysia.`}
-                  />
-                </p>
+                {bmOffenders.length > 0 ? (
+                  <p className="text-base font-semibold text-red-900 dark:text-red-100">
+                    🛑{" "}
+                    <Tri
+                      bm={`Dokumen Bahasa Malaysia ini masih mengandungi ${bmOffenders.length} baris berbahasa Cina — eROSES memerlukan Bahasa Malaysia sepenuhnya.`}
+                      zh={`这份要交 eROSES 的马来文文件里还有 ${bmOffenders.length} 行华语 —— eROSES 要全马来文。`}
+                      en={`This Bahasa Malaysia document still contains ${bmOffenders.length} line(s) of Chinese — eROSES requires full Bahasa Malaysia.`}
+                    />
+                  </p>
+                ) : (
+                  <p className="text-base font-semibold text-red-900 dark:text-red-100">
+                    🙋{" "}
+                    <Tri
+                      bm={`${droppedNames.length} nama yang ditulis dalam aksara Cina pada nota tidak disalin seperti asal ke dalam dokumen ini.`}
+                      zh={`笔记上有 ${droppedNames.length} 个用华文写的名字，这份文件里没有照抄。`}
+                      en={`${droppedNames.length} name(s) the notes wrote in Chinese characters were not copied as written into this document.`}
+                    />
+                  </p>
+                )}
+                {/* 125 §1-3: the last net — names the page carried in
+                    characters that the document no longer does. The model
+                    is not allowed to romanise (checked by code); if a
+                    romanised spelling got here anyway, it is the model's
+                    guess, and only the identity card can replace it. */}
+                {droppedNames.length > 0 && (
+                  <p className="text-sm font-medium text-red-900/90 dark:text-red-100/90">
+                    <Tri
+                      bm={`${droppedNames.length} nama ini (${droppedNames.join("、")}) TIDAK disalin seperti asal oleh AI — jika dokumen menunjukkan ejaan rumi bagi nama itu, ejaan itu ialah tekaan. Isi ejaan daripada kad pengenalan.`}
+                      zh={`这 ${droppedNames.length} 个名字（${droppedNames.join("、")}）AI 没有照抄 —— 如果文件里出现了它的拼音，那是 AI 猜的。请照身份证填。`}
+                      en={`These ${droppedNames.length} name(s) (${droppedNames.join(", ")}) were NOT copied as written by the AI — a romanised spelling of them in the document is a guess. Fill in the spelling from the identity card.`}
+                    />
+                  </p>
+                )}
                 {/* §2 second pass (116): say which part is MinitAI's job and
                     which part is the reader's, before showing either. */}
                 {split.termOnly.length > 0 && (
@@ -608,11 +664,16 @@ export function MinutesDocument() {
                   className="flex max-h-72 flex-col gap-2 overflow-y-auto"
                   data-probe="bm-name-map"
                 >
-                  {split.nameTokens.map((s) => {
+                  {tableNames.map((s) => {
                     const fromRoster = rosterFor(s);
                     const value = mappedValue(s);
+                    const dropped = droppedNames.includes(s);
                     return (
-                      <div key={s} className="flex flex-wrap items-center gap-2">
+                      <div
+                        key={s}
+                        className="flex flex-wrap items-center gap-2"
+                        data-dropped-name={dropped ? "true" : undefined}
+                      >
                         <button
                           type="button"
                           onClick={() => locateInDocument(s)}
@@ -648,6 +709,15 @@ export function MinutesDocument() {
                           )}
                           className="min-w-[12rem] flex-1 rounded-sm border border-red-300 bg-white/80 px-2 py-1 text-sm dark:bg-white/10"
                         />
+                        {dropped && (
+                          <span className="rounded-xs bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-900 dark:bg-amber-400/15 dark:text-amber-100">
+                            <Tri
+                              bm="AI tidak menyalin nama ini — isi ikut kad pengenalan"
+                              zh="这个名字 AI 没有照抄，请照身份证填"
+                              en="the AI did not copy this name — fill it in from the identity card"
+                            />
+                          </span>
+                        )}
                         {fromRoster && (
                           <span className="rounded-xs bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-900 dark:bg-green-400/15 dark:text-green-200">
                             <Tri bm="dari senarai AJK" zh="名册里有" en="from the roster" />
