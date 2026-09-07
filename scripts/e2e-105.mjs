@@ -44,7 +44,8 @@ const SERVICE = env.SUPABASE_SERVICE_ROLE_KEY;
 const TEST_EMAIL = "zzz-e2e-105@example.com";
 const TEST_PASSWORD = "E2e#" + Math.random().toString(36).slice(2, 10) + "Aa1";
 const ORG_NAME = "ZZZ 105 底座測試社團（可刪）";
-const BASE = "http://localhost:3000";
+// 125: E2E_BASE lets the suite run against a server on another port (port 3000 was held by an unrelated dev server on 2026-09-08).
+const BASE = process.env.E2E_BASE || "http://localhost:3000";
 
 const failures = [];
 function check(name, ok, extra = "") {

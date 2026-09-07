@@ -31,7 +31,8 @@ const TEST_PASSWORD = "E2e#" + Math.random().toString(36).slice(2, 10) + "Aa1";
 // Already uppercase: the create form uppercases as you type (C-4, 拍板 33),
 // and the REST lookups below must match what actually got stored.
 const ORG_NAME = "ZZZ E2E 测试社团（可删）";
-const BASE = "http://localhost:3000";
+// 125: E2E_BASE lets the suite run against a server on another port (port 3000 was held by an unrelated dev server on 2026-09-08).
+const BASE = process.env.E2E_BASE || "http://localhost:3000";
 
 const failures = [];
 function check(name, ok, extra = "") {
