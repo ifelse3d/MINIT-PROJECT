@@ -42,6 +42,7 @@ import {
 } from "@/lib/extraction-merge";
 import { addRow, removeRow, rowHasContent, type RowList } from "@/lib/extraction-rows";
 import { attendeeIdentityKey } from "@/lib/attendee-identity";
+import { attendanceRecorded, confirmedHeadcount } from "@/lib/attendance-gate";
 import { saveConfirmedMinutes } from "./actions";
 import {
   dropDraft,
@@ -174,6 +175,8 @@ export type MinutesStore = {
   attendanceUnsettled: boolean;
   /** D30: no attendee with a name yet — the confirmed save stays locked. */
   attendanceMissing: boolean;
+  /** 125 §2: the person's answer to the headcount line (null = take it back). */
+  confirmHeadcount: (n: number | null) => void;
   openSample: () => void;
   backToEmpty: () => void;
 
@@ -1290,7 +1293,13 @@ export function MinutesProvider({
   // Read straight off the extraction rather than off `groups`, which is
   // computed further down — and which would make this a forward reference for
   // the sake of reusing one `.length`.
-  const attendanceUnsettled = extraction.attendees.length === 0 && !noAttendeesRecorded;
+  // 125 §2: a headcount a person confirmed off the page's own line settles
+  // it too — a page that recorded attendance as 「理事12人,请假2人,会员40人」
+  // must not force anybody to type a name to get past this step.
+  const attendanceUnsettled =
+    extraction.attendees.length === 0 &&
+    confirmedHeadcount(extraction) === undefined &&
+    !noAttendeesRecorded;
   const allReviewed = outstanding === 0 && !attendanceUnsettled;
   /**
    * D30 (2026-08-28, J review 27-evening #33): the eROSES annual return needs
@@ -1300,8 +1309,30 @@ export function MinutesProvider({
    * the save. This flag is what the save gate reads (and the server action
    * re-checks it; the client is not the authority).
    */
-  const attendanceMissing = !extraction.attendees.some(
-    (a) => a.name.value.trim() !== "",
+  // 125 §2-4: no named list AND no person-confirmed headcount (the same
+  // rule the server action applies — src/lib/attendance-gate.ts).
+  const attendanceMissing = !attendanceRecorded(extraction);
+
+  /**
+   * 125 §2-3: the attendance step's card sets the number a person agreed to
+   * (or typed) off the page's headcount line; null takes it back. Never
+   * called by anything but a tap. Agreeing with the line also confirms the
+   * line itself — the person just read it.
+   */
+  const confirmHeadcount = useCallback(
+    (n: number | null) =>
+      updateField((e) => {
+        if (n === null || !Number.isInteger(n) || n <= 0) {
+          delete e.attendance_confirmed;
+        } else {
+          e.attendance_confirmed = n;
+          if (e.attendance_count && e.attendance_count.confidence === "check") {
+            e.attendance_count.confidence = "confirmed";
+          }
+        }
+        return e;
+      }),
+    [updateField],
   );
 
   /**
@@ -1568,6 +1599,7 @@ export function MinutesProvider({
         setNoAttendeesRecorded,
         attendanceUnsettled,
         attendanceMissing,
+        confirmHeadcount,
         openSample,
         backToEmpty,
         updateField,

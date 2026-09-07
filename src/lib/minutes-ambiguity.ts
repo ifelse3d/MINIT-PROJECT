@@ -1,4 +1,5 @@
 import type { MeetingNotesExtraction } from "@/lib/extraction";
+import { parseHeadcount, type Headcount } from "@/lib/headcount";
 import { latinNameRuns, sourcesOf, usableResolutions, type MinutesPlan } from "@/lib/minutes-compose";
 
 // ---------------------------------------------------------------------------
@@ -187,6 +188,31 @@ export function openAmbiguities(extraction: MeetingNotesExtraction): {
   return findAmbiguities(texts)
     .filter((a) => extraction.resolutions[usable[a.index]].as_written !== true)
     .map((a) => ({ ambiguity: a, extractionIndex: usable[a.index] }));
+}
+
+// --- shape 3: the headcount line (125 §2) ----------------------------------
+
+export type HeadcountQuestion = {
+  /** The headcount line, exactly as written. */
+  quote: string;
+  /** What code made of it — null when the shape is unknown, and the card
+   *  then asks "how many were present?" with an empty box, nothing pre-filled. */
+  counted: Headcount | null;
+};
+
+/**
+ * 125 §2: the page's headcount line is a QUESTION until a person answers it —
+ * "I make this 52 present; right?" when the shape is known (parseHeadcount),
+ * "how many does this line say were present?" when it is not. Answered by
+ * `attendance_confirmed`, which only the attendance step's card sets. Adding
+ * this shape here rather than asking the model is the point (D53): the same
+ * line asks the same question every time, and a test can say so.
+ */
+export function headcountQuestion(extraction: MeetingNotesExtraction): HeadcountQuestion | null {
+  if (extraction.attendance_confirmed !== undefined) return null;
+  const line = extraction.attendance_count;
+  if (!line || line.confidence === "missing" || line.value.trim() === "") return null;
+  return { quote: line.value, counted: parseHeadcount(line.value) };
 }
 
 /** Indices (into usableResolutions) the document must carry AS WRITTEN —

@@ -19,6 +19,7 @@
 import { getSupabaseServer, getSessionUser } from "@/db/supabase-server";
 import { indexMinutesDocInBackground } from "@/lib/ai/minutes-index";
 import { getActiveOrg } from "@/lib/active-org";
+import { attendanceRecorded } from "@/lib/attendance-gate";
 import { chargeFence, refundFence } from "@/lib/fence";
 import { getDocumentIdentity } from "@/lib/doc-identity";
 import { parseMeetingNotesExtraction } from "@/lib/extraction";
@@ -157,10 +158,10 @@ export async function saveConfirmedMinutes(input: {
   // D30 (2026-08-28, J #33): a confirmed set of minutes with NOBODY recorded
   // as attending would flow a zero into the eROSES annual return's "Bilangan
   // Ahli Hadir". The client blocks this too; this is the authority.
-  const hasAttendee = extraction.attendees.some(
-    (a) => a.name.value.trim() !== "",
-  );
-  if (!hasAttendee) {
+  // 125 §2-4: a headcount a person confirmed off the page's own line counts
+  // as recorded attendance (src/lib/attendance-gate.ts — the same rule the
+  // client applies).
+  if (!attendanceRecorded(extraction)) {
     return {
       error:
         "Kehadiran masih kosong — rekod sekurang-kurangnya seorang hadir dahulu / 出席名单还是空的 —— 请先记至少一个出席者 / Attendance is empty — record at least one attendee first",

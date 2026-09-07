@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   findAmbiguities,
+  headcountQuestion,
   openAmbiguities,
   verbatimForAmbiguous,
   verbatimIndices,
@@ -168,5 +169,56 @@ describe("🔴 §3 — until a person chooses, the document carries the line as 
 
   it("with nothing locked the plan is returned untouched", () => {
     expect(verbatimForAmbiguous(plan, NOTE, [])).toBe(plan);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 125 §2 — the THIRD shape: the headcount line is a question until a person
+// answers it. Fictional names (A3).
+// ---------------------------------------------------------------------------
+
+describe("🔴 125 §2 — shape 3: the headcount line", () => {
+  const line = (value: string) => ({
+    value,
+    confidence: "check" as const,
+    source_ref: { location: "photo 1, line 2", snippet: value },
+  });
+
+  it("a line code can count is asked as a confirmation, with the numbers", () => {
+    const q = headcountQuestion({
+      ...emptyMeetingNotesExtraction,
+      attendance_count: line("理事12人,请假2人(张伟杰,王丽华),会员40人"),
+    });
+    expect(q?.quote).toBe("理事12人,请假2人(张伟杰,王丽华),会员40人");
+    expect(q?.counted?.present).toBe(52);
+    expect(q?.counted?.apologies).toBe(2);
+  });
+
+  it("a line code cannot count is asked as an open question — nothing pre-filled", () => {
+    const q = headcountQuestion({
+      ...emptyMeetingNotesExtraction,
+      attendance_count: line("Semua AJK hadir"),
+    });
+    expect(q).toEqual({ quote: "Semua AJK hadir", counted: null });
+  });
+
+  it("once a person has confirmed a number, the question is closed", () => {
+    expect(
+      headcountQuestion({
+        ...emptyMeetingNotesExtraction,
+        attendance_count: line("理事12人,请假2人,会员40人"),
+        attendance_confirmed: 52,
+      }),
+    ).toBeNull();
+  });
+
+  it("no headcount line, no question (亂問一樣是病)", () => {
+    expect(headcountQuestion(emptyMeetingNotesExtraction)).toBeNull();
+    expect(
+      headcountQuestion({
+        ...emptyMeetingNotesExtraction,
+        attendance_count: { value: "", confidence: "missing", source_ref: null },
+      }),
+    ).toBeNull();
   });
 });

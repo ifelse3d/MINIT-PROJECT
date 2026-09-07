@@ -219,6 +219,16 @@ export function mergeMeetingVersions(
         ...out.attendees,
         ...newRows(out.attendees, other.attendees, (a) => a.name.value),
       ],
+      // 125 §2: the on-leave list fills like the attendees; a confirmed
+      // headcount is a person's statement and the fullest version's wins.
+      apologies:
+        out.apologies || other.apologies
+          ? [
+              ...(out.apologies ?? []),
+              ...newRows(out.apologies ?? [], other.apologies ?? [], (a) => a.name.value),
+            ]
+          : undefined,
+      attendance_confirmed: out.attendance_confirmed ?? other.attendance_confirmed,
       resolutions: [
         ...out.resolutions,
         ...newRows(out.resolutions, other.resolutions, (r) => r.text.value),

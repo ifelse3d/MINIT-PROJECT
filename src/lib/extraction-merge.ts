@@ -121,6 +121,22 @@ export function mergeMeetingExtractions(
     prepared_by: existing.prepared_by ?? incoming.prepared_by,
     endorsed_by: existing.endorsed_by ?? incoming.endorsed_by,
     attendees: [...existing.attendees, ...newAttendees],
+    // 125 §2: the on-leave list merges like the attendees (by name); the
+    // person-confirmed headcount is a human statement — the existing one
+    // survives, a second page never overwrites it.
+    apologies:
+      existing.apologies || incoming.apologies
+        ? [
+            ...(existing.apologies ?? []),
+            ...(incoming.apologies ?? []).filter(
+              (a) =>
+                !(existing.apologies ?? []).some(
+                  (b) => b.name.value.trim().toLowerCase() === a.name.value.trim().toLowerCase(),
+                ),
+            ),
+          ]
+        : undefined,
+    attendance_confirmed: existing.attendance_confirmed ?? incoming.attendance_confirmed,
     resolutions: [...existing.resolutions, ...incoming.resolutions],
     figures: [...existing.figures, ...incoming.figures],
     // Optional on purpose: absent on both sides stays absent (the e-Invois

@@ -1,3 +1,4 @@
+import { confirmedHeadcount } from "@/lib/attendance-gate";
 import type { Confidence, MeetingNotesExtraction } from "@/lib/extraction";
 import { EROSES_ANNUAL_RETURN_MAP } from "@/prompts/eroses-map";
 import { formatRm } from "@/lib/minutes-draft";
@@ -125,6 +126,18 @@ export function buildPastePack(
         });
       }
       case "attendees": {
+        // 125 §2: the headcount a person confirmed off the page's own line
+        // comes first (a page that records attendance as 「理事12人…」 has
+        // no list to count); the named list is the fallback. Either way the
+        // number is code's, never the AI's (Hard Rule 2).
+        const confirmed = confirmedHeadcount(e);
+        if (confirmed !== undefined) {
+          return row(entry, {
+            value: String(confirmed),
+            confidence: "confirmed",
+            source: e.attendance_count?.value ?? "",
+          });
+        }
         const present = e.attendees.filter(
           (a) => a.name.confidence !== "missing" && a.name.value !== ""
         );

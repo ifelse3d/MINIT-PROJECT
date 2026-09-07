@@ -90,6 +90,14 @@ export type MinitDocModel = {
   /** Verbatim attendance-count line from the document ("AJK yang hadir : 33
    *  orang"). Printed in the header block, exactly as the source wrote it. */
   attendanceCountText?: string;
+  /** 125 §2: the headcount a PERSON confirmed off that line (code counted
+   *  it, the person agreed). Printed as "Jumlah hadir: N orang"; when
+   *  absent the named sheet's length is printed instead, and with neither
+   *  no count is printed — the format never invents one. */
+  headcount?: number;
+  /** 125 §2: the people recorded as on leave — their own list, never among
+   *  the attendees. */
+  apologies?: string[];
   /** The named attendance sheet (position beside a name where confirmed). */
   attendees?: { name: string; position?: string }[];
   /** The Agenda summary table, original numbering. Usually rebuilt from
@@ -267,8 +275,14 @@ export function renderMinitMd(model: MinitDocModel): string {
   if (model.tarikh) out.push(`${L.date}: ${model.tarikh}`);
   if (model.masa) out.push(`${L.masa}: ${model.masa}`);
   if (model.tempat) out.push(`${L.venue}: ${model.tempat}`);
-  // The verbatim headcount line sits with the header block, as in sample A.
-  if (model.attendanceCountText) out.push(model.attendanceCountText);
+  // The verbatim headcount line sits with the header block, as in sample A —
+  // 125 §2: labelled, and ALWAYS printed when the page had one (the live
+  // document of 2026-09-07 lost it). The count a person confirmed follows it
+  // here when there is no named sheet to print it under.
+  if (model.attendanceCountText) out.push(`${L.headcountLine}: ${model.attendanceCountText}`);
+  const attendees = model.attendees ?? [];
+  const headcount = model.headcount ?? (attendees.length > 0 ? attendees.length : undefined);
+  if (attendees.length === 0 && headcount !== undefined) out.push(L.attendanceCount(headcount));
   out.push("");
 
   // The Agenda summary table — 總表歸總表. Original numbering, one layer.
@@ -289,13 +303,20 @@ export function renderMinitMd(model: MinitDocModel): string {
   }
 
   // The attendance sheet (named list) — after the header, before the body.
-  const attendees = model.attendees ?? [];
   if (attendees.length > 0) {
     out.push(`## ${L.attendance}`, "");
     attendees.forEach((a, i) => {
       out.push(`${i + 1}. ${a.name}${a.position ? ` — ${a.position}` : ""}`);
     });
-    out.push("", L.attendanceCount(attendees.length), "");
+    out.push("", L.attendanceCount(headcount ?? attendees.length), "");
+  }
+
+  // 125 §2: the on-leave list — its own heading, never among the attendees.
+  const apologies = model.apologies ?? [];
+  if (apologies.length > 0) {
+    out.push(`## ${L.apologies}`, "");
+    apologies.forEach((name, i) => out.push(`${i + 1}. ${name}`));
+    out.push("");
   }
 
   // Sections — 節歸節. A structured section keeps its ORIGINAL number and the

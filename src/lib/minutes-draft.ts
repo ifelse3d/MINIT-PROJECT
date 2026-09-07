@@ -1,3 +1,4 @@
+import { headcountForDocument } from "@/lib/attendance-gate";
 import type { MeetingNotesExtraction } from "@/lib/extraction";
 import { meetingTypeLabel } from "@/lib/meeting-types";
 import { draftedByLine } from "@/lib/brand";
@@ -82,15 +83,35 @@ function renderMinutesDraftBmRaw(
   }
   lines.push("");
 
+  // 125 §2: the page's own headcount line, as written, and the count a person
+  // confirmed off it — the same lines the formal composer prints, so the free
+  // preview matches the document. Counted by code, confirmed by a person.
+  const countLine = e.attendance_count;
+  if (countLine && countLine.confidence !== "missing" && countLine.value !== "") {
+    lines.push(`Kehadiran: ${countLine.value}`);
+  }
   const attendees = e.attendees.filter(
     (a) => a.name.confidence !== "missing" && a.name.value !== ""
   );
+  const headcount = headcountForDocument(e);
+  if (attendees.length === 0 && headcount !== undefined) {
+    lines.push(`Jumlah hadir: ${headcount} orang`);
+  }
+  if (lines[lines.length - 1] !== "") lines.push("");
   if (attendees.length > 0) {
     lines.push("## KEHADIRAN", "");
     attendees.forEach((a, i) => lines.push(`${i + 1}. ${a.name.value}`));
     // 28/8 formality pass — the same count line composeMinutesMd prints, so
     // the free preview matches the formal document. Counted by code.
-    lines.push("", `Jumlah hadir: ${attendees.length} orang`, "");
+    lines.push("", `Jumlah hadir: ${headcount ?? attendees.length} orang`, "");
+  }
+  const apologies = (e.apologies ?? []).filter(
+    (a) => a.name.confidence !== "missing" && a.name.value.trim() !== ""
+  );
+  if (apologies.length > 0) {
+    lines.push("## TIDAK HADIR (DENGAN MAAF)", "");
+    apologies.forEach((a, i) => lines.push(`${i + 1}. ${a.name.value}`));
+    lines.push("");
   }
 
   const resolutions = e.resolutions.filter(

@@ -48,7 +48,7 @@ export const EROSES_ANNUAL_RETURN_MAP: ErosesMapEntry[] = [
     erosesField: "Bilangan Ahli Hadir",
     erosesFieldEn: "Number of members present",
     extractionPath: "attendees",
-    note: "Dikira oleh sistem daripada senarai kehadiran yang disahkan / Counted by the system from the confirmed attendee list — never by the AI.",
+    note: "Dikira oleh sistem daripada bilangan yang anda sahkan atau senarai kehadiran / Worked out by the system from the headcount you confirmed or the attendee list — the AI never counts.",
   },
   {
     erosesField: "Senarai Ahli Jawatankuasa",

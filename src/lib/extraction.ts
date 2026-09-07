@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { plausibleAttendeeName } from "@/lib/attendee-sanity";
+import { parseHeadcount } from "@/lib/headcount";
 import { MEETING_TYPES } from "@/lib/meeting-types";
 
 // Re-exported so the many existing importers of `MEETING_TYPES` from this file
@@ -288,6 +289,22 @@ export const meetingNotesExtractionSchema = z.object({
   prepared_by: officeBearerSchema.optional(),
   endorsed_by: officeBearerSchema.optional(),
   attendees: z.array(attendeeSchema),
+  /**
+   * 125 §2: the people recorded as ON LEAVE / absent (请假 / 缺席 / tidak
+   * hadir / apologies) — never attendees. Optional + .catch([]): every
+   * document saved before today parses unchanged, a malformed array costs
+   * only itself. Filled by the reader from the page, and by parse from the
+   * bracketed names of the headcount line (src/lib/headcount.ts).
+   */
+  apologies: z.array(attendeeSchema).optional().catch([]),
+  /**
+   * 125 §2: the headcount a PERSON confirmed on the attendance step — the
+   * number the document prints and eROSES receives when the page recorded
+   * its attendance as a line (「理事12人,请假2人,会员40人」) rather than a
+   * list. NEVER set by the model: code counts the line, a person agrees or
+   * types the number (Hard Rule 2 for people). Optional + catch: old data.
+   */
+  attendance_confirmed: z.number().int().positive().optional().catch(undefined),
   resolutions: z.array(resolutionSchema),
   figures: z.array(figureSchema),
   /**
@@ -403,6 +420,35 @@ export function parseMeetingNotesExtraction(raw: unknown) {
   e.attendees = e.attendees.filter(
     (a) => a.name.confidence === "missing" || plausibleAttendeeName(a.name.value),
   );
+  // 125 §2: ON LEAVE IS NOT PRESENT — by code, not by prompt. On 8/31 the
+  // reader listed the two people in the headcount line's 请假 bracket as
+  // the ONLY two attendees. The bracketed names of a leave count go to
+  // `apologies`, and anybody in `apologies` is struck from `attendees`.
+  // Erasing and moving what the page itself says; nothing promoted.
+  const apologies = (e.apologies ?? []).filter(
+    (a) => a.name.confidence === "missing" || plausibleAttendeeName(a.name.value),
+  );
+  const line = e.attendance_count;
+  const counted =
+    line && line.confidence !== "missing" && line.value !== "" ? parseHeadcount(line.value) : null;
+  for (const name of counted?.names ?? []) {
+    if (apologies.some((a) => a.name.value.trim() === name)) continue;
+    apologies.push({
+      name: {
+        value: name,
+        confidence: "check",
+        source_ref: {
+          location: line?.source_ref?.location ?? "attendance_count",
+          snippet: line?.value ?? name,
+        },
+      },
+    });
+  }
+  const onLeave = new Set(apologies.map((a) => a.name.value.trim()).filter((n) => n !== ""));
+  if (onLeave.size > 0) {
+    e.attendees = e.attendees.filter((a) => !onLeave.has(a.name.value.trim()));
+  }
+  if (apologies.length > 0 || e.apologies !== undefined) e.apologies = apologies;
   return parsed;
 }
 

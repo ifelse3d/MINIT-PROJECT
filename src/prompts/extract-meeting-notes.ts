@@ -45,6 +45,7 @@ Respond with ONLY JSON in exactly this shape:
   "prepared_by": { "position": { ...field }, "person_name": { ...field } },
   "endorsed_by": { "position": { ...field }, "person_name": { ...field } },
   "attendees": [ { "name": { ...field } } ],
+  "apologies": [ { "name": { ...field } } ],
   "resolutions": [ { "text": { "value": "...", "confidence": "...", "source_ref": ... }, "kind": "decision" | "task" | "duty" | "info", "section_no": "1", "section_title": "as printed", "own_no": "2.1" } ],
   "figures": [ { "description": { ...field }, "amount_cents": { "value": <integer sen> | null, ...field } } ],
   "financial_resolutions": [ { "vendor_name": { ...field }, "approved_amount_cents": { "value": <integer sen> | null, ...field }, "purpose": { ...field } } ],
@@ -73,6 +74,7 @@ ATTENDEES — THE MOST COMMON MISTAKE. "attendees" means ONLY the people recorde
 - If the page has NO such heading, "attendees" MUST be an empty array [] — even when the page is covered in people's names.
 - NEVER build an attendance list by collecting names that appear elsewhere. A name written next to a job, a duty, a team position, a group, or an activity is an ASSIGNMENT, not attendance. Those belong in "resolutions" (see below).
 - Never list the same person twice. One person = one entry, however many times the page mentions them.
+- ON LEAVE IS NOT PRESENT. A name written after 请假 / 缺席 / 未出席 / tidak hadir / tidak dapat hadir / apologies / absent — including the names in brackets of a headcount line such as 「理事12人,请假2人(甲,乙),会员40人」 — goes into "apologies", NEVER into "attendees". The headcount line itself is still copied verbatim into "attendance_count"; our code counts it, you never do.
 A page of names with no attendance heading and an empty "attendees" array is a CORRECT answer. Inventing attendance from duty names is the wrong answer.
 
 OFFICE BEARERS — ⚠ THIS FIELD BECOMES A GOVERNMENT FILING. "office_bearers" is copied into the society's eROSES Annual Return as "Senarai Ahli Jawatankuasa", the committee list registered with the Registrar of Societies. Putting the wrong person in it is a false filing.

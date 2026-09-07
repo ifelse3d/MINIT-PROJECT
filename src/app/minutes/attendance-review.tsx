@@ -13,6 +13,7 @@ import { DeletableRow } from "./row-controls";
 import { RosterPicker } from "./roster-picker";
 import { useMinutes } from "./minutes-store";
 import { AgentCheckIn } from "./agent-check-in";
+import { HeadcountCard, useHeadcountOpen } from "./headcount-card";
 import { attendeeIdentityKey } from "@/lib/attendee-identity";
 
 // ---------------------------------------------------------------------------
@@ -75,6 +76,9 @@ export function AttendanceReview() {
    * the END of the list, and the input stays put for the next name.
    */
   const [newName, setNewName] = useState("");
+  // 125 §2: the headcount line is one more thing the agent is unsure about
+  // until a person answers the card at the top of the step.
+  const headcountOpen = useHeadcountOpen();
   const addTypedAttendee = () => {
     const v = newName.trim();
     if (v === "") return;
@@ -232,12 +236,23 @@ export function AttendanceReview() {
         </details>
       )}
 
+      {/* 125 §2-3: the page's headcount line, counted by code and confirmed
+          by a person — so a page that records attendance as one line does
+          not force anybody to type a name. */}
+      {!nothingYet && (
+        <div id="attendance-headcount" className="scroll-mt-28">
+          <HeadcountCard />
+        </div>
+      )}
+
       {/* The one question an empty list has to answer. Not a validation error:
           "the notes do not record who attended" is a perfectly normal thing for
           a page of scribbled notes to be true of, and the person is the only
           one who can say so (Hard Rule 1 — a human may assert it, nothing may
-          assume it). */}
-      {attendanceUnsettled && !nothingYet && (
+          assume it). 125 §2: not shown while the headcount card above is still
+          asking — answering it settles this (a confirmed count needs no
+          names), and two questions about the same thing is noise. */}
+      {attendanceUnsettled && !nothingYet && !headcountOpen && (
         <div className="flex flex-col gap-3 rounded-md border-2 border-amber-400 bg-amber-50 p-4 dark:bg-amber-400/10">
           <p className="text-base font-medium text-amber-900 dark:text-amber-100">
             <Tri
@@ -502,10 +517,10 @@ export function AttendanceReview() {
           to them. Nothing is confirmed on its behalf. */}
       {!nothingYet && !isSample && (
         <AgentCheckIn
-          uncertain={batchCount}
+          uncertain={batchCount + (headcountOpen ? 1 : 0)}
           onHandleNow={() =>
             document
-              .getElementById("attendance-needs-you")
+              .getElementById(headcountOpen ? "attendance-headcount" : "attendance-needs-you")
               ?.scrollIntoView({ behavior: "smooth", block: "start" })
           }
         />
