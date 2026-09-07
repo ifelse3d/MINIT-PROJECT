@@ -52,6 +52,13 @@ const BACKOFF_MS = [0, 900, 2_600];
 const API_URL = "https://api.anthropic.com/v1/messages";
 const API_VERSION = "2023-06-01";
 
+/** 125 §6: does this model still take `temperature`? The Claude 5 family
+ *  (sonnet-5, opus-5, fable-5…) returns 400 when it is sent; earlier
+ *  families (haiku-4-5) accept it. Exported for the unit test. */
+export function acceptsTemperature(model: string): boolean {
+  return !/^claude-(sonnet|opus|fable|haiku|mythos)-5/.test(model);
+}
+
 // ---------------------------------------------------------------------------
 // Prices per 1M tokens in USD, from Anthropic's published pricing, checked
 // 2026-08-22. Same rule as gemini.ts / openai.ts: a model that is not in this
@@ -137,7 +144,11 @@ export function createAnthropicProvider(model: string): VisionJsonProvider {
         model,
         max_tokens: maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
         messages: [{ role: "user", content }],
-        temperature: temperature ?? DEFAULT_TEMPERATURE,
+        // 125 §6: the Claude 5 family rejects `temperature` outright (400
+        // "temperature is deprecated for this model"), which is why
+        // claude-sonnet-5 could not be called at all. Sent only to models
+        // that still take it (haiku-4-5 does) — a pattern, not a whitelist.
+        ...(acceptsTemperature(model) ? { temperature: temperature ?? DEFAULT_TEMPERATURE } : {}),
         ...(effort ? { output_config: { effort } } : {}),
       });
 
