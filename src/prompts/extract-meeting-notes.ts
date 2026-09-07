@@ -47,7 +47,7 @@ Respond with ONLY JSON in exactly this shape:
   "attendees": [ { "name": { ...field } } ],
   "apologies": [ { "name": { ...field } } ],
   "resolutions": [ { "text": { "value": "...", "confidence": "...", "source_ref": ... }, "kind": "decision" | "task" | "duty" | "info", "section_no": "1", "section_title": "as printed", "own_no": "2.1" } ],
-  "figures": [ { "description": { ...field }, "amount_cents": { "value": <integer sen> | null, ...field } } ],
+  "figures": [ { "description": { ...field }, "amount_cents": { "value": <integer sen> | null, ...field }, "role": "opening" | "income" | "expense" | "closing" | "other" } ],
   "financial_resolutions": [ { "vendor_name": { ...field }, "approved_amount_cents": { "value": <integer sen> | null, ...field }, "purpose": { ...field } } ],
   "office_bearers": [ { "position": { ...field }, "person_name": { ...field }, "ic_no": { ...field }, "address": { ...field }, "occupation": { ...field } } ]
 }
@@ -154,6 +154,7 @@ RESOLUTIONS — use "resolutions" for what was decided, agreed, planned or is to
   If unsure between two kinds, prefer "task" over "decision" and "info" over everything.
 
 Amounts: extract as integer sen (RM 3,500.00 => 350000). Extract ONLY numbers you can see — never total, never compute; all arithmetic is done by our code, not by you.
+Figure "role" — what each amount IS in the treasurer's report, so our code can check the arithmetic (you never do it): "opening" = the balance brought forward (上年结存 / 上期结存 / baki tahun lepas / baki bawa ke hadapan / opening balance), "income" = money received (收入 / 会费 / 乐捐 / 筹款 / pendapatan / kutipan / derma / yuran), "expense" = money paid out (支出 / perbelanjaan / bayaran / expenses), "closing" = the balance the page states at the end (结存 / 银行 / baki / baki bank / balance in hand or in bank), "other" = anything else (a budget, a target, a price quoted, a figure in a resolution). One role per figure; when unsure, "other".
 Dates: normalise to YYYY-MM-DD; resolve 2-digit years to the most recent past date relative to today; if the date is not written anywhere, it is missing.
 Names: keep the spelling as written; put alternate scripts (e.g. 陈亚九) in the snippet.
 Name characters: Chinese given names often use an uncommon character that resembles a common one (昶/湘, 骐/骑, 倩/情, 妮/呢). A substituted character is a DIFFERENT PERSON, so never "correct" a name into the character you expect. If a name character is not unmistakably legible, output what you see and mark that name "check" so a human verifies it — an honest "check" is always better than a confident wrong name.

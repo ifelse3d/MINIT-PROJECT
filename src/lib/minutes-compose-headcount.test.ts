@@ -82,6 +82,29 @@ describe("🔴 125 §2-5 — Jumlah hadir comes from the confirmed count", () =>
     expect(md).not.toContain("Jumlah hadir");
   });
 
+  it("125 §4-3: an acknowledged mismatch prints ONE note line under the figures — in the document's language, figures untouched", () => {
+    const fig = (description: string, cents: number, role: "opening" | "income" | "expense" | "closing") => ({
+      description: confirmed(description),
+      amount_cents: { value: cents, confidence: "confirmed" as const, source_ref: { location: "p1", snippet: String(cents) } },
+      role,
+    });
+    const e: MeetingNotesExtraction = {
+      ...agm(),
+      figures: [fig("上年结存", 768000, "opening"), fig("收入", 1360000, "income"), fig("支出", 1015000, "expense"), fig("银行", 1159000, "closing")],
+      figures_mismatch_noted: true,
+    };
+    const md = composeMinutesMd(plan, e, opts);
+    expect(md).toContain("- 银行: RM11,590.00");
+    expect(md).toContain("Nota: angka di atas disalin seperti tertulis; baki yang dikira RM11,130.00 berbeza daripada baki tertulis RM11,590.00 sebanyak RM460.00");
+    expect(renderMinutesDraftBm(e, { orgName: "PERSATUAN CONTOH" })).toContain("Nota: angka di atas");
+    // Not acknowledged → no note (the review step is still asking).
+    const silent = composeMinutesMd(plan, { ...e, figures_mismatch_noted: undefined }, opts);
+    expect(silent).not.toContain("Nota: angka di atas");
+    // Balanced → no note even when "noted" (nothing to note).
+    const balanced = composeMinutesMd(plan, { ...e, figures: [...e.figures.slice(0, 3), fig("银行", 1113000, "closing")] }, opts);
+    expect(balanced).not.toContain("Nota: angka di atas");
+  });
+
   it("the zh and en reading copies use their own labels", () => {
     expect(composeMinutesMd(plan, agm(), { ...opts, lang: "zh" })).toContain("出席人数：52 人");
     expect(composeMinutesMd(plan, agm(), { ...opts, lang: "zh" })).toContain("## 请假");

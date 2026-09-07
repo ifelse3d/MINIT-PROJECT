@@ -208,9 +208,16 @@ export const resolutionSchema = z.object({
   as_written: z.boolean().optional().catch(undefined),
 });
 
+/** 125 §4: what a figure IS in the treasurer's arithmetic. The reader
+ *  labels; code sums (src/lib/financial-reconcile.ts). Absent = "other". */
+export const figureRoleSchema = z.enum(["opening", "income", "expense", "closing", "other"]);
+
 export const figureSchema = z.object({
   description: textFieldSchema,
   amount_cents: amountCentsFieldSchema,
+  /** Optional + catch: every fixture and saved document before today parses
+   *  unchanged; a bad label only costs the reconciliation, never the figure. */
+  role: figureRoleSchema.optional().catch(undefined),
 });
 
 /**
@@ -308,6 +315,13 @@ export const meetingNotesExtractionSchema = z.object({
   attendance_confirmed: z.number().int().positive().optional().catch(undefined),
   resolutions: z.array(resolutionSchema),
   figures: z.array(figureSchema),
+  /**
+   * 125 §4-3: a person looked at figures that do not add up and said "the
+   * numbers are right, the page really says so". Set only by the review
+   * step's card, never by the model; the document then carries one note
+   * line. No figure is ever changed by anybody but the person.
+   */
+  figures_mismatch_noted: z.boolean().optional().catch(undefined),
   /**
    * Money the meeting approved TO BE PAID OUT (work order 94). Optional, and
    * `.catch(undefined)` for the same reason `kind` carries it: every document

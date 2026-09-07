@@ -20,6 +20,7 @@ import { BeforeReading } from "./before-reading";
 import { DiscussSection } from "./discuss-section";
 import { FieldRow } from "./field-row";
 import { AddRowButton, DeletableRow } from "./row-controls";
+import { ReconcileCard } from "./reconcile-card";
 import { useMinutes, type TextLikeField } from "./minutes-store";
 import { signedUrlForOriginal } from "./open-original";
 import type { MeetingNotesExtraction, ResolutionKind } from "@/lib/extraction";
@@ -1379,6 +1380,10 @@ export function NotesReview() {
           total={groups.figures.total}
           defaultOpen={firstUnfinishedHere === "figures"}
         >
+          {/* 125 §4: the treasurer's figures add themselves up (code, Hard
+              Rule 2); a mismatch is a question, never a correction. */}
+          <ReconcileCard />
+          <div id="figures-rows" className="scroll-mt-28" />
           {extraction.figures.map((f, i) => (
             <DeletableRow
               key={`fig-${i}`}

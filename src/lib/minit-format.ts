@@ -106,6 +106,9 @@ export type MinitDocModel = {
   agendaTable?: { no: string; title: string }[];
   sections: MinitSection[];
   figures?: { description: string; amountText: string }[];
+  /** 125 §4-3: one note line under the figures when a person acknowledged
+   *  that they do not add up. Absent = nothing (a balanced page is silent). */
+  figuresNote?: string;
   /** 118 §5-1: the particulars a printed appointment carries (No. K/P,
    *  alamat, pekerjaan) print beside the name — they are what eROSES asks
    *  for, and the reader was already copying them. Absent = nothing. */
@@ -379,6 +382,7 @@ export function renderMinitMd(model: MinitDocModel): string {
   if (figures.length > 0) {
     out.push(`## ${L.money}`, "");
     figures.forEach((f) => out.push(`- ${f.description}: ${f.amountText}`));
+    if (model.figuresNote) out.push("", model.figuresNote);
     out.push("");
   }
 
@@ -439,7 +443,9 @@ export type MinitLintFinding = {
     | "agenda_table_missing"
     | "attendance_count_missing"
     | "content_lost"
-    | "forbidden_content";
+    | "forbidden_content"
+    /** 125 §4: the quality eval's reconciliation expectation was not met. */
+    | "reconcile_unexpected";
   detail: string;
 };
 

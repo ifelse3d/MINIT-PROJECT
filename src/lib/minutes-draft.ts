@@ -3,7 +3,7 @@ import type { MeetingNotesExtraction } from "@/lib/extraction";
 import { meetingTypeLabel } from "@/lib/meeting-types";
 import { draftedByLine } from "@/lib/brand";
 import { bearerParticulars, formatRm } from "@/lib/minit-format";
-import { composeStructuredMinutesMd, minutesStructure } from "@/lib/minutes-compose";
+import { composeStructuredMinutesMd, figuresNoteFor, minutesStructure } from "@/lib/minutes-compose";
 import { normalizeFullwidth } from "@/lib/bm-guard";
 
 // ---------------------------------------------------------------------------
@@ -141,6 +141,9 @@ function renderMinutesDraftBmRaw(
     figures.forEach((f) =>
       lines.push(`- ${f.description.value}: ${formatRm(f.amount_cents.value as number)}`)
     );
+    // 125 §4-3: the same acknowledged-mismatch note the formal document prints.
+    const note = figuresNoteFor(e, "bm");
+    if (note) lines.push("", note);
     lines.push("");
   }
 

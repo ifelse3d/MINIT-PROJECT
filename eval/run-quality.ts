@@ -31,6 +31,7 @@ import {
   minutesStructure,
   usableResolutions,
 } from "../src/lib/minutes-compose";
+import { reconcileExtraction } from "../src/lib/financial-reconcile";
 import { lintMinitMd, type MinitLintExpectations, type MinitLintFinding } from "../src/lib/minit-format";
 import { isMinutesLang } from "../src/lib/minutes-lang";
 
@@ -58,6 +59,8 @@ type QualityCase = {
   language: string;
   extraction: unknown;
   expect: Omit<MinitLintExpectations, "lang">;
+  /** 125 §4: what the figures' arithmetic must say for this page. */
+  reconcile?: "balanced" | "mismatch" | "not_applicable";
 };
 
 type CaseOutcome = {
@@ -158,6 +161,17 @@ async function main() {
       }
 
       const findings = lintMinitMd(markdown, { ...meta.expect, lang });
+      // 125 §4: the treasurer's arithmetic — pure code over the confirmed
+      // figures, so a case can say whether its page balances. Zero cost.
+      if (meta.reconcile) {
+        const r = reconcileExtraction(extraction);
+        if (r.status !== meta.reconcile) {
+          findings.push({
+            code: "reconcile_unexpected",
+            detail: `expected ${meta.reconcile}, got ${r.status}${r.status === "mismatch" ? ` (diff ${r.diffCents} sen)` : ""}`,
+          });
+        }
+      }
       console.log(
         findings.length === 0 ? "0 findings ✓" : `${findings.length} findings`,
       );

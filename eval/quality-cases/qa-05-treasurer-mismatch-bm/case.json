@@ -1,0 +1,35 @@
+{
+  "type": "minutes_quality",
+  "description": "FICTIONAL handwritten AGM treasurer's report in the SHAPE of J's real page (125 §4): opening 7,680 + income 13,600 − expenses 10,150 = 11,130, but the page states a bank balance of 11,590 — off by 460, and the page also records that the auditor found no problem. Expected: mismatch (a card on the review step); nobody has acknowledged it here, so the document carries NO note line and every figure exactly as written.",
+  "orgName": "PERSATUAN CONTOH SEJAHTERA NEGERI PERLIS",
+  "language": "bm",
+  "extraction": {
+    "meeting_type": { "value": "agm", "confidence": "confirmed", "source_ref": { "location": "photo 1, top", "snippet": "常年大会" } },
+    "meeting_date": { "value": "2026-03-15", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 1", "snippet": "15/3/26" } },
+    "meeting_venue": { "value": "", "confidence": "missing", "source_ref": null },
+    "attendees": [],
+    "attendance_count": { "value": "理事12人,请假2人(张伟杰,王丽华),会员40人", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 2", "snippet": "理事12人,请假2人(张伟杰,王丽华),会员40人" } },
+    "attendance_confirmed": 52,
+    "resolutions": [
+      { "text": { "value": "主席感谢大家去年帮忙", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 2", "snippet": "主席感谢大家去年帮忙" } }, "kind": "info" },
+      { "text": { "value": "财政报告：查账员 刘国华 说没问题, 通过", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 5", "snippet": "财政报告：查账员 刘国华 说没问题, 通过" } }, "kind": "decision" },
+      { "text": { "value": "动议 张伟杰, 附议 王丽华", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 6", "snippet": "动议 张伟杰, 附议 王丽华" } }, "kind": "info" }
+    ],
+    "figures": [
+      { "description": { "value": "上年结存", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 3", "snippet": "上年结存 7,680" } }, "amount_cents": { "value": 768000, "confidence": "confirmed", "source_ref": { "location": "photo 1, line 3", "snippet": "7,680" } }, "role": "opening" },
+      { "description": { "value": "收入: 会费", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 3", "snippet": "收入: 会费 13,600" } }, "amount_cents": { "value": 1360000, "confidence": "confirmed", "source_ref": { "location": "photo 1, line 3", "snippet": "13,600" } }, "role": "income" },
+      { "description": { "value": "支出", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 4", "snippet": "支出 10,150" } }, "amount_cents": { "value": 1015000, "confidence": "confirmed", "source_ref": { "location": "photo 1, line 4", "snippet": "10,150" } }, "role": "expense" },
+      { "description": { "value": "银行", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 4", "snippet": "银行 11,590" } }, "amount_cents": { "value": 1159000, "confidence": "confirmed", "source_ref": { "location": "photo 1, line 4", "snippet": "11,590" } }, "role": "closing" },
+      { "description": { "value": "晚宴", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 7", "snippet": "晚宴 RM9150" } }, "amount_cents": { "value": 915000, "confidence": "confirmed", "source_ref": { "location": "photo 1, line 7", "snippet": "RM9150" } }, "role": "other" }
+    ],
+    "office_bearers": []
+  },
+  "reconcile": "mismatch",
+  "expect": {
+    "masa": false,
+    "agendaTable": false,
+    "attendanceCount": true,
+    "mustContain": ["张伟杰", "王丽华", "刘国华", "RM7,680.00", "RM13,600.00", "RM10,150.00", "RM11,590.00", "RM9,150.00", "Jumlah hadir: 52 orang", "TIDAK HADIR (DENGAN MAAF)"],
+    "mustNotContain": ["Nota: angka di atas", "RM11,130.00", "Zhang Wei", "Wang Li", "Liu Guo", "Chong Wai", "Ong Lai", "Lau Kok"]
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "type": "minutes_quality",
+  "description": "FICTIONAL handwritten AGM treasurer's report whose figures ADD UP (125 §4). Opening 7,680 + income 13,600 − expenses 10,150 = 11,130, and the page states 11,130. Expected: balanced — no reconcile finding, no note line in the document.",
+  "orgName": "PERSATUAN CONTOH SEJAHTERA NEGERI PERLIS",
+  "language": "bm",
+  "extraction": {
+    "meeting_type": { "value": "agm", "confidence": "confirmed", "source_ref": { "location": "photo 1, top", "snippet": "常年大会" } },
+    "meeting_date": { "value": "2026-03-15", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 1", "snippet": "15/3/26" } },
+    "meeting_venue": { "value": "", "confidence": "missing", "source_ref": null },
+    "attendees": [],
+    "attendance_count": { "value": "理事12人,会员40人", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 2", "snippet": "理事12人,会员40人" } },
+    "attendance_confirmed": 52,
+    "resolutions": [
+      { "text": { "value": "财政报告：查账员 刘国华 说没问题, 通过", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 5", "snippet": "财政报告：查账员 刘国华 说没问题, 通过" } }, "kind": "decision" },
+      { "text": { "value": "2026年慈善晚宴 17/10/2026, 通过", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 6", "snippet": "2026年慈善晚宴 17/10/2026, 通过" } }, "kind": "decision" }
+    ],
+    "figures": [
+      { "description": { "value": "上年结存", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 3", "snippet": "上年结存 7,680" } }, "amount_cents": { "value": 768000, "confidence": "confirmed", "source_ref": { "location": "photo 1, line 3", "snippet": "7,680" } }, "role": "opening" },
+      { "description": { "value": "收入: 会费", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 3", "snippet": "收入: 会费 13,600" } }, "amount_cents": { "value": 1360000, "confidence": "confirmed", "source_ref": { "location": "photo 1, line 3", "snippet": "13,600" } }, "role": "income" },
+      { "description": { "value": "支出", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 4", "snippet": "支出 10,150" } }, "amount_cents": { "value": 1015000, "confidence": "confirmed", "source_ref": { "location": "photo 1, line 4", "snippet": "10,150" } }, "role": "expense" },
+      { "description": { "value": "银行", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 4", "snippet": "银行 11,130" } }, "amount_cents": { "value": 1113000, "confidence": "confirmed", "source_ref": { "location": "photo 1, line 4", "snippet": "11,130" } }, "role": "closing" }
+    ],
+    "office_bearers": []
+  },
+  "reconcile": "balanced",
+  "expect": {
+    "masa": false,
+    "agendaTable": false,
+    "attendanceCount": true,
+    "mustContain": ["刘国华", "RM7,680.00", "RM13,600.00", "RM10,150.00", "RM11,130.00", "17/10/2026", "Jumlah hadir: 52 orang"],
+    "mustNotContain": ["Nota: angka di atas", "Liu Guo", "Lau Kok"]
+  }
+}
