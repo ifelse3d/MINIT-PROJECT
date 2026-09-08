@@ -28,7 +28,8 @@ import { cleanMinutesTitle, suggestMinutesTitle } from "@/lib/minutes-title";
 import { buildPastePack, type FilingRosterEntry } from "@/lib/paste-pack";
 import { dayIsoMalaysia } from "@/lib/history";
 import { type MinutesLang } from "@/lib/minutes-lang";
-import { consumeIntake } from "@/lib/intake-handoff";
+import { consumeIntake, peekIntake } from "@/lib/intake-handoff";
+import { useHydrated } from "@/lib/browser-store";
 import { SAMPLE_ORG_NAME, sampleMeetingExtraction } from "@/lib/sample-data";
 import {
   EMPTY_MEETING_FACTS,
@@ -503,26 +504,42 @@ export function MinutesProvider({
     [],
   );
 
-  // Restore saved work once on mount, then save on every change.
+  // Restore saved work once, then save on every change.
   //
-  // The ref guard matters: React Strict Mode (on by default in dev) runs mount
-  // effects TWICE. `consumeIntake` deletes the parcel on the first run, so the
-  // second run fell through to `loadSavedMinutes()` and OVERWROTE the extraction
-  // the home page had just handed over with older saved work.
-  // (Found in review, 2026-07-28.)
+  // 130 §5: the restore is applied DURING the first browser render (React's
+  // adjust-state pattern — compare, set, and React re-runs the component
+  // before committing) instead of in a mount effect that painted an empty
+  // workspace first and set eight states after. The reads are pure
+  // (peekIntake / loadSavedMinutes); everything that TOUCHES the outside —
+  // deleting the parcel, purging a saved-to-History blob, re-signing photo
+  // links, the draft-key ref — is the effect right after, keyed on what was
+  // restored. The server and hydration renders see nothing (`hydrated` is
+  // false there), so the HTML still matches.
   //
-  // Since the split this effect lives in the LAYOUT, so it runs once for the
-  // whole section rather than once per page — moving from /minutes to
+  // The old ref guard (React Strict Mode runs mount effects twice, and
+  // `consumeIntake` deleted the parcel on the first run, so the second fell
+  // through to `loadSavedMinutes()` and OVERWROTE the hand-off — found in
+  // review, 2026-07-28) is unnecessary now: the render-time look does not
+  // delete, and the delete runs once the hand-off is already on screen.
+  //
+  // Since the split this lives in the LAYOUT, so it runs once for the whole
+  // section rather than once per page — moving from /minutes to
   // /minutes/attendance no longer re-reads localStorage at all.
-  const didRestore = useRef(false);
-  useEffect(() => {
-    if (didRestore.current) return;
-    didRestore.current = true;
+  const hydrated = useHydrated();
+  const [restoreSource, setRestoreSource] = useState<
+    | null
+    | { kind: "handed" }
+    | { kind: "saved-history" }
+    | { kind: "saved"; pages: PhotoPage[]; draftKey: string | null }
+    | { kind: "none" }
+  >(null);
+  if (hydrated && restoreSource === null) {
     // Did the home page's "one door" just read a page of meeting notes for us?
     // If so it wins over anything saved earlier — the person literally just took
     // that photo. (2026-07-28: the home AskBox → /api/intake → here.)
-    const handed = consumeIntake("meeting_notes");
+    const handed = peekIntake("meeting_notes");
     if (handed) {
+      setRestoreSource({ kind: "handed" });
       setExtraction(handed.extraction as MeetingNotesExtraction);
       setSourceLabel(handed.fileName);
       // 28/8 evening (last round's own "one door" gap): the home page now
@@ -548,59 +565,78 @@ export function MinutesProvider({
             : [],
       );
       setRestored(true);
-      return;
-    }
-    const saved = loadSavedMinutes();
-    // J 28/8 evening item 1 (the bug he reported TWICE): a workspace whose
-    // meeting is ALREADY IN HISTORY does not come back. "新的会议记录" now
-    // means what it says — the saved document lives on its own History page
-    // (print, photos, edit all there); restoring it here only ever made the
-    // next visit open on last month's meeting.
-    if (saved?.savedToHistory) {
-      try {
-        localStorage.removeItem(minutesStoreKey());
-      } catch {
-        // Storage unavailable — nothing restored either way.
+    } else {
+      const saved = loadSavedMinutes();
+      // J 28/8 evening item 1 (the bug he reported TWICE): a workspace whose
+      // meeting is ALREADY IN HISTORY does not come back. "新的会议记录" now
+      // means what it says — the saved document lives on its own History page
+      // (print, photos, edit all there); restoring it here only ever made the
+      // next visit open on last month's meeting.
+      if (saved?.savedToHistory) {
+        setRestoreSource({ kind: "saved-history" });
+        setRestored(true);
+      } else if (saved) {
+        setExtraction(saved.extraction);
+        // 129 C: the document written for these very facts comes back with
+        // them — tagged to the same object, so the auto-write stays quiet.
+        if (saved.aiDraft && typeof saved.aiDraft.markdown === "string") {
+          setDraftResult({
+            for: saved.extraction,
+            lang: saved.aiDraft.lang,
+            markdown: saved.aiDraft.markdown,
+          });
+        }
+        setSourceLabel(saved.sourceLabel);
+        // I-2: pages when the blob has them; a legacy single photo reads as
+        // one page.
+        const restoredPages: PhotoPage[] =
+          saved.photoPages ??
+          (saved.photoDataUrl
+            ? [{ name: saved.sourceLabel ?? "photo", dataUrl: saved.photoDataUrl }]
+            : []);
+        setPhotoPages(restoredPages);
+        setTypedByHand(saved.typed === true);
+        setNoAttendeesRecorded(saved.noAttendees === true);
+        if (typeof saved.title === "string") setDocTitle(saved.title);
+        // C-13: keep writing into the same cloud draft this device was on.
+        const draftKey =
+          typeof saved.draftKey === "string" && saved.draftKey !== "" ? saved.draftKey : null;
+        if (draftKey !== null) setDraftKeyForUi(draftKey);
+        setRestoreSource({ kind: "saved", pages: restoredPages, draftKey });
+        setRestored(true);
+        // (0-1's "restore the saved mark" branch is gone on purpose — a
+        // saved-to-History blob is purged below and never restored at all.)
+      } else {
+        setRestoreSource({ kind: "none" });
+        setRestored(true);
       }
-      setRestored(true);
-      return;
     }
-    if (saved) {
-      setExtraction(saved.extraction);
-      // 129 C: the document written for these very facts comes back with
-      // them — tagged to the same object, so the auto-write stays quiet.
-      if (saved.aiDraft && typeof saved.aiDraft.markdown === "string") {
-        setDraftResult({
-          for: saved.extraction,
-          lang: saved.aiDraft.lang,
-          markdown: saved.aiDraft.markdown,
-        });
-      }
-      setSourceLabel(saved.sourceLabel);
-      // I-2: pages when the blob has them; a legacy single photo reads as
-      // one page.
-      const restoredPages =
-        saved.photoPages ??
-        (saved.photoDataUrl
-          ? [{ name: saved.sourceLabel ?? "photo", dataUrl: saved.photoDataUrl }]
-          : []);
-      setPhotoPages(restoredPages);
-      // G3-1: previews that did not survive the blob come back signed.
-      rehydratePhotoPages(restoredPages);
-      setTypedByHand(saved.typed === true);
-      setNoAttendeesRecorded(saved.noAttendees === true);
-      if (typeof saved.title === "string") setDocTitle(saved.title);
-      // C-13: keep writing into the same cloud draft this device was on.
-      if (typeof saved.draftKey === "string" && saved.draftKey !== "") {
-        draftKeyRef.current = saved.draftKey;
-        const k = saved.draftKey;
-        setTimeout(() => setDraftKeyForUi(k), 0);
-      }
-      // (0-1's "restore the saved mark" branch is gone on purpose — a
-      // saved-to-History blob is purged above and never restored at all.)
+  }
+  // The outside-world half of the restore, once what was restored is on
+  // screen. Declared BEFORE the C-13 effects on purpose: effects run in
+  // order, and the draft-key ref must be set before anything writes a blob.
+  useEffect(() => {
+    if (restoreSource === null) return;
+    switch (restoreSource.kind) {
+      case "handed":
+        consumeIntake("meeting_notes");
+        return;
+      case "saved-history":
+        try {
+          localStorage.removeItem(minutesStoreKey());
+        } catch {
+          // Storage unavailable — nothing restored either way.
+        }
+        return;
+      case "saved":
+        if (restoreSource.draftKey !== null) draftKeyRef.current = restoreSource.draftKey;
+        // G3-1: previews that did not survive the blob come back signed.
+        rehydratePhotoPages(restoreSource.pages);
+        return;
+      default:
+        return;
     }
-    setRestored(true);
-  }, [rehydratePhotoPages]);
+  }, [restoreSource, rehydratePhotoPages]);
 
   // C-13: what unfinished drafts does the CLOUD hold for this org? Loaded
   // once per visit; [] covers "none" and "DB behind migration 33" alike
