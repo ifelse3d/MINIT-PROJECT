@@ -30,6 +30,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import { AIPanel } from "./ai-panel";
+import {
+  notifyStorageChanged,
+  useHydrated,
+  useMediaQuery,
+  useStoredString,
+} from "@/lib/browser-store";
 
 const MIN_WIDTH = 320;
 const MAX_WIDTH = 640;
@@ -61,45 +67,42 @@ export type AIDockState = ReturnType<typeof useAIDock>;
  * reserve room for the rail (`push`) in the same render that opens it.
  */
 export function useAIDock() {
-  const [open, setOpen] = useState(false);
-  const [width, setWidth] = useState(DEFAULT_WIDTH);
-  const [isDesktop, setIsDesktop] = useState(false);
+  // 130 §5: the breakpoint and the saved preferences are read as external
+  // stores (false / null on the server, the browser's answer after
+  // hydration) and the dock's state is DERIVED from them plus the person's
+  // choices this visit — no effect copies them into state.
+  const isDesktop = useMediaQuery(DESKTOP_QUERY);
+  const ready = useHydrated();
+  const savedWidth = useStoredString("local", WIDTH_KEY);
+  const savedOpen = useStoredString("local", OPEN_KEY);
+  const [openChoice, setOpenChoice] = useState<boolean | null>(null);
+  const [widthChoice, setWidthChoice] = useState<number | null>(null);
   const [dragging, setDragging] = useState(false);
-  // Nothing is restored until after mount, so server and client first paint
-  // agree. Until then the dock is closed at its default width.
-  const [ready, setReady] = useState(false);
+
+  const restoredWidth = (() => {
+    const n = Number(savedWidth);
+    return Number.isFinite(n) && n > 0 ? clampWidth(n) : DEFAULT_WIDTH;
+  })();
+  const width = widthChoice ?? restoredWidth;
+  // A rail left open on a laptop does not spring open as a sheet on a phone:
+  // the saved "open" only counts on a desktop-width viewport.
+  const open = openChoice ?? (ready && isDesktop && savedOpen === "1");
+
+  // The width at the moment a drag ends, for the write-back — kept in an
+  // effect, never assigned during render.
   const widthRef = useRef(width);
-  widthRef.current = width;
-
-  // Track the breakpoint and restore the saved preference in one pass, so a
-  // rail left open on a laptop does not spring open as a sheet on a phone.
   useEffect(() => {
-    const mq = window.matchMedia(DESKTOP_QUERY);
-    const sync = () => setIsDesktop(mq.matches);
-    sync();
-    mq.addEventListener("change", sync);
-
-    try {
-      const savedWidth = Number(localStorage.getItem(WIDTH_KEY));
-      if (Number.isFinite(savedWidth) && savedWidth > 0) {
-        setWidth(clampWidth(savedWidth));
-      }
-      if (mq.matches && localStorage.getItem(OPEN_KEY) === "1") setOpen(true);
-    } catch {
-      // Private mode / storage disabled: defaults are fine.
-    }
-    setReady(true);
-
-    return () => mq.removeEventListener("change", sync);
-  }, []);
+    widthRef.current = width;
+  }, [width]);
 
   const toggle = useCallback((next: boolean) => {
-    setOpen(next);
+    setOpenChoice(next);
     try {
       localStorage.setItem(OPEN_KEY, next ? "1" : "0");
     } catch {
       /* ignore */
     }
+    notifyStorageChanged();
   }, []);
 
   const startResize = useCallback(() => setDragging(true), []);
@@ -111,7 +114,7 @@ export function useAIDock() {
 
     const onMove = (e: PointerEvent) => {
       // 16px = the rail's right gutter (`pr-4`).
-      setWidth(clampWidth(window.innerWidth - e.clientX - 16));
+      setWidthChoice(clampWidth(window.innerWidth - e.clientX - 16));
     };
     const stop = () => {
       setDragging(false);
@@ -120,6 +123,7 @@ export function useAIDock() {
       } catch {
         /* ignore */
       }
+      notifyStorageChanged();
     };
 
     window.addEventListener("pointermove", onMove);
@@ -140,15 +144,14 @@ export function useAIDock() {
   }, [dragging]);
 
   const nudgeWidth = useCallback((delta: number) => {
-    setWidth((w) => {
-      const next = clampWidth(w + delta);
-      try {
-        localStorage.setItem(WIDTH_KEY, String(next));
-      } catch {
-        /* ignore */
-      }
-      return next;
-    });
+    const next = clampWidth(widthRef.current + delta);
+    setWidthChoice(next);
+    try {
+      localStorage.setItem(WIDTH_KEY, String(next));
+    } catch {
+      /* ignore */
+    }
+    notifyStorageChanged();
   }, []);
 
   return {
