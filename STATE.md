@@ -5,7 +5,19 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
-**🟣 130 号单已开（2026-09-09 凌晨，J：「还没做的都写成 PROMPT，做好所有」）：`_J-要做的事X-施工单-上台后总清场-全部残项-20260909.md`——全部残项分 §3–§19；一律在分支 `after-stage` 做，J 说「上台完了」才 merge 进 main（9/9 5:15 PM 上台前线上不动）。**
+**🟣 130 号场收工（2026-09-09 凌晨，报告 `_J-要做的事\131-…md`；工作场自己写）：§3–§19 全做（§16 只做章程半、Office 半留残；§19 只写规格＝132 号单）。
+🔴 33 支 commit 全在分支 `after-stage`，`main` 一支没动、没 push——J 说「上台完了」才 `git checkout main && git merge --ff-only after-stage && git push origin main`（9/9 5:15 PM 上台前线上不动）。
+四关：tsc 0 · **eslint 0 错 0 警（19→0，`.github/workflows/ci.yml` 已加 `--max-warnings 0` 关）** · vitest **1610** · build ✓。真钱 **US$0.0076**（一次付费 eval:quality 7/7；授权 ≤3.00）。**新 migration 46**（`20260924000000_roster_particulars.sql`：committee_roster 加 ic_no／address／occupation，可空、探针、salin 46）——**J 贴**；.env／Vercel env 没动。**
+①§3 成文层补回被读取端吃掉的子标题（`recoverLostSubheading`／`headingTitleOf`，没动 prompt）；§4 `Tarikh:` 三语印 `15-03-2026`（同 `isoToErosesDate`）。
+②§5 eslint 逐档 17 支：共用底座 `src/lib/browser-store.ts`（`useHydrated`／`useStoredString`／`useMediaQuery`＝`useSyncExternalStore`，没有一处 lazy initializer）；日历事件成可订阅 store（`use-local-events.ts`）；register-store／minutes-store 的一次性还原改「渲染中比对再 set」＋副作用进 effect（`peekIntake` 纯看）。
+③§6 `shot-layout-109`／`shot-cards-113` 重教（ask-back 状态改「认不出是哪一种」）；§7 W-2 flake 根因＝补水竞态（打字早于 onChange 挂上）；§8 铃铛进 app bar（top-bar slot，portal）＋告示两行 13px：447→506px（+59，不是 69；第三排卡还差 ~103px＝设计题等 J）。
+④§9 浮动面板回纹针（`src/lib/intake-client.ts` 两面共用，`e2e:panel-clip`）；§10 章程报价行改百分比＋行话守门扩到任何「N 次」；§11 加人卡预填＋州属由码从地址算（`address-state.ts`，11 测）＋migration 46；§12 问一句 4 颗（收据编号、eROSES 是什么）。
+⑤§13 动画：padding 不再过场、Button scale＋`--dur-press`、Upcoming 与 chip `minit-enter`、勾 `minit-tick`、多卡错开 40ms（只动 transform／opacity）；§14 `/admin` 模型测试卡（估价→两次确认→每页×模型一次 server action，只回结构摘要；plan 用量池 102 场已有）；§15 `checkLockedTokens`（金额／IC／数字日期，两条回圈）＋对话 12 题改摺成摘要（`chat-summary.ts`，扣一次；**D55**、设计文件 §4.6）；§16 长章程 PDF 走排队（`startJob("constitution")`，旧分段读取器当后备）；§17 `eval:quality --offline --lang bm,zh,en`（零 vendor，21/21）＋来源检查 `name_lost`／`locked_lost`＋qa-06／qa-07；§18 `check:ai` 实跑（**不打厂商、零钱**）：classify nano、extract flash-lite、chat luna、long_doc flash-lite、write 跟 long_doc。
+**没能验证：** `/admin` 模型卡没在浏览器看（要平台管理员）；章程走排队没真跑（真钱）；对话压缩没打真厂商到 12 题；线上没变。**新 e2e：`e2e:calendar`、`e2e:panel-clip`、`e2e:roster-prefill`。**
+🔴 **本场新陷阱：Turbopack dev 持久快取会吃掉 `globals.css` 改动（重开也旧）——`rm -rf .next/dev/cache` 再开；被 server action 匯入的 lib 不准 import React（hook 另开 `use-*.ts`）；`set-state-in-effect` 一个 effect 只报第一个 setState；commit 讯息里的 `$0` 会被 bash 吃掉（用 `-F`）。**
+法律页 37 个 `[[` 照旧等 J 填表；换模型等 J 看 bench；132 号规格等 J 拍五题。**
+
+**🟣 130 号单已开（2026-09-09 凌晨，J：「还没做的都写成 PROMPT，做好所有」）：`_J-要做的事\130-施工单-上台后总清场-全部残项-20260909.md`——全部残项分 §3–§19；一律在分支 `after-stage` 做，J 说「上台完了」才 merge 进 main（9/9 5:15 PM 上台前线上不动）。**
 
 **🟣 129 号追加（2026-09-08 深夜，上台前夜，报告在 `_J-要做的事
 9-…md`，commit `16fbd76`＋`b761fdf` 已 push、fetch 实查同步）：J 线上抓到 eROSES 贴入页「Tempat」还是 `会议室`＋红字——文件层 125 已套词汇表、贴入页两条路（`eroses-meeting.ts` 登记页、`paste-pack.ts` 年度呈报第 1 步）拿原字。两处都改成同一张 `applyBmGlossary`＋同一套围名（名册／职位／签名／机构名；`buildPastePack` 多一个可选 `{orgName}`）；顺手把 125 §2 漏掉的登记页「Jumlah Kehadiran」改吃 `headcountForDocument`（确认 52 先、名单其次）。测试 1577 过（+8）、tsc 0、build ×2。**线上只看到页面正常出，`会议室→Bilik Mesyuarat` 那格没在线上亲眼看到**（浏览器机构不是 TESTING1，没切）。没动文件层。**第二轮（J「都做」）：A 登记页三格提示只印一次（`4f579a9`）；C 写好的 BM 文件跟草稿一起存（`SavedMinutes.aiDraft`／cloud `DraftPayload.aiDraft`，还原时 tag 到同一个 extraction 物件，127 auto-write 不再重扣，`2dd7143`）；D `struckDoubleSuggestion`（重复字→词汇表词才建议，FieldRow 加 `suggestionsLead`）＋核对页 figures 两栏一行（`a1e0b61`）。vitest 1581、tsc 0、build ✓、eslint 基准同（那个 set-state 洞行号 502→526）。全 push 同步。**没在浏览器跑过**——J 明早真件＝验收。**
@@ -1530,6 +1542,11 @@ createPortal；Ask MinitAI 盖顶栏 → rail top-14 z-30＋右推只推内容�
 
 
 ## 6. 已知陷阱（踩过的，别再踩）
+
+- 🔴 **（130 场，2026-09-09）Turbopack dev 的持久快取会吃掉 `globals.css` 的改动**：改了 CSS、HMR 不动、连 dev server 重开都还是旧的（Tailwind utility 类会重生，因为它扫 tsx；纯 CSS 规则不会）。解：`rm -rf .next/dev/cache` 再开。§13 的 `minit-tick` 就是这样「不存在」了十分钟。
+- 🔴 **（130 场）被 server action（`"use server"` 档）匯入的 lib 不准 import React**——`local-events.ts` 加 `useSyncExternalStore` 让 /minutes 直接 500；hook 另开 `use-local-events.ts`。
+- （130 场）eslint `react-hooks/set-state-in-effect` 一个 effect 只报**第一个** setState，清完一个会冒下一个；`useSyncExternalStore` 的 getSnapshot 里读 `ref.current` 不会被 refs 规则抓，但 render 主体会。
+- （130 场）commit 讯息用双引号时 `$0`、`$1` 会被 bash 吃掉（写成 `/usr/bin/bash`）——长讯息用 `git commit -F 档`；Bash heredoc 里放含三引号的 python 常断，patch 一律先写成 scratchpad 的 .py。
 
 ### 2026-09-07 清晨新增（118 号品质急救二轮场）
 
