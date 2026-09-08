@@ -197,10 +197,21 @@ export function StepCard({
   // is the same as not opening it — they finished step 2, step 3 quietly
   // unlocked 800px further down, and the page looked like nothing happened.
   // Only when it becomes relevant AFTER mount: never yank the page on load.
+  //
+  // 130 §5: "open when the prop turns on" is the React pattern for adjusting
+  // state to a prop change — compared and set DURING render (React re-runs
+  // the component at once, before committing), not in an effect after the
+  // fact. The scroll stays an effect: it is a side effect on the page, and it
+  // is keyed on the SAME transition, so it fires exactly when the card
+  // opened itself.
+  const [prevDefaultOpen, setPrevDefaultOpen] = useState(defaultOpen);
+  if (defaultOpen !== prevDefaultOpen) {
+    setPrevDefaultOpen(defaultOpen);
+    if (defaultOpen) setOpen(true);
+  }
   const mountedRef = useRef(false);
   useEffect(() => {
     if (!defaultOpen) return;
-    setOpen(true);
     if (mountedRef.current) reveal();
   }, [defaultOpen, reveal]);
 
@@ -210,10 +221,17 @@ export function StepCard({
     mountedRef.current = true;
   }, []);
 
-  // The progress rail / a "next step" button asked for this card.
+  // The progress rail / a "next step" button asked for this card: same
+  // pattern — the request (id + nonce) is compared during render, the scroll
+  // follows in an effect.
+  const targetKey = id !== undefined && target?.id === id ? `${target.id}:${target.nonce}` : null;
+  const [prevTargetKey, setPrevTargetKey] = useState(targetKey);
+  if (targetKey !== prevTargetKey) {
+    setPrevTargetKey(targetKey);
+    if (targetKey !== null) setOpen(true);
+  }
   useEffect(() => {
     if (!id || target?.id !== id) return;
-    setOpen(true);
     reveal();
   }, [id, target?.id, target?.nonce, reveal]);
 
@@ -331,10 +349,13 @@ export function StepGroup({
   const done = outstanding === 0;
 
   // Same reason as StepCard: the group that needs attention may only become
-  // knowable after the page has restored its data.
-  useEffect(() => {
+  // knowable after the page has restored its data. Same pattern (130 §5):
+  // compared and set during render, not in an effect.
+  const [prevDefaultOpen, setPrevDefaultOpen] = useState(defaultOpen);
+  if (defaultOpen !== prevDefaultOpen) {
+    setPrevDefaultOpen(defaultOpen);
     if (defaultOpen) setOpen(true);
-  }, [defaultOpen]);
+  }
 
   return (
     <div
