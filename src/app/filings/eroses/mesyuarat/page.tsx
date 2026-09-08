@@ -196,7 +196,11 @@ export default async function DaftarMesyuaratPage({
                     labelSub={
                       <span>
                         {row.fieldEn}
-                        {row.note && (
+                        {/* 129 A (J 9/8): a box with nothing to copy shows its
+                            note ONCE, in the value slot (`fix`) — not here as
+                            well. A copyable box keeps the note as guidance
+                            under the label (the venue's address reminder). */}
+                        {row.note && row.copyable && (
                           <span className="block">
                             <Tri bm={row.note.bm} zh={row.note.zh} en={row.note.en} />
                           </span>
