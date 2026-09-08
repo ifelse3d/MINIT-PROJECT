@@ -6,7 +6,7 @@
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
 **🟣 129 号追加（2026-09-08 深夜，上台前夜，报告在 `_J-要做的事
-9-…md`，commit `16fbd76`＋`b761fdf` 已 push、fetch 实查同步）：J 线上抓到 eROSES 贴入页「Tempat」还是 `会议室`＋红字——文件层 125 已套词汇表、贴入页两条路（`eroses-meeting.ts` 登记页、`paste-pack.ts` 年度呈报第 1 步）拿原字。两处都改成同一张 `applyBmGlossary`＋同一套围名（名册／职位／签名／机构名；`buildPastePack` 多一个可选 `{orgName}`）；顺手把 125 §2 漏掉的登记页「Jumlah Kehadiran」改吃 `headcountForDocument`（确认 52 先、名单其次）。测试 1577 过（+8）、tsc 0、build ×2。**线上只看到页面正常出，`会议室→Bilik Mesyuarat` 那格没在线上亲眼看到**（浏览器机构不是 TESTING1，没切）。没动词汇表、没动文件层。候选 A（三格提示印两次）等 J 点名。**
+9-…md`，commit `16fbd76`＋`b761fdf` 已 push、fetch 实查同步）：J 线上抓到 eROSES 贴入页「Tempat」还是 `会议室`＋红字——文件层 125 已套词汇表、贴入页两条路（`eroses-meeting.ts` 登记页、`paste-pack.ts` 年度呈报第 1 步）拿原字。两处都改成同一张 `applyBmGlossary`＋同一套围名（名册／职位／签名／机构名；`buildPastePack` 多一个可选 `{orgName}`）；顺手把 125 §2 漏掉的登记页「Jumlah Kehadiran」改吃 `headcountForDocument`（确认 52 先、名单其次）。测试 1577 过（+8）、tsc 0、build ×2。**线上只看到页面正常出，`会议室→Bilik Mesyuarat` 那格没在线上亲眼看到**（浏览器机构不是 TESTING1，没切）。没动文件层。**第二轮（J「都做」）：A 登记页三格提示只印一次（`4f579a9`）；C 写好的 BM 文件跟草稿一起存（`SavedMinutes.aiDraft`／cloud `DraftPayload.aiDraft`，还原时 tag 到同一个 extraction 物件，127 auto-write 不再重扣，`2dd7143`）；D `struckDoubleSuggestion`（重复字→词汇表词才建议，FieldRow 加 `suggestionsLead`）＋核对页 figures 两栏一行（`a1e0b61`）。vitest 1581、tsc 0、build ✓、eslint 基准同（那个 set-state 洞行号 502→526）。全 push 同步。**没在浏览器跑过**——J 明早真件＝验收。**
 
 **🟣 127 号小场（2026-09-08 晚，上台前夜，报告在 `_J-要做的事W-…md`，commit `87f0f25` 已 push）：J 线上抓四件——核对页每组「待核对在上、已确认收起」（`CheckedFirst`）；第 3 步 BM 文件到页即由 MinitAI 自动写（一份确认内容一次；重新整理会再扣，未持久化）；数字后「人」→`orang`；BM 出席行由 `headcountLineBm` 从算好的人数重组、名字不音译。测试 1569 过、build 过。125 号场的 STATE 主体在下面，未改。**
 
