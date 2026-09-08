@@ -2,7 +2,8 @@
 
 import { MINUTES_STATUS_LABEL, labelFor } from "@/lib/status-labels";
 import { scopedKey } from "@/lib/storage-scope-core";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useHydrated, useStoredString } from "@/lib/browser-store";
 import Link from "next/link";
 import { NAV_ITEMS, SETTINGS_NAV, type NavItem } from "@/components/nav-items";
 import { Badge } from "@/components/ui/badge";
@@ -53,10 +54,8 @@ export type DbMinutesHit = {
  * Same key and shape; kept deliberately tolerant because a corrupt or absent
  * blob must mean "no clauses", never a crash and never the fictional example.
  */
-function loadOwnClauses(): ConfirmedClause[] {
+function ownClausesFrom(raw: string | null): ConfirmedClause[] {
   try {
-    // S0-4: scoped per user+org, matching /constitution's own store.
-    const raw = localStorage.getItem(scopedKey("constitution:v1"));
     if (!raw) return [];
     const parsed = JSON.parse(raw) as { clauses?: unknown };
     if (!Array.isArray(parsed.clauses)) return [];
@@ -117,58 +116,58 @@ export function SearchResults({
   dbMinutes: DbMinutesHit[];
 }) {
   const t = useTriText();
-  const [localDonations, setLocalDonations] = useState<LocalDonationHit[]>([]);
-  const [clauses, setClauses] = useState<ClauseMatch[]>([]);
-  const [ready, setReady] = useState(false);
+  // 130 §5: the two device stores this search reads are external stores
+  // (null on the server and during hydration); the hits are DERIVED from
+  // them and the query — no effect, no setState, and `ready` is simply
+  // "the browser has had its say".
+  const ready = useHydrated();
+  // Same store /money uses (usePersistentState key). S0-4: scoped per
+  // user+org, matching /constitution's own store for the clauses.
+  const donationsRaw = useStoredString("local", scopedKey("money:donations:v1"));
+  const constitutionRaw = useStoredString("local", scopedKey("constitution:v1"));
 
-  useEffect(() => {
-    if (!query) {
-      setLocalDonations([]);
-      setClauses([]);
-      setReady(true);
-      return;
-    }
+  const localDonations = useMemo<LocalDonationHit[]>(() => {
+    if (!query) return [];
     const ql = query.toLowerCase();
-    // Same store /money uses (usePersistentState key).
     try {
-      const raw = window.localStorage.getItem(scopedKey("money:donations:v1"));
-      const donations = raw ? (JSON.parse(raw) as RegisterDonation[]) : [];
+      const donations = donationsRaw ? (JSON.parse(donationsRaw) as RegisterDonation[]) : [];
       // D32 (J's review, 27 evening): a receipted row lives in the database
       // AND in this browser's draft — showing both printed the same receipt
       // twice, once bare and once tagged "this browser". The DB hit is the
       // canonical one; the local copy only adds rows the DB cannot show yet.
       const dbNos = new Set(dbReceipts.map((r) => r.receiptNo));
-      setLocalDonations(
-        donations
-          .filter((d) => d.receiptNo === null || !dbNos.has(d.receiptNo))
-          .filter((d) =>
-            [d.donorName, d.purpose, d.receiptNo ?? "", d.donatedAtIso]
-              .join(" ")
-              .toLowerCase()
-              .includes(ql),
-          )
-          .slice(0, 20)
-          .map((d) => ({
-            donorName: d.donorName,
-            amountCents: d.amountCents,
-            purpose: d.purpose,
-            dateIso: d.donatedAtIso,
-            receiptNo: d.receiptNo,
-          })),
-      );
+      return donations
+        .filter((d) => d.receiptNo === null || !dbNos.has(d.receiptNo))
+        .filter((d) =>
+          [d.donorName, d.purpose, d.receiptNo ?? "", d.donatedAtIso]
+            .join(" ")
+            .toLowerCase()
+            .includes(ql),
+        )
+        .slice(0, 20)
+        .map((d) => ({
+          donorName: d.donorName,
+          amountCents: d.amountCents,
+          purpose: d.purpose,
+          dateIso: d.donatedAtIso,
+          receiptNo: d.receiptNo,
+        }));
     } catch {
-      setLocalDonations([]);
+      return [];
     }
-    // Same matcher the /constitution page uses, over the SAME source: the
-    // clauses read off this device's own constitution.
-    //
-    // 2026-07-28 — this used to search `sampleClauses`, the FICTIONAL
-    // constitution. Someone searching "kuorum" got a confident clause quote out
-    // of an invented document sitting next to their real receipts and minutes.
-    // No constitution photographed yet = no clause hits, which is the truth.
-    setClauses(filterClauses(query, loadOwnClauses()));
-    setReady(true);
-  }, [query, dbReceipts]);
+  }, [query, donationsRaw, dbReceipts]);
+
+  // Same matcher the /constitution page uses, over the SAME source: the
+  // clauses read off this device's own constitution.
+  //
+  // 2026-07-28 — this used to search `sampleClauses`, the FICTIONAL
+  // constitution. Someone searching "kuorum" got a confident clause quote out
+  // of an invented document sitting next to their real receipts and minutes.
+  // No constitution photographed yet = no clause hits, which is the truth.
+  const clauses = useMemo<ClauseMatch[]>(
+    () => (query ? filterClauses(query, ownClausesFrom(constitutionRaw)) : []),
+    [query, constitutionRaw],
+  );
 
   const pageHits = useMemo(() => (query ? matchPages(query) : []), [query]);
   const totalHits =
