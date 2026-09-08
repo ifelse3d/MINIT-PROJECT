@@ -46,14 +46,16 @@ echo  ============================================
 echo   SIAP / DONE.
 echo   Baris bertanda hijau di atas ialah jawapan sebenar.
 echo   The green-ticked lines above are the real answer.
-echo   Empat baris di bawah hanya gambaran September 2026 - kalau lain
-echo   sikit, ikut yang di atas.
-echo   The four lines below are only a September 2026 snapshot - if they
-echo   differ, the lines above win.
+echo   Lima baris di bawah hanya gambaran 9 Sep 2026 (130 nombor 18, dijalankan
+echo   sebenar) - kalau lain sikit, ikut yang di atas.
+echo   The five lines below are only the 9 Sep 2026 snapshot (130 no. 18, a real
+echo   run) - if they differ, the lines above win.
 echo     AI_MODEL_CLASSIFY  -^> openai:gpt-5-nano
 echo     AI_MODEL_CHAT      -^> openai:gpt-5.6-luna
 echo     AI_MODEL_EXTRACT   -^> gemini:gemini-3.5-flash-lite
 echo     AI_MODEL_LONG_DOC  -^> gemini:gemini-3.5-flash-lite
+echo     AI_MODEL_WRITE     -^> (tidak ditetapkan / not set) ikut LONG_DOC
+echo   Skrip ini TIDAK memanggil vendor - tiada kos / this script calls NO vendor - costs nothing.
 echo.
 echo   Kalau ada yang tertulis gemini untuk classify/chat,
 echo   If classify/chat still say gemini,
