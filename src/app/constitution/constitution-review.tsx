@@ -54,6 +54,9 @@ import {
 } from "@/lib/sample-constitution";
 import { AttachIcon, ChooseFileLabel, UploadLimitNote } from "@/components/attach-icon";
 
+/** The clause list of an empty page — one shared instance, never a fresh `[]`. */
+const EMPTY_CLAUSES: ConfirmedClause[] = [];
+
 // ---------------------------------------------------------------------------
 // CONSTITUTION screen. The keyword filter, citations and the refusal rule are
 // the real, unit-tested functions. The eROSES test: asking a question in your own
@@ -255,11 +258,12 @@ export function ConstitutionReview({
   const isSample = !hasOwn && showSample;
   const nothingYet = !hasOwn && !showSample;
   /** The clauses every answer on this page is drawn from. */
-  const clauses = hasOwn
-    ? stored.clauses
-    : isSample
-      ? sampleClauses
-      : [];
+  // One reference per source (130 §5): a fresh `[]` on every render made
+  // every useMemo below recompute — and the lint said so.
+  const clauses = useMemo(
+    () => (hasOwn ? stored.clauses : isSample ? sampleClauses : EMPTY_CLAUSES),
+    [hasOwn, stored, isSample],
+  );
   const title = hasOwn
     ? stored.title
     : isSample
