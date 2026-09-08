@@ -55,17 +55,18 @@ export function useActiveOrg(): {
   orgCount: number | null;
 } {
   const email = useAuthEmail();
-  const [org, setOrg] = useState<{ name: string; is_demo: boolean } | null>(
+  const [loadedOrg, setOrg] = useState<{ name: string; is_demo: boolean } | null>(
     null,
   );
-  const [orgCount, setOrgCount] = useState<number | null>(null);
+  const [loadedCount, setOrgCount] = useState<number | null>(null);
+  // Signed out ⇒ nothing is known — derived, not written back by an effect
+  // (130 §5). What was loaded for the previous session stays in state but is
+  // never shown; the next sign-in's load replaces it.
+  const org = email ? loadedOrg : null;
+  const orgCount = email ? loadedCount : null;
 
   useEffect(() => {
-    if (!email) {
-      setOrg(null);
-      setOrgCount(null);
-      return;
-    }
+    if (!email) return;
     let cancelled = false;
     const supabase = getSupabaseBrowser();
     const orgId = readActiveOrgId();
