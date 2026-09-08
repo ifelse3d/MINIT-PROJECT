@@ -32,6 +32,12 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ArrowRight, ArrowUp, CircleHelp, RotateCcw, Sparkles, X } from "lucide-react";
+import { AttachIcon, UploadLimitNote } from "@/components/attach-icon";
+import { readOneFileViaIntake } from "@/lib/intake-client";
+import { planUploadSegments } from "@/lib/constitution-read-client";
+import { compressPhoto } from "@/app/minutes/minutes-storage";
+import { useAiQuota } from "@/components/ai-quota-provider";
+import { costPhrase } from "@/lib/quota-display";
 import {
   Tri,
   isLangMode,
@@ -50,7 +56,7 @@ import {
   type AgentChangeInfo,
   type AgentUiChangeInfo,
 } from "@/components/agent-change-card";
-import { writeIntake } from "@/lib/intake-handoff";
+import { writeIntake, type IntakeKind } from "@/lib/intake-handoff";
 import { pctOfQuota } from "@/lib/quota-display";
 import { tidyReply } from "@/lib/tidy-reply";
 import { ASSISTANT_NAME } from "@/lib/brand";
@@ -174,6 +180,126 @@ export function AIPanel({
   const endRef = useRef<HTMLDivElement | null>(null);
   /** Ticket for the question in flight — see ask(). */
   const askSeq = useRef(0);
+
+  // ---------------------------------------------------------------------
+  // 130 §9 — the paperclip (90's other half; 119 A-6). The panel takes ONE
+  // file at a time (a photo, a PDF, an Office file), and it goes down the
+  // SAME road as the home page's box: /api/intake classifies and reads
+  // (readOneFileViaIntake), the result is handed to the review page through
+  // the one-shot courier (writeIntake), and the chat gets a card with a
+  // "go and check" button — never the file's content. When MinitAI cannot
+  // place the page it asks, with one-tap answers, and only the read is
+  // charged after the person answers. A PDF longer than one request goes to
+  // the home page's door, which has the queue (105) — the panel says so and
+  // points there rather than reading half of it.
+  // ---------------------------------------------------------------------
+  const fileInput = useRef<HTMLInputElement | null>(null);
+  const [staged, setStaged] = useState<{ file: File; preview: string | null } | null>(null);
+  const [askKind, setAskKind] = useState(false);
+  const quotaPool = useAiQuota();
+
+  async function stageFile(list: FileList | null) {
+    if (!list || list.length === 0 || busy) return;
+    setError(null);
+    setAskKind(false);
+    const file = list[0];
+    setStaged({
+      file,
+      preview: file.type.startsWith("image/") ? await compressPhoto(file) : null,
+    });
+  }
+
+  async function sendStaged(forcedKind?: IntakeKind) {
+    if (busy || !staged) return;
+    const { file, preview } = staged;
+    setError(null);
+    setAskKind(false);
+    setBusy(true);
+    try {
+      // A long PDF needs several requests — that is the home page's queue.
+      if (file.type === "application/pdf") {
+        const plan = await planUploadSegments([file]);
+        if (plan.segments.length > 1) {
+          setStaged(null);
+          setTurns((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              text: t(
+                `"${file.name}" panjang — ia dibaca sedikit demi sedikit dari pintu di halaman utama (kos ditunjukkan dahulu). Hantar dari sana.`,
+                `「${file.name}」比较长 —— 要从首页那道门一批一批地读（会先告诉您用量）。请从那里送。`,
+                `"${file.name}" is long — it is read a few pages at a time from the home page's door (the cost is shown first). Send it from there.`,
+              ),
+              button: { href: "/", bm: "Ke halaman utama", zh: "去首页", en: "Go to the home page" },
+              free: true,
+            },
+          ]);
+          return;
+        }
+      }
+      const r = await readOneFileViaIntake(file, question, forcedKind, t);
+      if (r.outcome === "unknown") {
+        // Stays staged; the person answers with one tap.
+        setAskKind(true);
+        return;
+      }
+      if (r.outcome === "error") {
+        setError(r.message);
+        return;
+      }
+      const body = r.body;
+      const kind = body.kind as IntakeKind;
+      writeIntake({
+        kind,
+        fileName: body.fileName ?? file.name,
+        extraction: body.extraction,
+        storagePath: body.storagePath ?? null,
+        photoDataUrl: preview,
+      });
+      setStaged(null);
+      setQuestion("");
+      // The classify (when it ran) and the read are the metered actions.
+      const cost = costPhrase(pctOfQuota((forcedKind ? 0 : 1) + 1, quotaPool));
+      const what =
+        kind === "meeting_notes"
+          ? { bm: "nota mesyuarat", zh: "会议笔记", en: "meeting notes" }
+          : kind === "ledger_page"
+            ? { bm: "halaman lejar derma", zh: "捐款账页", en: "a donation ledger page" }
+            : { bm: "perlembagaan", zh: "章程", en: "the constitution" };
+      setTurns((prev) => [
+        ...prev,
+        {
+          role: "user",
+          text: t(`📎 ${file.name}`, `📎 ${file.name}`, `📎 ${file.name}`),
+        },
+        {
+          role: "assistant",
+          text: t(
+            `Sudah dibaca — ini ${what.bm} (${cost.bm}). Buka dan semak; apa-apa nak ubah, beritahu saya di sana.`,
+            `读好了 —— 这是${what.zh}（这次${cost.zh}）。点开核对；要改哪里，进去后直接跟我说。`,
+            `Read — this is ${what.en} (${cost.en}). Open it and check; tell me there if anything needs changing.`,
+          ),
+          button: {
+            href: body.page ?? "/",
+            bm: "Buka dan semak",
+            zh: "打开核对",
+            en: "Open and check",
+          },
+        },
+      ]);
+      router.refresh();
+    } catch {
+      setError(
+        t(
+          "Sambungan internet terputus semasa menghantar fail. Cuba sekali lagi.",
+          "上传文件的时候网络断了。请再试一次。",
+          "The connection dropped while sending the file. Please try again.",
+        ),
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
 
   // 2026-08-18: this panel is mounted by the ROOT LAYOUT, so it does not
   // remount when you change page. Its meter kept showing whatever was true when
@@ -724,8 +850,114 @@ export function AIPanel({
           on J's screenshot — is gone. Clearing is the ↺ icon in the header;
           the counter lives on the meter row; the explanations are behind ?. */}
 
+      {/* 130 §9: the staged file — visible and removable BEFORE anything is
+          sent or charged — and, when MinitAI could not place it, the
+          one-tap "which kind is this?" answers. */}
+      {staged && (
+        <div
+          data-probe="panel-staged"
+          className="mt-3 flex flex-col gap-2 rounded-md border-2 border-[#a855f7]/40 bg-white/70 p-3 dark:bg-white/10"
+        >
+          <div className="flex items-center gap-3">
+            {staged.preview ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={staged.preview} alt="" className="h-12 w-12 rounded-sm object-cover" />
+            ) : (
+              <span className="flex h-12 w-12 items-center justify-center rounded-sm bg-[color:var(--v2-card-nested)] text-2xl">
+                📄
+              </span>
+            )}
+            <span className="min-w-0 flex-1 truncate text-sm">{staged.file.name}</span>
+            <button
+              type="button"
+              aria-label={t("Buang fail ini", "移除这个文件", "Remove this file")}
+              onClick={() => {
+                setStaged(null);
+                setAskKind(false);
+              }}
+              disabled={busy}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[color:var(--v2-text-soft)] hover:bg-[color:var(--v2-card-nested)]"
+            >
+              <X className="h-5 w-5" strokeWidth={2.2} />
+            </button>
+          </div>
+          {askKind ? (
+            <div className="flex flex-col gap-2">
+              <p className="text-sm">
+                🤔{" "}
+                <Tri
+                  bm={`MinitAI tidak pasti "${staged.file.name}" ini halaman jenis apa. Ia jenis yang mana?`}
+                  zh={`MinitAI 看不出「${staged.file.name}」是哪一种文件。这是哪一种？`}
+                  en={`MinitAI is not sure what kind of page "${staged.file.name}" is. Which is it?`}
+                />
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {(
+                  [
+                    ["meeting_notes", "📝", "Nota mesyuarat", "会议笔记", "Meeting notes"],
+                    ["ledger_page", "🧾", "Halaman lejar derma", "捐款账页", "Donation ledger page"],
+                    ["constitution", "📜", "Perlembagaan", "章程", "Constitution"],
+                  ] as const
+                ).map(([kind, icon, bm, zh, en]) => (
+                  <button
+                    key={kind}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void sendStaged(kind)}
+                    className="min-h-11 rounded-md border-2 border-[color:var(--v2-border)] bg-[color:var(--v2-card)] px-3 text-sm font-medium hover:border-[color:var(--v2-primary)]/60"
+                  >
+                    {icon} <Tri bm={bm} zh={zh} en={en} />
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                data-probe="panel-send-file"
+                disabled={busy}
+                onClick={() => void sendStaged()}
+                className="v2-pill inline-flex min-h-11 items-center gap-2 bg-[color:var(--v2-primary-fill)] px-4 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                <Tri bm="Hantar untuk dibaca" zh="送出让 MinitAI 读" en="Send to be read" />
+              </button>
+              <span className="text-xs text-[color:var(--v2-text-soft)]">
+                {(() => {
+                  const c = costPhrase(pctOfQuota(2, quotaPool));
+                  return <Tri bm={c.bm} zh={c.zh} en={c.en} />;
+                })()}
+              </span>
+            </div>
+          )}
+          <UploadLimitNote office />
+        </div>
+      )}
+
       {/* Input */}
       <div className="mt-3 flex items-end gap-2 rounded-md border border-[color:var(--v2-border)] bg-[color:var(--v2-card)] p-2 pl-4">
+        {/* 130 §9: the paperclip — same icon, same accepted kinds, same
+            12MB rule as the home page's box. */}
+        <input
+          ref={fileInput}
+          type="file"
+          accept="image/*,application/pdf,.docx,.xlsx,.pptx"
+          className="hidden"
+          onChange={(e) => {
+            void stageFile(e.target.files);
+            e.target.value = "";
+          }}
+        />
+        <button
+          type="button"
+          data-probe="panel-attach"
+          aria-label={t("Lampirkan fail", "夹一个文件", "Attach a file")}
+          onClick={() => fileInput.current?.click()}
+          disabled={busy || isBlocked}
+          className="flex size-11 shrink-0 items-center justify-center rounded-full text-[color:var(--v2-text-soft)] hover:bg-[color:var(--v2-card-nested)] disabled:opacity-50"
+        >
+          <AttachIcon />
+        </button>
         <textarea
           value={question}
           rows={1}

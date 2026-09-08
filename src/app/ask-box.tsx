@@ -58,6 +58,7 @@ import { AttachIcon, UPLOAD_LIMIT_MB, UploadLimitNote } from "@/components/attac
 import { Button } from "@/components/ui/button";
 import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
 import { prepareUploadForSend } from "@/lib/upload-relay-client";
+import { readOneFileViaIntake, type IntakeOk } from "@/lib/intake-client";
 import {
   fingerprintFiles,
   planUploadSegments,
@@ -175,15 +176,7 @@ type ChatOk = {
   maxTurns: number;
 };
 
-type IntakeOk = {
-  kind: IntakeKind | "unknown";
-  page?: string;
-  fileName?: string;
-  extraction?: unknown;
-  error?: string;
-  /** Where the original landed in the uploads bucket (28/8 evening). */
-  storagePath?: string | null;
-};
+// IntakeOk — the reader's answer shape — moved to src/lib/intake-client.ts (130 §9).
 
 // K1 (work order 82): the SAME chips as the floating panel, owned by the
 // prepared layer — every one is answered for free (tests pin each language).
@@ -783,57 +776,11 @@ export function AskBox({
     setStaged((prev) => [...prev, ...withPreviews]);
   }
 
-  /** One reading through /api/intake. `forcedKind` skips the classifier. */
-  async function readOneFile(
-    file: File,
-    context: string,
-    forcedKind: IntakeKind | undefined,
-  ): Promise<
-    | { outcome: "ok"; body: IntakeOk }
-    | { outcome: "unknown" }
-    | { outcome: "error"; message: string }
-  > {
-    // 48 + A-4: shrink photos in the browser; relay a big PDF via Storage;
-    // refuse honestly what neither road can carry.
-    const prepared = await prepareUploadForSend(file);
-    if (prepared.send === "refuse") return { outcome: "error", message: prepared.error };
-    const form = new FormData();
-    if (prepared.send === "file") form.append("file", prepared.file);
-    else form.append("storagePath", prepared.storagePath);
-    if (context.trim() !== "") form.append("context", context.trim());
-    if (forcedKind) form.append("kind", forcedKind);
-    const res = await fetch("/api/intake", { method: "POST", body: form });
-    // P-1 (the "connection dropped" incident): the old code read ANY failure
-    // here as a dropped connection — including the server being killed
-    // mid-read, which is precisely when the quota may have been eaten with
-    // nothing to show. If a response arrived but is unreadable, say THAT.
-    let body: IntakeOk;
-    try {
-      body = (await res.json()) as IntakeOk;
-    } catch {
-      return {
-        outcome: "error",
-        message: t(
-          "Pelayan tidak membalas semasa membaca fail itu. Ini bukan salah anda. Tunggu seminit, lihat baki kuota AI anda, kemudian cuba sekali lagi.",
-          "读取文件的时候，伺服器没有回应。这不是您的问题。请等一分钟，看一下 AI 用量的余额，再试一次。",
-          "The server did not reply while reading that file. This is not your fault. Wait a minute, check your remaining AI quota, then try again.",
-        ),
-      };
-    }
-    if (body.kind === "unknown") return { outcome: "unknown" };
-    if (!res.ok || !body.page || !body.extraction) {
-      return {
-        outcome: "error",
-        message:
-          body.error ??
-          t(
-            "MinitAI tidak dapat membaca fail itu. Cuba sekali lagi.",
-            "MinitAI 读不了这个文件。请再试一次。",
-            "MinitAI could not read that file. Please try again.",
-          ),
-      };
-    }
-    return { outcome: "ok", body };
+  /** One reading through /api/intake. `forcedKind` skips the classifier.
+   *  130 §9: the road itself lives in src/lib/intake-client.ts now — the
+   *  floating panel's paperclip drives the same function. */
+  function readOneFile(file: File, context: string, forcedKind: IntakeKind | undefined) {
+    return readOneFileViaIntake(file, context, forcedKind, t);
   }
 
   /**
