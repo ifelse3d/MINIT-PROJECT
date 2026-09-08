@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 
 import { adoptLegacyKey } from "@/lib/storage-scope-core";
 
@@ -81,7 +89,22 @@ export function usePersistentState<T>(
   // by comparison instead of by an extra setState in the hydrate effect.
   const [corruptKey, setCorruptKey] = useState<string | null>(null);
   const corrupt = corruptKey === key;
-  const [quotaFull, setQuotaFull] = useState(false);
+  // 130 §5: the outcome of the LAST WRITE is a fact about the browser, not
+  // React state — the write effect records it here and tells the subscriber,
+  // instead of calling setState from inside an effect (the lint's objection,
+  // and a second render per keystroke). useSyncExternalStore reads it.
+  const quota = useRef({ full: false, listeners: new Set<() => void>() });
+  const quotaFull = useSyncExternalStore(
+    useCallback((listener: () => void) => {
+      const box = quota.current;
+      box.listeners.add(listener);
+      return () => {
+        box.listeners.delete(listener);
+      };
+    }, []),
+    () => quota.current.full,
+    () => false,
+  );
 
   // Hydrate once on mount (and again if the key changes — S0-4: the key now
   // carries the user/org scope, so switching organisation re-hydrates).
@@ -129,14 +152,17 @@ export function usePersistentState<T>(
     // hydration, so without this guard the seed would overwrite the unreadable
     // blob before the user had any chance to act on the warning.
     if (corrupt) return;
+    const box = quota.current;
+    const wasFull = box.full;
     try {
       window.localStorage.setItem(key, JSON.stringify(value));
-      setQuotaFull(false);
+      box.full = false;
     } catch {
       // Storage full or unavailable. State still works in memory for this
       // visit, but the user MUST be told, because closing the tab loses it.
-      setQuotaFull(true);
+      box.full = true;
     }
+    if (box.full !== wasFull) for (const l of box.listeners) l();
   }, [key, value, hydratedKey, corrupt]);
 
   const reset = useCallback(() => {
