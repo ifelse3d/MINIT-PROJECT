@@ -974,6 +974,35 @@ export function AskBox({
             // "start reading" tap. A matching resume means this document is
             // already paid for and half-read — pricing it again would be a
             // false statement, so a continuation never re-gates.
+            // 130 §16 (119 A-5): a long constitution goes through the SAME
+            // queue as a long minit or ledger (105 §1 — one four-page batch
+            // per request, priced first, charged batch by batch, resumable;
+            // the constitution fence and D47's page formula are already in
+            // the step route). The segmented reader below stays as the
+            // fallback for a deployment without migration 43 and for a
+            // continuation of a read that started on it.
+            if (!resume && !constitutionConfirmed) {
+              setReading(files[0].name);
+              const started = await startJob(files[0], "constitution", context);
+              if (started.ok) {
+                closeSteps(true);
+                setQueueGate({
+                  jobId: started.jobId,
+                  kind: "constitution",
+                  page: "/constitution",
+                  fileName: started.fileName,
+                  context,
+                  estimate: started.estimate,
+                });
+                return;
+              }
+              if (!started.fallback) {
+                closeSteps(false);
+                setError(started.message);
+                return;
+              }
+              // fallback: the segmented reader, exactly as before the queue.
+            }
             if (!constitutionConfirmed && !resume) {
               setConstitutionGate({
                 pages: plan.totalPages ?? plan.segments.length,
@@ -1384,11 +1413,17 @@ export function AskBox({
             `做好了。笔记读完，会议记录${dateBit ? `（${formatDateShort(m!.meeting_date.value)}）` : ""}整理出 ${m!.resolutions.length} 条内容。${moneyRows > 0 ? `我还看到 ${moneyRows} 笔钱 —— 想一起记账就点第二张卡。` : ""}${costZh}点卡片进去核对；要改哪里，进去后直接跟我说。`,
             `Done. I read the notes and prepared the meeting minutes${dateBit} — ${m!.resolutions.length} items.${moneyRows > 0 ? ` I also spotted ${moneyRows} money line(s) — the second card records them if you want.` : ""}${costEn} Open the card to check; tell me there if anything needs changing.`,
           )
-        : t(
-            `Siap. Halaman lejar itu sudah dibaca — buka kad di bawah untuk semak setiap baris.${costBm}`,
-            `做好了。账页读完了 —— 点下面的卡片逐行核对。${costZh}`,
-            `Done. The ledger page is read — open the card below to check each row.${costEn}`,
-          );
+        : kind === "constitution"
+          ? t(
+              `Siap. Perlembagaan itu sudah dibaca fasal demi fasal — buka kad di bawah untuk semak.${costBm}`,
+              `做好了。章程一条一条读完了 —— 点下面的卡片核对。${costZh}`,
+              `Done. The constitution is read clause by clause — open the card below to check.${costEn}`,
+            )
+          : t(
+              `Siap. Halaman lejar itu sudah dibaca — buka kad di bawah untuk semak setiap baris.${costBm}`,
+              `做好了。账页读完了 —— 点下面的卡片逐行核对。${costZh}`,
+              `Done. The ledger page is read — open the card below to check each row.${costEn}`,
+            );
 
     const redoLine = a.redoneAsVersions
       ? t(
