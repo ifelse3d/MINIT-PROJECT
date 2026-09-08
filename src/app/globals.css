@@ -782,15 +782,32 @@ input[type="checkbox"] {
 [data-probe="conversation-region"] [data-probe="askback-card"],
 [data-probe="conversation-region"] [data-probe="product-card"],
 [data-probe="conversation-region"] [data-probe="queue-progress"],
-[data-probe="conversation-region"] .minit-enter {
+.minit-enter {
   animation: minit-enter 180ms var(--ease-out) both;
+}
+
+/* 130 §13-4: a tick that has just been earned pops — 60% → 100% on transform
+   plus the fade, over --dur. Same rule as the arrival: composited only. */
+@keyframes minit-tick {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.minit-tick {
+  animation: minit-tick var(--dur) var(--ease-out) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
   [data-probe="conversation-region"] [data-probe="askback-card"],
   [data-probe="conversation-region"] [data-probe="product-card"],
   [data-probe="conversation-region"] [data-probe="queue-progress"],
-  [data-probe="conversation-region"] .minit-enter {
+  .minit-enter,
+  .minit-tick {
     animation: minit-enter-still 120ms var(--ease-out) both;
   }
 }

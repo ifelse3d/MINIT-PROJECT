@@ -195,10 +195,13 @@ function ProductCard({
   parcel,
   disabled,
   onOpen,
+  delayMs = 0,
 }: {
   parcel: ProductParcel;
   disabled: boolean;
   onOpen: () => void;
+  /** 130 §13-5: this card's place in a stagger — its arrival waits this long. */
+  delayMs?: number;
 }) {
   const t = useTriText();
   let icon = <FileText className="h-6 w-6" strokeWidth={1.9} />;
@@ -260,6 +263,7 @@ function ProductCard({
       data-kind={parcel.kind}
       disabled={disabled}
       onClick={onOpen}
+      style={delayMs > 0 ? { animationDelay: `${delayMs}ms` } : undefined}
       className="group flex w-full items-center gap-3 rounded-md border-2 border-[color:var(--v2-primary)]/35 bg-white/85 p-3.5 text-left transition-[transform,border-color,box-shadow] duration-[var(--dur-fast)] ease-[var(--ease-out)] hover:-translate-y-0.5 hover:border-[color:var(--v2-primary)]/70 hover:shadow-[var(--v2-shadow-soft)] active:scale-[0.995] disabled:opacity-60 dark:bg-white/10"
     >
       <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-sm bg-[color:var(--v2-primary)]/10 text-[color:var(--v2-primary)]">
@@ -1659,6 +1663,12 @@ export function AskBox({
                           parcel={p}
                           disabled={busy !== null}
                           onOpen={() => openProduct(p)}
+                          // 130 §13-5: several finished pieces in one turn
+                          // arrive one after another (40ms apart, at most
+                          // four steps) instead of all at once — the eye
+                          // counts them. The arrival itself is the same
+                          // minit-enter the card always had.
+                          delayMs={Math.min(j, 4) * 40}
                         />
                       ))}
                     </div>

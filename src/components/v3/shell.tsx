@@ -201,11 +201,17 @@ export function AppShell({
               a 14" laptop with the assistant open showed FOUR card columns
               in phone-width space. Width-sensitive grids below use
               container variants (@md:/@3xl:/…), which measure THIS column. */}
+          {/* 130 §13-1 (110 §沒做 3): the room the docked assistant takes is
+              applied at once, NOT animated. padding-right is a LAYOUT
+              property — transitioning it reflowed the whole column (every
+              card, the whole conversation) on every frame for 300ms, on a
+              curve that was not even the rail's (Tailwind ease-out vs the
+              rail's spring), so the page and the rail never moved together.
+              The rail itself slides in on transform+opacity (ai-dock.tsx,
+              composited); the content steps aside once, and the eye follows
+              the thing that moves. */}
           <div
-            className={cn(
-              dock.dragging ? "" : "transition-[padding] duration-300 ease-out",
-              chatScreen && "flex min-h-0 flex-1 flex-col",
-            )}
+            className={cn(chatScreen && "flex min-h-0 flex-1 flex-col")}
             style={{ paddingRight: dock.push || undefined }}
           >
             <main

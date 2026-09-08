@@ -263,7 +263,9 @@ export function StepCard({
                 : "size-11 bg-[color:var(--v2-primary-fill)] text-lg"
             }`}
           >
-            {compact ? <Check className="size-5" strokeWidth={3} /> : step}
+            {/* 130 §13-4: the tick a step just earned pops in (transform +
+                opacity, --dur); the number it replaces does not animate. */}
+            {compact ? <Check className="minit-tick size-5" strokeWidth={3} /> : step}
           </span>
         )}
         <span className="min-w-0 flex-1">
@@ -517,7 +519,7 @@ export function StepProgress({ steps }: { steps: StepProgressItem[] }) {
               <span className="font-bold">{i + 1}</span>
               <Tri bm={s.labelBm} zh={s.labelZh} en={s.labelEn} />
               {s.status === "done" && (
-                <Check aria-hidden className="size-4 shrink-0" strokeWidth={3} />
+                <Check aria-hidden className="minit-tick size-4 shrink-0" strokeWidth={3} />
               )}
               {s.status === "locked" && (
                 <Lock aria-hidden className="size-4 shrink-0" strokeWidth={2.4} />

@@ -99,11 +99,15 @@ export function WorkbenchColumns({
             statistic nobody asked for. */}
         {collapsed && (
           <div className="mb-2 hidden justify-end @4xl:flex">
+            {/* 130 §13-3: what comes back into view arrives (fade + 6px, the
+                conversation's own arrival) — the column's width itself is
+                layout and is never animated: it steps once, the contents
+                arrive. */}
             <button
               type="button"
               data-probe="upcoming-reopen"
               onClick={() => set(false)}
-              className="inline-flex min-h-9 items-center gap-2 rounded-full border-2 border-[color:var(--v2-border)] bg-white/70 px-3 text-sm font-medium text-[color:var(--v2-text-soft)] hover:border-[color:var(--v2-primary)]/60 hover:text-[color:var(--v2-primary)] dark:bg-white/10"
+              className="minit-enter inline-flex min-h-9 items-center gap-2 rounded-full border-2 border-[color:var(--v2-border)] bg-white/70 px-3 text-sm font-medium text-[color:var(--v2-text-soft)] hover:border-[color:var(--v2-primary)]/60 hover:text-[color:var(--v2-primary)] dark:bg-white/10"
               aria-label={
                 count > 0
                   ? t(
@@ -131,7 +135,7 @@ export function WorkbenchColumns({
       {!collapsed && (
         // Its own scrollbar: the row is exactly one screen tall, and five
         // deadlines plus five events is taller than a laptop's remaining room.
-        <div className="v2-scroll hidden min-h-0 overflow-y-auto @4xl:block">
+        <div className="v2-scroll minit-enter hidden min-h-0 overflow-y-auto @4xl:block">
           <div className="mb-2 flex justify-end">
             <button
               type="button"
