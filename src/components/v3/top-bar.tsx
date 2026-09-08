@@ -12,6 +12,7 @@ import { NAV_ITEMS, SETTINGS_NAV, type NavItem } from "@/components/nav-items";
 import { ThemeToggle } from "./top-search";
 import { ProfileMenu } from "./profile-menu";
 import { CommandPalette } from "./command-palette";
+import { useTopBarSlotMount } from "./top-bar-slot";
 
 // ---------------------------------------------------------------------------
 // The sticky top bar (violet redesign §5) — one bar for every width:
@@ -65,6 +66,7 @@ export function TopBar({
   const [paletteOpen, setPaletteOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const einvoisOperator = useEinvoisOperator();
+  const mountSlot = useTopBarSlotMount();
   const words = pageWords(pathname, einvoisOperator);
 
   // `/` focuses the search (or opens the palette when the input is hidden);
@@ -176,8 +178,11 @@ export function TopBar({
           </div>
         </form>
 
-        {/* Right: search icon (<lg) · language · theme · avatar. */}
+        {/* Right: [page slot, phone] · search icon (<lg) · language · theme · avatar. */}
         <div className="flex shrink-0 items-center gap-2">
+          {/* 130 §8: a page may put ONE control here on a phone (the home
+              page's Upcoming bell). Empty and zero-width otherwise. */}
+          <div ref={mountSlot} className="flex items-center empty:hidden md:hidden" />
           <IconTip label={t("Cari", "搜索", "Search")} side="bottom">
             <button
               type="button"

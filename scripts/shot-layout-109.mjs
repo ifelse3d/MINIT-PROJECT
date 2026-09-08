@@ -391,6 +391,26 @@ async function run() {
           console.log(
             `   note: phone ratio ${ratio}× — §1's 1.4× is met at 1280 and 1920, not here`,
           );
+          // 130 §8: the bell moved into the 56px app bar, giving its row
+          // (44px button + 12px gap = 56px) back to the conversation. The
+          // work order's arithmetic also counted a 3-line safety notice
+          // shrinking to 2 lines (≈13px); MEASURED on this build the notice
+          // was already two lines, so the 13px form gained ~3px, not 13.
+          // The floor is what the mechanism actually gives: 447 + 56 = 503.
+          // Measured 2026-09-09: 506px.
+          check(
+            `${label}: 130 §8 — the conversation area is at least 447 + 56 = 503px (bell row given back)`,
+            s3.region >= 503,
+            `${s3.region}px`,
+          );
+          const bellInBar = await page.evaluate(() => {
+            const bell = document.querySelector('[data-probe="upcoming-bell"]');
+            const bar = bell?.closest("header");
+            if (!bell || !bar) return "no bell in a header";
+            const r = bell.getBoundingClientRect();
+            return r.height >= 44 && r.width >= 44 ? "ok" : `bell ${Math.round(r.width)}×${Math.round(r.height)}`;
+          });
+          check(`${label}: 130 §8 — the bell sits in the app bar and keeps its 44px size`, bellInBar === "ok", bellInBar);
         } else {
           check(
             `${label}: the conversation area is ≥1.4× its old height`,

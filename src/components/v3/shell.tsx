@@ -52,6 +52,7 @@ import { useEinvoisOperator, useEinvoisVisible } from "@/lib/einvois-pref";
 import { isChatScreenRoute } from "@/lib/chat-screen";
 import { cn } from "./surfaces";
 import { TopBar } from "./top-bar";
+import { TopBarSlotProvider } from "./top-bar-slot";
 import { AIDock, useAIDock } from "./ai-dock";
 
 /** Routes rendered without nav/search/theme chrome. C-7 (work order 31, 客①):
@@ -175,7 +176,10 @@ export function AppShell({
           />
         )}
 
-        {/* One animated offset: the wrapper follows --rail-w (§3.1). */}
+        {/* One animated offset: the wrapper follows --rail-w (§3.1).
+            130 §8: the slot provider sits around the bar AND the content, so a
+            page can portal a control (the phone's Upcoming bell) into the bar. */}
+        <TopBarSlotProvider>
         <div
           className={cn(
             "rail-anim",
@@ -220,6 +224,7 @@ export function AppShell({
             </main>
           </div>
         </div>
+        </TopBarSlotProvider>
 
         {/* Phone tab bar — the same four entries as ever (拍板④). */}
         <TabBar pathname={pathname ?? "/"} />

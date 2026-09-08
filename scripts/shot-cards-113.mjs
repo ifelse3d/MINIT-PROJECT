@@ -50,7 +50,8 @@ const TAG = process.env.SHOT_TAG ?? "after";
 
 /** 🔴 §4-2: the floors 110 recorded for the conversation area. Not a ratio —
  *  an absolute number this build is not allowed to go under. */
-const REGION_FLOOR = { desktop: 604, wide: 784, phone: 447 };
+// 130 §8: the phone floor rises by the bell row (44 + 12) it gave back.
+const REGION_FLOOR = { desktop: 604, wide: 784, phone: 503 };
 
 const failures = [];
 function check(name, ok, extra = "") {
@@ -624,10 +625,34 @@ async function run() {
 
       // state 1: empty — WITH THE SIX CARDS ON SCREEN
       const s1 = await measure(page);
-      if (label === "phone")
+      if (label === "phone") {
         await page.screenshot({
           path: path.join(REPORTS, `cards-113-${TAG}-phone-1-empty.png`),
         });
+        // 130 §8: is the THIRD row of cards (ask / carry on) whole on screen
+        // above the composer without scrolling? MEASURED, not gated: the bell
+        // row gave 56px back (447 → 506px of conversation) and the third row
+        // still ends ~103px below the composer at 375×812 — its titles wrap
+        // to two lines on a phone, and the heading block above the cards is
+        // ~100px. Reaching it means a shorter phone card or a shorter
+        // heading, which is a design call (report 131 §8), not a side effect
+        // of moving a bell. The number is printed so the next change can be
+        // measured against it.
+        const thirdRow = await page.evaluate(() => {
+          const composer = document.querySelector('[data-probe="composer"]')?.getBoundingClientRect();
+          const rows = ["ask", "resume"].map((id) => {
+            const el = document.querySelector(`[data-probe="entry-card"][data-card="${id}"]`);
+            if (!el) return `${id}: missing`;
+            const r = el.getBoundingClientRect();
+            const ok = r.top >= 0 && composer !== undefined && r.bottom <= composer.top + 1;
+            return `${id}: ${Math.round(r.top)}–${Math.round(r.bottom)}${ok ? "" : " NOT WHOLE"}`;
+          });
+          return { ok: rows.every((x) => !x.includes("NOT") && !x.includes("missing")), detail: rows.join(" · ") + ` (composer top ${Math.round(composer?.top ?? -1)})` };
+        });
+        console.log(
+          `   note: 130 §8 third row of cards ${thirdRow.ok ? "IS" : "is NOT"} whole above the composer — ${thirdRow.detail}`,
+        );
+      }
 
       // state 2: a photo staged (the cards fold away here)
       const input = await page.$('input[type="file"]');
