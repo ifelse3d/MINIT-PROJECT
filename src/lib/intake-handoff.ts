@@ -72,6 +72,30 @@ export function writeIntake(parcel: Omit<IntakeParcel, "at">): void {
 }
 
 /**
+ * 130 §5: READ the parcel without touching it — a pure look, safe to call
+ * during render (React may render twice; a delete there would lose the
+ * hand-off on the second pass). The destination applies what it sees, then
+ * consumeIntake() in an effect actually removes it.
+ */
+export function peekIntake(expected: IntakeKind): IntakeParcel | null {
+  let raw: string | null = null;
+  try {
+    raw = window.sessionStorage.getItem(KEY);
+  } catch {
+    return null;
+  }
+  if (raw == null) return null;
+  let parcel: IntakeParcel | null = null;
+  try {
+    parcel = asParcel(JSON.parse(raw));
+  } catch {
+    parcel = null;
+  }
+  if (!parcel || parcel.kind !== expected || Date.now() - parcel.at > MAX_AGE_MS) return null;
+  return parcel;
+}
+
+/**
  * Read and DELETE the parcel, if there is a fresh one of the expected kind.
  * Returns null otherwise — the destination then behaves exactly as before.
  */

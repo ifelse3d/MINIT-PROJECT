@@ -40,7 +40,8 @@ import { useScopedKey } from "@/lib/storage-scope";
 import { todayIsoMalaysia } from "@/lib/history";
 import { uploadErrorMessage } from "@/lib/shrink-photo";
 import { prepareUploadForSend } from "@/lib/upload-relay-client";
-import { consumeIntake } from "@/lib/intake-handoff";
+import { consumeIntake, peekIntake } from "@/lib/intake-handoff";
+import { useHydrated } from "@/lib/browser-store";
 import { issueAndSaveReceipts } from "./actions";
 import {
   deleteRegisterRows,
@@ -564,18 +565,32 @@ export function RegisterProvider({
     void saveRegisterRows(unreceipted).then((r) => setRegisterLocalOnly(!r.ok));
   }, []);
 
-  // Did the home page's "one door" just read a ledger page for us? Consume it
-  // once on mount, before anything else touches the ledger review.
+  // Did the home page's "one door" just read a ledger page for us? Applied
+  // ONCE, before anything else touches the ledger review.
   // (2026-07-28: home AskBox → /api/intake → here.)
+  //
+  // 130 §5: applied DURING the first browser render (React's adjust-state
+  // pattern — compare, set, and React re-runs the component before
+  // committing), not in an effect after a first paint of the empty review.
+  // The look is pure (peekIntake); the delete is the effect below, once the
+  // hand-off is on screen. The server and hydration renders see nothing
+  // (`hydrated` is false there), so the HTML still matches.
+  const hydrated = useHydrated();
+  const [handoffApplied, setHandoffApplied] = useState(false);
+  if (hydrated && !handoffApplied) {
+    setHandoffApplied(true);
+    const handed = peekIntake("ledger_page");
+    if (handed) {
+      setLedger(handed.extraction as LedgerExtraction);
+      setLedgerSourceLabel(handed.fileName);
+      setAddedRows(new Set());
+      setLedgerPayments({});
+      setLedgerPages([]);
+    }
+  }
   useEffect(() => {
-    const handed = consumeIntake("ledger_page");
-    if (!handed) return;
-    setLedger(handed.extraction as LedgerExtraction);
-    setLedgerSourceLabel(handed.fileName);
-    setAddedRows(new Set());
-    setLedgerPayments({});
-    setLedgerPages([]);
-  }, []);
+    if (handoffApplied) consumeIntake("ledger_page");
+  }, [handoffApplied]);
 
   // Confirmed ledger rows → register (explicit human action; deterministic
   // TS mapping — receipt eligibility rules live in receipts.ts).
