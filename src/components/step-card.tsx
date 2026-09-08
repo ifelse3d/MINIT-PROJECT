@@ -26,6 +26,7 @@
 
 import {
   createContext,
+  Fragment,
   useCallback,
   useContext,
   useEffect,
@@ -382,6 +383,67 @@ export function StepGroup({
       </button>
       {open && <div className="bg-white/60 p-3.5 dark:bg-white/5">{children}</div>}
     </div>
+  );
+}
+
+/**
+ * 127 (J 9/8, live site: 「需要改的就放到上面，不然看著亂，或者收起來」):
+ * inside a group, the rows that still need the person come FIRST, and the
+ * rows already confirmed fold away behind one line — "✓ 12 already
+ * confirmed — show". A group with nothing left to check, or nothing checked
+ * yet, renders its rows exactly as before. Presentation only: every row's
+ * callbacks and keys are the caller's, untouched.
+ */
+export function CheckedFirst({
+  rows,
+}: {
+  rows: { key: string; needsCheck: boolean; node: ReactNode }[];
+}) {
+  const [showDone, setShowDone] = useState(false);
+  const pending = rows.filter((r) => r.needsCheck);
+  const done = rows.filter((r) => !r.needsCheck);
+  if (pending.length === 0 || done.length === 0) {
+    return (
+      <>
+        {rows.map((r) => (
+          <Fragment key={r.key}>{r.node}</Fragment>
+        ))}
+      </>
+    );
+  }
+  return (
+    <>
+      {pending.map((r) => (
+        <Fragment key={r.key}>{r.node}</Fragment>
+      ))}
+      <button
+        type="button"
+        onClick={() => setShowDone((v) => !v)}
+        aria-expanded={showDone}
+        data-probe="checked-first-toggle"
+        className="mt-2 flex w-full items-center gap-2 rounded-md border-2 border-green-300 bg-green-50 px-3.5 py-3 text-left text-base font-medium text-green-900 hover:brightness-95 dark:bg-green-400/10 dark:text-green-100"
+      >
+        <span className="min-w-0 flex-1">
+          ✓ {done.length}{" "}
+          <Tri bm="sudah disahkan" zh="项已确认" en="already confirmed" />
+          {" — "}
+          {showDone ? (
+            <Tri bm="sembunyikan" zh="收起" en="hide" />
+          ) : (
+            <Tri bm="tunjukkan" zh="点开看" en="show" />
+          )}
+        </span>
+        <ChevronDown
+          aria-hidden
+          className={`size-5 shrink-0 transition-transform duration-200 ${showDone ? "rotate-180" : ""}`}
+          strokeWidth={2.2}
+        />
+      </button>
+      {showDone &&
+        done.map((r) => (
+          <Fragment key={r.key}>{r.node}</Fragment>
+        ))}
+    </>
   );
 }
 

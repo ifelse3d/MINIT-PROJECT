@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ConfirmingDeleteButton } from "@/components/confirm-delete";
 import { Tri, useLocalizedError, useTriText } from "@/components/language-provider";
-import { StepGroup } from "@/components/step-card";
+import { CheckedFirst, StepGroup } from "@/components/step-card";
 import { NextStepLink, PageSection } from "@/components/page-section";
 import { PageThumbs } from "@/components/page-thumbs";
 import { HowItWorksButton } from "@/app/how-it-works";
@@ -1323,9 +1323,13 @@ export function NotesReview() {
                       )}{" "}
                       <span className="font-normal">({group.length})</span>
                     </p>
-                    {group.map(({ r, i }) => (
-                      <ResolutionRowBlock key={`res-${i}`} r={r} i={i} />
-                    ))}
+                    <CheckedFirst
+                      rows={group.map(({ r, i }) => ({
+                        key: `res-${i}`,
+                        needsCheck: r.text.confidence !== "confirmed",
+                        node: <ResolutionRowBlock r={r} i={i} />,
+                      }))}
+                    />
                   </div>
                 );
               });
@@ -1356,9 +1360,13 @@ export function NotesReview() {
                       />
                     </p>
                   )}
-                  {inSection.map(({ r, i }) => (
-                    <ResolutionRowBlock key={`res-${i}`} r={r} i={i} />
-                  ))}
+                  <CheckedFirst
+                    rows={inSection.map(({ r, i }) => ({
+                      key: `res-${i}`,
+                      needsCheck: r.text.confidence !== "confirmed",
+                      node: <ResolutionRowBlock r={r} i={i} />,
+                    }))}
+                  />
                 </div>
               );
             });
@@ -1384,7 +1392,14 @@ export function NotesReview() {
               Rule 2); a mismatch is a question, never a correction. */}
           <ReconcileCard />
           <div id="figures-rows" className="scroll-mt-28" />
-          {extraction.figures.map((f, i) => (
+          {/* 127: rows still to check first; confirmed rows fold away. */}
+          <CheckedFirst
+            rows={extraction.figures.map((f, i) => ({
+              key: `fig-${i}`,
+              needsCheck:
+                f.description.confidence !== "confirmed" ||
+                f.amount_cents.confidence !== "confirmed",
+              node: (
             <DeletableRow
               key={`fig-${i}`}
               onDelete={() => removeExtractionRow("figures", i)}
@@ -1480,7 +1495,9 @@ export function NotesReview() {
               }
             />
             </DeletableRow>
-          ))}
+              ),
+            }))}
+          />
           <AddRowButton
             onClick={() => addExtractionRow("figures")}
             labelBm="Tambah angka"
@@ -1498,7 +1515,14 @@ export function NotesReview() {
           total={groups.bearers.total}
           defaultOpen={firstUnfinishedHere === "bearers"}
         >
-          {extraction.office_bearers.map((b, i) => (
+          {/* 127: rows still to check first; confirmed rows fold away. */}
+          <CheckedFirst
+            rows={extraction.office_bearers.map((b, i) => ({
+              key: `ob-${i}`,
+              needsCheck: [b.position, b.person_name, b.ic_no, b.address, b.occupation].some(
+                (f) => f !== undefined && f.confidence !== "confirmed",
+              ),
+              node: (
             <DeletableRow
               key={`ob-${i}`}
               onDelete={() => removeExtractionRow("office_bearers", i)}
@@ -1627,7 +1651,9 @@ export function NotesReview() {
               );
             })}
             </DeletableRow>
-          ))}
+              ),
+            }))}
+          />
           <AddRowButton
             onClick={() => addExtractionRow("office_bearers")}
             labelBm="Tambah jawatan"

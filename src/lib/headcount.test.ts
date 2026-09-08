@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseHeadcount } from "./headcount";
+import { headcountLineBm, parseHeadcount } from "./headcount";
 
 // 125 §2 — the headcount line is counted by code, the people on leave are
 // counted out. Fictional names throughout (A3).
@@ -98,5 +98,21 @@ describe("125 §2 — shapes this code does not know return null, never a guess"
 
   it("a bare number with no unit and no headcount word is not trusted", () => {
     expect(parseHeadcount("Bil. 52")).toBeNull();
+  });
+});
+
+describe("127 — headcountLineBm", () => {
+  const bm = (zh: string) => ({ 理事: "Ahli Jawatankuasa", 会员: "ahli" })[zh] ?? zh;
+  it("rebuilds the Chinese line from the parsed counts, in BM", () => {
+    expect(headcountLineBm("出席:理事12人,请假2人(甲,乙),会员40人", bm)).toBe(
+      "12 orang Ahli Jawatankuasa, 40 orang ahli; tidak hadir dengan maaf: 2 orang",
+    );
+    expect(headcountLineBm("出席:理事12人,请假2人(甲,乙),会员40人", bm, { includeNames: true })).toBe(
+      "12 orang Ahli Jawatankuasa, 40 orang ahli; tidak hadir dengan maaf: 2 orang (甲, 乙)",
+    );
+  });
+  it("a line without Chinese, or one it cannot parse, is left to print as written", () => {
+    expect(headcountLineBm("AJK yang hadir : 33 orang", bm)).toBeNull();
+    expect(headcountLineBm("大家都来了", bm)).toBeNull();
   });
 });

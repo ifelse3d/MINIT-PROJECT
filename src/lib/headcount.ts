@@ -125,3 +125,35 @@ export function parseHeadcount(line: string): Headcount | null {
     parts,
   };
 }
+
+/**
+ * 127 (J 9/8, live site): the BM document used to print the page's headcount
+ * line AS WRITTEN — 「出席:理事12人,请假2人(甲,乙),会员40人」 — and the guard
+ * then asked a person to deal with the leftover 人. When the line parses,
+ * the document prints the SAME numbers in Bahasa Malaysia, built by code
+ * from the parsed parts: "12 orang Ahli Jawatankuasa, 40 orang ahli; tidak
+ * hadir dengan maaf: 2 orang". `labelBm` turns a group's Chinese label into
+ * BM (the glossary); a label it does not know stays as written, for the
+ * guard. Names in the brackets are printed only when the caller has no
+ * separate list for them — never dropped, never transliterated.
+ * A line with no Chinese in it is left to print as written (null).
+ */
+export function headcountLineBm(
+  line: string,
+  labelBm: (zh: string) => string,
+  opts: { includeNames?: boolean } = {},
+): string | null {
+  if (!/[㐀-䶿一-鿿]/.test(line)) return null;
+  const hc = parseHeadcount(line);
+  if (!hc) return null;
+  const groups = hc.parts.map((p) => {
+    const label = p.label.trim() === "" ? "" : labelBm(p.label).trim();
+    return label === "" ? `${p.n} orang` : `${p.n} orang ${label}`;
+  });
+  let out = groups.join(", ");
+  if (hc.apologies > 0) {
+    out += `; tidak hadir dengan maaf: ${hc.apologies} orang`;
+    if (opts.includeNames && hc.names.length > 0) out += ` (${hc.names.join(", ")})`;
+  }
+  return out;
+}

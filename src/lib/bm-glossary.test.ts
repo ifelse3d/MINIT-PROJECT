@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   BM_GLOSSARY,
+  applyBmGlossary,
   glossaryTermSubstitutions,
   looksLikeChineseName,
   splitFlaggedLines,
@@ -145,5 +146,15 @@ describe("splitFlaggedLines", () => {
       glossaryTermSubstitutions(text.join(String.fromCharCode(10))),
     );
     expect(nameTokens).toEqual(["刘国华"]);
+  });
+});
+
+describe("127 — a count's unit", () => {
+  it("turns a digit-led 人 into orang, after the glossary", () => {
+    expect(applyBmGlossary("理事12人")).toBe("Ahli Jawatankuasa 12 orang");
+    expect(applyBmGlossary("会员 40人")).toBe("ahli 40 orang");
+  });
+  it("leaves 人 alone when no digit leads it", () => {
+    expect(applyBmGlossary("负责人")).toBe("负责人");
   });
 });

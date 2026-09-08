@@ -1,5 +1,6 @@
 import { headcountForDocument } from "@/lib/attendance-gate";
 import { applyBmGlossary } from "@/lib/bm-glossary";
+import { headcountLineBm } from "@/lib/headcount";
 import type { MeetingNotesExtraction } from "@/lib/extraction";
 import { meetingTypeLabel } from "@/lib/meeting-types";
 import { draftedByLine } from "@/lib/brand";
@@ -101,8 +102,15 @@ function renderMinutesDraftBmRaw(
   // confirmed off it — the same lines the formal composer prints, so the free
   // preview matches the document. Counted by code, confirmed by a person.
   const countLine = e.attendance_count;
+  const apologyNames = (e.apologies ?? []).filter(
+    (a) => a.name.confidence !== "missing" && a.name.value.trim() !== ""
+  );
   if (countLine && countLine.confidence !== "missing" && countLine.value !== "") {
-    lines.push(`Kehadiran: ${countLine.value}`);
+    // 127: the same BM line the formal composer prints — counts by code,
+    // labels by the glossary, no 人 left over for the guard.
+    lines.push(
+      `Kehadiran: ${headcountLineBm(countLine.value, fixed, { includeNames: apologyNames.length === 0 }) ?? fixed(countLine.value)}`,
+    );
   }
   const attendees = e.attendees.filter(
     (a) => a.name.confidence !== "missing" && a.name.value !== ""

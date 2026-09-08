@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -145,6 +145,23 @@ export function MinutesDocument() {
   // 118 §6: the agent's sentence under the document — how many lines are
   // still carried as written because they can be read two ways.
   const openQuestions = useOpenQuestionCount();
+
+  // 127 (J 9/8, live site): the person came here for the official BM
+  // document, so MinitAI writes it the moment the page is reached with
+  // everything confirmed — nobody is shown a quick preview and then asked
+  // to press a button that says "this costs quota". Once per confirmed
+  // extraction (a WeakSet, so a fact edited on the review step gets a fresh
+  // document, and the same facts never pay twice in one visit); never over a
+  // person's own edits, never after a failure (the buttons stay for that),
+  // never for the sample, and only for BM — 中文/EN copies stay on request.
+  const autoWritten = useRef(new WeakSet<object>());
+  useEffect(() => {
+    if (!isReal || isSample || !allReviewed || docLang !== "bm") return;
+    if (aiDraft !== null || draftBusy || draftError || alreadySaved || edited !== null) return;
+    if (autoWritten.current.has(extraction)) return;
+    autoWritten.current.add(extraction);
+    void writeWithAi();
+  }, [isReal, isSample, allReviewed, docLang, aiDraft, draftBusy, draftError, alreadySaved, edited, extraction, writeWithAi]);
 
   // e-INVOIS AUDIT TRAIL (work order 94). Every judgement here is arithmetic
   // over values a human already confirmed — no vendor call, nothing invented.
@@ -371,11 +388,17 @@ export function MinutesDocument() {
                 zh="MinitAI 已经把您确认的内容整理成马来文的正式文件。保存前请看一遍。"
                 en="MinitAI has organised what you confirmed into the formal Malay document. Please read it once before saving."
               />
+            ) : draftBusy ? (
+              <Tri
+                bm="MinitAI sedang menyusun perkara yang anda sahkan menjadi dokumen rasmi Bahasa Malaysia — sebentar sahaja."
+                zh="MinitAI 正在把您确认的内容整理成正式的马来文文件 —— 稍等一下。"
+                en="MinitAI is organising what you confirmed into the formal Malay document — just a moment."
+              />
             ) : allReviewed ? (
               <Tri
-                bm="Ini paparan ringkas — perkara anda mengikut susunan asal nota. Tekan butang di bawah dan MinitAI akan menyusunnya menjadi dokumen rasmi Bahasa Malaysia."
-                zh="这只是快速预览 —— 内容还是照笔记原本的顺序排。按下面的按钮，MinitAI 会把它整理成正式的马来文文件。"
-                en="This is the quick preview — your items in the order they were written. Tap the button below and MinitAI will organise them into the formal Malay document."
+                bm="Ini paparan ringkas — perkara anda mengikut susunan asal nota. Butang di bawah menyusunnya menjadi dokumen rasmi."
+                zh="这只是快速预览 —— 内容还是照笔记原本的顺序排。下面的按钮会把它整理成正式文件。"
+                en="This is the quick preview — your items in the order they were written. The button below organises them into the formal document."
               />
             ) : (
               <Tri
@@ -447,14 +470,18 @@ export function MinutesDocument() {
                     line. The route's `polish` flag it pressed still exists
                     (buildPhraseWork keeps its tests); nothing on screen
                     reaches it today. */}
-                <span className="text-sm text-muted-foreground">
-                  {/* 0-2: path marker only — no "about X%" promise. */}
-                  <Tri
-                    bm="Ini menggunakan kuota AI bulanan."
-                    zh="这会用本月的 AI 用量。"
-                    en="This uses the monthly AI allowance."
-                  />
-                </span>
+                {/* 127: the first BM write happens by itself; only a
+                    REWRITE is a second charge, so only then is it said.
+                    0-2: path marker only — no "about X%" promise. */}
+                {aiDraft !== null && (
+                  <span className="text-sm text-muted-foreground">
+                    <Tri
+                      bm="Menulis semula menggunakan kuota AI bulanan sekali lagi."
+                      zh="重写一次会再用一次本月的 AI 用量。"
+                      en="Writing it again uses the monthly AI allowance once more."
+                    />
+                  </span>
+                )}
               </div>
               {/* A-6 (work order 51): shown here only while the BM guard box
                   is not on screen — when it is, the SAME error renders inside

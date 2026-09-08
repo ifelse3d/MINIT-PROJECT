@@ -12,6 +12,8 @@ import { renderMinutesDraftBm } from "./minutes-draft";
 // ---------------------------------------------------------------------------
 
 const LINE = "理事12人,请假2人(张伟杰,王丽华),会员40人";
+// 127: in BM the line is rebuilt from the parsed counts — same numbers, no 人 left.
+const BM_LINE = "12 orang Ahli Jawatankuasa, 40 orang ahli; tidak hadir dengan maaf: 2 orang";
 const confirmed = (value: string) => ({
   value,
   confidence: "confirmed" as const,
@@ -34,7 +36,8 @@ const plan = { sections: [{ heading: "Perkara", items: [{ source: 0, text: "Mesy
 describe("🔴 125 §2-5 — Jumlah hadir comes from the confirmed count", () => {
   it("the formal document: the line as written, 52 orang, the on-leave list", () => {
     const md = composeMinutesMd(plan, agm(), opts);
-    expect(md).toContain(`Kehadiran: ${LINE}`);
+    expect(md).toContain(`Kehadiran: ${BM_LINE}`);
+    expect(md).not.toContain("人");
     expect(md).toContain("Jumlah hadir: 52 orang");
     expect(md).not.toContain("Jumlah hadir: 1 orang");
     expect(md).toContain("## TIDAK HADIR (DENGAN MAAF)");
@@ -47,7 +50,7 @@ describe("🔴 125 §2-5 — Jumlah hadir comes from the confirmed count", () =>
 
   it("the free preview prints the same lines", () => {
     const md = renderMinutesDraftBm(agm(), { orgName: "PERSATUAN CONTOH" });
-    expect(md).toContain(`Kehadiran: ${LINE}`);
+    expect(md).toContain(`Kehadiran: ${BM_LINE}`);
     expect(md).toContain("Jumlah hadir: 52 orang");
     expect(md).toContain("## TIDAK HADIR (DENGAN MAAF)");
   });
@@ -58,7 +61,7 @@ describe("🔴 125 §2-5 — Jumlah hadir comes from the confirmed count", () =>
       resolutions: [{ text: confirmed("Ucapan aluan."), section_no: "1", section_title: "Ucapan Pengerusi" }],
     };
     const md = composeStructuredMinutesMd(e, { ...opts, lang: "bm" });
-    expect(md).toContain(`Kehadiran: ${LINE}`);
+    expect(md).toContain(`Kehadiran: ${BM_LINE}`);
     expect(md).toContain("Jumlah hadir: 52 orang");
   });
 
@@ -72,13 +75,14 @@ describe("🔴 125 §2-5 — Jumlah hadir comes from the confirmed count", () =>
     expect(md).toContain("## KEHADIRAN");
     expect(md).toContain("Jumlah hadir: 2 orang");
     // The page's line still prints — it was never allowed to vanish.
-    expect(md).toContain(`Kehadiran: ${LINE}`);
+    expect(md).toContain(`Kehadiran: ${BM_LINE}`);
   });
 
   it("with the line but nothing confirmed and no names, no count is invented", () => {
     const e: MeetingNotesExtraction = { ...agm(), attendance_confirmed: undefined, apologies: [] };
     const md = composeMinutesMd(plan, e, opts);
-    expect(md).toContain(`Kehadiran: ${LINE}`);
+    // No separate on-leave list → the names ride on the line, as written.
+    expect(md).toContain(`Kehadiran: ${BM_LINE} (张伟杰, 王丽华)`);
     expect(md).not.toContain("Jumlah hadir");
   });
 
@@ -104,6 +108,11 @@ describe("🔴 125 §2-5 — Jumlah hadir comes from the confirmed count", () =>
     // Balanced → no note even when "noted" (nothing to note).
     const balanced = composeMinutesMd(plan, { ...e, figures: [...e.figures.slice(0, 3), fig("银行", 1113000, "closing")] }, opts);
     expect(balanced).not.toContain("Nota: angka di atas");
+  });
+
+  it("127: the zh and en copies keep the page's line as written", () => {
+    expect(composeMinutesMd(plan, agm(), { ...opts, lang: "zh" })).toContain(`${LINE}`);
+    expect(composeMinutesMd(plan, agm(), { ...opts, lang: "en" })).toContain(`${LINE}`);
   });
 
   it("the zh and en reading copies use their own labels", () => {

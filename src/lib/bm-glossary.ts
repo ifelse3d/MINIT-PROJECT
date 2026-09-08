@@ -149,6 +149,10 @@ export function applyBmGlossary(text: string, protect: readonly string[] = []): 
   fenced.forEach((p, i) => {
     work = work.split(`${i}`).join(p);
   });
+  // 127 (J 9/8 on the live site): 「12人」 is a COUNT — the unit after a
+  // number is "orang". Only a digit-led 人 is touched, so 负责人 / 人数 and
+  // any 人 inside a person's name stay for the guard or the table.
+  work = work.replace(/(\d)\s*人/g, "$1 orang");
   return work;
 }
 
