@@ -238,6 +238,20 @@ async function run() {
     // "db_behind" sentence — also a pass, recorded as such; after J applies
     // the migration this same script exercises the real submit.
     await c.goto(`${BASE}/money/expenses`, { waitUntil: "networkidle2" });
+    // 130 §7 — the "neither message" flake, root cause: this script typed into
+    // the claim form the instant networkidle2 fired, and on a slow pass that
+    // was BEFORE React had hydrated the page. The inputs are controlled —
+    // characters typed before the onChange handlers exist never reach React
+    // state — so the tap on 交上去 submitted an EMPTY form and got the
+    // "description and amount are required" sentence: neither of the two
+    // messages the check looks for. The page itself says when it is ready:
+    // the expense list prints 载入中… until hydration has run AND the first
+    // load has landed; wait for that to go, then type. Not a retry — a
+    // precondition.
+    await c.waitForFunction(
+      () => !(document.body.innerText || "").includes("载入中"),
+      { timeout: 15000 },
+    );
     const expensesText = await bodyText(c);
     // C-5: the screen's wording changed in the Stage-E rework — a collector
     // gets the claim form ("报销：拿回我垫付的钱"); the decide pile ("等您处理")
@@ -253,7 +267,17 @@ async function run() {
       await descInput.type("测试报销：白漆两桶");
       await amtInput.type("45");
       await clickByText(c, "button", "交上去");
-      await sleep(3000);
+      // The submit is a server action: wait for ITS answer (either sentence),
+      // bounded — a fixed 3s sleep was the second half of the flake.
+      await c
+        .waitForFunction(
+          () => {
+            const t = document.body.innerText || "";
+            return t.includes("报销交上去了") || t.includes("migration 25");
+          },
+          { timeout: 15000 },
+        )
+        .catch(() => {});
       const afterClaim = await bodyText(c);
       claimOk = afterClaim.includes("报销交上去了");
       const dbBehind = afterClaim.includes("migration 25");
