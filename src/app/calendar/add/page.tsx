@@ -13,7 +13,7 @@
 // three rules as calendar-shell.tsx, which explains why.
 // ---------------------------------------------------------------------------
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,18 +29,20 @@ import { EventsSection } from "../events-section";
 import { FromAiNote } from "@/components/from-ai-note";
 
 export default function AddEventsPage() {
-  const [events, setEvents] = useState<SimpleEvent[]>([]);
+  // 130 §5: this page only ADDS; it reads the stored list at the moment of
+  // the tap (loadEvents) and never mirrored it into state for display — the
+  // old `useEffect(() => setEvents(loadEvents()))` was hydration the page
+  // did not use.
   const [added, setAdded] = useState(0);
   /** Why the organisation's copy could not be written, or null. Told, not
    *  swallowed — "permission" gets the "whose job is this" sentence, because
    *  a role refusal recurs on every retry (26 号报告 2-4). */
   const [syncIssue, setSyncIssue] = useState<"permission" | "other" | null>(null);
 
-  useEffect(() => setEvents(loadEvents()), []);
-
   function addEvent(ev: SimpleEvent) {
-    const next = sortedByDate([...events, ev]);
-    setEvents(next);
+    // From the store, not the render's copy: two adds before a re-render
+    // must not lose one (the same stale-closure trap calendar-shell names).
+    const next = sortedByDate([...loadEvents(), ev]);
     saveEvents(next);
     setAdded((n) => n + 1);
     // Fire-and-forget: the event is already on screen and already on this
