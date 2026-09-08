@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
 import { MEETING_TYPES, meetingTypeUiLabelTri } from "@/lib/meeting-types";
@@ -100,10 +101,13 @@ export function MinutesFilters({
         <Button type="button" variant="outline" size="lg" asChild>
           {/* A link, not a reset(): reset() would restore the values the SERVER
               rendered, i.e. the filters that are already applied — which looks
-              like a button that does nothing. */}
-          <a href="/minutes/history">
+              like a button that does nothing. A <Link> (130 §5): the page is a
+              server component keyed on its search params, so a client
+              navigation to the bare address re-renders it unfiltered exactly
+              as a full load did — no reason to bypass the router. */}
+          <Link href="/minutes/history">
             <Tri bm="Kosongkan" zh="清掉条件" en="Clear" />
-          </a>
+          </Link>
         </Button>
       )}
     </form>
