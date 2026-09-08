@@ -117,7 +117,7 @@ describe("composeMinutesMd", () => {
     const md = built();
     expect(md).toContain("# MINIT MESYUARAT — If Else");
     expect(md).toContain("Jenis mesyuarat: Mesyuarat Jawatankuasa");
-    expect(md).toContain("Tarikh: 2026-08-16");
+    expect(md).toContain("Tarikh: 16-08-2026");
   });
 
   it("builds the opening summary from the section headings, inventing nothing", () => {
@@ -288,7 +288,7 @@ describe("composeMinutesMd in other languages", () => {
     const zh = build("zh");
     expect(zh).toContain("# 会议记录 — If Else");
     expect(zh).toContain("会议类型: 理事会议");
-    expect(zh).toContain("日期: 2026-08-16");
+    expect(zh).toContain("日期: 16-08-2026");
     expect(zh).toContain("## 还没定下来的事");
     expect(zh).not.toContain("MINIT MESYUARAT");
     expect(zh).not.toContain("Jenis mesyuarat");

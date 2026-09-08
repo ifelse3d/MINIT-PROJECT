@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { emptyMeetingNotesExtraction, type MeetingNotesExtraction } from "@/lib/extraction";
 import {
+  buildPhraseWork,
   composeMinutesMd,
   composeStructuredMinutesMd,
+  headingTitleOf,
   minutesPlanSchema,
   minutesStructure,
   structuredPhraseNeeds,
@@ -255,5 +257,102 @@ describe("the PDF reads the meeting-title line", () => {
     const lines = minutesPdfLines("# X\n**MESYUARAT AGUNG TAHUNAN 2026**\nbody");
     expect(lines).toContainEqual({ kind: "strong", text: "MESYUARAT AGUNG TAHUNAN 2026" });
     expect(lines.some((l) => "text" in l && l.text.includes("**"))).toBe(false);
+  });
+});
+
+// 130 §3 (126 §10): the reader dropped a printed sub-heading's title. Same
+// shape as real page A — fictional names and places, nothing real.
+describe("130 §3 — a lost sub-heading title comes back from the section's first line", () => {
+  const lostSubheading = (): MeetingNotesExtraction => ({
+    ...structuredExtraction(),
+    resolutions: [
+      {
+        text: confirmed("Pengerusi mengalu-alukan semua ahli yang hadir."),
+        kind: "info",
+        section_no: "1",
+        section_title: "Ucapan Pengerusi",
+      },
+      {
+        text: confirmed("Perkara berbangkit daripada minit yang lalu dibincangkan."),
+        kind: "info",
+        section_no: "2",
+        section_title: "Perkara Berbangkit",
+      },
+      // The sub-heading's TITLE, emitted as the first paragraph of "2.1".
+      {
+        text: confirmed("Agenda 2.1: Kekosongan jawatan Ahli Jawatankuasa"),
+        kind: "info",
+        section_no: "2.1",
+        section_title: "",
+      },
+      {
+        text: confirmed("Encik Rosli Contoh dilantik mengisi kekosongan jawatan AJK sehingga mesyuarat agung akan datang."),
+        kind: "decision",
+        section_no: "2.1",
+        section_title: "",
+      },
+      {
+        text: confirmed("Tiada perkara lain dibangkitkan."),
+        kind: "info",
+        section_no: "3",
+        section_title: "Hal-hal lain",
+      },
+    ],
+  });
+
+  it("the heading is printed with its title and the ruler finds no empty heading", () => {
+    const md = composeStructuredMinutesMd(lostSubheading(), opts);
+    expect(md).toContain("## Agenda 2.1: Kekosongan jawatan Ahli Jawatankuasa");
+    expect(md).not.toMatch(/## Agenda 2\.1:\s*$/m);
+    const codes = lintMinitMd(md, { lang: "bm", agendaTable: true }).map((f) => f.code);
+    expect(codes).not.toContain("agenda_heading_empty");
+    // The paragraph under it survived; the title line is not printed twice.
+    expect(md).toContain("Encik Rosli Contoh dilantik");
+    expect(md.match(/Kekosongan jawatan Ahli Jawatankuasa/g)?.length).toBe(2); // agenda table + heading
+  });
+
+  it("the agenda summary table carries the recovered title", () => {
+    const md = composeStructuredMinutesMd(lostSubheading(), opts);
+    expect(md).toContain("2.1. Kekosongan jawatan Ahli Jawatankuasa");
+  });
+
+  it("a promoted line is phrased as a TITLE, never as a paragraph", () => {
+    const e = lostSubheading();
+    expect(structuredPhraseNeeds(e, "bm")).toEqual([]);
+    const work = buildPhraseWork(e, "zh");
+    const rows = e.resolutions.length;
+    // Paragraph index 2 (the promoted line) is absent; its title rides as a virtual index.
+    expect(work.items.map((i) => i.index)).not.toContain(2);
+    expect(work.items.some((i) => i.index >= rows && i.text === "Kekosongan jawatan Ahli Jawatankuasa")).toBe(true);
+  });
+
+  it("a lone line under an empty heading stays a paragraph — nothing is dropped", () => {
+    const e = lostSubheading();
+    e.resolutions.splice(3, 1); // remove the paragraph under 2.1
+    const md = composeStructuredMinutesMd(e, opts);
+    expect(md).toContain("Kekosongan jawatan Ahli Jawatankuasa");
+    const s = minutesStructure(e)!.find((x) => x.no === "2.1")!;
+    expect(s.title).toBe("");
+    expect(s.indices.length).toBe(1);
+  });
+
+  it("prose under an empty heading is not mistaken for a title", () => {
+    const e = lostSubheading();
+    e.resolutions[2].text = confirmed(
+      "Pengerusi memaklumkan bahawa jawatan AJK telah kosong sejak bulan lalu. Perkara ini perlu diselesaikan.",
+    );
+    const s = minutesStructure(e)!.find((x) => x.no === "2.1")!;
+    expect(s.title).toBe("");
+    expect(s.indices.length).toBe(2);
+  });
+
+  it("headingTitleOf — heading furniture is stripped, prose is refused", () => {
+    expect(headingTitleOf("Agenda 2.1: Kekosongan jawatan", "2.1")).toBe("Kekosongan jawatan");
+    expect(headingTitleOf("2.1 Kekosongan jawatan", "2.1")).toBe("Kekosongan jawatan");
+    expect(headingTitleOf("Kekosongan jawatan", "2.1")).toBe("Kekosongan jawatan");
+    expect(headingTitleOf("议程 2.1：职位空缺", "2.1")).toBe("职位空缺");
+    expect(headingTitleOf("2.2 Perkara lain", "2.1")).toBeNull(); // another line's number
+    expect(headingTitleOf("Mesyuarat bersetuju.", "2.1")).toBeNull();
+    expect(headingTitleOf("Agenda 2.1:", "2.1")).toBeNull();
   });
 });

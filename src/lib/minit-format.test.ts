@@ -117,7 +117,7 @@ describe("renderMinitMd — the structured (printed formal) form", () => {
   });
 
   it("prints the full TARIKH / MASA / TEMPAT block with the headcount", () => {
-    expect(md).toContain("Tarikh: 2026-05-20");
+    expect(md).toContain("Tarikh: 2026-05-20"); // the renderer prints the model's own string; the BM form is applied upstream (130 §4)
     expect(md).toContain("Masa: 8.30 PM – 10.30 PM");
     expect(md).toContain("Tempat: Dewan Serbaguna, Taman Contoh");
     expect(md).toContain("AJK yang hadir : 21 orang");

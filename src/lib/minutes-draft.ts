@@ -1,5 +1,6 @@
 import { headcountForDocument } from "@/lib/attendance-gate";
 import { applyBmGlossary } from "@/lib/bm-glossary";
+import { isoToErosesDate } from "@/lib/eroses-meeting";
 import { headcountLineBm } from "@/lib/headcount";
 import type { MeetingNotesExtraction } from "@/lib/extraction";
 import { meetingTypeLabel } from "@/lib/meeting-types";
@@ -78,7 +79,8 @@ function renderMinutesDraftBmRaw(
     );
   }
   if (e.meeting_date.confidence !== "missing" && e.meeting_date.value !== "") {
-    lines.push(`Tarikh: ${e.meeting_date.value}`);
+    // 130 §4: the BM form of the date (15-03-2026), as the formal composer.
+    lines.push(`Tarikh: ${isoToErosesDate(e.meeting_date.value)}`);
   }
   // 125 §5-4: the fixed passages of this BM template — venue, figure labels,
   // bearer positions — get the glossary applied (the same rule as the formal
