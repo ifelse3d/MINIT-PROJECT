@@ -1,6 +1,7 @@
 "use client";
 
 import type { MeetingNotesExtraction } from "@/lib/extraction";
+import type { MinutesLang } from "@/lib/minutes-lang";
 
 // ---------------------------------------------------------------------------
 // Where a half-finished set of minutes lives between visits.
@@ -86,6 +87,13 @@ export type SavedMinutes = {
    * appeared. Optional: older blobs get a fresh key on first autosave.
    */
   draftKey?: string;
+  /**
+   * 129 C (J 9/8): the document MinitAI already wrote for the extraction in
+   * this blob. Restored tagged to that extraction, so a reload shows the
+   * document instead of writing (and charging for) it again. Optional:
+   * older blobs have none and the document is written once, as before.
+   */
+  aiDraft?: { lang: MinutesLang; markdown: string } | null;
 };
 
 export function loadSavedMinutes(): SavedMinutes | null {

@@ -335,6 +335,8 @@ type DraftPayload = {
   noAttendees?: boolean;
   title?: string;
   photoPages?: { name: string; storagePath: string | null }[];
+  /** 129 C: the document MinitAI already wrote for THIS extraction. */
+  aiDraft?: { lang: MinutesLang; markdown: string } | null;
 };
 
 function isDraftPayload(v: unknown): v is DraftPayload {
@@ -397,6 +399,28 @@ export function MinutesProvider({
   // firing once per render.
   const [cloudDrafts, setCloudDrafts] = useState<DraftListItem[] | null>(null);
   const [draftNote, setDraftNote] = useState<string | null>(null);
+  // The document the model wrote, TAGGED with the extraction it came from
+  // (declared up here since 129 C so the autosaves below can carry it; the
+  // reasoning sits with docLang further down). 129 C (J 9/8, 127's known
+  // gap): a reload restored the facts but not the document, so the 127
+  // auto-write ran again and charged again. The document now travels with
+  // the draft — localStorage and the cloud row — and comes back tagged to
+  // the very extraction object that is restored, so nothing is re-written
+  // and nothing is re-charged until a fact actually changes.
+  const [draftResult, setDraftResult] = useState<{
+    for: MeetingNotesExtraction;
+    lang: MinutesLang;
+    markdown: string;
+  } | null>(null);
+  // Memoised: it sits in the autosave deps, and a fresh object every render
+  // would re-arm the cloud debounce on every keystroke elsewhere.
+  const persistedAiDraft = useMemo(
+    () =>
+      draftResult && draftResult.for === extraction
+        ? { lang: draftResult.lang, markdown: draftResult.markdown }
+        : null,
+    [draftResult, extraction],
+  );
   const draftKeyRef = useRef<string | null>(null);
   // The ref is the SYNCHRONOUS truth (effects write blobs with it in the same
   // pass); this state is its render-safe mirror for the UI. Effects update it
@@ -543,6 +567,15 @@ export function MinutesProvider({
     }
     if (saved) {
       setExtraction(saved.extraction);
+      // 129 C: the document written for these very facts comes back with
+      // them — tagged to the same object, so the auto-write stays quiet.
+      if (saved.aiDraft && typeof saved.aiDraft.markdown === "string") {
+        setDraftResult({
+          for: saved.extraction,
+          lang: saved.aiDraft.lang,
+          markdown: saved.aiDraft.markdown,
+        });
+      }
       setSourceLabel(saved.sourceLabel);
       // I-2: pages when the blob has them; a legacy single photo reads as
       // one page.
@@ -617,6 +650,7 @@ export function MinutesProvider({
       title: docTitle,
       savedToHistory: alreadySaved,
       draftKey: draftKeyRef.current,
+      aiDraft: persistedAiDraft,
     });
     if (outcome === "photo-dropped" && photoPages.length > 0) {
       // Clear them from state too, otherwise the failing write repeats forever.
@@ -649,6 +683,7 @@ export function MinutesProvider({
         name: p.name,
         storagePath: p.storagePath ?? null,
       })),
+      aiDraft: persistedAiDraft,
     };
     // BM for the derived label (docLang is declared further down — and a
     // draft's label must not change with the viewer's language anyway).
@@ -658,7 +693,7 @@ export function MinutesProvider({
     cloudTimerRef.current = setTimeout(() => {
       void saveDraft({ clientKey, title, payload });
     }, 2500);
-  }, [extraction, sourceLabel, photoDataUrl, photoPages, typedByHand, noAttendeesRecorded, docTitle, restored, alreadySaved, showSample]);
+  }, [extraction, sourceLabel, photoDataUrl, photoPages, typedByHand, noAttendeesRecorded, docTitle, restored, alreadySaved, showSample, persistedAiDraft]);
 
   const findEventsInMinutes = useCallback(async () => {
     setEvError(null);
@@ -906,8 +941,9 @@ export function MinutesProvider({
         name: p.name,
         storagePath: p.storagePath ?? null,
       })),
+      aiDraft: persistedAiDraft,
     }),
-    [extraction, sourceLabel, typedByHand, noAttendeesRecorded, docTitle, photoPages],
+    [extraction, sourceLabel, typedByHand, noAttendeesRecorded, docTitle, photoPages, persistedAiDraft],
   );
 
   const draftCannotReachCloud = t(
@@ -995,6 +1031,14 @@ export function MinutesProvider({
       setDraftKeyForUi(clientKey);
       droppedForRef.current = null;
       setExtraction(payload.extraction);
+      // 129 C: same as the local restore — the written document rides along.
+      if (payload.aiDraft && typeof payload.aiDraft.markdown === "string") {
+        setDraftResult({
+          for: payload.extraction,
+          lang: payload.aiDraft.lang,
+          markdown: payload.aiDraft.markdown,
+        });
+      }
       setSourceLabel(payload.sourceLabel ?? null);
       setTypedByHand(payload.typed === true);
       setNoAttendeesRecorded(payload.noAttendees === true);
@@ -1451,11 +1495,6 @@ export function MinutesProvider({
     [extraction, docLang],
   );
 
-  const [draftResult, setDraftResult] = useState<{
-    for: MeetingNotesExtraction;
-    lang: MinutesLang;
-    markdown: string;
-  } | null>(null);
   const [draftBusy, setDraftBusy] = useState(false);
   const [draftFailure, setDraftFailure] = useState<{
     for: MeetingNotesExtraction;
