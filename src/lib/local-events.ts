@@ -35,6 +35,7 @@ export type SimpleEvent = {
   derived?: boolean;
 };
 
+import { useSyncExternalStore } from "react";
 import { adoptLegacyKey, scopedKey } from "@/lib/storage-scope-core";
 
 /** Pre-S0-4 global key — adopted into the scoped key once, then removed. */
@@ -63,6 +64,70 @@ export function saveEvents(events: SimpleEvent[]): void {
   } catch {
     // storage unavailable — events just won't persist
   }
+  notifyEventListeners();
+}
+
+// ---------------------------------------------------------------------------
+// 130 §5: the device's events as a SUBSCRIBABLE store, so a screen reads them
+// with useSyncExternalStore instead of `useEffect(() => setEvents(loadEvents()))`
+// — the SSR-hydration pattern the lint rejects (setState in an effect). The
+// server snapshot is the empty list, the client snapshot is what is stored;
+// React swaps the one for the other after hydration with no mismatch. Every
+// write goes through saveEvents(), which tells every subscriber; another
+// tab's write arrives through the `storage` event.
+// ---------------------------------------------------------------------------
+
+const EMPTY_EVENTS: SimpleEvent[] = [];
+const eventListeners = new Set<() => void>();
+let eventsCache: { key: string; raw: string | null; events: SimpleEvent[] } | null = null;
+
+function notifyEventListeners(): void {
+  for (const l of eventListeners) l();
+}
+
+/** The stored events, sorted — the SAME array reference until the stored
+ *  blob (or the scope key) changes, which is what useSyncExternalStore needs. */
+function eventsSnapshot(): SimpleEvent[] {
+  const key = eventsKey();
+  let raw: string | null = null;
+  try {
+    adoptLegacyKey(key, EVENTS_LEGACY_KEY);
+    raw = localStorage.getItem(key);
+  } catch {
+    raw = null;
+  }
+  if (eventsCache && eventsCache.key === key && eventsCache.raw === raw) {
+    return eventsCache.events;
+  }
+  let parsed: SimpleEvent[] = EMPTY_EVENTS;
+  try {
+    const arr = raw ? (JSON.parse(raw) as unknown) : [];
+    parsed = Array.isArray(arr) ? sortedByDate(arr as SimpleEvent[]) : EMPTY_EVENTS;
+  } catch {
+    parsed = EMPTY_EVENTS;
+  }
+  eventsCache = { key, raw, events: parsed };
+  return parsed;
+}
+
+function subscribeEvents(listener: () => void): () => void {
+  eventListeners.add(listener);
+  const onStorage = () => listener();
+  window.addEventListener("storage", onStorage);
+  return () => {
+    eventListeners.delete(listener);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
+function serverEventsSnapshot(): SimpleEvent[] {
+  return EMPTY_EVENTS;
+}
+
+/** This device's events, live: empty on the server and during hydration,
+ *  the stored list (sorted by date) right after, updated on every save. */
+export function useLocalEvents(): SimpleEvent[] {
+  return useSyncExternalStore(subscribeEvents, eventsSnapshot, serverEventsSnapshot);
 }
 
 export function sortedByDate(events: SimpleEvent[]): SimpleEvent[] {

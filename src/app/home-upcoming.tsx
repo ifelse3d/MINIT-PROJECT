@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Tri, useTriText } from "@/components/language-provider";
 import { URGENCY_BADGE, URGENCY_CARD } from "@/lib/activity-labels";
@@ -13,7 +13,7 @@ import {
   DEADLINE_LABELS,
   type Deadline,
 } from "@/lib/deadlines";
-import { loadEvents, type SimpleEvent } from "@/lib/local-events";
+import { useLocalEvents } from "@/lib/local-events";
 import { useEinvoisVisible } from "@/lib/einvois-pref";
 import { mergeUpcoming } from "@/lib/standard-deadlines";
 
@@ -32,8 +32,9 @@ const UPCOMING_LIMIT = 5;
  * card (desktop) and the notification bell (phone) — one merge, two doors.
  */
 export function useUpcomingItems(deadlines: Deadline[], todayIso: string) {
-  const [events, setEvents] = useState<SimpleEvent[]>([]);
-  useEffect(() => setEvents(loadEvents()), []);
+  // 130 §5: the device's events come through the subscribable store —
+  // empty on the server, stored list after hydration, no setState in an effect.
+  const events = useLocalEvents();
   // R-6 (2026-08-25): e-Invois is optional and default OFF — its month-end
   // deadlines are noise for a society that never files it.
   const [einvoisVisible] = useEinvoisVisible();
