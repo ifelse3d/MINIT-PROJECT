@@ -5,6 +5,8 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
+**🟣 127 号小场（2026-09-08 晚，上台前夜，报告在 `_J-要做的事W-…md`，commit `87f0f25` 已 push）：J 线上抓四件——核对页每组「待核对在上、已确认收起」（`CheckedFirst`）；第 3 步 BM 文件到页即由 MinitAI 自动写（一份确认内容一次；重新整理会再扣，未持久化）；数字后「人」→`orang`；BM 出席行由 `headcountLineBm` 从算好的人数重组、名字不音译。测试 1569 过、build 过。125 号场的 STATE 主体在下面，未改。**
+
 **最后更新：2026-09-08 凌晨（MYT）· Fable 5.1（125 号场：真件八件——人名不准音译、出席人数、签名栏、财政对帐、三小洞、sonnet、lint 三洞、真纸 bench）**
 **🔴 本场（125 号场）状态一句话（126 号报告）：J 9/7 晚线上亲手抓到的八件全落地、全是码守——
 华文人名变拼音退回模型（`checkChineseNamesSurvive`）；人数句由码算、人点「对」（`parseHeadcount`＋`attendance_confirmed` 满足 D30，请假≠出席）；
