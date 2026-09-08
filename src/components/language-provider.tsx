@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { notifyStorageChanged, useHydrated, useStoredString } from "@/lib/browser-store";
 
 // ---------------------------------------------------------------------------
 // LANGUAGE — ONE language at a time (Stage R, 2026-08-25).
@@ -56,12 +57,31 @@ const LangContext = createContext<{
   setMode: () => {},
 });
 
+/**
+ * The mode this device remembers: the v2 key when it holds one; else the old
+ * three-toggle preference IF it names exactly one language ("all three on"
+ * was the old default, indistinguishable from never having chosen, so it
+ * asks fresh); else null.
+ */
+function rememberedMode(stored: string | null, legacyRaw: string | null): LangMode | null {
+  if (isLangMode(stored)) return stored;
+  if (!legacyRaw) return null;
+  try {
+    const legacy = JSON.parse(legacyRaw) as Partial<LangPrefs>;
+    const on = (["bm", "zh", "en"] as const).filter((k) => legacy[k] === true);
+    return on.length === 1 ? on[0] : null;
+  } catch {
+    return null;
+  }
+}
+
 function persistMode(m: LangMode) {
   try {
     localStorage.setItem(STORAGE_KEY, m);
   } catch {
     // storage unavailable — preference just won't persist
   }
+  notifyStorageChanged();
   try {
     // Mirror for the server: <html lang> is stamped from this cookie.
     document.cookie = `${LANG_COOKIE}=${m};path=/;max-age=31536000;samesite=lax`;
@@ -84,41 +104,28 @@ export function LanguageProvider({
   initialMode?: string;
 }) {
   const fromServer = isLangMode(initialMode) ? initialMode : null;
-  const [mode, setModeState] = useState<LangMode>(fromServer ?? DEFAULT_MODE);
-  const [needsChoice, setNeedsChoice] = useState(false);
+  // 130 §5: what this device remembers is read as an external store (null on
+  // the server and during hydration); the mode in force is DERIVED — the
+  // person's choice this visit, else the cookie the server saw, else what
+  // the device remembers, else the default. No effect copies storage into
+  // state; the only effect left refreshes the cookie for the next server
+  // render, which is a write to the outside world and nothing else.
+  const hydrated = useHydrated();
+  const stored = useStoredString("local", STORAGE_KEY);
+  const legacyRaw = useStoredString("local", LEGACY_KEY);
+  const [choice, setChoice] = useState<LangMode | null>(null);
+  const remembered = useMemo(() => rememberedMode(stored, legacyRaw), [stored, legacyRaw]);
+  const mode: LangMode = choice ?? fromServer ?? remembered ?? DEFAULT_MODE;
+  // Ask only once the browser has had its say and had nothing to say.
+  const needsChoice = choice === null && fromServer === null && hydrated && remembered === null;
 
   useEffect(() => {
-    if (fromServer) return; // the cookie answered it — nothing to migrate
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (isLangMode(stored)) {
-        setModeState(stored);
-        persistMode(stored); // refresh the cookie for the next server render
-        return;
-      }
-      // Migrate the old three-toggle preference IF it names exactly one
-      // language; "all three on" was the old default, indistinguishable from
-      // never having chosen, so it asks fresh.
-      const legacyRaw = localStorage.getItem(LEGACY_KEY);
-      if (legacyRaw) {
-        const legacy = JSON.parse(legacyRaw) as Partial<LangPrefs>;
-        const on = (["bm", "zh", "en"] as const).filter((k) => legacy[k] === true);
-        if (on.length === 1) {
-          setModeState(on[0]);
-          persistMode(on[0]);
-          return;
-        }
-      }
-      setNeedsChoice(true);
-    } catch {
-      setNeedsChoice(true);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (fromServer || remembered === null) return;
+    persistMode(remembered); // refresh the cookie for the next server render
+  }, [fromServer, remembered]);
 
   function setMode(m: LangMode) {
-    setModeState(m);
-    setNeedsChoice(false);
+    setChoice(m);
     persistMode(m);
   }
 
