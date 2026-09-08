@@ -84,3 +84,41 @@ describe("the paste-pack committee field files from the roster (G-1)", () => {
     }
   });
 });
+
+// J 9/8 (stage-eve, live site): the BM document said "Bilik Mesyuarat", the
+// Annual Return's Tempat box still said 会议室 and lit the Chinese guard.
+describe("the Tempat box gets the same BM glossary as the document", () => {
+  const venueRow = (venue: string, opts?: { orgName?: string; roster?: FilingRosterEntry[] }) => {
+    const e = agmMeeting();
+    e.meeting_venue = {
+      value: venue,
+      confidence: "confirmed",
+      source_ref: { location: "p1", snippet: venue },
+    };
+    return buildPastePack(e, opts?.roster ?? [], { orgName: opts?.orgName }).find(
+      (r) => r.erosesField === "Tempat Mesyuarat",
+    )!;
+  };
+
+  it("会议室 pastes as Bilik Mesyuarat, confidence and source untouched", () => {
+    const r = venueRow("会议室");
+    expect(r.value).toBe("Bilik Mesyuarat");
+    expect(r.confidence).toBe("confirmed");
+    expect(r.source).toBe("会议室");
+  });
+
+  it("never touches the registered org name or a roster name", () => {
+    expect(venueRow("雪兰莪会议协会礼堂", { orgName: "雪兰莪会议协会" }).value).toBe(
+      "雪兰莪会议协会Dewan",
+    );
+    expect(
+      venueRow("会议室 (林秘书家)", {
+        roster: [{ name: "林秘书", position: "Setiausaha", nameOfficial: "LIM MI SHU" }],
+      }).value,
+    ).toBe("Bilik Mesyuarat (林秘书家)");
+  });
+
+  it("leaves a BM venue exactly as written", () => {
+    expect(venueRow("Dewan Orang Ramai").value).toBe("Dewan Orang Ramai");
+  });
+});

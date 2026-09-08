@@ -1,4 +1,5 @@
 import { confirmedHeadcount } from "@/lib/attendance-gate";
+import { applyBmGlossary } from "@/lib/bm-glossary";
 import type { Confidence, MeetingNotesExtraction } from "@/lib/extraction";
 import { EROSES_ANNUAL_RETURN_MAP } from "@/prompts/eroses-map";
 import { formatRm } from "@/lib/minutes-draft";
@@ -84,6 +85,8 @@ export function buildPastePack(
    * names, BLOCKS that one field and says where to fix it.
    */
   roster: FilingRosterEntry[] = [],
+  /** The registered organisation name — fenced off from the BM glossary. */
+  opts: { orgName?: string | null } = {},
 ): PastePackRow[] {
   // 🔴 2026-08-20. Before today this function printed whatever was in the field
   // straight into "Jenis Mesyuarat" and marked the row Confirmed — so a
@@ -119,8 +122,22 @@ export function buildPastePack(
       }
       case "meeting_venue": {
         const f = e.meeting_venue;
+        // J 9/8 (stage-eve, live site): the BM document prints "Tempat: Bilik
+        // Mesyuarat" (125 §5-4) — this box offered 会议室 and lit the Chinese
+        // guard. Same glossary, same fence: every name (page, roster, org)
+        // is protected first; Chinese the table does not know stays for
+        // the guard.
+        const protect = [
+          opts.orgName ?? "",
+          ...e.attendees.map((a) => a.name.value),
+          ...(e.apologies ?? []).map((a) => a.name.value),
+          ...e.office_bearers.map((b) => b.person_name.value),
+          e.prepared_by?.person_name.value ?? "",
+          e.endorsed_by?.person_name.value ?? "",
+          ...roster.flatMap((r) => [r.name, r.nameOfficial ?? ""]),
+        ];
         return row(entry, {
-          value: f.value === "" ? "—" : f.value,
+          value: f.value === "" ? "—" : applyBmGlossary(f.value, protect),
           confidence: f.confidence,
           source: f.source_ref?.snippet ?? "",
         });

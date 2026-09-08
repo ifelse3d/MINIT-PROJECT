@@ -136,7 +136,7 @@ export default async function LangkahPage({
   if (n === 1) {
     const filingRoster = await loadFilingRoster();
     const pastePack: PastePackRow[] | null = base.selected?.extraction
-      ? buildPastePack(base.selected.extraction, filingRoster)
+      ? buildPastePack(base.selected.extraction, filingRoster, { orgName: base.active.name })
       : null;
     const packRow = (field: string) =>
       pastePack?.find((r) => r.erosesField === field) ?? null;

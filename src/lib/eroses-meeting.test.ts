@@ -80,6 +80,16 @@ describe("buildMeetingFormPack", () => {
     expect(count?.value).toBe("2");
   });
 
+  it("a headcount a person confirmed off the page's own line comes first (125 §2)", () => {
+    // 「理事12人,请假2人,会员40人」 — no names to count, a person pressed "Yes, 52".
+    const e = extractionWith({});
+    e.attendance_confirmed = 52;
+    const rows = buildMeetingFormPack({ meetingType: "agm", meetingDateIso: null, extraction: e });
+    const count = rows.find((r) => r.field === "Jumlah Kehadiran Ahli Mesyuarat")!;
+    expect(count.value).toBe("52");
+    expect(count.copyable).toBe(true);
+  });
+
   it("degrades honestly for an old row with no stored extraction", () => {
     const rows = buildMeetingFormPack({
       meetingType: "event",

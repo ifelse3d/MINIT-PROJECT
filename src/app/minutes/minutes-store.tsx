@@ -1422,8 +1422,8 @@ export function MinutesProvider({
   );
 
   const pastePack = useMemo(
-    () => buildPastePack(extraction, filingRoster),
-    [extraction, filingRoster],
+    () => buildPastePack(extraction, filingRoster, { orgName: documentOrgName }),
+    [extraction, filingRoster, documentOrgName],
   );
 
   // --- Letting the model actually WRITE the document ------------------------

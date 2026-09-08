@@ -1,3 +1,4 @@
+import { headcountForDocument } from "@/lib/attendance-gate";
 import { applyBmGlossary } from "@/lib/bm-glossary";
 import type { MeetingNotesExtraction } from "@/lib/extraction";
 import { meetingTypeLabel, type TriText } from "@/lib/meeting-types";
@@ -132,11 +133,12 @@ export function buildMeetingFormPack(facts: MeetingFormFacts): ErosesMeetingRow[
     e && e.meeting_venue.confidence !== "missing" && e.meeting_venue.value !== ""
       ? applyBmGlossary(e.meeting_venue.value, protect)
       : "";
-  const attendeeCount = e
-    ? e.attendees.filter(
-        (a) => a.name.confidence !== "missing" && a.name.value.trim() !== "",
-      ).length
-    : 0;
+  // 125 §2 said "the paste-pack takes the confirmed count first" — it did so
+  // for the Annual Return (paste-pack.ts) and missed this page, so J's AGM
+  // that prints "Jumlah hadir: 52 orang" offered "—" here. Same helper as
+  // the document and the Annual Return: the person-confirmed headcount,
+  // else the named list's length; counted by code (Hard Rule 2).
+  const attendeeCount = e ? (headcountForDocument(e) ?? 0) : 0;
   // Tujuan: the person's own name for the meeting is the truest one-line
   // purpose; the BM type label is the fallback the portal understands.
   const tujuan =
