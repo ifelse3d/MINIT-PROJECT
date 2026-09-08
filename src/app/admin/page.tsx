@@ -9,6 +9,7 @@ import { Tri } from "@/components/language-provider";
 import { FleetCharts } from "./fleet-charts";
 import { GrantCreditsCard } from "./grant-credits-card";
 import { PlanQuotasCard } from "./plan-quotas-card";
+import { BenchCard } from "./bench-card";
 import { loadPlanQuotas } from "@/lib/plan-quotas";
 
 // ---------------------------------------------------------------------------
@@ -346,6 +347,9 @@ export default async function AdminPage() {
             {/* §0-6 (102): the plan dials + the org-plan switch, same gate. */}
             <PlanQuotasCard quotas={planQuotas} />
             <GrantCreditsCard />
+            {/* 130 §14-2: the model bench behind a button — estimate first,
+                an explicit confirm, real money (bench-actions.ts). */}
+            <BenchCard />
           </div>
         ) : (
           <p className="rounded-md border-2 border-dashed p-4 text-sm text-[color:var(--v2-text-soft)]">
