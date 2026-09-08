@@ -93,7 +93,17 @@ const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * column — so each named column is stripped and the write retried.
  * Migration 32 gave note/honorific; migration 37 gives email/state.
  */
-const OPTIONAL_COLUMNS = ["note", "honorific", "email", "state", "phone"] as const;
+// 130 §11: ic_no / address / occupation ride the same ladder (migration 46).
+const OPTIONAL_COLUMNS = [
+  "note",
+  "honorific",
+  "email",
+  "state",
+  "phone",
+  "ic_no",
+  "address",
+  "occupation",
+] as const;
 
 export async function addCommitteeMember(
   _prev: MemberActionState,
@@ -116,6 +126,10 @@ export async function addCommitteeMember(
   const state = String(formData.get("state") ?? "").trim();
   const termStartRaw = String(formData.get("termStart") ?? "").trim();
   const confirmSameName = String(formData.get("confirmSameName") ?? "") === "1";
+  // 130 §11: the eROSES AJK particulars, pre-filled from the notes or typed.
+  const icNo = String(formData.get("icNo") ?? "").trim();
+  const address = String(formData.get("address") ?? "").trim();
+  const occupation = String(formData.get("occupation") ?? "").trim();
 
   if (position === "") return { error: ERR.needPosition, ok: false, field: "position" };
   if (personName === "") return { error: ERR.needName, ok: false, field: "personName" };
@@ -192,6 +206,9 @@ export async function addCommitteeMember(
   if (honorific !== "") row.honorific = honorific.slice(0, 60);
   if (email !== "") row.email = email.slice(0, 160);
   if (state !== "") row.state = state.slice(0, 60);
+  if (icNo !== "") row.ic_no = icNo.slice(0, 20);
+  if (address !== "") row.address = address.slice(0, 240);
+  if (occupation !== "") row.occupation = occupation.slice(0, 120);
 
   const error = await writeWithColumnLadder((r) =>
     supabase.from("committee_roster").insert(r),
@@ -254,6 +271,9 @@ export async function updateCommitteeMember(
   // Migration 41 (100 §0-4): contact phone — optional, rides the ladder.
   const phone = String(formData.get("phone") ?? "").trim();
   const termStartRaw = String(formData.get("termStart") ?? "").trim();
+  const icNo = String(formData.get("icNo") ?? "").trim();
+  const address = String(formData.get("address") ?? "").trim();
+  const occupation = String(formData.get("occupation") ?? "").trim();
 
   if (position === "") return { error: ERR.needPosition, ok: false, field: "position" };
   if (email !== "" && !EMAIL_SHAPE.test(email)) {
@@ -294,6 +314,9 @@ export async function updateCommitteeMember(
     email: email === "" ? null : email.slice(0, 160),
     state: state === "" ? null : state.slice(0, 60),
     phone: phone === "" ? null : phone.slice(0, 40),
+    ic_no: icNo === "" ? null : icNo.slice(0, 20),
+    address: address === "" ? null : address.slice(0, 240),
+    occupation: occupation === "" ? null : occupation.slice(0, 120),
   };
 
   const error = await writeWithColumnLadder((r) =>

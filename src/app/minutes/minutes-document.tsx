@@ -265,6 +265,27 @@ export function MinutesDocument() {
   // lands. A row the roster did not know offers "add them to the roster"
   // (pre-filled) so next time the swap is automatic.
   const [nameMap, setNameMap] = useState<Record<string, string>>({});
+  /** 130 §11: the add-to-roster link's query, from the extraction's own
+   *  office_bearers entry for this name (exact match; else name + IC name only). */
+  function addToRosterParams(name: string, icName: string): string {
+    const q = new URLSearchParams({ tambah_nama: name, tambah_ic: icName });
+    const bearer = extraction.office_bearers.find(
+      (b) => b.person_name.confidence !== "missing" && b.person_name.value.trim() === name.trim(),
+    );
+    const present = (f?: { value: string; confidence: string }) =>
+      f && f.confidence !== "missing" && f.value.trim() !== "" ? f.value.trim() : null;
+    if (bearer) {
+      const kp = present(bearer.ic_no);
+      const alamat = present(bearer.address);
+      const pekerjaan = present(bearer.occupation);
+      const jawatan = present(bearer.position);
+      if (kp) q.set("tambah_kp", kp);
+      if (alamat) q.set("tambah_alamat", alamat);
+      if (pekerjaan) q.set("tambah_pekerjaan", pekerjaan);
+      if (jawatan) q.set("tambah_jawatan", jawatan);
+    }
+    return q.toString();
+  }
   const rosterFor = (snippet: string) =>
     nameSubs.find((s) => s.from === snippet.trim()) ?? null;
   const mappedValue = (snippet: string) =>
@@ -753,7 +774,13 @@ export function MinutesDocument() {
                         )}
                         {!fromRoster && value.trim() !== "" && (
                           <Link
-                            href={`/members?tambah_nama=${encodeURIComponent(s)}&tambah_ic=${encodeURIComponent(value.trim())}`}
+                            // 130 §11: what the notes carried for this
+                            // person (IC number, address, occupation, the
+                            // position they were appointed to) rides along,
+                            // so the add card is pre-filled and the person
+                            // only confirms. Nothing is invented: a field the
+                            // notes did not carry stays out of the URL.
+                            href={`/members?${addToRosterParams(s, value.trim())}`}
                             className="text-xs underline underline-offset-4"
                           >
                             ＋{" "}

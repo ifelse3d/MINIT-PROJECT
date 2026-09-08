@@ -10,6 +10,7 @@ import {
 } from "@/components/language-provider";
 import { toIsoDate } from "@/lib/date-input";
 import { MALAYSIAN_STATES } from "@/lib/eroses-committee";
+import { stateFromAddress } from "@/lib/address-state";
 import {
   addCommitteeMember,
   importCommittee,
@@ -178,6 +179,14 @@ export function AddCommitteeRow() {
   const [email, setEmail] = useState("");
   const [negeri, setNegeri] = useState("");
   const [termStart, setTermStart] = useState("");
+  // 130 §11: the eROSES AJK particulars the notes may already carry.
+  const [icNo, setIcNo] = useState("");
+  const [address, setAddress] = useState("");
+  const [occupation, setOccupation] = useState("");
+  // Which address the Negeri box was last filled FROM — so a state the
+  // person typed themselves is never overwritten, while a state derived
+  // from an earlier address follows the address when it changes.
+  const [negeriFromAddress, setNegeriFromAddress] = useState<string | null>(null);
   // Cancelling the same-name question: useActionState's state cannot be
   // cleared imperatively, so remember WHICH state object was dismissed (the
   // errorHiddenFor pattern from ImportCommittee below).
@@ -189,17 +198,49 @@ export function AddCommitteeRow() {
   // just typed ride in as ?tambah_nama=…&tambah_ic=…, pre-filled here so the
   // add is one look and a save. Read once on mount; setTimeout(0) per the
   // eslint baseline's sanctioned effect-setState shape.
+  // 130 §11 (101 §8): the particulars the notes carried for a NEW office
+  // bearer ride in too — ?tambah_kp (IC number), ?tambah_alamat (address),
+  // ?tambah_pekerjaan (occupation), ?tambah_jawatan (position) — and the
+  // Negeri is worked out from the address by code (stateFromAddress), so
+  // the person's whole job is to look and press Add. The eROSES test.
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
     const nama = p.get("tambah_nama");
     const ic = p.get("tambah_ic");
-    if (!nama && !ic) return;
+    const kp = p.get("tambah_kp");
+    const alamat = p.get("tambah_alamat");
+    const pekerjaan = p.get("tambah_pekerjaan");
+    const jawatan = p.get("tambah_jawatan");
+    if (!nama && !ic && !kp && !alamat && !pekerjaan && !jawatan) return;
     const timer = setTimeout(() => {
       if (nama) setPersonName(nama);
       if (ic) setNameOfficial(ic);
+      if (kp) setIcNo(kp);
+      if (alamat) {
+        setAddress(alamat);
+        const derived = stateFromAddress(alamat);
+        if (derived) {
+          setNegeri(derived);
+          setNegeriFromAddress(alamat);
+        }
+      }
+      if (pekerjaan) setOccupation(pekerjaan);
+      if (jawatan) setPosition(jawatan);
     }, 0);
     return () => clearTimeout(timer);
   }, []);
+
+  /** The address box: typing here also fills the Negeri box by code, unless
+   *  the person has already chosen a state themselves. */
+  function onAddressChange(next: string) {
+    setAddress(next);
+    const derived = stateFromAddress(next);
+    const negeriIsOurs = negeri === "" || negeriFromAddress !== null;
+    if (derived && negeriIsOurs) {
+      setNegeri(derived);
+      setNegeriFromAddress(next);
+    }
+  }
 
   // B-4 (work order 51): a successful add clears the WHOLE form (date
   // included) so the next person starts on a clean row. setTimeout(0), not a
@@ -215,6 +256,10 @@ export function AddCommitteeRow() {
       setEmail("");
       setNegeri("");
       setTermStart("");
+      setIcNo("");
+      setAddress("");
+      setOccupation("");
+      setNegeriFromAddress(null);
     }, 0);
     return () => clearTimeout(timer);
   }, [state]);
@@ -323,7 +368,10 @@ export function AddCommitteeRow() {
           <input
             name="state"
             value={negeri}
-            onChange={(e) => setNegeri(e.currentTarget.value)}
+            onChange={(e) => {
+              setNegeri(e.currentTarget.value);
+              setNegeriFromAddress(null); // theirs now, not the address's
+            }}
             className={inputCls + (fieldInvalid(state, "state") ? invalidCls : "")}
             maxLength={60}
             list="committee-states"
@@ -333,6 +381,58 @@ export function AddCommitteeRow() {
               <option key={s} value={s} />
             ))}
           </datalist>
+        </label>
+
+        {/* 130 §11: the rest of what the eROSES AJK step asks — pre-filled
+            from the notes when they carried it, typed otherwise. The IC
+            number is shown here and in the edit row ONLY (PDPA — see
+            migration 46). */}
+        <label className="flex flex-col gap-1">
+          <span className="text-sm font-medium text-muted-foreground">
+            <Tri bm="No. K/P (eROSES)" zh="身份证号（eROSES）" en="IC no. (eROSES)" />
+          </span>
+          <input
+            name="icNo"
+            value={icNo}
+            onChange={(e) => setIcNo(e.currentTarget.value)}
+            className={inputCls}
+            maxLength={20}
+            inputMode="numeric"
+            autoComplete="off"
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-sm font-medium text-muted-foreground">
+            <Tri bm="Alamat (eROSES)" zh="地址（eROSES）" en="Address (eROSES)" />
+          </span>
+          <input
+            name="address"
+            value={address}
+            onChange={(e) => onAddressChange(e.currentTarget.value)}
+            className={inputCls}
+            maxLength={240}
+          />
+          {negeriFromAddress !== null && negeri !== "" && (
+            <span className="text-xs text-muted-foreground" data-probe="negeri-derived">
+              <Tri
+                bm={`Negeri diisi daripada alamat: ${negeri}`}
+                zh={`州属已从地址带出：${negeri}`}
+                en={`State filled in from the address: ${negeri}`}
+              />
+            </span>
+          )}
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-sm font-medium text-muted-foreground">
+            <Tri bm="Pekerjaan (eROSES)" zh="职业（eROSES）" en="Occupation (eROSES)" />
+          </span>
+          <input
+            name="occupation"
+            value={occupation}
+            onChange={(e) => setOccupation(e.currentTarget.value)}
+            className={inputCls}
+            maxLength={120}
+          />
         </label>
 
         {/* B-6 (拍板 6): the society's own way of telling two same-named
@@ -422,6 +522,9 @@ export function AddCommitteeRow() {
                 fd.set("email", email);
                 fd.set("state", negeri);
                 fd.set("termStart", termStart);
+                fd.set("icNo", icNo);
+                fd.set("address", address);
+                fd.set("occupation", occupation);
                 fd.set("confirmSameName", "1");
                 startTransition(() => formAction(fd));
               }}
@@ -836,6 +939,10 @@ export function EditCommitteeRow({
     email?: string | null;
     state?: string | null;
     phone?: string | null;
+    /** 130 §11 (migration 46). */
+    ic_no?: string | null;
+    address?: string | null;
+    occupation?: string | null;
   };
   onDone: () => void;
   onCancel: () => void;
@@ -851,6 +958,9 @@ export function EditCommitteeRow({
   const [email, setEmail] = useState(row.email ?? "");
   const [negeri, setNegeri] = useState(row.state ?? "");
   const [phone, setPhone] = useState(row.phone ?? "");
+  const [icNo, setIcNo] = useState(row.ic_no ?? "");
+  const [address, setAddress] = useState(row.address ?? "");
+  const [occupation, setOccupation] = useState(row.occupation ?? "");
   const [termStart, setTermStart] = useState(row.term_start ?? "");
 
   useEffect(() => {
@@ -971,6 +1081,49 @@ export function EditCommitteeRow({
             name="note"
             value={note}
             onChange={(e) => setNote(e.currentTarget.value)}
+            className={inputCls}
+            maxLength={120}
+          />,
+        )}
+        {field(
+          <Tri bm="No. K/P (eROSES)" zh="身份证号（eROSES）" en="IC no. (eROSES)" />,
+          <input
+            name="icNo"
+            type="text"
+            value={icNo}
+            onChange={(e) => setIcNo(e.currentTarget.value)}
+            className={inputCls}
+            maxLength={20}
+            inputMode="numeric"
+            autoComplete="off"
+          />,
+        )}
+        {field(
+          <Tri bm="Alamat (eROSES)" zh="地址（eROSES）" en="Address (eROSES)" />,
+          <input
+            name="address"
+            type="text"
+            value={address}
+            onChange={(e) => {
+              const next = e.currentTarget.value;
+              setAddress(next);
+              // Fill the Negeri from the address only while it is empty.
+              if (negeri === "") {
+                const derived = stateFromAddress(next);
+                if (derived) setNegeri(derived);
+              }
+            }}
+            className={inputCls}
+            maxLength={240}
+          />,
+        )}
+        {field(
+          <Tri bm="Pekerjaan (eROSES)" zh="职业（eROSES）" en="Occupation (eROSES)" />,
+          <input
+            name="occupation"
+            type="text"
+            value={occupation}
+            onChange={(e) => setOccupation(e.currentTarget.value)}
             className={inputCls}
             maxLength={120}
           />,

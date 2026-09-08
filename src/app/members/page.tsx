@@ -52,15 +52,25 @@ export default async function MembersPage() {
     const supabase = await getSupabaseServer();
     // Newest columns first; a database that is behind (D8) answers with an
     // unknown-column error, and the select retries one migration back per
-    // step (41 → 37 → 32 → base) — the page never white-screens over a
+    // step (46 → 41 → 37 → 32 → base) — the page never white-screens over a
     // schema gap.
-    const with41 = await supabase
+    // 130 §11: migration 46 adds the eROSES particulars; behind it, 41.
+    const with46 = await supabase
       .from("committee_roster")
       .select(
-        "id, position, person_name, name_official, term_start, note, honorific, email, state, phone",
+        "id, position, person_name, name_official, term_start, note, honorific, email, state, phone, ic_no, address, occupation",
       )
       .eq("org_id", active.id)
       .order("id", { ascending: true });
+    const with41 = with46.error
+      ? await supabase
+          .from("committee_roster")
+          .select(
+            "id, position, person_name, name_official, term_start, note, honorific, email, state, phone",
+          )
+          .eq("org_id", active.id)
+          .order("id", { ascending: true })
+      : with46;
     const with37 = with41.error
       ? await supabase
           .from("committee_roster")

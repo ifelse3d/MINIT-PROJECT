@@ -114,8 +114,10 @@ echo         agent boleh ubah telefon/e-mel AJK - setiap ubahan ada rekod + undo
 echo    42.  20260920000000  kolam kuota setiap pelan + pelan Plus (102 nombor 0-6)
 echo         J tetapkan kuota Trial/Standard/Plus/HQ dari konsol - tiada SQL lagi
 echo    43.  20260921000000  ai_jobs - baca dokumen panjang sedikit demi sedikit (105 nombor 1)
+
 echo    44.  20260922000000  betulkan Tukar pelan dalam konsol - ia tidak pernah berjaya (116)
 echo    45.  20260923000000  kira kuota AI secara atom - dua permintaan serentak tak lagi lepas (122 nombor 3)
+echo    46.  20260924000000  senarai AJK: No. K/P, alamat, pekerjaan - kad "tambah ke senarai" isi sendiri (130 nombor 11)
 echo         TANPA INI: fail lebih 10 muka surat masih tak boleh dibaca (macam sebelum ini)
 echo.
 echo     0.  Keluar / Quit
@@ -166,8 +168,10 @@ if "%pick%"=="40" set f=20260918000000_expense_receipt.sql& goto copy
 if "%pick%"=="41" set f=20260919000000_agent_changes.sql& goto copy
 if "%pick%"=="42" set f=20260920000000_plan_quotas.sql& goto copy
 if "%pick%"=="43" set f=20260921000000_ai_jobs.sql& goto copy
+
 if "%pick%"=="44" set f=20260922000000_fix_set_org_plan.sql& goto copy
 if "%pick%"=="45" set f=20260923000000_charge_ai_action.sql& goto copy
+if "%pick%"=="46" set f=20260924000000_roster_particulars.sql& goto copy
 
 echo.
 echo    Nombor tak sah / not a valid number.

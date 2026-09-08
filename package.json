@@ -29,6 +29,7 @@
     "e2e:roles": "node scripts/e2e-roles.mjs",
     "e2e:calendar": "node scripts/e2e-calendar-130.mjs",
     "e2e:panel-clip": "node scripts/e2e-panel-clip-130.mjs",
+    "e2e:roster-prefill": "node scripts/e2e-roster-prefill-130.mjs",
     "shots": "node scripts/screenshots.mjs",
     "contoh:constitution": "node scripts/make-contoh-constitution.mjs"
   },
