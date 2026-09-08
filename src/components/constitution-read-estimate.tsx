@@ -1,7 +1,9 @@
 "use client";
 
 import { Tri } from "@/components/language-provider";
+import { useAiCost } from "@/components/ai-quota-provider";
 import { estimateConstitutionRead } from "@/lib/constitution-pages";
+import { costPhrase } from "@/lib/quota-display";
 
 // ---------------------------------------------------------------------------
 // ④ (work order 85, J 2026-08-30: 「寫預估（看文件大小）」) — the price-and-
@@ -26,6 +28,11 @@ export function ConstitutionReadEstimate({
 }) {
   const e = estimateConstitutionRead(pages);
   const parts = segments ?? e.segments;
+  // 130 §10 (119 A-3, 118 §4): the price is a share of the month's pool —
+  // "about X% of the monthly allowance" — never a count of actions. The
+  // same useAiCost / costPhrase every other button uses; the action count
+  // still comes from the tested page formula, it is only SAID differently.
+  const cost = costPhrase(useAiCost(e.actions));
 
   // Under ~1.5 minutes, seconds are the honest unit; above it, minutes read
   // better than "124 seconds".
@@ -42,9 +49,9 @@ export function ConstitutionReadEstimate({
     <p className="rounded-sm border border-[color:var(--v2-border)] bg-white/60 px-3 py-2 text-sm text-muted-foreground dark:bg-white/5">
       🧮{" "}
       <Tri
-        bm={`${e.pages} muka surat → menolak ${e.actions} tindakan AI (pelan percuma: ${e.fencePages} muka surat daripada baki seumur hidup)${parts > 1 ? ` · dibaca dalam ${parts} bahagian` : ""} · anggaran ${timeBm}.`}
-        zh={`这份共 ${e.pages} 页 → 会扣 ${e.actions} 次 AI 用量（免费版终身页数扣 ${e.fencePages} 页）${parts > 1 ? `、分 ${parts} 段读` : ""}，预计${timeZh}。`}
-        en={`${e.pages} page${e.pages === 1 ? "" : "s"} → deducts ${e.actions} AI action${e.actions === 1 ? "" : "s"} (free plan: ${e.fencePages} of the lifetime page allowance)${parts > 1 ? ` · read in ${parts} parts` : ""} · about ${timeEn}.`}
+        bm={`${e.pages} muka surat → ${cost.bm} (pelan percuma: ${e.fencePages} muka surat daripada baki seumur hidup)${parts > 1 ? ` · dibaca dalam ${parts} bahagian` : ""} · anggaran ${timeBm}.`}
+        zh={`这份共 ${e.pages} 页 → ${cost.zh}（免费版终身页数扣 ${e.fencePages} 页）${parts > 1 ? `、分 ${parts} 段读` : ""}，预计${timeZh}。`}
+        en={`${e.pages} page${e.pages === 1 ? "" : "s"} → ${cost.en} (free plan: ${e.fencePages} of the lifetime page allowance)${parts > 1 ? ` · read in ${parts} parts` : ""} · about ${timeEn}.`}
       />
     </p>
   );

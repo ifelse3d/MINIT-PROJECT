@@ -43,7 +43,23 @@ const files = UI_DIRS.flatMap(tsxFiles);
 
 describe("118 §4 — no jargon in front of a person", () => {
   it("a button's cost is a percentage, never '1 AI action' (three languages)", () => {
-    const banned = [/1 AI action/i, /1 tindakan AI/i, /1 次 AI 额度/, /1 次 AI 額度/];
+    // 130 §10: any COUNT of actions in front of a person, not just "1" —
+    // the constitution estimate line used to say "N 次 AI 用量" /
+    // "deducts N AI actions" (the last "N 页／N 次" quote on a deep page).
+    // `${e.actions}` in a template literal is caught by the interpolation
+    // forms below; a literal digit by the plain ones.
+    const banned = [
+      /1 AI action/i,
+      /1 tindakan AI/i,
+      /1 次 AI 额度/,
+      /1 次 AI 額度/,
+      /\d+ AI actions?/i,
+      /\d+ tindakan AI/i,
+      /\d+ 次 AI/,
+      /\$\{[^}]*\} AI action/i,
+      /\$\{[^}]*\} tindakan AI/i,
+      /\$\{[^}]*\} 次 AI/,
+    ];
     const hits: string[] = [];
     for (const f of files) {
       const text = withoutComments(readFileSync(f, "utf-8"));
