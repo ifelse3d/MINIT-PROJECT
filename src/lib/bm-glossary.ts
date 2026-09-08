@@ -156,6 +156,37 @@ export function applyBmGlossary(text: string, protect: readonly string[] = []): 
   return work;
 }
 
+/**
+ * 129 D (J 9/8; 125 §8 / 127 left it): the reader printed 「晚晚宴」 off a
+ * page where the writer struck out a first 晚 and wrote it again — the
+ * prompt asks for the word that stands, the model still copied both. The
+ * row is rightly amber; this offers the ONE-TAP answer beside it, computed
+ * by code: a doubled Chinese character is collapsed, and the collapsed
+ * text is offered only when a glossary term now reads across that spot
+ * (晚晚宴 → 晚宴, 会议议室 → 会议室). 谢谢 / 大大 collapse to nothing the
+ * table knows, so no suggestion — a real doubled word is never "fixed".
+ * Null = nothing to suggest. The person taps it or types their own.
+ */
+export function struckDoubleSuggestion(value: string): string | null {
+  const chars = [...value];
+  for (let i = 0; i + 1 < chars.length; i++) {
+    if (chars[i] !== chars[i + 1] || !/[㐀-䶿一-鿿]/.test(chars[i])) continue;
+    const candidate = [...chars.slice(0, i), ...chars.slice(i + 1)].join("");
+    // Character index i in `candidate` is the surviving copy.
+    const spans = BM_GLOSSARY.some(([term]) => {
+      if (term.length < 2) return false;
+      let at = candidate.indexOf(term);
+      while (at !== -1) {
+        if (at <= i && i < at + term.length) return true;
+        at = candidate.indexOf(term, at + 1);
+      }
+      return false;
+    });
+    if (spans) return candidate;
+  }
+  return null;
+}
+
 /** A CJK run — the unit a human actually supplies a spelling for. */
 const CJK_RUN = /[㐀-䶿一-鿿]+/g;
 

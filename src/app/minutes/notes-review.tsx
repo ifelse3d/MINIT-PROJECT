@@ -26,6 +26,7 @@ import { signedUrlForOriginal } from "./open-original";
 import type { MeetingNotesExtraction, ResolutionKind } from "@/lib/extraction";
 import { AttachIcon, ChooseFileLabel, UploadLimitNote } from "@/components/attach-icon";
 import { honorificSuggestions } from "@/lib/honorific-match";
+import { struckDoubleSuggestion } from "@/lib/bm-glossary";
 
 // D-7 / J review 27-evening #30 (2026-08-28): the review GROUPS what was
 // decided instead of printing one flat transcription wall. The model labels
@@ -1406,12 +1407,25 @@ export function NotesReview() {
               hasContent={rowHasContent("figures", i)}
               what={t(`Angka ${i + 1}`, `第 ${i + 1} 笔金额`, `Amount ${i + 1}`)}
             >
+            {/* 129 D (J 9/8): one figure = one line — what it is on the
+                left, the amount on the right (stacked on a phone). */}
+            <div className="grid gap-x-4 md:grid-cols-2">
             <FieldRow
               labelBm={`Angka ${i + 1} — perkara`}
               labelZh={`数字 ${i + 1} — 项目`}
               labelEn={`Figure ${i + 1} — what it is`}
               field={f.description}
               display={f.description.value}
+              // 129 D: 「晚晚宴」 — the struck-out double, one tap, by code.
+              suggestions={(() => {
+                const s = struckDoubleSuggestion(f.description.value);
+                return s === null ? undefined : [{ label: s, value: s }];
+              })()}
+              suggestionsLead={{
+                bm: "Ada huruf berganda — maksud anda:",
+                zh: "有重复的字——是不是：",
+                en: "A doubled character — did you mean:",
+              }}
               onConfirm={() =>
                 updateField((e) => {
                   confirm(e.figures[i].description);
@@ -1494,6 +1508,7 @@ export function NotesReview() {
                 })
               }
             />
+            </div>
             </DeletableRow>
               ),
             }))}

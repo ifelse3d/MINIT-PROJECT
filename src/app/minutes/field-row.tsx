@@ -60,6 +60,7 @@ export function FieldRow({
   onEdit,
   onMarkAbsent,
   suggestions,
+  suggestionsLead,
 }: {
   labelBm: string;
   labelZh: string;
@@ -81,6 +82,8 @@ export function FieldRow({
    *  讲师 surnamed 陈. Tapping one is a normal edit (human source of truth).
    *  Never AI, never a guess: absent unless the roster actually matches. */
   suggestions?: { label: string; value: string }[];
+  /** 129 D: what the chips are — defaults to the roster wording. */
+  suggestionsLead?: { bm: string; zh: string; en: string };
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(field.value);
@@ -315,7 +318,11 @@ export function FieldRow({
       {!editing && !isSample && suggestions && suggestions.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm text-muted-foreground">
-            <Tri bm="Padanan senarai AJK:" zh="名册里的匹配：" en="Roster match:" />
+            {suggestionsLead ? (
+              <Tri bm={suggestionsLead.bm} zh={suggestionsLead.zh} en={suggestionsLead.en} />
+            ) : (
+              <Tri bm="Padanan senarai AJK:" zh="名册里的匹配：" en="Roster match:" />
+            )}
           </span>
           {suggestions.map((s) => (
             <button
