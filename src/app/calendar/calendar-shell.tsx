@@ -13,6 +13,7 @@ import {
   mergeEvents,
   saveEvents,
   sortedByDate,
+  useLocalEvents,
   type SimpleEvent,
 } from "@/lib/local-events";
 import { deleteEvent, loadOrgEvents, saveEvent } from "./actions";
@@ -58,7 +59,11 @@ export function CalendarShell({
   /** This org's latest confirmed AGM, or null. Drives the annual-return date. */
   agm: ConfirmedAgm | null;
 }) {
-  const [events, setEvents] = useState<SimpleEvent[]>([]);
+  // 130 §5: the device's events through the subscribable store — empty on
+  // the server, the stored list after hydration, every save pushed to every
+  // subscriber. No setState in an effect; the organisation's copy is merged
+  // INTO the store when it arrives.
+  const events = useLocalEvents();
   // #15: which secondary calendars this device shows (opt-in, default none).
   const [overlays, setOverlays] = useCalendarOverlays();
   // #13: the lunar-recurring rule — 每月初一/十五 with the society's OWN word
@@ -93,17 +98,15 @@ export function CalendarShell({
   const [syncIssue, setSyncIssue] = useState<"permission" | "other" | null>(null);
 
   useEffect(() => {
-    // The device's list goes up immediately; the organisation's is merged in
-    // when it arrives. A union, never a replace — see mergeEvents for why
-    // taking either side wholesale deletes somebody's meeting.
-    const local = loadEvents();
-    setEvents(sortedByDate(local));
+    // The device's list is on screen already (the store); the organisation's
+    // is merged in when it arrives. A union, never a replace — see
+    // mergeEvents for why taking either side wholesale deletes somebody's
+    // meeting. Merged against the device's list AS IT IS when the answer
+    // lands, not as it was when the request left.
     let cancelled = false;
     void loadOrgEvents().then((remote) => {
       if (cancelled || remote.length === 0) return;
-      const merged = mergeEvents(local, remote);
-      setEvents(merged);
-      saveEvents(merged);
+      saveEvents(mergeEvents(loadEvents(), remote));
     });
     return () => {
       cancelled = true;
@@ -123,33 +126,25 @@ export function CalendarShell({
   }
 
   function persist(next: SimpleEvent[]) {
-    const sorted = sortedByDate(next);
-    setEvents(sorted);
-    saveEvents(sorted);
+    saveEvents(sortedByDate(next));
   }
 
   /**
-   * Functional update, not `persist([...events, ev])`.
+   * Read the store, not `persist([...events, ev])`.
    *
    * The closure form reads `events` as it was at render time, so two adds before a
    * re-render silently lose one — the same stale-closure class of bug the money
-   * page builds refs to avoid. (Found in review, 2026-07-28.)
+   * page builds refs to avoid. (Found in review, 2026-07-28.) loadEvents() is
+   * the stored list at the moment of the tap, which is what the functional
+   * update used to guarantee.
    */
   function addEvent(ev: SimpleEvent) {
-    setEvents((prev) => {
-      const sorted = sortedByDate([...prev, ev]);
-      saveEvents(sorted);
-      return sorted;
-    });
+    persist([...loadEvents(), ev]);
     syncSave(ev);
   }
 
   function removeEvent(id: string) {
-    setEvents((prev) => {
-      const sorted = sortedByDate(prev.filter((e) => e.id !== id));
-      saveEvents(sorted);
-      return sorted;
-    });
+    persist(loadEvents().filter((e) => e.id !== id));
     syncDelete(id);
   }
 
@@ -208,10 +203,7 @@ export function CalendarShell({
           agm={agm}
           orgName={orgName}
           events={shownEvents}
-          onRemove={(id) => {
-            persist(events.filter((e) => e.id !== id));
-            syncDelete(id);
-          }}
+          onRemove={removeEvent}
         />
       </div>
 
