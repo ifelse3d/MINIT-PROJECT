@@ -21,7 +21,7 @@ export const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 export type FlowMeetingOption = { id: number; label: string; meetingType: string };
 
 export type FlowBase = {
-  active: { id: number; role: string } | null;
+  active: { id: number; role: string; name: string } | null;
   orgType: "registered" | "committee" | null;
   meetings: FlowMeetingOption[];
   selectedId: number | null;
@@ -76,7 +76,7 @@ export async function loadFlowBase(docParam: string | string[] | undefined): Pro
         : null;
   const selected = selectedId !== null ? await getConfirmedMinutesDoc(selectedId) : null;
   return {
-    active: { id: active.id, role: active.role },
+    active: { id: active.id, role: active.role, name: active.name },
     orgType,
     meetings: meetings.map((m) => ({
       id: m.id,

@@ -97,4 +97,40 @@ describe("buildMeetingFormPack", () => {
     expect(byField["Tempat Mesyuarat"].value).toBe("—");
     expect(byField["Jumlah Kehadiran Ahli Mesyuarat"].value).toBe("—");
   });
+
+  // J 9/8 (stage-eve, live site): the BM document said "Bilik Mesyuarat",
+  // the paste-pack still said 会议室 and lit the Chinese guard.
+  describe("Tempat gets the same glossary as the BM document", () => {
+    const venueOf = (venue: string, extra?: { attendees?: string[]; orgName?: string }) =>
+      buildMeetingFormPack({
+        meetingType: "agm",
+        meetingDateIso: "2026-03-15",
+        extraction: extractionWith({ venue, attendees: extra?.attendees }),
+        orgName: extra?.orgName,
+      }).find((r) => r.field === "Tempat Mesyuarat")!.value;
+
+    it("会议室 pastes as Bilik Mesyuarat", () => {
+      expect(venueOf("会议室")).toBe("Bilik Mesyuarat");
+    });
+
+    it("swaps only the terms it knows — unknown Chinese stays for the guard", () => {
+      // (the glossary only pads a swapped term against Latin/digits, not CJK)
+      expect(venueOf("陈氏宗祠会议室")).toBe("陈氏宗祠Bilik Mesyuarat");
+    });
+
+    it("never touches a name or the registered org name", () => {
+      // 会议 sits inside the org name; the org name is fenced off first.
+      expect(venueOf("雪兰莪会议协会礼堂", { orgName: "雪兰莪会议协会" })).toBe(
+        "雪兰莪会议协会Dewan",
+      );
+      // …and a roster name containing a glossary term is equally safe.
+      expect(venueOf("会议室 (林秘书家)", { attendees: ["林秘书"] })).toBe(
+        "Bilik Mesyuarat (林秘书家)",
+      );
+    });
+
+    it("leaves a BM venue exactly as written", () => {
+      expect(venueOf("Dewan Orang Ramai")).toBe("Dewan Orang Ramai");
+    });
+  });
 });

@@ -48,6 +48,7 @@ export default async function DaftarMesyuaratPage({
         title: base.selected.title,
         meetingDateIso: base.selected.meetingDateIso,
         extraction: base.selected.extraction,
+        orgName: base.active.name,
       })
     : null;
   // 28/8 evening item 8 (kept from the retired /filings page): a meeting the

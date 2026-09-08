@@ -1,3 +1,4 @@
+import { applyBmGlossary } from "@/lib/bm-glossary";
 import type { MeetingNotesExtraction } from "@/lib/extraction";
 import { meetingTypeLabel, type TriText } from "@/lib/meeting-types";
 
@@ -101,6 +102,8 @@ export type MeetingFormFacts = {
   meetingDateIso: string | null;
   /** The stored reviewed extraction, when the row has one (S0-5). */
   extraction: MeetingNotesExtraction | null;
+  /** The registered organisation name — fenced off from the glossary. */
+  orgName?: string | null;
 };
 
 /** The Tambah Mesyuarat form, one row per portal box, in the portal's order. */
@@ -108,9 +111,26 @@ export function buildMeetingFormPack(facts: MeetingFormFacts): ErosesMeetingRow[
   const kind = erosesMeetingKind(facts.meetingType);
   const e = facts.extraction;
 
+  // J 9/8 (stage-eve, on the live site): the BM document printed
+  // "Tempat: Bilik Mesyuarat" but this box still offered 会议室 and the
+  // Chinese guard lit up red. The fixed passages of the BM document get the
+  // glossary (125 §5-4, minutes-draft / minutes-compose); the paste-pack
+  // reads the same stored fact, so it gets the same treatment — every
+  // person's name and the registered org name fenced off first, exactly as
+  // the composer does. Chinese the table does not know stays for the guard.
+  const protect = e
+    ? [
+        facts.orgName ?? "",
+        ...e.attendees.map((a) => a.name.value),
+        ...(e.apologies ?? []).map((a) => a.name.value),
+        ...e.office_bearers.map((b) => b.person_name.value),
+        e.prepared_by?.person_name.value ?? "",
+        e.endorsed_by?.person_name.value ?? "",
+      ]
+    : [];
   const venue =
     e && e.meeting_venue.confidence !== "missing" && e.meeting_venue.value !== ""
-      ? e.meeting_venue.value
+      ? applyBmGlossary(e.meeting_venue.value, protect)
       : "";
   const attendeeCount = e
     ? e.attendees.filter(
