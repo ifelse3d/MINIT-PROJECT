@@ -12,6 +12,7 @@ import { writesInChinese, type MinutesLang } from "@/lib/minutes-lang";
 import {
   checkChineseNamesSurvive,
   checkInventedAgent,
+  checkLockedTokens,
   enforceKinds,
 } from "@/lib/minutes-guards";
 import { verbatimForAmbiguous } from "@/lib/minutes-ambiguity";
@@ -118,7 +119,10 @@ export async function runDraftMinutesPlan(opts: {
     const survive = writesInChinese(lang)
       ? { ok: true, romanised: [] as number[] }
       : checkChineseNamesSurvive(parsedPlan.data, resolutionTexts, allowedRuns);
-    if (coverage.ok && altered.length === 0 && merged.ok && agent.ok && survive.ok) {
+    // 130 §15-1: the locked list is a check, not a request — an amount, an
+    // IC number or a numeric date changed or added sends the plan back.
+    const locked = checkLockedTokens(parsedPlan.data, resolutionTexts);
+    if (coverage.ok && altered.length === 0 && merged.ok && agent.ok && survive.ok && locked.ok) {
       // 118 §1-1: labels are EARNED by the words on the page, checked here
       // — an unearned one is dropped, never fatal (a label only ever
       // changes the prefix, so dropping it costs nobody their document).
@@ -140,6 +144,7 @@ export async function runDraftMinutesPlan(opts: {
       dropped: merged.dropped,
       invented: agent.invented,
       romanised: survive.romanised,
+      lockedChanged: locked.changed,
     };
   }
   return { ok: false, repair };
@@ -239,6 +244,8 @@ export async function runPhraseMinutesItems(opts: {
     const survive = writesInChinese(lang)
       ? { ok: true, romanised: [] as number[] }
       : checkChineseNamesSurvive(pseudoPlan, allTexts, allowedRuns);
+    // 130 §15-1: same locked-token rule as the arranging loop.
+    const locked = checkLockedTokens(pseudoPlan, allTexts);
 
     if (
       missing.length === 0 &&
@@ -246,7 +253,8 @@ export async function runPhraseMinutesItems(opts: {
       unknown.length === 0 &&
       altered.length === 0 &&
       agent.ok &&
-      survive.ok
+      survive.ok &&
+      locked.ok
     ) {
       return {
         ok: true,
@@ -260,6 +268,7 @@ export async function runPhraseMinutesItems(opts: {
       altered,
       invented: agent.invented,
       romanised: survive.romanised,
+      lockedChanged: locked.changed,
     };
   }
   return { ok: false };

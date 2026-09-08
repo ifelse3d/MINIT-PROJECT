@@ -39,6 +39,7 @@ import {
   type AskRouteKey,
 } from "@/lib/ask-routes";
 import { chatPrompt, type ChatTurn } from "@/prompts/chat";
+import { chatSummaryPrompt } from "@/prompts/chat-summary";
 import { dayIsoMalaysia } from "@/lib/history";
 import { ROUTE_AI_DEADLINE_MS } from "@/lib/ai/http";
 import { vendorFailureResponse } from "@/lib/ai/vendor-failure";
@@ -78,8 +79,13 @@ import { vendorFailureResponse } from "@/lib/ai/vendor-failure";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-/** Hard cap per conversation. Layer 2 of the usage limit. */
+/** The conversation length at which the older turns are FOLDED into a
+ *  summary (130 §15-2). Layer 2 of the usage limit: it no longer refuses —
+ *  it compresses, and the compression is a charged action like any other. */
 export const MAX_TURNS = 12;
+/** How many recent exchanges (user + assistant) survive a fold verbatim. */
+const KEEP_EXCHANGES = 3;
+const summarySchema = z.object({ summary: z.string().min(1).max(2000) });
 /** How many earlier turns are sent as context (keeps the prompt cheap). */
 const CONTEXT_TURNS = 6;
 const MAX_QUESTION_CHARS = 500;
@@ -149,20 +155,13 @@ export async function POST(req: Request) {
     const { question, history } = parsedBody.data;
 
     // --- limit 2: conversation length ------------------------------------
-    const userTurns = history.filter((t) => t.role === "user").length;
-    if (userTurns >= MAX_TURNS) {
-      return NextResponse.json(
-        {
-          code: "TURN_LIMIT",
-          error: joinUserError({
-            bm: `Perbualan ini sudah panjang (${MAX_TURNS} soalan). Tekan "Mula semula" dan tanya soalan baharu — ini menjaga bantuan AI anda supaya tidak habis terlalu cepat.`,
-            zh: `这个对话已经很长了（${MAX_TURNS} 个问题）。请按「重新开始」，再问新的问题 —— 这样可以省着用您的 AI 用量。`,
-            en: `This conversation is getting long (${MAX_TURNS} questions). Tap "Start again" and ask a fresh question — this keeps your AI help from running out too quickly.`,
-          }),
-        },
-        { status: 429 },
-      );
-    }
+    // 130 §15-2 (119 A-8): a long conversation is FOLDED, not refused. The
+    // decision is made here from the client's history; the fold itself
+    // happens below, after the org and the charge are known, because the
+    // summary is a vendor call and costs an action (docs/助手重做-设计.md §4.5:
+    // reaching the vendor is what costs — a summary reaches it).
+    const userTurnsBefore = history.filter((t) => t.role === "user").length;
+    const mustFold = userTurnsBefore >= MAX_TURNS;
 
     // The org is resolved through the RLS-checked path, so the org name that
     // goes into the prompt can never come from the browser.
@@ -208,6 +207,54 @@ export async function POST(req: Request) {
     const todayIso = dayIsoMalaysia(new Date().toISOString())!;
     // Short text Q&A — no image, no handwriting. The cheap tier is enough.
     const provider = getVisionProvider("chat");
+
+    // --- 130 §15-2: fold the older turns into a summary ------------------
+    // One more charged action for the summary call; the last KEEP_EXCHANGES
+    // exchanges stay verbatim. If the quota cannot pay for the fold, the
+    // reply is still answered (its action is already charged) over the
+    // recent tail only, and the client is told the fold did not happen.
+    let workingHistory: ChatTurn[] = history as ChatTurn[];
+    let compressed: { summary: string; keptTurns: number } | null = null;
+    if (mustFold) {
+      const keep = KEEP_EXCHANGES * 2;
+      const older = history.slice(0, Math.max(0, history.length - keep)) as ChatTurn[];
+      const tail = history.slice(-keep) as ChatTurn[];
+      let foldCharge: UsageCharge | null = null;
+      try {
+        foldCharge = await checkAndRecordUsage(org.id, "chat_turn");
+      } catch {
+        foldCharge = null;
+      }
+      if (foldCharge && older.length > 0) {
+        const langCookieForFold = (await cookies()).get(LANG_COOKIE)?.value;
+        const foldMode = isLangMode(langCookieForFold) ? langCookieForFold : DEFAULT_LANG_MODE;
+        const foldLang: LangKey = foldMode === "all" ? "bm" : foldMode;
+        const recordFold = createUsageRecorder(org.id, foldCharge);
+        try {
+          const rawSummary = await provider.extractJson({
+            prompt: chatSummaryPrompt({ orgName: org.name, turns: older, uiLang: foldLang }),
+            onUsage: recordFold,
+            deadlineAt: Date.now() + ROUTE_AI_DEADLINE_MS,
+          });
+          const sum = summarySchema.safeParse(rawSummary);
+          if (sum.success) {
+            compressed = { summary: sum.data.summary.trim(), keptTurns: tail.length };
+            workingHistory = [{ role: "assistant", text: compressed.summary }, ...tail];
+          } else {
+            workingHistory = tail;
+          }
+        } catch (e) {
+          // The vendor was not reached or did not answer: refund the fold's
+          // action (the reply's own charge stands) and carry on with the tail.
+          await refundUsage(org.id, foldCharge);
+          void captureAppError("/api/chat", e, { orgId: org.id, code: "fold" });
+          workingHistory = tail;
+        }
+      } else {
+        workingHistory = tail;
+      }
+    }
+    const userTurns = workingHistory.filter((t) => t.role === "user").length;
 
     // P-1: ONE vendor-time budget shared by every call this answer makes —
     // the tool loop (up to 4 metered calls), the plain path and the rule-7
@@ -303,7 +350,7 @@ export async function POST(req: Request) {
       uiLang,
       // Only the recent tail: older turns rarely change the answer and every
       // token is money.
-      history: history.slice(-CONTEXT_TURNS * 2) as ChatTurn[],
+      history: workingHistory.slice(-CONTEXT_TURNS * 2),
       question,
       minutesExcerpts: formatHitsForPrompt(hits),
       // The prompt describes the tools only when this vendor can actually be
@@ -459,6 +506,10 @@ YOUR PREVIOUS ATTEMPT WAS NOT VALID JSON in the required shape. Respond with ONL
       usedPct: after?.usedPct ?? null,
       turnsUsed: userTurns + 1,
       maxTurns: MAX_TURNS,
+      // 130 §15-2: the older turns were folded into this summary (a charged
+      // action); the client replaces its transcript with the summary plus
+      // the kept tail. null = no fold this turn.
+      compressed,
     });
   } catch (e) {
     // S-7: count the failure for the ops console — never its contents (PDPA).

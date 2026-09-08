@@ -298,3 +298,113 @@ export function droppedChineseNames(
   }
   return out;
 }
+
+// ---------------------------------------------------------------------------
+// 130 §15-1 (119 A-8): THE LOCKED LIST, CHECKED BY CODE.
+//
+// The prompt's "locked list" (draft-minutes.ts) tells the model which things
+// must be copied character for character: names, amounts, dates and times,
+// identity-card and receipt numbers, the substance of a decision. Names and
+// decisions were already guarded by code (checkNames / checkLatinNames /
+// checkChineseNamesSurvive / checkInventedAgent). Amounts, IC numbers and
+// numeric dates were not — a prompt is a request, and this is a document a
+// society signs. This guard compares the model's sentence against the item
+// it came from: a locked token changed or ADDED sends the plan back once,
+// exactly like the other guards; a second miss and the plain template wins.
+//
+// 寧缺勿濫 — what counts, and what deliberately does not:
+//   * an AMOUNT the item wrote with "RM" must appear in the sentence with the
+//     same digits (separators and a trailing ".00" may differ: RM1,000 and
+//     RM 1000.00 are one amount); an amount in the sentence must have its
+//     digits somewhere in the item (so "460" on the page may become "RM460",
+//     but RM500 out of nowhere may not);
+//   * an IDENTITY-CARD NUMBER (######-##-####) must survive digit for digit,
+//     both ways;
+//   * a NUMERIC DATE in the sentence (20/5/2026, 20-05-26, 2026-05-20) must be
+//     a date the item carries — added or changed dates are caught; a date the
+//     model spelled out in words ("20 Mei 2026") is NOT flagged, because the
+//     locked list allows the grammar a sentence needs and a date written in
+//     words is the same fact.
+// ---------------------------------------------------------------------------
+
+const RM_AMOUNT = /RM\s?(\d[\d,]*(?:\.\d{1,2})?)/gi;
+const IC_NUMBER = /\b\d{6}-\d{2}-\d{4}\b/g;
+const NUMERIC_DATE = /\b(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})\b|\b(\d{4})-(\d{2})-(\d{2})\b/g;
+
+/** "1,000.00" → "1000"; "1,000.50" → "1000.50" — one spelling per amount. */
+function amountKey(raw: string): string {
+  const plain = raw.replace(/,/g, "");
+  const [whole, frac = ""] = plain.split(".");
+  const cents = frac.padEnd(2, "0").slice(0, 2);
+  return cents === "00" ? whole.replace(/^0+(?=\d)/, "") : `${whole.replace(/^0+(?=\d)/, "")}.${cents}`;
+}
+
+/** "20/5/2026", "20-05-26", "2026-05-20" → "20/5/26" — one spelling per date. */
+function dateKeys(text: string): string[] {
+  const out: string[] = [];
+  for (const m of text.matchAll(NUMERIC_DATE)) {
+    if (m[4] !== undefined) {
+      out.push(`${Number(m[6])}/${Number(m[5])}/${m[4].slice(-2)}`);
+    } else {
+      const y = m[3];
+      out.push(`${Number(m[1])}/${Number(m[2])}/${y.slice(-2)}`);
+    }
+  }
+  return out;
+}
+
+/** Every run of digits in the text, separators stripped — the loose "did
+ *  these digits appear at all" net the amount check falls back to. */
+function digitRuns(text: string): Set<string> {
+  const out = new Set<string>();
+  for (const m of text.replace(/(\d),(?=\d{3}\b)/g, "$1").matchAll(/\d+(?:\.\d+)?/g)) {
+    out.add(amountKey(m[0]));
+  }
+  return out;
+}
+
+export type LockedTokens = { amounts: string[]; ics: string[]; dates: string[] };
+
+/** The locked tokens of one text. Exported for the tests and the report. */
+export function lockedTokens(text: string): LockedTokens {
+  return {
+    amounts: [...text.matchAll(RM_AMOUNT)].map((m) => amountKey(m[1])),
+    ics: [...text.matchAll(IC_NUMBER)].map((m) => m[0]),
+    dates: dateKeys(text),
+  };
+}
+
+/**
+ * Every plan item's sentence against the item(s) it came from. Returns the
+ * source indices whose locked tokens were changed or added — the same shape
+ * the other guards return, so the retry loop treats it the same way.
+ */
+export function checkLockedTokens(
+  plan: MinutesPlan,
+  sourceTexts: readonly string[],
+): { ok: boolean; changed: number[] } {
+  const changed = new Set<number>();
+  const inspect = (item: { source: number | number[]; text: string }) => {
+    const indices = sourcesOf(item).filter((i) => i >= 0 && i < sourceTexts.length);
+    if (indices.length === 0) return;
+    const sourceText = indices.map((i) => sourceTexts[i]).join(" \n ");
+    const src = lockedTokens(sourceText);
+    const out = lockedTokens(item.text);
+    const srcDigits = digitRuns(sourceText);
+    const outDigits = digitRuns(item.text);
+    let bad = false;
+    // Amounts: the item's RM amounts must be in the sentence; the sentence's
+    // RM amounts must have their digits somewhere in the item.
+    for (const a of src.amounts) if (!outDigits.has(a)) bad = true;
+    for (const a of out.amounts) if (!srcDigits.has(a)) bad = true;
+    // IC numbers: both ways, digit for digit.
+    for (const ic of src.ics) if (!out.ics.includes(ic)) bad = true;
+    for (const ic of out.ics) if (!src.ics.includes(ic)) bad = true;
+    // Numeric dates in the sentence must be dates the item carries.
+    for (const d of out.dates) if (!src.dates.includes(d)) bad = true;
+    if (bad) for (const i of indices) changed.add(i);
+  };
+  for (const section of plan.sections) section.items.forEach(inspect);
+  plan.unresolved.forEach(inspect);
+  return { ok: changed.size === 0, changed: [...changed].sort((a, b) => a - b) };
+}

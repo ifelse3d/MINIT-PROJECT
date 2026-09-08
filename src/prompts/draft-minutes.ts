@@ -45,6 +45,9 @@ export type DraftMinutesPromptParams = {
     /** 125 §1: sources whose Chinese personal name did not survive in
      *  characters — romanised or dropped (checkChineseNamesSurvive). */
     romanised?: number[];
+    /** 130 §15-1: sources whose amount, IC number or numeric date was changed
+     *  or added in the sentence (checkLockedTokens). */
+    lockedChanged?: number[];
   };
 };
 
@@ -297,6 +300,13 @@ function repairProblems(repair: NonNullable<DraftMinutesPromptParams["repair"]>)
         `it in letters, or left it out. Copy the name in its Chinese characters, ` +
         `character for character, never in pinyin or any romanisation, whatever ` +
         `language the document is in): ${repair.romanised.join(", ")}`
+      : "",
+    repair.lockedChanged?.length
+      ? `CHANGED OR ADDED A LOCKED TOKEN (an amount of money, an identity-card ` +
+        `number or a numeric date in your sentence is not the one the item carries, ` +
+        `or the item's amount / IC number is missing from your sentence — copy them ` +
+        `digit for digit, and write no amount, IC number or date the item does not ` +
+        `carry): ${repair.lockedChanged.join(", ")}`
       : "",
   ]
     .filter(Boolean)

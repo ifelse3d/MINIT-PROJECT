@@ -85,6 +85,8 @@ type Turn = {
   changes?: AgentChangeInfo[];
   /** §0-2a (work order 102): device-side changes (language) — old → new + undo. */
   uiChanges?: AgentUiChangeInfo[];
+  /** 130 §15-2: this turn is the summary the older turns were folded into. */
+  compressed?: boolean;
 };
 
 /** Shape guard for a stored transcript (usePersistentState contract). */
@@ -123,6 +125,8 @@ type ChatOk = {
   usedPct: number | null;
   turnsUsed: number;
   maxTurns: number;
+  /** 130 §15-2: the older turns were folded into this summary (charged). */
+  compressed?: { summary: string; keptTurns: number } | null;
 };
 
 // Chips only PREFILL the input — the member presses Ask themselves. Since K1
@@ -197,6 +201,8 @@ export function AIPanel({
   const [staged, setStaged] = useState<{ file: File; preview: string | null } | null>(null);
   const [askKind, setAskKind] = useState(false);
   const quotaPool = useAiQuota();
+  /** 130 §15-2: what one fold (one AI call) costs, in the person's terms. */
+  const foldCost = costPhrase(pctOfQuota(1, quotaPool));
 
   async function stageFile(list: FileList | null) {
     if (!list || list.length === 0 || busy) return;
@@ -381,18 +387,34 @@ export function AIPanel({
       for (const c of uiChanges) {
         if (isLangMode(c.to)) setMode(c.to);
       }
-      setTurns((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          text: tidyReply(body.reply),
-          button: body.button,
-          sources: body.sources ?? null,
-          lookups: body.lookups ?? null,
-          changes: body.changes && body.changes.length > 0 ? body.changes : undefined,
-          uiChanges: uiChanges.length > 0 ? uiChanges : undefined,
-        },
-      ]);
+      const replyTurn: Turn = {
+        role: "assistant",
+        text: tidyReply(body.reply),
+        button: body.button,
+        sources: body.sources ?? null,
+        lookups: body.lookups ?? null,
+        changes: body.changes && body.changes.length > 0 ? body.changes : undefined,
+        uiChanges: uiChanges.length > 0 ? uiChanges : undefined,
+      };
+      if (body.compressed) {
+        // 130 §15-2: the server folded the older turns into a summary (a
+        // charged action). The transcript becomes: the summary, the kept
+        // tail, this question, this answer — so the next turn does not fold
+        // again. Free (prepared) turns older than the tail fold away too.
+        const folded = body.compressed;
+        setTurns((prev) => {
+          const sent = prev.slice(0, -1).filter((x) => !x.free);
+          const tail = sent.slice(-folded.keptTurns);
+          return [
+            { role: "assistant", text: folded.summary, compressed: true },
+            ...tail,
+            prev[prev.length - 1],
+            replyTurn,
+          ];
+        });
+      } else {
+        setTurns((prev) => [...prev, replyTurn]);
+      }
       // §0-2c: the reply said "drafting it now" — run the person's own words
       // through the dictation road. The panel has no product cards, so the
       // finished draft arrives as a button to the page that shows it.
@@ -589,12 +611,13 @@ export function AIPanel({
               en={usedPct === null ? `${remaining} left` : `${usedPct}% used this month`}
             />
           </GlassBadge>
+          {/* 130 §15-2: the counter counts down to a FOLD, not a refusal. */}
           {turnsLeft !== null && (
             <span className="text-sm text-[color:var(--v2-text-soft)]">
               <Tri
-                bm={`· boleh tanya ${turnsLeft} lagi`}
-                zh={`· 这轮还能问 ${turnsLeft} 题`}
-                en={`· ${turnsLeft} left this conversation`}
+                bm={`· ${turnsLeft} lagi sebelum dilipat`}
+                zh={`· 再 ${turnsLeft} 题会压成摘要`}
+                en={`· ${turnsLeft} more before it folds`}
               />
             </span>
           )}
@@ -641,9 +664,9 @@ export function AIPanel({
                 the live count with every answer — printing a mirror constant
                 is how the two would drift. */}
             <Tri
-              bm={`Satu perbualan ada had soalan.${turnsLeft === null ? "" : ` Perbualan ini tinggal ${turnsLeft}.`} Perbualan baharu bermula semula — kuota bulanan tidak terjejas.`}
-              zh={`一轮对话的题数有上限。${turnsLeft === null ? "" : `这轮还剩 ${turnsLeft} 题。`}换新对话会重新计算，不影响本月用量。`}
-              en={`One conversation has a question limit.${turnsLeft === null ? "" : ` This one has ${turnsLeft} left.`} A new conversation resets that — the monthly allowance is unaffected.`}
+              bm={`Apabila perbualan menjadi panjang, MinitAI melipat bahagian awal menjadi ringkasan dan terus menjawab — lipatan itu satu panggilan AI (${foldCost.bm}).${turnsLeft === null ? "" : ` ${turnsLeft} soalan lagi sebelum lipatan seterusnya.`} Perbualan baharu bermula bersih.`}
+              zh={`对话太长时，MinitAI 会把前面压成摘要再继续答 —— 压缩本身是一次 AI 呼叫（${foldCost.zh}）。${turnsLeft === null ? "" : `再 ${turnsLeft} 题会压一次。`}换新对话则从头开始。`}
+              en={`When a conversation grows long, MinitAI folds the earlier part into a summary and carries on — the fold is one AI call (${foldCost.en}).${turnsLeft === null ? "" : ` ${turnsLeft} more before the next fold.`} A new conversation starts clean.`}
             />
           </p>
           <p className="text-base">
@@ -732,6 +755,18 @@ export function AIPanel({
                   />
                   <ArrowRight className="h-5 w-5" strokeWidth={2} />
                 </Link>
+              )}
+              {/* 130 §15-2: a folded summary says what it is and that the
+                  fold used allowance. */}
+              {turn.compressed && (
+                <p className="mt-2 text-xs text-[color:var(--v2-text-soft)]">
+                  🧵{" "}
+                  <Tri
+                    bm={`Perbualan sudah panjang — MinitAI melipat bahagian awal menjadi ringkasan ini (${foldCost.bm}).`}
+                    zh={`对话太长了 —— MinitAI 把前面的部分压成了这段摘要（这次${foldCost.zh}）。`}
+                    en={`The conversation grew long — MinitAI folded the earlier part into this summary (${foldCost.en}).`}
+                  />
+                </p>
               )}
               {/* K1 ④: a prepared answer says so — honest about being free. */}
               {turn.free && (

@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   checkChineseNamesSurvive,
   checkInventedAgent,
+  checkLockedTokens,
   chineseNameRuns,
   droppedChineseNames,
   earnedKind,
   enforceKinds,
+  lockedTokens,
 } from "./minutes-guards";
 import { minutesPlanSchema } from "./minutes-compose";
 
@@ -291,5 +293,73 @@ describe("125 §1-3 — droppedChineseNames, the document page's last net", () =
 
   it("protected text (org name, roster, signer) is never a candidate", () => {
     expect(droppedChineseNames(["陈氏宗祠 主席致词"], "Ucapan Pengerusi.", ["陈氏宗祠"])).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 130 §15-1 — the locked list checked by code: amounts, IC numbers and numeric
+// dates must survive digit for digit; nothing of that kind may be added.
+// Fictional figures, a fictional IC (the prompt's own worked example).
+// ---------------------------------------------------------------------------
+describe("130 §15-1 lockedTokens — what the guard reads off a line", () => {
+  it("amounts normalise across separators and a trailing .00", () => {
+    expect(lockedTokens("Derma RM1,000 diterima").amounts).toEqual(["1000"]);
+    expect(lockedTokens("Derma RM 1000.00 diterima").amounts).toEqual(["1000"]);
+    expect(lockedTokens("Bayaran RM250.50").amounts).toEqual(["250.50"]);
+  });
+  it("IC numbers and numeric dates, in their common spellings", () => {
+    const t = lockedTokens("lanti AJK Tan Kim Loo 800101-07-1234 pada 20/5/2026, mesyuarat 2026-06-01");
+    expect(t.ics).toEqual(["800101-07-1234"]);
+    expect(t.dates).toEqual(["20/5/26", "1/6/26"]);
+  });
+});
+
+describe("130 §15-1 checkLockedTokens — changed or added tokens send the plan back", () => {
+  const plan = (text: string, source = 0) =>
+    minutesPlanSchema.parse({ sections: [{ heading: "A", items: [{ source, text }] }], unresolved: [] });
+  const SRC = ["Baki tabung RM7,680 pada 20/5/2026; No. K/P 800101-07-1234."];
+
+  it("the same facts in fuller prose pass — separators, .00 and a date in words are not changes", () => {
+    const ok = checkLockedTokens(
+      plan("Baki tabung dilaporkan sebanyak RM 7680.00 pada 20 Mei 2026; No. K/P 800101-07-1234 dicatat."),
+      SRC,
+    );
+    expect(ok).toEqual({ ok: true, changed: [] });
+  });
+
+  it("an amount that changed is caught", () => {
+    expect(checkLockedTokens(plan("Baki tabung RM7,860 pada 20/5/2026; No. K/P 800101-07-1234."), SRC).changed).toEqual([0]);
+  });
+
+  it("an amount out of nowhere is caught; a bare figure the page carried may gain its RM", () => {
+    expect(checkLockedTokens(plan("Baki tabung RM7,680 dan RM500 lagi pada 20/5/2026; No. K/P 800101-07-1234."), SRC).changed).toEqual([0]);
+    expect(checkLockedTokens(plan("Perbezaan RM460 dicatat."), ["Perbezaan 460 dicatat."]).ok).toBe(true);
+  });
+
+  it("an IC number changed by one digit, or dropped, is caught", () => {
+    expect(checkLockedTokens(plan("Baki tabung RM7,680 pada 20/5/2026; No. K/P 800101-07-1235."), SRC).changed).toEqual([0]);
+    expect(checkLockedTokens(plan("Baki tabung RM7,680 pada 20/5/2026."), SRC).changed).toEqual([0]);
+  });
+
+  it("a numeric date the page did not carry is caught; the page's own date in another spelling is not", () => {
+    expect(checkLockedTokens(plan("Baki tabung RM7,680 pada 21/5/2026; No. K/P 800101-07-1234."), SRC).changed).toEqual([0]);
+    expect(checkLockedTokens(plan("Baki tabung RM7,680 pada 20-05-26; No. K/P 800101-07-1234."), SRC).ok).toBe(true);
+  });
+
+  it("a merged item is checked against the union of its sources", () => {
+    const merged = minutesPlanSchema.parse({
+      sections: [{ heading: "A", items: [{ source: [0, 1], text: "Derma RM100 dan RM200 diterima." }] }],
+      unresolved: [],
+    });
+    expect(checkLockedTokens(merged, ["Derma RM100.", "Derma RM200."]).ok).toBe(true);
+    const wrong = minutesPlanSchema.parse({
+      sections: [{ heading: "A", items: [{ source: [0, 1], text: "Derma RM100 dan RM300 diterima." }] }],
+      unresolved: [],
+    });
+    expect(checkLockedTokens(wrong, ["Derma RM100.", "Derma RM200."]).changed).toEqual([0, 1]);
+  });
+
+  it("a line with no locked tokens is never flagged", () => {
+    expect(checkLockedTokens(plan("Mesyuarat ditangguhkan."), ["散会"]).ok).toBe(true);
   });
 });

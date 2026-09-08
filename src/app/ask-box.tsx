@@ -101,7 +101,7 @@ import {
 import { isTurnArray } from "@/components/v3/ai-panel";
 import { usePersistentState } from "@/lib/use-persistent-state";
 import { useScopedKey } from "@/lib/storage-scope";
-import { pctOfQuota } from "@/lib/quota-display";
+import { costPhrase, pctOfQuota } from "@/lib/quota-display";
 
 /** §1 (105): the queue's estimate reads in whole minutes — "about 0 minutes"
  *  is not an estimate anybody believes, so it never goes below 1. */
@@ -149,6 +149,8 @@ type Turn = {
   changes?: AgentChangeInfo[];
   /** §0-2a: device-side changes this turn made (language) — old → new + undo. */
   uiChanges?: AgentUiChangeInfo[];
+  /** 130 §15-2: this turn is the summary the older turns were folded into. */
+  compressed?: boolean;
 };
 
 /** One visible step of the agent's work (§3 — wow 的來源: 邊做邊亮步驟). */
@@ -174,6 +176,8 @@ type ChatOk = {
   usedPct: number | null;
   turnsUsed: number;
   maxTurns: number;
+  /** 130 §15-2: the older turns were folded into this summary (charged). */
+  compressed?: { summary: string; keptTurns: number } | null;
 };
 
 // IntakeOk — the reader's answer shape — moved to src/lib/intake-client.ts (130 §9).
@@ -704,18 +708,34 @@ export function AskBox({
       for (const c of uiChanges) {
         if (isLangMode(c.to)) setMode(c.to);
       }
-      setTurns((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          text: tidyReply(body.reply),
-          button: body.button,
-          sources: body.sources ?? null,
-          lookups: body.lookups ?? null,
-          changes: body.changes && body.changes.length > 0 ? body.changes : undefined,
-          uiChanges: uiChanges.length > 0 ? uiChanges : undefined,
-        },
-      ]);
+      const replyTurn: Turn = {
+        role: "assistant",
+        text: tidyReply(body.reply),
+        button: body.button,
+        sources: body.sources ?? null,
+        lookups: body.lookups ?? null,
+        changes: body.changes && body.changes.length > 0 ? body.changes : undefined,
+        uiChanges: uiChanges.length > 0 ? uiChanges : undefined,
+      };
+      if (body.compressed) {
+        // 130 §15-2: the server folded the older turns into a summary (a
+        // charged action). The transcript becomes: the summary, the kept
+        // tail, this question, this answer — so the next turn does not fold
+        // again. Free (prepared) turns older than the tail fold away too.
+        const folded = body.compressed;
+        setTurns((prev) => {
+          const sent = prev.slice(0, -1).filter((x) => !x.free);
+          const tail = sent.slice(-folded.keptTurns);
+          return [
+            { role: "assistant", text: folded.summary, compressed: true },
+            ...tail,
+            prev[prev.length - 1],
+            replyTurn,
+          ];
+        });
+      } else {
+        setTurns((prev) => [...prev, replyTurn]);
+      }
       // §0-2c: the reply said "drafting it now" — run the spoken account
       // through the real pipeline. The story is every USER turn (the agent's
       // own words must never become source material — Hard Rule 1).
@@ -1642,6 +1662,18 @@ export function AskBox({
                       </Link>
                     </Button>
                   )}
+                  {/* 130 §15-2: a folded summary says what it is and that
+                      the fold used allowance. */}
+                  {turn.compressed && (
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      🧵{" "}
+                      <Tri
+                        bm={`Perbualan sudah panjang — MinitAI melipat bahagian awal menjadi ringkasan ini (${costPhrase(pctOfQuota(1, monthlyQuota)).bm}).`}
+                        zh={`对话太长了 —— MinitAI 把前面的部分压成了这段摘要（这次${costPhrase(pctOfQuota(1, monthlyQuota)).zh}）。`}
+                        en={`The conversation grew long — MinitAI folded the earlier part into this summary (${costPhrase(pctOfQuota(1, monthlyQuota)).en}).`}
+                      />
+                    </p>
+                  )}
                   {/* K1 ④: a prepared answer says so — honest about being free. */}
                   {turn.free && (
                     <p className="mt-2 text-sm text-muted-foreground">
@@ -1767,12 +1799,15 @@ export function AskBox({
                     </Button>
                   )}
                 />
+                {/* 130 §15-2: no counter of refusals any more — the conversation
+                    folds itself when it grows long, and that fold costs
+                    allowance, so the sentence says that instead. */}
                 {turnsLeft !== null && (
                   <span className="text-sm text-muted-foreground">
                     <Tri
-                      bm={`Boleh tanya ${turnsLeft} lagi dalam perbualan ini`}
-                      zh={`这轮还能问 ${turnsLeft} 题`}
-                      en={`${turnsLeft} left in this conversation`}
+                      bm={`Selepas ${turnsLeft} soalan lagi, bahagian awal dilipat menjadi ringkasan (${costPhrase(pctOfQuota(1, monthlyQuota)).bm})`}
+                      zh={`再问 ${turnsLeft} 题后，前面的会自动压成摘要（${costPhrase(pctOfQuota(1, monthlyQuota)).zh}）`}
+                      en={`After ${turnsLeft} more, the earlier part is folded into a summary (${costPhrase(pctOfQuota(1, monthlyQuota)).en})`}
                     />
                   </span>
                 )}
