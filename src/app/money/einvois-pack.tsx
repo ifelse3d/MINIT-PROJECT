@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tri, useTriText } from "@/components/language-provider";
@@ -35,14 +35,15 @@ export function EInvoisPack({
   const t = useTriText();
   const { donations, documentOrgName, availableMonths, setError } = useRegister();
 
-  const [einvoisMonth, setEinvoisMonth] = useState<string>(() => todayIsoMalaysia().slice(0, 7));
+  const [pickedMonth, setEinvoisMonth] = useState<string>(() => todayIsoMalaysia().slice(0, 7));
   // Months are derived from the donation dates, so the picker only ever offers
-  // months that actually have records.
-  useEffect(() => {
-    if (availableMonths.length > 0 && !availableMonths.includes(einvoisMonth)) {
-      setEinvoisMonth(availableMonths[0]);
-    }
-  }, [availableMonths, einvoisMonth]);
+  // months that actually have records. The month in force is DERIVED (130 §5):
+  // the person's pick when the records have it, else the first month that
+  // does — no effect writing state back after the fact.
+  const einvoisMonth =
+    availableMonths.length > 0 && !availableMonths.includes(pickedMonth)
+      ? availableMonths[0]
+      : pickedMonth;
 
   const [downloadBusy, setDownloadBusy] = useState<string | null>(null);
 
