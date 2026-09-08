@@ -293,6 +293,20 @@ async function loadFeedback(): Promise<
   }
 }
 
+/** app_errors rows of the last 30 days that carry no org — the ones the
+ *  per-org table cannot show. (Its own function: a clock read is not a thing
+ *  a component render may do — 130 §5, react-hooks/purity.) */
+async function countUnattributedErrors(): Promise<number> {
+  const admin = getSupabase();
+  const d30 = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+  const r = await admin
+    .from("app_errors")
+    .select("id", { count: "exact", head: true })
+    .is("org_id", null)
+    .gte("created_at", d30);
+  return r.count ?? 0;
+}
+
 export default async function AdminPage() {
   const user = await getSessionUser();
   if (!isAdmin(user?.email)) notFound();
@@ -304,16 +318,7 @@ export default async function AdminPage() {
     // §0-6 (102): current per-plan pools (DB-first, compiled fallback).
     loadPlanQuotas(),
   ]);
-  const unattributedErrors = await (async () => {
-    const admin = getSupabase();
-    const d30 = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
-    const r = await admin
-      .from("app_errors")
-      .select("id", { count: "exact", head: true })
-      .is("org_id", null)
-      .gte("created_at", d30);
-    return r.count ?? 0;
-  })();
+  const unattributedErrors = await countUnattributedErrors();
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 pb-10">
