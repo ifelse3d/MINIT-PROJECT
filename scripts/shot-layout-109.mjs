@@ -43,7 +43,8 @@ const SERVICE = env.SUPABASE_SERVICE_ROLE_KEY;
 const TEST_EMAIL = "zzz-shot-layout-109@example.com";
 const TEST_PASSWORD = "E2e#" + Math.random().toString(36).slice(2, 10) + "Aa1";
 const ORG_NAME = "ZZZ 109 版面測試社團（可刪）";
-const BASE = "http://localhost:3000";
+// 126: port 3000 may be taken by J's other project — e2e runs on E2E_BASE.
+const BASE = process.env.E2E_BASE ?? "http://localhost:3000";
 /** SHOT_TAG=before names the files for the "before" pass — run it with the
  *  layout files checked out at the previous commit. There the assertions are
  *  MEASUREMENTS, not gates: their whole point is that they do not hold yet. */
@@ -108,8 +109,16 @@ const field = (value, snippet) => ({
   source_ref: { location: "photo 1", snippet },
 });
 
-/** What /api/intake would answer for a paper carrying two meetings — the
- *  ask-back card ("which meeting?") is state 3. */
+/** 130 §6 (re-taught after 116 removed the which-meeting card): what
+ *  /api/intake answers when the request carries NO kind — MinitAI "cannot
+ *  place the page" and ASKS, with one-tap answers. That ask-back card is
+ *  state 3. Nothing is read, nothing is charged. */
+const CANNED_UNKNOWN = { kind: "unknown" };
+
+/** What /api/intake answers once a kind is known (a card was pressed, or the
+ *  person answered the ask-back): one plain meeting reading — ONE decision,
+ *  so two pages of it never look like "the same meeting twice" (105 §3's
+ *  repeat-pages card needs two). The finished-product card is state 4. */
 const CANNED = {
   kind: "meeting_notes",
   page: "/minutes",
@@ -123,10 +132,6 @@ const CANNED = {
     resolutions: [{ text: field("Contoh keputusan", "Contoh keputusan") }],
     figures: [],
     office_bearers: [],
-    other_meetings: [
-      { date_text: field("8/7/26", "开会议 8/7/26") },
-      { date_text: field("18/7", "18/7 会议") },
-    ],
   },
 };
 
@@ -182,15 +187,31 @@ async function run() {
       localStorage.setItem("minit.lang.v2", "zh");
       document.cookie = "minit-lang=zh;path=/";
     } catch {}
+    // 130 §6: tell the interceptor what kind the app sent (read from the
+    // FormData itself), so the canned answer can follow the real request.
+    const realFetch = window.fetch;
+    window.fetch = function (input, init) {
+      try {
+        const url = typeof input === "string" ? input : input?.url ?? "";
+        if (url.includes("/api/intake") && init?.body instanceof FormData) {
+          init.headers = { ...(init.headers ?? {}), "x-shot-kind": String(init.body.get("kind") ?? "") };
+        }
+      } catch {}
+      return realFetch.call(this, input, init);
+    };
   });
 
   await page.setRequestInterception(true);
   page.on("request", (req) => {
     if (req.url().includes("/api/intake") && req.method() === "POST") {
+      // The page's own fetch wrapper copies the FormData's "kind" into a
+      // header, so the canned answer follows what the app actually sent:
+      // no kind → "which kind is this?"; a kind → the reading.
+      const kind = req.headers()["x-shot-kind"] ?? "";
       void req.respond({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify(CANNED),
+        body: JSON.stringify(kind === "" ? CANNED_UNKNOWN : CANNED),
       });
       return;
     }
@@ -249,7 +270,7 @@ async function run() {
       await new Promise((r) => setTimeout(r, 400));
       const s2 = await measure(page);
 
-      // ---- state 3: an ask-back card ("which meeting?") -------------------
+      // ---- state 3: an ask-back card ("which kind of page is this?") -----
       await page.evaluate(() => {
         const b = [...document.querySelectorAll("button")].find((x) =>
           (x.textContent ?? "").includes("送出"),
@@ -257,9 +278,7 @@ async function run() {
         b?.click();
       });
       await page.waitForFunction(
-        () =>
-          document.querySelector('[data-card="meeting-choice"]') !== null ||
-          (document.body.innerText || "").includes("不止一场会议"),
+        () => (document.body.innerText || "").includes("是哪一种"),
         { timeout: 20000 },
       );
       await new Promise((r) => setTimeout(r, 500));
@@ -267,10 +286,11 @@ async function run() {
       await page.screenshot({ path: path.join(REPORTS, `layout-109-${TAG}-${label}-2-cards.png`) });
 
       // ---- state 4: the finished-product card ----------------------------
-      // "Keep it all in one — use what was read (free)": no vendor, no money.
+      // Answer "meeting notes": the re-send carries the kind, the canned
+      // reading comes back, the finished-product card lands. No vendor.
       await page.evaluate(() => {
         const b = [...document.querySelectorAll("button")].find((x) =>
-          (x.textContent ?? "").includes("全部放一份"),
+          (x.textContent ?? "").includes("会议笔记"),
         );
         b?.click();
       });

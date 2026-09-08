@@ -44,7 +44,8 @@ const SERVICE = env.SUPABASE_SERVICE_ROLE_KEY;
 const TEST_EMAIL = "zzz-shot-cards-113@example.com";
 const TEST_PASSWORD = "E2e#" + Math.random().toString(36).slice(2, 10) + "Aa1";
 const ORG_NAME = "ZZZ 113 入口卡測試社團（可刪）";
-const BASE = "http://localhost:3000";
+// 126: port 3000 may be taken by J's other project — e2e runs on E2E_BASE.
+const BASE = process.env.E2E_BASE ?? "http://localhost:3000";
 const TAG = process.env.SHOT_TAG ?? "after";
 
 /** 🔴 §4-2: the floors 110 recorded for the conversation area. Not a ratio —
@@ -109,8 +110,16 @@ const field = (value, snippet) => ({
   source_ref: { location: "photo 1", snippet },
 });
 
-/** What /api/intake would answer for a paper carrying two meetings — the
- *  ask-back card ("which meeting?") is state 3, exactly as in 109. */
+/** 130 §6 (re-taught after 116 removed the which-meeting card): what
+ *  /api/intake answers when the request carries NO kind — MinitAI "cannot
+ *  place the page" and ASKS, with one-tap answers. That ask-back card is
+ *  state 3. Nothing is read, nothing is charged. */
+const CANNED_UNKNOWN = { kind: "unknown" };
+
+/** What /api/intake answers once a kind is known (a card was pressed, or the
+ *  person answered the ask-back): one plain meeting reading — ONE decision,
+ *  so two pages of it never look like "the same meeting twice" (105 §3's
+ *  repeat-pages card needs two). The finished-product card is state 4. */
 const CANNED = {
   kind: "meeting_notes",
   page: "/minutes",
@@ -124,10 +133,6 @@ const CANNED = {
     resolutions: [{ text: field("Contoh keputusan", "Contoh keputusan") }],
     figures: [],
     office_bearers: [],
-    other_meetings: [
-      { date_text: field("8/7/26", "开会议 8/7/26") },
-      { date_text: field("18/7", "18/7 会议") },
-    ],
   },
 };
 
@@ -207,6 +212,8 @@ function instrument() {
           kind: init.body.get("kind") ?? null,
           context: init.body.get("context") ?? null,
         });
+        // 130 §6: the interceptor answers by what was actually sent.
+        init.headers = { ...(init.headers ?? {}), "x-shot-kind": String(init.body.get("kind") ?? "") };
       }
     } catch {}
     return realFetch.call(this, input, init);
@@ -218,6 +225,60 @@ function instrument() {
 }
 
 const card = (id) => `[data-probe="entry-card"][data-card="${id}"]`;
+
+/** 130 §6: the conversation survives page changes on purpose (F-4), and a
+ *  finished-product card from the previous step folds the entry cards away
+ *  (§2) — so every step that needs the CARDS starts from a genuinely empty
+ *  conversation. (116 removed the which-meeting card; a reading now lands as
+ *  a product card straight away, which is what made this necessary.) */
+/** Click an entry card and PROVE its React handler ran: cards 1–3 open the
+ *  file chooser, which the instrument records. A click that landed before
+ *  hydration opens nothing — then wait and click again (bounded), instead of
+ *  uploading with no kind and blaming the app. */
+async function pressCard(page, id) {
+  for (let attempt = 0; attempt < 8; attempt++) {
+    await page.evaluate(() => {
+      window.__pickerOpens = [];
+    });
+    await page.click(card(id));
+    await new Promise((r) => setTimeout(r, 150));
+    const opens = await page.evaluate(() => window.__pickerOpens.length);
+    if (opens === 1) return attempt;
+    await new Promise((r) => setTimeout(r, 400));
+  }
+  // Say what is in the way before giving up — a screenshot and the element
+  // actually under the card's centre.
+  const where = await page.evaluate((sel) => {
+    const el = document.querySelector(sel);
+    if (!el) return "card not in DOM";
+    const r = el.getBoundingClientRect();
+    const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    const shell = el.closest('[data-probe="entry-cards-shell"]');
+    return JSON.stringify({
+      rect: { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) },
+      hit: hit ? `${hit.tagName}.${String(hit.className).slice(0, 60)}` : null,
+      inert: shell?.hasAttribute("inert") ?? null,
+      shellH: shell ? Math.round(shell.getBoundingClientRect().height) : null,
+    });
+  }, card(id));
+  await page.screenshot({ path: path.join(REPORTS, `cards-113-${TAG}-debug-${id}.png`) });
+  throw new Error(`card ${id} never opened the chooser — ${where}`);
+}
+
+async function freshHome(page) {
+  // Navigate FIRST: the previous step's read may still be finishing, and
+  // its product card would be written to localStorage right after a clear
+  // done on the live page (that race produced a folded, inert card row and
+  // "kind: null" in the intake call). A fresh document has nothing in
+  // flight; clear there, then load once more.
+  await page.goto(BASE, { waitUntil: "networkidle2" });
+  await page.evaluate(() => {
+    for (const k of Object.keys(localStorage)) {
+      if (k.includes("chat.home")) localStorage.removeItem(k);
+    }
+  });
+  await page.goto(BASE, { waitUntil: "networkidle2" });
+}
 
 async function clickText(page, text) {
   return page.evaluate((t) => {
@@ -245,10 +306,14 @@ async function run() {
   await page.setRequestInterception(true);
   page.on("request", (req) => {
     if (req.url().includes("/api/intake") && req.method() === "POST") {
+      // The page's own fetch wrapper copies the FormData's "kind" into a
+      // header, so the canned answer follows what the app actually sent:
+      // no kind → "which kind is this?"; a kind → the reading.
+      const kind = req.headers()["x-shot-kind"] ?? "";
       void req.respond({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify(CANNED),
+        body: JSON.stringify(kind === "" ? CANNED_UNKNOWN : CANNED),
       });
       return;
     }
@@ -427,9 +492,9 @@ async function run() {
       ["money", "ledger_page"],
       ["constitution", "constitution"],
     ]) {
-      await page.goto(BASE, { waitUntil: "networkidle2" });
+      await freshHome(page);
       await new Promise((r) => setTimeout(r, 700));
-      await page.click(card(id));
+      await pressCard(page, id);
       const input = await page.$('input[type="file"]');
       await input.uploadFile(...files);
       await page.waitForFunction(
@@ -451,7 +516,7 @@ async function run() {
 
     // The classifier is NOT deleted: a paper that simply arrives is still
     // asked about. This is the assertion that keeps the shortcut a shortcut.
-    await page.goto(BASE, { waitUntil: "networkidle2" });
+    await freshHome(page);
     await new Promise((r) => setTimeout(r, 700));
     {
       const input = await page.$('input[type="file"]');
@@ -475,7 +540,7 @@ async function run() {
     // =====================================================================
     // §2 — the cards get out of the way, and come back
     // =====================================================================
-    await page.goto(BASE, { waitUntil: "networkidle2" });
+    await freshHome(page);
     await new Promise((r) => setTimeout(r, 900));
     const openHeight = (await measure(page)).cards;
     check("§2: the cards are on screen while the conversation is empty", openHeight > 100, `${openHeight}px`);
@@ -547,12 +612,7 @@ async function run() {
       // one opens — and "empty state, with the cards" would silently have
       // been measured and photographed with a conversation in it. Found by
       // looking at the phone screenshot, not by a failing assertion.
-      await page.evaluate(() => {
-        for (const k of Object.keys(localStorage)) {
-          if (k.includes("chat.home")) localStorage.removeItem(k);
-        }
-      });
-      await page.goto(BASE, { waitUntil: "networkidle2" });
+      await freshHome(page);
       await new Promise((r) => setTimeout(r, 900));
       const cardsUp = await page.evaluate(
         () =>
@@ -583,19 +643,18 @@ async function run() {
           path: path.join(REPORTS, `cards-113-${TAG}-phone-2-sent.png`),
         });
 
-      // state 3: an ask-back card ("which meeting?")
+      // state 3: an ask-back card ("which kind of page is this?")
       await clickText(page, "送出");
       await page.waitForFunction(
-        () =>
-          document.querySelector('[data-card="meeting-choice"]') !== null ||
-          (document.body.innerText || "").includes("不止一场会议"),
+        () => (document.body.innerText || "").includes("是哪一种"),
         { timeout: 20000 },
       );
       await new Promise((r) => setTimeout(r, 500));
       const s3 = await measure(page);
 
-      // state 4: the finished-work card ("keep it all in one" — free)
-      await clickText(page, "全部放一份");
+      // state 4: the finished-work card (answer "meeting notes" — the canned
+      // reading comes back; no vendor)
+      await clickText(page, "会议笔记");
       await page.waitForFunction(
         () => document.querySelector('[data-probe="product-card"]') !== null,
         { timeout: 20000 },
