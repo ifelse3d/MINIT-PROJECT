@@ -13,9 +13,9 @@ import {
   mergeEvents,
   saveEvents,
   sortedByDate,
-  useLocalEvents,
   type SimpleEvent,
 } from "@/lib/local-events";
+import { useLocalEvents } from "@/lib/use-local-events";
 import { deleteEvent, loadOrgEvents, saveEvent } from "./actions";
 import { ActivityCalendar } from "./activity-calendar";
 import { CalendarControls } from "./calendar-controls";

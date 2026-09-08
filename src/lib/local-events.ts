@@ -35,7 +35,6 @@ export type SimpleEvent = {
   derived?: boolean;
 };
 
-import { useSyncExternalStore } from "react";
 import { adoptLegacyKey, scopedKey } from "@/lib/storage-scope-core";
 
 /** Pre-S0-4 global key — adopted into the scoped key once, then removed. */
@@ -69,7 +68,8 @@ export function saveEvents(events: SimpleEvent[]): void {
 
 // ---------------------------------------------------------------------------
 // 130 §5: the device's events as a SUBSCRIBABLE store, so a screen reads them
-// with useSyncExternalStore instead of `useEffect(() => setEvents(loadEvents()))`
+// with useSyncExternalStore (the hook is in src/lib/use-local-events.ts)
+// instead of `useEffect(() => setEvents(loadEvents()))`
 // — the SSR-hydration pattern the lint rejects (setState in an effect). The
 // server snapshot is the empty list, the client snapshot is what is stored;
 // React swaps the one for the other after hydration with no mismatch. Every
@@ -124,11 +124,15 @@ function serverEventsSnapshot(): SimpleEvent[] {
   return EMPTY_EVENTS;
 }
 
-/** This device's events, live: empty on the server and during hydration,
- *  the stored list (sorted by date) right after, updated on every save. */
-export function useLocalEvents(): SimpleEvent[] {
-  return useSyncExternalStore(subscribeEvents, eventsSnapshot, serverEventsSnapshot);
-}
+/** The three functions useSyncExternalStore wants — exported as a bundle so
+ *  the React hook can live in a "use client" file (src/lib/use-local-events.ts):
+ *  this module is also imported by server actions, so it must not import
+ *  React itself. */
+export const localEventsStore = {
+  subscribe: subscribeEvents,
+  getSnapshot: eventsSnapshot,
+  getServerSnapshot: serverEventsSnapshot,
+};
 
 export function sortedByDate(events: SimpleEvent[]): SimpleEvent[] {
   return [...events].sort((a, b) => a.dateIso.localeCompare(b.dateIso));

@@ -13,7 +13,7 @@ import {
   DEADLINE_LABELS,
   type Deadline,
 } from "@/lib/deadlines";
-import { useLocalEvents } from "@/lib/local-events";
+import { useLocalEvents } from "@/lib/use-local-events";
 import { useEinvoisVisible } from "@/lib/einvois-pref";
 import { mergeUpcoming } from "@/lib/standard-deadlines";
 
