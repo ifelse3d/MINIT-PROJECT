@@ -5,6 +5,8 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
+**🟣 130 号单已开（2026-09-09 凌晨，J：「还没做的都写成 PROMPT，做好所有」）：`_J-要做的事X-施工单-上台后总清场-全部残项-20260909.md`——全部残项分 §3–§19；一律在分支 `after-stage` 做，J 说「上台完了」才 merge 进 main（9/9 5:15 PM 上台前线上不动）。**
+
 **🟣 129 号追加（2026-09-08 深夜，上台前夜，报告在 `_J-要做的事
 9-…md`，commit `16fbd76`＋`b761fdf` 已 push、fetch 实查同步）：J 线上抓到 eROSES 贴入页「Tempat」还是 `会议室`＋红字——文件层 125 已套词汇表、贴入页两条路（`eroses-meeting.ts` 登记页、`paste-pack.ts` 年度呈报第 1 步）拿原字。两处都改成同一张 `applyBmGlossary`＋同一套围名（名册／职位／签名／机构名；`buildPastePack` 多一个可选 `{orgName}`）；顺手把 125 §2 漏掉的登记页「Jumlah Kehadiran」改吃 `headcountForDocument`（确认 52 先、名单其次）。测试 1577 过（+8）、tsc 0、build ×2。**线上只看到页面正常出，`会议室→Bilik Mesyuarat` 那格没在线上亲眼看到**（浏览器机构不是 TESTING1，没切）。没动文件层。**第二轮（J「都做」）：A 登记页三格提示只印一次（`4f579a9`）；C 写好的 BM 文件跟草稿一起存（`SavedMinutes.aiDraft`／cloud `DraftPayload.aiDraft`，还原时 tag 到同一个 extraction 物件，127 auto-write 不再重扣，`2dd7143`）；D `struckDoubleSuggestion`（重复字→词汇表词才建议，FieldRow 加 `suggestionsLead`）＋核对页 figures 两栏一行（`a1e0b61`）。vitest 1581、tsc 0、build ✓、eslint 基准同（那个 set-state 洞行号 502→526）。全 push 同步。**没在浏览器跑过**——J 明早真件＝验收。**
 
