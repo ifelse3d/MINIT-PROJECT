@@ -54,10 +54,12 @@ export function MonthPicker({
   const currentMonth = Number(month.slice(5, 7));
 
   // Reopening should always start from the month on screen, not from wherever
-  // the year stepper was left last time.
-  useEffect(() => {
-    if (open) setYear(currentYear);
-  }, [open, currentYear]);
+  // the year stepper was left last time — done in the tap that opens it
+  // (130 §5), not by an effect writing state after the render.
+  function toggleOpen() {
+    if (!open) setYear(currentYear);
+    setOpen(!open);
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -90,7 +92,7 @@ export function MonthPicker({
     <div ref={wrapRef} className="relative">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggleOpen}
         aria-expanded={open}
         aria-haspopup="dialog"
         className="flex min-h-12 items-center gap-2.5 rounded-md border-2 border-[color:var(--v2-outline-border)] bg-white/80 px-4 text-xl font-semibold tabular-nums hover:bg-white dark:bg-white/10"
