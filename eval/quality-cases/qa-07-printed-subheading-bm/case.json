@@ -1,0 +1,76 @@
+{
+  "type": "minutes_quality",
+  "description": "130 §17 (with 130 §3/§4): FICTIONAL printed committee minit whose reader dropped a sub-heading's title — section 2.1 came back with an empty section_title and the title as its first paragraph (real page A's shape). The compose layer must put the title back (no `## Agenda 2.1:` empty heading), print the date the BM way (dd-mm-yyyy), keep the RM amounts and the appointment line verbatim, and reconcile the treasurer's figures as balanced. Entirely fictional (A3).",
+  "orgName": "PERSATUAN CONTOH SEJAHTERA NEGERI PERLIS",
+  "language": "bm",
+  "extraction": {
+    "meeting_type": { "value": "committee", "confidence": "confirmed", "source_ref": { "location": "page 1, title", "snippet": "MESYUARAT JAWATANKUASA KALI KE-3" } },
+    "meeting_date": { "value": "2026-06-14", "confidence": "confirmed", "source_ref": { "location": "page 1, header", "snippet": "TARIKH : 14 Jun 2026" } },
+    "meeting_time": { "value": "8.00 PM – 9.30 PM", "confidence": "confirmed", "source_ref": { "location": "page 1, header", "snippet": "MASA : 8.00 PM – 9.30 PM" } },
+    "meeting_venue": { "value": "Dewan Contoh, Kangar", "confidence": "confirmed", "source_ref": { "location": "page 1, header", "snippet": "TEMPAT : Dewan Contoh, Kangar" } },
+    "attendance_count": { "value": "AJK yang hadir : 9 orang", "confidence": "confirmed", "source_ref": { "location": "page 1, header", "snippet": "AJK yang hadir : 9 orang" } },
+    "attendance_confirmed": 9,
+    "attendees": [],
+    "resolutions": [
+      {
+        "text": { "value": "Pengerusi mengalu-alukan kehadiran semua ahli jawatankuasa dan mengucapkan terima kasih atas kerjasama semua pihak.", "confidence": "confirmed", "source_ref": { "location": "page 1, agenda 1", "snippet": "Pengerusi mengalu-alukan" } },
+        "kind": "info",
+        "section_no": "1",
+        "section_title": "Ucapan Pengerusi"
+      },
+      {
+        "text": { "value": "Minit mesyuarat yang lalu dibentangkan oleh Setiausaha dan disahkan sebulat suara.", "confidence": "confirmed", "source_ref": { "location": "page 1, agenda 2", "snippet": "Minit mesyuarat yang lalu" } },
+        "kind": "decision",
+        "section_no": "2",
+        "section_title": "Pengesahan Minit Mesyuarat Yang Lalu"
+      },
+      {
+        "text": { "value": "Agenda 2.1: Kekosongan jawatan Ahli Jawatankuasa", "confidence": "confirmed", "source_ref": { "location": "page 1, agenda 2.1", "snippet": "Agenda 2.1: Kekosongan jawatan" } },
+        "kind": "info",
+        "section_no": "2.1",
+        "section_title": ""
+      },
+      {
+        "text": { "value": "Encik Rosli Contoh dilantik mengisi kekosongan jawatan Ahli Jawatankuasa sehingga mesyuarat agung akan datang.", "confidence": "confirmed", "source_ref": { "location": "page 1, agenda 2.1", "snippet": "Encik Rosli Contoh dilantik" } },
+        "kind": "decision",
+        "section_no": "2.1",
+        "section_title": ""
+      },
+      {
+        "text": { "value": "Bendahari melaporkan baki bawa ke hadapan RM7,680.00, pendapatan RM13,600.00 dan perbelanjaan RM10,150.00; baki semasa RM11,130.00.", "confidence": "confirmed", "source_ref": { "location": "page 2, agenda 3", "snippet": "Bendahari melaporkan" } },
+        "kind": "info",
+        "section_no": "3",
+        "section_title": "Laporan Kewangan"
+      },
+      {
+        "text": { "value": "Tiada perkara lain dibangkitkan. Mesyuarat ditangguhkan pada 9.30 PM.", "confidence": "confirmed", "source_ref": { "location": "page 2, agenda 4", "snippet": "Tiada perkara lain" } },
+        "kind": "info",
+        "section_no": "4",
+        "section_title": "Hal-hal Lain"
+      }
+    ],
+    "figures": [
+      { "description": { "value": "Baki bawa ke hadapan", "confidence": "confirmed", "source_ref": { "location": "page 2", "snippet": "baki bawa ke hadapan RM7,680.00" } }, "amount_cents": { "value": 768000, "confidence": "confirmed", "source_ref": { "location": "page 2", "snippet": "RM7,680.00" } }, "role": "opening" },
+      { "description": { "value": "Pendapatan", "confidence": "confirmed", "source_ref": { "location": "page 2", "snippet": "pendapatan RM13,600.00" } }, "amount_cents": { "value": 1360000, "confidence": "confirmed", "source_ref": { "location": "page 2", "snippet": "RM13,600.00" } }, "role": "income" },
+      { "description": { "value": "Perbelanjaan", "confidence": "confirmed", "source_ref": { "location": "page 2", "snippet": "perbelanjaan RM10,150.00" } }, "amount_cents": { "value": 1015000, "confidence": "confirmed", "source_ref": { "location": "page 2", "snippet": "RM10,150.00" } }, "role": "expense" },
+      { "description": { "value": "Baki semasa", "confidence": "confirmed", "source_ref": { "location": "page 2", "snippet": "baki semasa RM11,130.00" } }, "amount_cents": { "value": 1113000, "confidence": "confirmed", "source_ref": { "location": "page 2", "snippet": "RM11,130.00" } }, "role": "closing" }
+    ],
+    "office_bearers": [
+      {
+        "position": { "value": "Ahli Jawatankuasa", "confidence": "confirmed", "source_ref": { "location": "page 1, agenda 2.1", "snippet": "jawatan Ahli Jawatankuasa" } },
+        "person_name": { "value": "Rosli Contoh", "confidence": "confirmed", "source_ref": { "location": "page 1, agenda 2.1", "snippet": "Encik Rosli Contoh" } }
+      }
+    ],
+    "adjournment": { "value": "Mesyuarat ditangguhkan pada 9.30 PM.", "confidence": "confirmed", "source_ref": { "location": "page 2", "snippet": "ditangguhkan pada 9.30 PM" } },
+    "prepared_by": { "position": { "value": "Setiausaha", "confidence": "confirmed", "source_ref": { "location": "page 2, signature", "snippet": "Setiausaha" } }, "person_name": { "value": "SITI CONTOH", "confidence": "confirmed", "source_ref": { "location": "page 2, signature", "snippet": "SITI CONTOH" } } },
+    "endorsed_by": { "position": { "value": "Pengerusi", "confidence": "confirmed", "source_ref": { "location": "page 2, signature", "snippet": "Pengerusi" } }, "person_name": { "value": "AHMAD CONTOH", "confidence": "confirmed", "source_ref": { "location": "page 2, signature", "snippet": "AHMAD CONTOH" } } }
+  },
+  "reconcile": "balanced",
+  "expect": {
+    "masa": true,
+    "agendaTable": true,
+    "attendanceCount": true,
+    "mustContain": ["## Agenda 2.1: Kekosongan jawatan Ahli Jawatankuasa", "Tarikh: 14-06-2026", "Encik Rosli Contoh dilantik", "RM7,680.00", "RM11,130.00", "SITI CONTOH", "AHMAD CONTOH"],
+    "mustNotContain": ["Tarikh: 2026-06-14"]
+  }
+}

@@ -32,13 +32,79 @@ import {
   usableResolutions,
 } from "../src/lib/minutes-compose";
 import { reconcileExtraction } from "../src/lib/financial-reconcile";
-import { lintMinitMd, type MinitLintExpectations, type MinitLintFinding } from "../src/lib/minit-format";
-import { isMinutesLang } from "../src/lib/minutes-lang";
+import { formatRm, lintMinitMd, type MinitLintExpectations, type MinitLintFinding } from "../src/lib/minit-format";
+import { isMinutesLang, type MinutesLang } from "../src/lib/minutes-lang";
+import type { MeetingNotesExtraction } from "../src/lib/extraction";
+import type { MinutesPlan } from "../src/lib/minutes-compose";
+
+/** 130 §17: the plain plan — every usable item, in order, verbatim, one
+ *  section. The route's own fallback shape; here it is the offline stand-in
+ *  for the model so the compose layer can be measured without paying. */
+function plainPlan(resolutionTexts: string[]): MinutesPlan {
+  return {
+    sections: [
+      {
+        heading: "Perkara-perkara yang dibincangkan",
+        items: resolutionTexts.map((text, i) => ({ source: i, text })),
+      },
+    ],
+    unresolved: [],
+  };
+}
+
+/** 130 §17 (D53/D54/D55): every name and every locked token the extraction
+ *  carries must be in the document — names in their own characters, amounts
+ *  and IC numbers digit for digit. Checked on every run, online or offline. */
+function provenanceFindings(e: MeetingNotesExtraction, md: string): MinitLintFinding[] {
+  const out: MinitLintFinding[] = [];
+  const present = (f?: { value: string; confidence: string }) =>
+    f && f.confidence !== "missing" && f.value.trim() !== "" ? f.value.trim() : null;
+  const names = [
+    ...e.attendees.map((a) => present(a.name)),
+    ...(e.apologies ?? []).map((a) => present(a.name)),
+    ...e.office_bearers.map((b) => present(b.person_name)),
+    present(e.prepared_by?.person_name),
+    present(e.endorsed_by?.person_name),
+  ].filter((n): n is string => n !== null);
+  for (const n of new Set(names)) {
+    if (!md.includes(n)) out.push({ code: "name_lost", detail: n });
+  }
+  for (const f of e.figures) {
+    if (f.amount_cents.confidence === "missing" || f.amount_cents.value === null) continue;
+    const digits = String(f.amount_cents.value / 100);
+    const rm = formatRm(f.amount_cents.value);
+    if (!md.includes(rm) && !md.includes(digits) && !md.includes(rm.replace(".00", ""))) {
+      out.push({ code: "locked_lost", detail: `amount ${rm}` });
+    }
+  }
+  for (const b of e.office_bearers) {
+    const ic = present(b.ic_no);
+    if (ic && !md.includes(ic)) out.push({ code: "locked_lost", detail: `IC ${ic}` });
+  }
+  return out;
+}
 
 const ROOT = path.resolve(__dirname, "..");
 const CASES_DIR = path.join(ROOT, "eval", "quality-cases");
 const REPORTS_DIR = path.join(ROOT, "eval", "reports");
 const PAUSE_MS = Number(process.env.EVAL_PAUSE_MS ?? 2000);
+/**
+ * 130 §17: `--offline` — the COMPOSE LAYER alone, zero vendor calls, zero
+ * money. Structured cases compose deterministically (as they already did
+ * when no phrasing was needed); an unstructured case gets the plain plan
+ * (every item in one section, verbatim — the same shape the route falls back
+ * to when the model fails twice). What this measures is everything AFTER the
+ * model: the fixed passages, the glossary, the date form, the headcount line,
+ * the signature block, the sub-heading recovery, and the PROVENANCE checks
+ * below (every name and every locked token of the extraction must be in the
+ * document). `--lang bm,zh,en` runs each case in several languages — the
+ * three copies must all pass (三語一致).
+ */
+const OFFLINE = process.argv.includes("--offline");
+const LANGS = (() => {
+  const i = process.argv.indexOf("--lang");
+  return i === -1 ? null : process.argv[i + 1]?.split(",").map((s) => s.trim()).filter(isMinutesLang) ?? null;
+})();
 
 function loadEnvLocal() {
   const envPath = path.join(ROOT, ".env.local");
@@ -79,19 +145,27 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 async function main() {
   loadEnvLocal();
 
-  const { provider: providerName, model } = resolveModel("long_doc");
-  console.log(`\nMinit quality eval — draft model: ${providerName}:${model}\n`);
+  const { provider: providerName, model } = OFFLINE
+    ? { provider: "offline", model: "compose layer only (no vendor)" }
+    : resolveModel("long_doc");
+  console.log(`\nMinit quality eval — draft model: ${providerName}:${model}${OFFLINE ? " · --offline" : ""}\n`);
 
   const caseNames = readdirSync(CASES_DIR).filter((d) =>
     existsSync(path.join(CASES_DIR, d, "case.json")),
   );
   const outcomes: CaseOutcome[] = [];
 
-  for (const [i, name] of caseNames.entries()) {
-    process.stdout.write(`[${i + 1}/${caseNames.length}] ${name} ... `);
+  const runs: { name: string; caseName: string; lang: MinutesLang | null }[] = [];
+  for (const caseName of caseNames) {
+    if (LANGS && LANGS.length > 0) for (const lang of LANGS) runs.push({ name: `${caseName} [${lang}]`, caseName, lang });
+    else runs.push({ name: caseName, caseName, lang: null });
+  }
+  for (const [i, run] of runs.entries()) {
+    const { name, caseName } = run;
+    process.stdout.write(`[${i + 1}/${runs.length}] ${name} ... `);
     const started = Date.now();
     const meta = JSON.parse(
-      readFileSync(path.join(CASES_DIR, name, "case.json"), "utf-8"),
+      readFileSync(path.join(CASES_DIR, caseName, "case.json"), "utf-8"),
     ) as QualityCase;
 
     const parsed = parseMeetingNotesExtraction(meta.extraction);
@@ -110,7 +184,7 @@ async function main() {
       continue;
     }
     const extraction = parsed.data;
-    const lang = isMinutesLang(meta.language) ? meta.language : "bm";
+    const lang: MinutesLang = run.lang ?? (isMinutesLang(meta.language) ? meta.language : "bm");
 
     let cost: number | null = 0;
     let calls = 0;
@@ -134,7 +208,12 @@ async function main() {
       const structure = minutesStructure(extraction);
       if (structure) {
         const work = buildPhraseWork(extraction, lang);
-        if (work.items.length === 0) {
+        if (work.items.length === 0 || OFFLINE) {
+          // Offline: a structured document composes deterministically in ANY
+          // language — titles and paragraphs pass through verbatim, so a zh
+          // or en copy of a BM page reads BM inside its own furniture. That
+          // is what the compose layer does without a model; the lint still
+          // measures the furniture, the dates, the names, the tokens.
           markdown = composeStructuredMinutesMd(extraction, composeOpts);
         } else {
           const run = await runPhraseMinutesItems({
@@ -148,6 +227,9 @@ async function main() {
           const { texts, titles } = work.split(run.phrased);
           markdown = composeStructuredMinutesMd(extraction, composeOpts, texts, titles);
         }
+      } else if (OFFLINE) {
+        const resolutionTexts = usableResolutions(extraction).map((r) => r.text.value);
+        markdown = composeMinutesMd(plainPlan(resolutionTexts), extraction, composeOpts);
       } else {
         const resolutionTexts = usableResolutions(extraction).map((r) => r.text.value);
         const run = await runDraftMinutesPlan({
@@ -160,7 +242,14 @@ async function main() {
         markdown = composeMinutesMd(run.plan, extraction, composeOpts);
       }
 
-      const findings = lintMinitMd(markdown, { ...meta.expect, lang });
+      // A case's mustContain / mustNotContain are written for ITS language
+      // (BM labels, BM glossary words); a cross-language run (--lang) keeps
+      // the structural checks and the provenance checks, and drops those two.
+      const ownLanguage = run.lang === null || run.lang === (isMinutesLang(meta.language) ? meta.language : "bm");
+      const expectFor = ownLanguage ? meta.expect : { ...meta.expect, mustContain: [], mustNotContain: [] };
+      const findings = lintMinitMd(markdown, { ...expectFor, lang });
+      // 130 §17: provenance — names and locked tokens must be in the document.
+      findings.push(...provenanceFindings(extraction, markdown));
       // 125 §4: the treasurer's arithmetic — pure code over the confirmed
       // figures, so a case can say whether its page balances. Zero cost.
       if (meta.reconcile) {
@@ -198,7 +287,7 @@ async function main() {
         elapsedMs: Date.now() - started,
       });
     }
-    if (i < caseNames.length - 1) await sleep(PAUSE_MS);
+    if (!OFFLINE && i < runs.length - 1) await sleep(PAUSE_MS);
   }
 
   // --- summary ---

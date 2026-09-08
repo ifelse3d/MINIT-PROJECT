@@ -451,7 +451,11 @@ export type MinitLintFinding = {
      *  "N (N)"; the same agenda title heading two sections. */
     | "agenda_heading_empty"
     | "duplicate_numbering"
-    | "agenda_repeated";
+    | "agenda_repeated"
+    /** 130 §17: a name / a locked token (amount, IC) of the extraction is
+     *  not in the document — the quality eval's provenance checks. */
+    | "name_lost"
+    | "locked_lost";
   detail: string;
 };
 

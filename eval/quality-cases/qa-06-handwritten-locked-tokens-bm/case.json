@@ -1,0 +1,55 @@
+{
+  "type": "minutes_quality",
+  "description": "130 §17 (D53/D54/D55): FICTIONAL handwritten committee note where every LOCKED token is present — Chinese names that must stay in characters, an RM amount, an identity-card number, a numeric date — plus a bearer appointment with IC/address. Unstructured. The document must carry each token verbatim and no pinyin. Entirely fictional (A3).",
+  "orgName": "PERSATUAN CONTOH SEJAHTERA NEGERI PERLIS",
+  "language": "bm",
+  "extraction": {
+    "meeting_type": { "value": "committee", "confidence": "confirmed", "source_ref": { "location": "photo 1, top", "snippet": "理事会议" } },
+    "meeting_date": { "value": "2026-03-15", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 1", "snippet": "15/3/26" } },
+    "meeting_venue": { "value": "会议室", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 1", "snippet": "会议室" } },
+    "attendance_count": { "value": "理事12人,请假2人(张伟杰,王丽华),会员40人", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 2", "snippet": "理事12人,请假2人" } },
+    "attendance_confirmed": 52,
+    "attendees": [
+      { "name": { "value": "刘国华", "confidence": "confirmed", "source_ref": { "location": "photo 1, 出席", "snippet": "主席：刘国华" } } },
+      { "name": { "value": "Ooi Bee Huang", "confidence": "confirmed", "source_ref": { "location": "photo 1, 出席", "snippet": "记录：Ooi Bee Huang" } } }
+    ],
+    "apologies": [
+      { "name": { "value": "张伟杰", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 2", "snippet": "请假2人(张伟杰" } } },
+      { "name": { "value": "王丽华", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 2", "snippet": "王丽华)" } } }
+    ],
+    "resolutions": [
+      {
+        "text": { "value": "① 慈善晚宴 17/10/2026, 通过, 预算 RM7,680", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 3", "snippet": "①慈善晚宴 17/10/2026 通过 预算 RM7,680" } },
+        "kind": "decision"
+      },
+      {
+        "text": { "value": "② lanti AJK seorg. Tan Kim Loo 800101-07-1234. 8, Lrg 3 Tmn Aman, guru", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 4", "snippet": "②lanti AJK seorg. Tan Kim Loo" } },
+        "kind": "info"
+      },
+      {
+        "text": { "value": "③ 游行队伍带头：刘国华、Ooi Bee Huang", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 5", "snippet": "③游行队伍带头" } },
+        "kind": "task"
+      }
+    ],
+    "figures": [
+      { "description": { "value": "预算", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 3", "snippet": "预算 RM7,680" } }, "amount_cents": { "value": 768000, "confidence": "confirmed", "source_ref": { "location": "photo 1, line 3", "snippet": "RM7,680" } }, "role": "other" }
+    ],
+    "office_bearers": [
+      {
+        "position": { "value": "Ahli Jawatankuasa", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 4", "snippet": "lanti AJK seorg." } },
+        "person_name": { "value": "Tan Kim Loo", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 4", "snippet": "Tan Kim Loo" } },
+        "ic_no": { "value": "800101-07-1234", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 4", "snippet": "800101-07-1234" } },
+        "address": { "value": "8, Lrg 3 Tmn Aman", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 4", "snippet": "8, Lrg 3 Tmn Aman" } },
+        "occupation": { "value": "guru", "confidence": "confirmed", "source_ref": { "location": "photo 1, line 4", "snippet": "guru" } }
+      }
+    ],
+    "adjournment": { "value": "散会", "confidence": "confirmed", "source_ref": { "location": "photo 1, last line", "snippet": "散会" } }
+  },
+  "expect": {
+    "masa": false,
+    "agendaTable": false,
+    "attendanceCount": true,
+    "mustContain": ["刘国华", "Ooi Bee Huang", "张伟杰", "王丽华", "Tan Kim Loo", "800101-07-1234", "8, Lrg 3 Tmn Aman", "7,680", "Bilik Mesyuarat", "15-03-2026", "52 orang"],
+    "mustNotContain": ["Liu Guohua", "Zhang Weijie", "Wang Lihua", "会议室", "2026-03-15"]
+  }
+}

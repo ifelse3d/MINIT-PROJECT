@@ -10,6 +10,7 @@
     "test": "vitest run",
     "eval": "tsx eval/run-eval.ts",
     "eval:quality": "tsx eval/run-quality.ts",
+    "eval:quality:offline": "tsx eval/run-quality.ts --offline --lang bm,zh,en",
     "eval:tools": "tsx scripts/eval-tool-choice.ts",
     "bench": "tsx scripts/bench-models.ts",
     "economics": "tsx scripts/unit-economics.ts",
