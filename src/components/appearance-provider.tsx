@@ -34,6 +34,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { notifyStorageChanged, useHydrated, useStoredString } from "@/lib/browser-store";
 
 export const TEXT_SIZES = ["small", "medium", "large", "xlarge"] as const;
 export type TextSize = (typeof TEXT_SIZES)[number];
@@ -119,49 +120,50 @@ type AppearanceValue = {
 const AppearanceContext = createContext<AppearanceValue | null>(null);
 
 export function AppearanceProvider({ children }: { children: ReactNode }) {
-  const [textSize, setSize] = useState<TextSize>("medium");
-  const [dark, setDarkState] = useState(false);
-  const [ready, setReady] = useState(false);
+  // 130 §5: this device's saved choices are external stores (null on the
+  // server and during hydration — the boot script in <head> has already
+  // painted them, so nothing flashes); the values in force are DERIVED from
+  // the store and the person's choice this visit. No effect copies storage
+  // into state.
+  const hydrated = useHydrated();
+  const storedSize = useStoredString("local", SIZE_KEY);
+  const storedTheme = useStoredString("local", THEME_KEY);
+  const [sizeChoice, setSizeChoice] = useState<TextSize | null>(null);
+  const [darkChoice, setDarkChoice] = useState<boolean | null>(null);
+  const textSize: TextSize = sizeChoice ?? (isTextSize(storedSize) ? storedSize : "medium");
+  const dark = darkChoice ?? storedTheme === "dark";
+  const ready = hydrated;
 
-  // Read this device's choices once, after mount (SSR-safe).
+  // The document follows the value in force. Gated on hydration: the
+  // hydration commit still carries the server's defaults, and applying THOSE
+  // would undo the boot script's paint for one frame.
   useEffect(() => {
-    let storedSize: string | null = null;
-    let storedTheme: string | null = null;
-    try {
-      storedSize = window.localStorage.getItem(SIZE_KEY);
-      storedTheme = window.localStorage.getItem(THEME_KEY);
-    } catch {
-      // Private window with storage disabled: defaults apply for this visit.
-    }
-    const size = isTextSize(storedSize) ? storedSize : "medium";
-    setSize(size);
-    applyTextSize(size);
-
-    const isDark = storedTheme === "dark";
-    setDarkState(isDark);
-    document.documentElement.classList.toggle("dark", isDark);
-
-    setReady(true);
-  }, []);
+    if (!hydrated) return;
+    applyTextSize(textSize);
+  }, [hydrated, textSize]);
+  useEffect(() => {
+    if (!hydrated) return;
+    document.documentElement.classList.toggle("dark", dark);
+  }, [hydrated, dark]);
 
   const setTextSize = useCallback((next: TextSize) => {
-    setSize(next);
-    applyTextSize(next);
+    setSizeChoice(next);
     try {
       window.localStorage.setItem(SIZE_KEY, next);
     } catch {
       // Not remembered, but it works for this visit. Nothing useful to say.
     }
+    notifyStorageChanged();
   }, []);
 
   const setDark = useCallback((next: boolean) => {
-    setDarkState(next);
-    document.documentElement.classList.toggle("dark", next);
+    setDarkChoice(next);
     try {
       window.localStorage.setItem(THEME_KEY, next ? "dark" : "light");
     } catch {
       // As above.
     }
+    notifyStorageChanged();
   }, []);
 
   const value = useMemo(
