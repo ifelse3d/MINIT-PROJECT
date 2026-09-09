@@ -72,3 +72,31 @@ describe("🔴 134 — the free preview of a Chinese page reads in Chinese, in t
     expect(md).not.toContain("DENGAN MAAF");
   });
 });
+
+// 135 (J 9/9): 「用英文的會議報告也是 OK 的對不」 — yes, and its preview
+// now reads in English too, by the same character/word counting.
+describe("135 — English pages preview in English", () => {
+  const englishPage = (): MeetingNotesExtraction => ({
+    ...emptyMeetingNotesExtraction,
+    meeting_venue: confirmed("Community hall"),
+    attendees: [{ name: confirmed("陈秀玲") }],
+    resolutions: [
+      { text: confirmed("The chairman thanked all members for their help last year.") },
+      { text: confirmed("The minutes of the last meeting were confirmed without amendment.") },
+    ],
+    figures: [{ description: confirmed("Charity dinner takings"), amount_cents: { ...confirmed("315000"), value: 315000 } }],
+  });
+  it("an English page is en; a Malay page stays bm", () => {
+    expect(sourceLanguageOf(englishPage())).toBe("en");
+    expect(sourceLanguageOf(malayPage())).toBe("bm");
+  });
+  it("the English preview carries English headings and no BM glossary", () => {
+    const md = renderMinutesDraftBm(englishPage(), { orgName: "PERSATUAN CONTOH", lang: "en", sourceCopy: true });
+    expect(md).toContain("# MINUTES OF MEETING — PERSATUAN CONTOH");
+    expect(md).toContain("Venue: Community hall");
+    expect(md).toContain("## ATTENDANCE");
+    expect(md).toContain("## AMOUNTS");
+    expect(md).not.toContain("Translation — not for filing");
+    expect(md).not.toContain("KEHADIRAN");
+  });
+});

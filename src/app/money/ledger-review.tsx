@@ -15,6 +15,9 @@ import {
   parseRmToCents,
 } from "@/lib/receipts";
 import { formatRm } from "@/lib/minutes-draft";
+import { struckDoubleSuggestion } from "@/lib/bm-glossary";
+import { looksLikeBalanceRow, looksLikeSummaryPage } from "@/lib/ledger-hints";
+import { signedUrlForOriginal } from "@/app/minutes/open-original";
 import { handExpensePhoto } from "@/lib/expense-handoff";
 import { PaymentMethodToggle } from "./payment-method-toggle";
 import { TypeDonations } from "./type-donations";
@@ -47,6 +50,7 @@ export function LedgerReview() {
     onLedgerPicked,
     ledgerBackToEmpty,
     mutateLedger,
+    removeLedgerRow,
     addConfirmedRowsToRegister,
     rowsReadyToAdd,
     addManualDonations,
@@ -407,7 +411,9 @@ export function LedgerReview() {
             thumbnails — so a multi-page upload can be looked back at instead
             of trusting memory about what page 2 was. Shared with the minutes
             flow since D-3 (page-thumbs.tsx). */}
-        {!isSampleLedger && <PageThumbs pages={ledgerPages} />}
+        {!isSampleLedger && (
+          <PageThumbs pages={ledgerPages} openOriginal={signedUrlForOriginal} />
+        )}
 
         {/* §1-4 (work order 32, J's #4): the DEMO is the picture walkthrough
             now — the sample data rows are gone from the real page. Fake rows
@@ -457,6 +463,33 @@ export function LedgerReview() {
             />.
           </div>
         )}
+        {/* 135 (J 9/9, live site): the AGM notes' KEWANGAN block photographed
+            in here read as seven "donations" with no donor. Not one donor on
+            the page = a financial SUMMARY, not a ledger — say so, and point
+            at the doors that fit, instead of offering receipts. Pure check
+            (src/lib/ledger-hints.ts); nothing is removed by itself. */}
+        {!isSampleLedger && looksLikeSummaryPage(ledgerRows) && (
+          <div
+            data-probe="ledger-summary-notice"
+            className="rounded-md border-2 border-amber-300 bg-amber-50 p-4 text-base text-amber-950 dark:bg-amber-400/10 dark:text-amber-50"
+          >
+            <p className="font-semibold">
+              📊{" "}
+              <Tri
+                bm="Halaman ini tiada nama penderma — ia nampak seperti RINGKASAN kewangan (contohnya bahagian KEWANGAN dalam minit), bukan lejar derma."
+                zh="这一页没有任何捐款人名字 —— 看起来是财务总结（例如会议记录里的 KEWANGAN），不是逐笔的捐款簿。"
+                en="No donor is named on this page — it looks like a financial SUMMARY (a report's KEWANGAN block), not a donation ledger."
+              />
+            </p>
+            <p className="mt-2">
+              <Tri
+                bm="Resit hanya boleh dibuat daripada derma seorang demi seorang. Ambil gambar lejar derma yang sebenar, atau tekan “Tiada kertas — taip” dan catat seorang demi seorang. Perbelanjaan (dewan, kos jamuan) direkod di Perbelanjaan & tuntutan. Baris yang bukan derma boleh dibuang dengan ✕ di bawahnya."
+                zh="收据只能从一笔一笔的个人捐款开出。请拍逐笔的捐款簿，或按「没有纸 —— 打字」一笔一笔记；支出（礼堂、晚宴开销）请到「支出与报销」记。不是捐款的行，按它下面的 ✕ 删掉。"
+                en="Receipts can only be made from individual donations. Photograph the actual donation ledger, or press “No paper — type it in” and record them one by one. Spending (the hall, the dinner's cost) belongs in Spending & claims. A row that is not a donation can be removed with the ✕ under it."
+              />
+            </p>
+          </div>
+        )}
         {/* Compact spreadsheet-style table — one ledger row per table row */}
         <ExtractionTable
           headers={[
@@ -477,6 +510,12 @@ export function LedgerReview() {
                       : "confirmed",
                 "confirmed" as "confirmed" | "check" | "missing"
               );
+            // 135: a purpose that reads as a BALANCE (上年结存, 银行, baki) is
+            // tagged — a state, not money received; and a purpose the writer
+            // struck and rewrote (晚晚餐宴) gets the same one-tap fix the
+            // minutes page offers (129 D). Both pure; the person decides.
+            const balance = looksLikeBalanceRow(r.purpose.value);
+            const struck = isSampleLedger ? null : struckDoubleSuggestion(r.purpose.value);
             // Stage 0-1: sample rows are READ-ONLY — no confirm, no edit. A
             // cell without handlers renders as plain text (extraction-table).
             const textCell = (
@@ -504,27 +543,70 @@ export function LedgerReview() {
               // D19 (拍板 34): every income row answers cash/transfer at
               // registration. The AI never decides this — default cash, one
               // tap to change. Hidden once the row is already in the register.
-              extra:
-                isSampleLedger || addedRows.has(i) ? undefined : (
-                  <span className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                    <Tri bm="Diterima sebagai" zh="收款方式" en="Received as" />
-                    <PaymentMethodToggle
-                      compact
-                      value={ledgerPayments[i] ?? "cash"}
-                      onChange={(m) => setLedgerPayment(i, m)}
-                    />
-                  </span>
-                ),
+              extra: isSampleLedger ? undefined : (
+                <span className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                  {!addedRows.has(i) && (
+                    <>
+                      <Tri bm="Diterima sebagai" zh="收款方式" en="Received as" />
+                      <PaymentMethodToggle
+                        compact
+                        value={ledgerPayments[i] ?? "cash"}
+                        onChange={(m) => setLedgerPayment(i, m)}
+                      />
+                    </>
+                  )}
+                  {struck !== null && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      data-probe="ledger-struck-fix"
+                      onClick={() => mutateLedger((l) => editTextField(l.rows[i].purpose, struck))}
+                    >
+                      ✏️{" "}
+                      <Tri
+                        bm={`Tujuan nampak tertulis dua kali — guna「${struck}」`}
+                        zh={`用途看起来写重了 —— 用「${struck}」`}
+                        en={`The purpose looks doubled — use “${struck}”`}
+                      />
+                    </Button>
+                  )}
+                  {/* 135: the way OUT for a row that is not a donation. */}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="text-red-700 dark:text-red-300"
+                    data-probe="ledger-remove-row"
+                    onClick={() => removeLedgerRow(i)}
+                  >
+                    ✕ <Tri bm="Buang baris ini" zh="删掉这一行" en="Remove this row" />
+                  </Button>
+                </span>
+              ),
               warning: isSampleLedger ? (
                 // Every sample row says so itself — the banner above scrolls
                 // away, the label on the row does not.
                 <Tri bm="CONTOH — lihat sahaja" zh="示范 —— 只能看" en="SAMPLE — view only" />
-              ) : !eligibleForReceipt(r) ? (
-                <Tri
-                  bm="Belum layak resit — sahkan dahulu"
-                  zh="暂不能开收据 —— 请先确认"
-                  en="Not ready for a receipt — confirm it first"
-                />
+              ) : balance || !eligibleForReceipt(r) ? (
+                <span className="flex flex-col gap-1">
+                  {balance && (
+                    <span data-probe="ledger-balance-hint">
+                      <Tri
+                        bm="Ini nampak seperti BAKI, bukan wang yang diterima — buang baris ini kalau ia bukan derma"
+                        zh="这看起来是结余（存款），不是收到的钱 —— 不是捐款就删掉这一行"
+                        en="This looks like a BALANCE, not money received — remove the row if it is not a donation"
+                      />
+                    </span>
+                  )}
+                  {!eligibleForReceipt(r) && (
+                    <Tri
+                      bm="Belum layak resit — sahkan dahulu"
+                      zh="暂不能开收据 —— 请先确认"
+                      en="Not ready for a receipt — confirm it first"
+                    />
+                  )}
+                </span>
               ) : undefined,
               cells: [
                 textCell("donor_name", "text"),

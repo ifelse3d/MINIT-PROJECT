@@ -41,6 +41,7 @@ import { todayIsoMalaysia } from "@/lib/history";
 import { uploadErrorMessage } from "@/lib/shrink-photo";
 import { prepareUploadForSend } from "@/lib/upload-relay-client";
 import { consumeIntake, peekIntake } from "@/lib/intake-handoff";
+import { dropLedgerRow } from "@/lib/ledger-hints";
 import { useHydrated } from "@/lib/browser-store";
 import { issueAndSaveReceipts } from "./actions";
 import {
@@ -133,7 +134,7 @@ export type RegisterStore = {
   setLedgerPayment: (rowIndex: number, method: "cash" | "transfer") => void;
   /** D19 (B-5③): the pages already read this review, as thumbnails —
    *  name + data URL, in upload order. A draft, so never persisted. */
-  ledgerPages: { name: string; dataUrl: string }[];
+  ledgerPages: { name: string; dataUrl: string; storagePath?: string | null }[];
   onLedgerPicked: (
     file: File | null,
     /** 0-1: "fresh" = the person said this photo starts a NEW ledger page. */
@@ -144,6 +145,9 @@ export type RegisterStore = {
   showLedgerSample: (extraction: LedgerExtraction) => void;
   ledgerBackToEmpty: () => void;
   mutateLedger: (fn: (l: LedgerExtraction) => void) => void;
+  /** 135 (J 9/9): take one row OUT of the review — a balance, a total, a
+   *  line that is not a donation. The per-row answers keep their rows. */
+  removeLedgerRow: (rowIndex: number) => void;
   addConfirmedRowsToRegister: () => void;
 
   // --- derived counts the headers and status badges read -------------------
@@ -334,7 +338,7 @@ export function RegisterProvider({
   >({});
   // B-5③: thumbnails of every page read into this review, upload order.
   const [ledgerPages, setLedgerPages] = useState<
-    { name: string; dataUrl: string }[]
+    { name: string; dataUrl: string; storagePath?: string | null }[]
   >([]);
 
   const [error, setError] = useState<string | null>(null);
@@ -405,6 +409,21 @@ export function RegisterProvider({
       return next;
     });
   }, []);
+
+  // 135 (J 9/9, live site: 「要刪除也沒辦法做到」): a review row that is not a
+  // donation — last year's balance, the bank balance, a column total — can
+  // be taken out before anything reaches the register. Pure re-keying in
+  // src/lib/ledger-hints.ts keeps the cash/transfer answers and the "already
+  // added" marks on the rows they were given for.
+  const removeLedgerRow = useCallback(
+    (rowIndex: number) => {
+      const next = dropLedgerRow(ledger.rows, addedRows, ledgerPayments, rowIndex);
+      setLedger((prev) => ({ ...prev, rows: next.rows }));
+      setAddedRows(next.added);
+      setLedgerPayments(next.payments);
+    },
+    [ledger.rows, addedRows, ledgerPayments],
+  );
 
   // --- THE AI INGESTION PATH: ledger photo/PDF → /api/extract-ledger --------
   // Mirrors the /minutes flow. G-2 (2026-08-25, J #10): a second page ADDS its
@@ -585,7 +604,27 @@ export function RegisterProvider({
       setLedgerSourceLabel(handed.fileName);
       setAddedRows(new Set());
       setLedgerPayments({});
-      setLedgerPages([]);
+      // 135 (J 9/9: 「沒得看回原圖」): a page that came through the home
+      // door used to arrive WITHOUT its picture — the thumbnails were reset
+      // to nothing. The parcel carries the preview and where the original
+      // landed (the same fields the minutes workspace shows), so show them.
+      setLedgerPages(
+        handed.pages && handed.pages.length > 0
+          ? handed.pages.map((p) => ({
+              name: p.fileName,
+              dataUrl: p.photoDataUrl ?? "",
+              storagePath: p.storagePath,
+            }))
+          : handed.storagePath || handed.photoDataUrl
+            ? [
+                {
+                  name: handed.fileName,
+                  dataUrl: handed.photoDataUrl ?? "",
+                  storagePath: handed.storagePath ?? null,
+                },
+              ]
+            : [],
+      );
     }
   }
   useEffect(() => {
@@ -1080,6 +1119,7 @@ export function RegisterProvider({
         showLedgerSample,
         ledgerBackToEmpty,
         mutateLedger,
+        removeLedgerRow,
         addConfirmedRowsToRegister,
         ledgerRowsToCheck,
         rowsReadyToAdd,
