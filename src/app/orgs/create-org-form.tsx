@@ -444,360 +444,399 @@ export function CreateOrgForm({
   if (!state.ok && road === "fork") return forkCard;
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
-      {/* §1 (104): the constitution road puts the DOCUMENT first — the whole
-          point of choosing it. `constitutionPending` tells the server the
-          name box is deliberately empty (see PROVISIONAL_ORG_NAME). */}
-      {!state.ok && road === "constitution" && (
-        <>
-          {constitutionBlock}
-          {file && <input type="hidden" name="constitutionPending" value="1" />}
-        </>
-      )}
-      <label className="flex flex-col gap-1">
-        <span className="text-base font-semibold">
-          <Tri bm="Nama pertubuhan" zh="组织名称" en="Organisation name" />
-        </span>
-        {/* C-4 (拍板 33): typed letters turn into CAPITALS as they land — the
-            ROS register writes society names in capitals, and a mixed-case
-            name here would disagree with every official document. Uppercasing
-            never changes the string length, so the caret keeps its place. */}
-        <input
-          name="name"
-          className={inputCls}
-          // §1 (104): on the constitution road the DOCUMENT supplies the name,
-          // so the box is optional — leaving it empty is the normal thing to
-          // do there, and the line below says so.
-          required={road !== "constitution"}
-          maxLength={200}
-          autoCapitalize="characters"
-          placeholder={
-            road === "constitution"
-              ? t(
-                  "Boleh dibiarkan kosong",
-                  "可以留空",
-                  "You can leave this empty",
-                )
-              : undefined
-          }
-          onChange={(e) => {
-            const el = e.currentTarget;
-            const pos = el.selectionStart;
-            el.value = el.value.toUpperCase();
-            if (pos !== null) el.setSelectionRange(pos, pos);
-            setNameTyped(el.value.trim() !== "");
-          }}
-        />
-        {road === "constitution" && (
+    <div className="flex flex-col gap-4">
+      <form action={formAction} className="flex flex-col gap-4">
+        {/* §1 (104): the constitution road puts the DOCUMENT first — the whole
+            point of choosing it. `constitutionPending` tells the server the
+            name box is deliberately empty (see PROVISIONAL_ORG_NAME). */}
+        {!state.ok && road === "constitution" && (
+          <>
+            {constitutionBlock}
+            {file && <input type="hidden" name="constitutionPending" value="1" />}
+          </>
+        )}
+        <label className="flex flex-col gap-1">
+          <span className="text-base font-semibold">
+            <Tri bm="Nama pertubuhan" zh="组织名称" en="Organisation name" />
+          </span>
+          {/* C-4 (拍板 33): typed letters turn into CAPITALS as they land — the
+              ROS register writes society names in capitals, and a mixed-case
+              name here would disagree with every official document. Uppercasing
+              never changes the string length, so the caret keeps its place. */}
+          <input
+            name="name"
+            className={inputCls}
+            // §1 (104): on the constitution road the DOCUMENT supplies the name,
+            // so the box is optional — leaving it empty is the normal thing to
+            // do there, and the line below says so.
+            required={road !== "constitution"}
+            maxLength={200}
+            autoCapitalize="characters"
+            placeholder={
+              road === "constitution"
+                ? t(
+                    "Boleh dibiarkan kosong",
+                    "可以留空",
+                    "You can leave this empty",
+                  )
+                : undefined
+            }
+            onChange={(e) => {
+              const el = e.currentTarget;
+              const pos = el.selectionStart;
+              el.value = el.value.toUpperCase();
+              if (pos !== null) el.setSelectionRange(pos, pos);
+              setNameTyped(el.value.trim() !== "");
+            }}
+          />
+          {road === "constitution" && (
+            <span className="text-sm text-muted-foreground">
+              <Tri
+                bm="Biarkan kosong — MinitAI membacanya daripada perlembagaan yang anda lampirkan di atas, dan menunjukkannya kepada anda untuk dibetulkan."
+                zh="留空就好 —— MinitAI 会从上面那份章程里读出来，读好了先给您看、您改错的地方。"
+                en="Leave it empty — MinitAI reads it from the constitution you attached above and shows it to you to correct."
+              />
+            </span>
+          )}
           <span className="text-sm text-muted-foreground">
             <Tri
-              bm="Biarkan kosong — MinitAI membacanya daripada perlembagaan yang anda lampirkan di atas, dan menunjukkannya kepada anda untuk dibetulkan."
-              zh="留空就好 —— MinitAI 会从上面那份章程里读出来，读好了先给您看、您改错的地方。"
-              en="Leave it empty — MinitAI reads it from the constitution you attached above and shows it to you to correct."
-            />
-          </span>
-        )}
-        <span className="text-sm text-muted-foreground">
-          <Tri
-            bm="Nama berdaftar rasmi sentiasa dalam HURUF BESAR."
-            zh="官方注册名称一律大写。"
-            en="Official registered names are always in CAPITALS."
-          />
-        </span>
-      </label>
-
-      <label className="flex flex-col gap-1">
-        <span className="text-base font-semibold">
-          <Tri
-            bm="Nama anda (untuk rekod jawatankuasa)"
-            zh="您的姓名（用于委员会记录）"
-            en="Your name (for the committee records)"
-          />
-        </span>
-        <input name="yourName" className={inputCls} maxLength={120} />
-        {/* This name really is used: it becomes members_roles.name, and
-            doc-identity.ts prints it on every confirmed document's audit line
-            ("Drafted by MinitAI, confirmed by …"). Say so BEFORE they type —
-            J's ask, 2026-08-25. Blank falls back to the login email. */}
-        <span className="text-sm text-muted-foreground">
-          <Tri
-            bm="Nama ini dicetak pada minit dan dokumen yang anda sahkan nanti («disahkan oleh …»). Kalau kosong, email log masuk anda yang digunakan."
-            zh="之后您确认会议记录和文件时，落款会印这个名字（「confirmed by …」）。留空就会印您的登入 email。"
-            en="This name is printed on the minutes and documents you confirm later (“confirmed by …”). If left blank, your login email is used instead."
-          />
-        </span>
-      </label>
-
-      {/* B-5 (建議①②): what KIND of organisation this is. Two big choices,
-          not a bare enum: a committee-type org gets the same features minus
-          the eROSES/annual-return nagging that does not apply to it. */}
-      <fieldset className="flex flex-col gap-2">
-        <legend className="text-base font-semibold">
-          <Tri bm="Jenis pertubuhan" zh="机构类型" en="Type of organisation" />
-        </legend>
-        <label
-          className={`flex cursor-pointer flex-col rounded-md border-2 px-4 py-3 ${
-            orgType === "registered"
-              ? "border-[color:var(--v2-primary)] bg-[color:var(--v2-primary-soft)]"
-              : "border-[color:var(--v2-outline-border)]"
-          }`}
-        >
-          <span className="flex items-center gap-2 text-base font-semibold">
-            <input
-              type="radio"
-              name="orgType"
-              value="registered"
-              checked={orgType === "registered"}
-              onChange={() => setOrgType("registered")}
-              className="h-5 w-5 accent-[color:var(--v2-primary)]"
-            />
-            <Tri
-              bm="Persatuan berdaftar (ROS/PPM)"
-              zh="注册社团（ROS/PPM）"
-              en="Registered society (ROS/PPM)"
-            />
-          </span>
-          <span className="pl-7 text-sm text-muted-foreground">
-            <Tri
-              bm="Didaftarkan dengan Jabatan Pendaftaran Pertubuhan — MinitAI mengingatkan Penyata Tahunan eROSES."
-              zh="在社团注册局注册的社团 —— MinitAI 会提醒 eROSES 年度呈报。"
-              en="Registered with the Registrar of Societies — MinitAI reminds you about the eROSES Annual Return."
+              bm="Nama berdaftar rasmi sentiasa dalam HURUF BESAR."
+              zh="官方注册名称一律大写。"
+              en="Official registered names are always in CAPITALS."
             />
           </span>
         </label>
-        <label
-          className={`flex cursor-pointer flex-col rounded-md border-2 px-4 py-3 ${
-            orgType === "committee"
-              ? "border-[color:var(--v2-primary)] bg-[color:var(--v2-primary-soft)]"
-              : "border-[color:var(--v2-outline-border)]"
-          }`}
-        >
-          <span className="flex items-center gap-2 text-base font-semibold">
-            <input
-              type="radio"
-              name="orgType"
-              value="committee"
-              checked={orgType === "committee"}
-              onChange={() => setOrgType("committee")}
-              className="h-5 w-5 accent-[color:var(--v2-primary)]"
-            />
-            <Tri
-              bm="Jawatankuasa dalaman / sementara"
-              zh="内部／临时委员会"
-              en="Internal / ad-hoc committee"
-            />
-          </span>
-          <span className="pl-7 text-sm text-muted-foreground">
-            <Tri
-              bm="Jawatankuasa acara, tabung khas dan seumpamanya — semua ciri yang sama, tanpa peringatan eROSES."
-              zh="活动筹委会、专款小组之类 —— 功能都一样，只是没有 eROSES 提醒。"
-              en="Event committees, special funds and the like — same features, without the eROSES reminders."
-            />
-          </span>
-        </label>
-      </fieldset>
 
-      {orgType === "registered" && (
         <label className="flex flex-col gap-1">
           <span className="text-base font-semibold">
             <Tri
-              bm="No. pendaftaran PPM/ROS"
-              zh="PPM/ROS 注册号"
-              en="PPM/ROS registration no."
+              bm="Nama anda (untuk rekod jawatankuasa)"
+              zh="您的姓名（用于委员会记录）"
+              en="Your name (for the committee records)"
             />
           </span>
-          <input name="ppmNo" className={inputCls} maxLength={64} placeholder="PPM-000-00-00000000" />
-          {/* C-1 (anti-impersonation v1): when filled it is printed on
-              official document letterheads, so a reader can check it. */}
+          <input name="yourName" className={inputCls} maxLength={120} />
+          {/* This name really is used: it becomes members_roles.name, and
+              doc-identity.ts prints it on every confirmed document's audit line
+              ("Drafted by MinitAI, confirmed by …"). Say so BEFORE they type —
+              J's ask, 2026-08-25. Blank falls back to the login email. */}
           <span className="text-sm text-muted-foreground">
             <Tri
-              bm="Jika diisi, nombor ini dicetak pada kepala surat dokumen rasmi anda — orang boleh menyemaknya."
-              zh="填了的话，这个号码会印在正式文件的页首 —— 别人可以核对。"
-              en="If filled in, this number is printed on your official document letterheads — anyone can check it."
+              bm="Nama ini dicetak pada minit dan dokumen yang anda sahkan nanti («disahkan oleh …»). Kalau kosong, email log masuk anda yang digunakan."
+              zh="之后您确认会议记录和文件时，落款会印这个名字（「confirmed by …」）。留空就会印您的登入 email。"
+              en="This name is printed on the minutes and documents you confirm later (“confirmed by …”). If left blank, your login email is used instead."
             />
           </span>
         </label>
-      )}
 
-      {/* C-2 (work order 27): brand-new, or already running for years? Only
-          the landing card's order changes — no feature is gated on this. */}
-      <fieldset className="flex flex-col gap-2">
-        <legend className="text-base font-semibold">
-          <Tri
-            bm="Pertubuhan ini…"
-            zh="这个社团是……"
-            en="This organisation is…"
-          />
-        </legend>
-        <div className="grid gap-2 @xl:grid-cols-2">
-          {(
-            [
-              {
-                value: "existing" as const,
-                bm: "Sudah lama wujud",
-                zh: "已成立多年的",
-                en: "Established, running for a while",
-                subBm: "Ada perlembagaan, AJK dan rekod sedia ada untuk dimasukkan",
-                subZh: "已有章程、理事和旧记录可以放进来",
-                subEn: "Has a constitution, committee and past records to bring in",
-              },
-              {
-                value: "new" as const,
-                bm: "Baru ditubuhkan",
-                zh: "新成立的",
-                en: "Newly formed",
-                subBm: "Bermula dari kosong — MinitAI mengiringi dari hari pertama",
-                subZh: "从零开始 —— MinitAI 从第一天陪着记",
-                subEn: "Starting fresh — MinitAI records from day one",
-              },
-            ]
-          ).map((opt) => (
-            <label
-              key={opt.value}
-              className={`flex cursor-pointer flex-col rounded-md border-2 px-4 py-3 ${
-                societyAge === opt.value
-                  ? "border-[color:var(--v2-primary)] bg-[color:var(--v2-primary-soft)]"
-                  : "border-[color:var(--v2-outline-border)]"
-              }`}
-            >
-              <span className="flex items-center gap-2 text-base font-semibold">
-                <input
-                  type="radio"
-                  name="societyAge"
-                  value={opt.value}
-                  checked={societyAge === opt.value}
-                  onChange={() => setSocietyAge(opt.value)}
-                  className="h-5 w-5 accent-[color:var(--v2-primary)]"
-                />
-                <Tri bm={opt.bm} zh={opt.zh} en={opt.en} />
-              </span>
-              <span className="pl-7 text-sm text-muted-foreground">
-                <Tri bm={opt.subBm} zh={opt.subZh} en={opt.subEn} />
-              </span>
-            </label>
-          ))}
-        </div>
-      </fieldset>
+        {/* B-5 (建議①②): what KIND of organisation this is. Two big choices,
+            not a bare enum: a committee-type org gets the same features minus
+            the eROSES/annual-return nagging that does not apply to it. */}
+        <fieldset className="flex flex-col gap-2">
+          <legend className="text-base font-semibold">
+            <Tri bm="Jenis pertubuhan" zh="机构类型" en="Type of organisation" />
+          </legend>
+          <label
+            className={`flex cursor-pointer flex-col rounded-md border-2 px-4 py-3 ${
+              orgType === "registered"
+                ? "border-[color:var(--v2-primary)] bg-[color:var(--v2-primary-soft)]"
+                : "border-[color:var(--v2-outline-border)]"
+            }`}
+          >
+            <span className="flex items-center gap-2 text-base font-semibold">
+              <input
+                type="radio"
+                name="orgType"
+                value="registered"
+                checked={orgType === "registered"}
+                onChange={() => setOrgType("registered")}
+                className="h-5 w-5 accent-[color:var(--v2-primary)]"
+              />
+              <Tri
+                bm="Persatuan berdaftar (ROS/PPM)"
+                zh="注册社团（ROS/PPM）"
+                en="Registered society (ROS/PPM)"
+              />
+            </span>
+            <span className="pl-7 text-sm text-muted-foreground">
+              <Tri
+                bm="Didaftarkan dengan Jabatan Pendaftaran Pertubuhan — MinitAI mengingatkan Penyata Tahunan eROSES."
+                zh="在社团注册局注册的社团 —— MinitAI 会提醒 eROSES 年度呈报。"
+                en="Registered with the Registrar of Societies — MinitAI reminds you about the eROSES Annual Return."
+              />
+            </span>
+          </label>
+          <label
+            className={`flex cursor-pointer flex-col rounded-md border-2 px-4 py-3 ${
+              orgType === "committee"
+                ? "border-[color:var(--v2-primary)] bg-[color:var(--v2-primary-soft)]"
+                : "border-[color:var(--v2-outline-border)]"
+            }`}
+          >
+            <span className="flex items-center gap-2 text-base font-semibold">
+              <input
+                type="radio"
+                name="orgType"
+                value="committee"
+                checked={orgType === "committee"}
+                onChange={() => setOrgType("committee")}
+                className="h-5 w-5 accent-[color:var(--v2-primary)]"
+              />
+              <Tri
+                bm="Jawatankuasa dalaman / sementara"
+                zh="内部／临时委员会"
+                en="Internal / ad-hoc committee"
+              />
+            </span>
+            <span className="pl-7 text-sm text-muted-foreground">
+              <Tri
+                bm="Jawatankuasa acara, tabung khas dan seumpamanya — semua ciri yang sama, tanpa peringatan eROSES."
+                zh="活动筹委会、专款小组之类 —— 功能都一样，只是没有 eROSES 提醒。"
+                en="Event committees, special funds and the like — same features, without the eROSES reminders."
+              />
+            </span>
+          </label>
+        </fieldset>
 
-      {/* C-1 (拍板⑤): pick a plan. Trial is the default; a paid choice RECORDS
-          the wish and a human activates it — no prices, no checkout (D12),
-          and the AI allowance stays at the trial level until activation.
-          §0-5 (102): the tiers read as percentages of Standard (15/100/200)
-          and HQ is tucked away — J opens HQ by hand for the network case. */}
-      <fieldset className="flex flex-col gap-2">
-        <legend className="text-base font-semibold">
-          <Tri bm="Pelan" zh="配套" en="Plan" />
-        </legend>
-        <div className="grid gap-2 @xl:grid-cols-3">
-          {(
-            [
-              {
-                value: "trial" as const,
-                bm: "Percubaan",
-                zh: "试用",
-                en: "Trial",
-                subBm: "Percuma buat masa ini · kuota AI 15% daripada Biasa · 1 pertubuhan",
-                subZh: "目前免费 · AI 用量为标准的 15% · 1 个机构",
-                subEn: "Free for now · 15% of the Standard AI quota · 1 organisation",
-              },
-              {
-                value: "standard" as const,
-                bm: "Biasa",
-                zh: "标准",
-                en: "Standard",
-                subBm: "Kuota penuh (100%) untuk pertubuhan yang aktif",
-                subZh: "完整用量（100%），给活跃社团",
-                subEn: "The full quota (100%) for an active society",
-              },
-              {
-                value: "plus" as const,
-                bm: "Plus",
-                zh: "Plus",
-                en: "Plus",
-                subBm: "Dua kali kuota Biasa (200%)",
-                subZh: "标准的两倍用量（200%）",
-                subEn: "Twice the Standard quota (200%)",
-              },
-            ]
-          ).map((opt) => (
-            <label
-              key={opt.value}
-              className={`flex cursor-pointer flex-col rounded-md border-2 px-4 py-3 ${
-                plan === opt.value
-                  ? "border-[color:var(--v2-primary)] bg-[color:var(--v2-primary-soft)]"
-                  : "border-[color:var(--v2-outline-border)]"
-              }`}
-            >
-              <span className="flex items-center gap-2 text-base font-semibold">
-                <input
-                  type="radio"
-                  name="plan"
-                  value={opt.value}
-                  checked={plan === opt.value}
-                  onChange={() => setPlan(opt.value)}
-                  className="h-5 w-5 accent-[color:var(--v2-primary)]"
-                />
-                <Tri bm={opt.bm} zh={opt.zh} en={opt.en} />
-              </span>
-              <span className="pl-7 text-sm text-muted-foreground">
-                <Tri bm={opt.subBm} zh={opt.subZh} en={opt.subEn} />
-              </span>
-            </label>
-          ))}
-        </div>
-        {plan !== "trial" && (
-          <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-sm font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+        {orgType === "registered" && (
+          <label className="flex flex-col gap-1">
+            <span className="text-base font-semibold">
+              <Tri
+                bm="No. pendaftaran PPM/ROS"
+                zh="PPM/ROS 注册号"
+                en="PPM/ROS registration no."
+              />
+            </span>
+            <input name="ppmNo" className={inputCls} maxLength={64} placeholder="PPM-000-00-00000000" />
+            {/* C-1 (anti-impersonation v1): when filled it is printed on
+                official document letterheads, so a reader can check it. */}
+            <span className="text-sm text-muted-foreground">
+              <Tri
+                bm="Jika diisi, nombor ini dicetak pada kepala surat dokumen rasmi anda — orang boleh menyemaknya."
+                zh="填了的话，这个号码会印在正式文件的页首 —— 别人可以核对。"
+                en="If filled in, this number is printed on your official document letterheads — anyone can check it."
+              />
+            </span>
+          </label>
+        )}
+
+        {/* C-2 (work order 27): brand-new, or already running for years? Only
+            the landing card's order changes — no feature is gated on this. */}
+        <fieldset className="flex flex-col gap-2">
+          <legend className="text-base font-semibold">
             <Tri
-              bm="Harga diumumkan selepas kos sebenar diukur. Pilihan anda direkodkan dan kami mengaktifkannya secara manual — sehingga itu, kuota AI kekal pada tahap percubaan (15 sebulan). Tiada bayaran diambil."
-              zh="价格会在量出真实成本后公布。您的选择会先记下来，由我们人工帮您开通 —— 开通之前，AI 用量照试用（每月 15 次）。现在不会收任何钱。"
-              en="Prices are announced once real costs are measured. Your choice is recorded and we activate it by hand — until then the AI allowance stays at the trial level (15/month). Nothing is charged."
+              bm="Pertubuhan ini…"
+              zh="这个社团是……"
+              en="This organisation is…"
             />
-            {process.env.NEXT_PUBLIC_CONTACT_EMAIL ? (
-              <>
-                {" "}
-                <a
-                  href={`mailto:${process.env.NEXT_PUBLIC_CONTACT_EMAIL}`}
-                  className="underline underline-offset-4"
-                >
-                  {process.env.NEXT_PUBLIC_CONTACT_EMAIL}
-                </a>
-              </>
-            ) : null}
+          </legend>
+          <div className="grid gap-2 @xl:grid-cols-2">
+            {(
+              [
+                {
+                  value: "existing" as const,
+                  bm: "Sudah lama wujud",
+                  zh: "已成立多年的",
+                  en: "Established, running for a while",
+                  subBm: "Ada perlembagaan, AJK dan rekod sedia ada untuk dimasukkan",
+                  subZh: "已有章程、理事和旧记录可以放进来",
+                  subEn: "Has a constitution, committee and past records to bring in",
+                },
+                {
+                  value: "new" as const,
+                  bm: "Baru ditubuhkan",
+                  zh: "新成立的",
+                  en: "Newly formed",
+                  subBm: "Bermula dari kosong — MinitAI mengiringi dari hari pertama",
+                  subZh: "从零开始 —— MinitAI 从第一天陪着记",
+                  subEn: "Starting fresh — MinitAI records from day one",
+                },
+              ]
+            ).map((opt) => (
+              <label
+                key={opt.value}
+                className={`flex cursor-pointer flex-col rounded-md border-2 px-4 py-3 ${
+                  societyAge === opt.value
+                    ? "border-[color:var(--v2-primary)] bg-[color:var(--v2-primary-soft)]"
+                    : "border-[color:var(--v2-outline-border)]"
+                }`}
+              >
+                <span className="flex items-center gap-2 text-base font-semibold">
+                  <input
+                    type="radio"
+                    name="societyAge"
+                    value={opt.value}
+                    checked={societyAge === opt.value}
+                    onChange={() => setSocietyAge(opt.value)}
+                    className="h-5 w-5 accent-[color:var(--v2-primary)]"
+                  />
+                  <Tri bm={opt.bm} zh={opt.zh} en={opt.en} />
+                </span>
+                <span className="pl-7 text-sm text-muted-foreground">
+                  <Tri bm={opt.subBm} zh={opt.subZh} en={opt.subEn} />
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        {/* C-1 (拍板⑤): pick a plan. Trial is the default; a paid choice RECORDS
+            the wish and a human activates it — no prices, no checkout (D12),
+            and the AI allowance stays at the trial level until activation.
+            §0-5 (102): the tiers read as percentages of Standard (15/100/200)
+            and HQ is tucked away — J opens HQ by hand for the network case. */}
+        <fieldset className="flex flex-col gap-2">
+          <legend className="text-base font-semibold">
+            <Tri bm="Pelan" zh="配套" en="Plan" />
+          </legend>
+          <div className="grid gap-2 @xl:grid-cols-3">
+            {(
+              [
+                {
+                  value: "trial" as const,
+                  bm: "Percubaan",
+                  zh: "试用",
+                  en: "Trial",
+                  subBm: "Percuma buat masa ini · kuota AI 15% daripada Biasa · 1 pertubuhan",
+                  subZh: "目前免费 · AI 用量为标准的 15% · 1 个机构",
+                  subEn: "Free for now · 15% of the Standard AI quota · 1 organisation",
+                },
+                {
+                  value: "standard" as const,
+                  bm: "Biasa",
+                  zh: "标准",
+                  en: "Standard",
+                  subBm: "Kuota penuh (100%) untuk pertubuhan yang aktif",
+                  subZh: "完整用量（100%），给活跃社团",
+                  subEn: "The full quota (100%) for an active society",
+                },
+                {
+                  value: "plus" as const,
+                  bm: "Plus",
+                  zh: "Plus",
+                  en: "Plus",
+                  subBm: "Dua kali kuota Biasa (200%)",
+                  subZh: "标准的两倍用量（200%）",
+                  subEn: "Twice the Standard quota (200%)",
+                },
+              ]
+            ).map((opt) => (
+              <label
+                key={opt.value}
+                className={`flex cursor-pointer flex-col rounded-md border-2 px-4 py-3 ${
+                  plan === opt.value
+                    ? "border-[color:var(--v2-primary)] bg-[color:var(--v2-primary-soft)]"
+                    : "border-[color:var(--v2-outline-border)]"
+                }`}
+              >
+                <span className="flex items-center gap-2 text-base font-semibold">
+                  <input
+                    type="radio"
+                    name="plan"
+                    value={opt.value}
+                    checked={plan === opt.value}
+                    onChange={() => setPlan(opt.value)}
+                    className="h-5 w-5 accent-[color:var(--v2-primary)]"
+                  />
+                  <Tri bm={opt.bm} zh={opt.zh} en={opt.en} />
+                </span>
+                <span className="pl-7 text-sm text-muted-foreground">
+                  <Tri bm={opt.subBm} zh={opt.subZh} en={opt.subEn} />
+                </span>
+              </label>
+            ))}
+          </div>
+          {plan !== "trial" && (
+            <p className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-sm font-medium text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+              <Tri
+                bm="Harga diumumkan selepas kos sebenar diukur. Pilihan anda direkodkan dan kami mengaktifkannya secara manual — sehingga itu, kuota AI kekal pada tahap percubaan (15 sebulan). Tiada bayaran diambil."
+                zh="价格会在量出真实成本后公布。您的选择会先记下来，由我们人工帮您开通 —— 开通之前，AI 用量照试用（每月 15 次）。现在不会收任何钱。"
+                en="Prices are announced once real costs are measured. Your choice is recorded and we activate it by hand — until then the AI allowance stays at the trial level (15/month). Nothing is charged."
+              />
+              {process.env.NEXT_PUBLIC_CONTACT_EMAIL ? (
+                <>
+                  {" "}
+                  <a
+                    href={`mailto:${process.env.NEXT_PUBLIC_CONTACT_EMAIL}`}
+                    className="underline underline-offset-4"
+                  >
+                    {process.env.NEXT_PUBLIC_CONTACT_EMAIL}
+                  </a>
+                </>
+              ) : null}
+            </p>
+          )}
+        </fieldset>
+
+        {parentChoices.length > 0 && (
+          <label className="flex flex-col gap-1">
+            <span className="text-base font-semibold">
+              <Tri
+                bm="Pertubuhan induk (kosongkan untuk pertubuhan baharu)"
+                zh="上级组织（留空表示新的独立组织）"
+                en="Parent organisation (leave empty for a new independent org)"
+              />
+            </span>
+            <select name="parentOrgId" className={inputCls} defaultValue="">
+              <option value="">
+                — <Tri bm="Tiada (induk baharu)" zh="无（新总部）" en="None (new HQ)" /> —
+              </option>
+              {parentChoices.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
+        {/* The manual road keeps the box where it has always been: last, and
+            clearly optional. */}
+        {!state.ok && road === "manual" && constitutionBlock}
+
+        {state.error && (
+          <p className="rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900">
+            {localizeError(state.error)}
           </p>
         )}
-      </fieldset>
 
-      {parentChoices.length > 0 && (
-        <label className="flex flex-col gap-1">
-          <span className="text-base font-semibold">
-            <Tri
-              bm="Pertubuhan induk (kosongkan untuk pertubuhan baharu)"
-              zh="上级组织（留空表示新的独立组织）"
-              en="Parent organisation (leave empty for a new independent org)"
-            />
-          </span>
-          <select name="parentOrgId" className={inputCls} defaultValue="">
-            <option value="">
-              — <Tri bm="Tiada (induk baharu)" zh="无（新总部）" en="None (new HQ)" /> —
-            </option>
-            {parentChoices.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-
-      {/* The manual road keeps the box where it has always been: last, and
-          clearly optional. */}
-      {!state.ok && road === "manual" && constitutionBlock}
-
-      {state.error && (
-        <p className="rounded-md border-2 border-red-300 bg-red-50 p-3 text-base font-medium text-red-900">
-          {localizeError(state.error)}
-        </p>
-      )}
+        {/* The submit button lives inside the form; once the organisation
+            exists the form is spent and the outcome renders BELOW it. */}
+        {!state.ok && (
+          <div className="flex flex-col gap-2">
+            <Button
+              type="submit"
+              size="lg"
+              // §1 (104): on the constitution road the name may be empty ONLY
+              // because a document is going to supply it. Neither one and there
+              // is nothing to create the organisation with — say so here rather
+              // than letting the server refuse after the tap.
+              disabled={pending || (road === "constitution" && !file && !nameTyped)}
+            >
+              {pending ? (
+                <Tri bm="Sebentar…" zh="请稍候…" en="One moment…" />
+              ) : road === "constitution" && file ? (
+                <Tri
+                  bm="Cipta & baca perlembagaan"
+                  zh="创建并读章程"
+                  en="Create & read the constitution"
+                />
+              ) : (
+                <Tri bm="Cipta Pertubuhan" zh="创建组织" en="Create organisation" />
+              )}
+            </Button>
+            {road === "constitution" && !file && !nameTyped && (
+              <span className="text-sm text-muted-foreground">
+                <Tri
+                  bm="Lampirkan perlembagaan di atas, atau taip nama pertubuhan."
+                  zh="请在上面放进章程，或者自己打上机构名字。"
+                  en="Attach the constitution above, or type the organisation's name."
+                />
+              </span>
+            )}
+          </div>
+        )}
+      </form>
 
       {/* 2026-07-28 AUDIT — THE app's worst dead end.
           On success this used to print a green line and stop. The user sat on
@@ -812,7 +851,12 @@ export function CreateOrgForm({
           plain link for the case where it does not happen at all. That link is
           not decoration: without it a failed router.replace() puts the dead end
           straight back. */}
-      {state.ok ? (
+      {/* 2026-09-09 HOTFIX: this block used to sit INSIDE the <form> above,
+          and IdentityStep is itself a <form>. React refuses to run the action
+          of a form nested in a form — the tap on "save and continue" threw
+          "A React form was unexpectedly submitted" and nothing was sent. It
+          is a sibling now. */}
+      {state.ok && (
         <div className="flex flex-col gap-3">
           {/* Work order 68 §1-8: SUCCESS says success, FAILURE says failure —
               never a red error inside a green "done" box. The org-created
@@ -917,41 +961,8 @@ export function CreateOrgForm({
             </div>
           )}
         </div>
-      ) : (
-        <div className="flex flex-col gap-2">
-          <Button
-            type="submit"
-            size="lg"
-            // §1 (104): on the constitution road the name may be empty ONLY
-            // because a document is going to supply it. Neither one and there
-            // is nothing to create the organisation with — say so here rather
-            // than letting the server refuse after the tap.
-            disabled={pending || (road === "constitution" && !file && !nameTyped)}
-          >
-            {pending ? (
-              <Tri bm="Sebentar…" zh="请稍候…" en="One moment…" />
-            ) : road === "constitution" && file ? (
-              <Tri
-                bm="Cipta & baca perlembagaan"
-                zh="创建并读章程"
-                en="Create & read the constitution"
-              />
-            ) : (
-              <Tri bm="Cipta Pertubuhan" zh="创建组织" en="Create organisation" />
-            )}
-          </Button>
-          {road === "constitution" && !file && !nameTyped && (
-            <span className="text-sm text-muted-foreground">
-              <Tri
-                bm="Lampirkan perlembagaan di atas, atau taip nama pertubuhan."
-                zh="请在上面放进章程，或者自己打上机构名字。"
-                en="Attach the constitution above, or type the organisation's name."
-              />
-            </span>
-          )}
-        </div>
       )}
-    </form>
+    </div>
   );
 }
 

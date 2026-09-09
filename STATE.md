@@ -5,6 +5,8 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
+**🟣 133 号线上急修（2026-09-09 下午 ~3 PM，上台前 2 小时，直接在 `main` 上、已 push；报告在 `_J-要做的事[-報告-線上急修-存好繼續按鈕-20260909.md`）：**J 线上抓到 /orgs/new 章程读完后「没错，存好继续」按不过去。病根＝`IdentityStep` 自己是一张 `<form action={saveOrgIdentity}>`，却被放在外层 `<form action={createOrg}>` 里面（form 套 form）；React 不跑巢状表单的 action，浏览器落到占位的 `javascript:` 动作抛「A React form was unexpectedly submitted」，server 一个请求都没收到。修法：成功区块（绿色「好了」＋IdentityStep＋读取中／读取失败卡）搬到外层表单**外面**当兄弟，外面包一个同 gap 的 div；建立按钮留在表单里、`state.ok` 后隐藏。只改 `create-org-form.tsx` 一支。验证：tsc 0 · eslint 0 · 拋弃式帐号走完整流程（挡掉读取路由不花钱）——按下去 action HTTP 200、`orgs.name`／`ppm_no` 写进去、自动跳 `/constitution?setup=1`。**`after-stage` 已 merge 进 `main` 的这支 commit（merge commit），所以「上台完了」的三行照旧可用（`--ff-only` 不会卡）。**
+
 **🟣 130 号单已开（2026-09-09 凌晨，J：「还没做的都写成 PROMPT，做好所有」）：`_J-要做的事X-施工单-上台后总清场-全部残项-20260909.md`——全部残项分 §3–§19；一律在分支 `after-stage` 做，J 说「上台完了」才 merge 进 main（9/9 5:15 PM 上台前线上不动）。**
 
 **🟣 129 号追加（2026-09-08 深夜，上台前夜，报告在 `_J-要做的事
