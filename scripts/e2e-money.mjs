@@ -83,6 +83,20 @@ async function ensureUser() {
   return body.id;
 }
 
+/** 136: click the VISIBLE match — ExtractionTable renders a desktop and a
+ *  phone copy of every row, and page.click() takes the first (hidden) one. */
+async function clickVisible(page, selector) {
+  const els = await page.$$(selector);
+  for (const el of els) {
+    const shown = await el.evaluate((n) => n.offsetParent !== null);
+    if (shown) {
+      await el.click();
+      return true;
+    }
+  }
+  return false;
+}
+
 async function clickByText(page, selector, text) {
   const els = await page.$$(selector);
   for (const el of els) {
@@ -97,6 +111,19 @@ async function clickByText(page, selector, text) {
 
 async function run() {
   const userId = await ensureUser();
+  // A run that died mid-way leaves its org behind; a second org of the same
+  // name would make the by-name lookups below pick the wrong one.
+  {
+    const stale = await (await rest(`/orgs?name=eq.${encodeURIComponent(ORG_NAME)}&select=id`)).json();
+    for (const o of Array.isArray(stale) ? stale : []) {
+      await rest(`/receipts?org_id=eq.${o.id}`, { method: "DELETE" });
+      await rest(`/expenses?org_id=eq.${o.id}`, { method: "DELETE" });
+      await rest(`/donations?org_id=eq.${o.id}`, { method: "DELETE" });
+      await rest(`/members_roles?org_id=eq.${o.id}`, { method: "DELETE" });
+      await rest(`/orgs?id=eq.${o.id}`, { method: "DELETE" });
+      console.log("NOTE: removed a leftover org from an earlier run");
+    }
+  }
   const browser = await puppeteer.launch({
     executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe",
     headless: "new",
@@ -323,6 +350,133 @@ async function run() {
   };
   const n1 = await countReceipts();
   check("receipts row count matches 9", n1 === 9, `count=${n1}`);
+
+  // --- 136: every review row carries a KIND; only income reaches a receipt --
+  // A ledger reading is handed to /money the way the home door does it (the
+  // one-shot sessionStorage parcel) — no AI call, no money. Six rows: a
+  // reader-labelled balance, a confirmed income with a donor, an expense, an
+  // income the reader marked "check", a column total, and an unlabelled row
+  // whose purpose is a balance word (the 135 code guess). Visible elements
+  // only (offsetParent) — ExtractionTable renders desktop AND phone copies.
+  {
+    const ref = (snippet) => ({ location: "photo 1", snippet });
+    const f = (value, confidence = "confirmed") =>
+      confidence === "missing"
+        ? { value: "", confidence, source_ref: null }
+        : { value, confidence, source_ref: ref(String(value)) };
+    const amt = (v) => ({ value: v, confidence: "confirmed", source_ref: ref(String(v)) });
+    const row = (donor, cents, purpose, kind, kindConf = "confirmed") => ({
+      donor_name: donor ? f(donor) : f("", "missing"),
+      donor_phone: f("", "missing"),
+      amount_cents: amt(cents),
+      purpose: f(purpose),
+      donated_at: f("2026-09-01"),
+      ...(kind ? { kind: f(kind, kindConf) } : {}),
+    });
+    const extraction = {
+      page_title: f("KEWANGAN 2025"),
+      rows: [
+        row("", 768000, "上年结存", "balance"),
+        row("测试捐款人A", 5000, "乐捐", "income"),
+        row("", 1000, "礼堂租金", "expense"),
+        row("测试捐款人B", 2000, "晚宴", "income", "check"),
+        row("", 1360000, "Jumlah 合计", "total"),
+        row("", 1159000, "银行", null),
+      ],
+    };
+    await page.goto(`${BASE}/money/history`, { waitUntil: "networkidle2" });
+    await page.evaluate((parcel) => {
+      sessionStorage.setItem(
+        "minit.intake.v1",
+        JSON.stringify({ kind: "ledger_page", fileName: "kewangan-136.png", extraction: parcel, at: Date.now() }),
+      );
+    }, extraction);
+    await page.goto(`${BASE}/money`, { waitUntil: "networkidle2" });
+    await new Promise((r) => setTimeout(r, 1500));
+    const visible = (sel) =>
+      page.evaluate(
+        (q) => [...document.querySelectorAll(q)].filter((el) => el.offsetParent !== null).length,
+        sel,
+      );
+    const badgeKinds = () =>
+      page.evaluate(() =>
+        [...document.querySelectorAll('[data-probe="ledger-kind-badge"]')]
+          .filter((el) => el.offsetParent !== null)
+          .map((el) => `${el.dataset.kind}:${el.dataset.confidence}`),
+      );
+    let kinds = await badgeKinds();
+    check(
+      "136 five badges visible, the total row folded away",
+      kinds.length === 5 && kinds.includes("balance:confirmed") && kinds.includes("expense:confirmed"),
+      kinds.join(","),
+    );
+    check("136 check label shows as check", kinds.includes("income:check"));
+    check("136 unlabelled balance word → grey code guess", kinds.includes("balance:inferred"));
+    const totalsLine = await page.evaluate(
+      () => document.querySelector('[data-probe="ledger-totals-line"]')?.textContent ?? "",
+    );
+    check("136 totals line says 1 hidden", totalsLine.includes("已隐藏 1 行总计"), totalsLine);
+    await page.click('[data-probe="ledger-totals-toggle"]');
+    await new Promise((r) => setTimeout(r, 400));
+    kinds = await badgeKinds();
+    check("136 show → total badge appears (6)", kinds.length === 6 && kinds.includes("total:confirmed"), kinds.join(","));
+    // Receipt gate: the button counts only the confirmed income row.
+    const addBtnText = async () =>
+      page.evaluate(() =>
+        [...document.querySelectorAll("button")]
+          .filter((b) => b.offsetParent !== null && b.textContent.includes("加入登记"))
+          .map((b) => b.textContent.trim())[0] ?? "",
+      );
+    let addText = await addBtnText();
+    check("136 add-to-register counts 1 (only confirmed income)", addText.includes("(1)"), addText);
+    check("136 undecided row says tap the badge", (await visible('[data-probe="ledger-kind-undecided"]')) === 1);
+    check("136 non-income rows say no receipt", (await visible('[data-probe="ledger-non-income-note"]')) === 3);
+    // ✓ Correct on the check row → it becomes income → count 2.
+    await clickVisible(page, '[data-probe="ledger-kind-confirm"]');
+    await new Promise((r) => setTimeout(r, 400));
+    addText = await addBtnText();
+    check("136 confirming the check row → count 2", addText.includes("(2)"), addText);
+    // Badge picker: turn the code-guessed balance into a person-confirmed one.
+    const badges = await page.$$('[data-probe="ledger-kind-badge"]');
+    for (const b of badges) {
+      const conf = await b.evaluate((el) => (el.offsetParent !== null ? el.dataset.confidence : ""));
+      if (conf === "inferred") { await b.click(); break; }
+    }
+    await new Promise((r) => setTimeout(r, 300));
+    const pickVisible = await visible('[data-probe="ledger-kind-pick-balance"]');
+    check("136 tapping a badge opens the picker", pickVisible === 1, `visible=${pickVisible}`);
+    if (pickVisible === 1) {
+      await clickVisible(page, '[data-probe="ledger-kind-pick-balance"]');
+      await new Promise((r) => setTimeout(r, 300));
+    }
+    kinds = await badgeKinds();
+    check("136 picked balance is now confirmed (no code guess left)", !kinds.includes("balance:inferred"), kinds.join(","));
+    // One tap: record as spending → /money/expenses pre-filled, nothing saved.
+    await clickVisible(page, '[data-probe="ledger-to-expense"]');
+    await new Promise((r) => setTimeout(r, 1500));
+    check("136 record-as-spending lands on /money/expenses", page.url().includes("/money/expenses"), page.url());
+    check("136 expenses page shows the pre-fill notice", (await visible('[data-probe="expense-prefill-notice"]')) === 1);
+    const prefilled = await page.evaluate(() => {
+      const amount = document.querySelector('input[inputmode="decimal"]');
+      const desc = [...document.querySelectorAll("input")].find((i) => i.value === "礼堂租金");
+      return { amount: amount?.value ?? "", desc: Boolean(desc) };
+    });
+    check("136 amount pre-filled 10.00 and purpose carried", prefilled.amount === "10.00" && prefilled.desc, JSON.stringify(prefilled));
+    const expenseRowsBefore = await (await rest(`/expenses?org_id=eq.${orgId}&select=id`)).json();
+    check("136 nothing saved by the tap itself", Array.isArray(expenseRowsBefore) && expenseRowsBefore.length === 0, `rows=${JSON.stringify(expenseRowsBefore).slice(0, 80)}`);
+    // Back (client-side): the row is marked as sent, badge frozen.
+    await page.goBack({ waitUntil: "networkidle2" });
+    await new Promise((r) => setTimeout(r, 1200));
+    check("136 the sent row is marked and cannot get a receipt", (await visible('[data-probe="ledger-sent-to-expenses"]')) === 1);
+    const frozen = await page.evaluate(() =>
+      [...document.querySelectorAll('[data-probe="ledger-kind-badge"]')]
+        .filter((el) => el.offsetParent !== null && el.dataset.kind === "expense")
+        .every((el) => el.disabled),
+    );
+    check("136 the sent row's badge is frozen", frozen);
+    // Leave the review clean for the rest of the script.
+    await page.evaluate(() => sessionStorage.removeItem("minit.intake.v1"));
+  }
 
   // --- fresh-session sign-in: OrgChip must agree with the server -----------
   // A brand-new browser session (no cookies, no localStorage) signing into an
