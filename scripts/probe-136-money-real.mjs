@@ -14,6 +14,7 @@
 //
 //   node scripts/probe-136-money-real.mjs          (dev server on :3000)
 //   E2E_BASE=http://localhost:3100 node scripts/probe-136-money-real.mjs
+//   ONLY=A | ONLY=B                                 (one of the two flows)
 
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
@@ -114,24 +115,28 @@ async function readThroughHomeDoor(page, file, label) {
   await input.uploadFile(file);
   await sleep(800);
   await shot(page, `${label}-0-staged`);
+  // The conversation persists across reads: an earlier product card is still
+  // on the page, so wait for a NEW card, then open the newest one.
+  const before = (await page.$$('[data-probe="product-card"]')).length;
   await page.focus("#minit-ask-input");
   await page.keyboard.press("Enter");
   const t0 = Date.now();
-  let card = null;
+  let cards = [];
   while (Date.now() - t0 < 150000) {
-    card = await page.$('[data-probe="product-card"]');
-    if (card) break;
+    cards = await page.$$('[data-probe="product-card"]');
+    if (cards.length > before) break;
     const err = await page.evaluate(() => document.body.innerText.includes("读取失败") || document.body.innerText.includes("Could not"));
     if (err) break;
     await sleep(1500);
   }
-  check(`${label}: MinitAI read it and offered the product card (${Math.round((Date.now() - t0) / 1000)}s)`, Boolean(card));
+  const card = cards.length > before;
+  check(`${label}: MinitAI read it and offered the product card (${Math.round((Date.now() - t0) / 1000)}s)`, card);
   await shot(page, `${label}-1-home-card`);
   if (!card) {
     console.log("BODY:", (await page.evaluate(() => document.body.innerText)).slice(0, 1500));
     return false;
   }
-  await clickVisible(page, '[data-probe="product-card"]');
+  await cards[cards.length - 1].click();
   await sleep(2500);
   check(`${label}: the card opens /money`, page.url().includes("/money"), page.url());
   return true;
@@ -172,7 +177,8 @@ async function run() {
     check("org created", page.url().includes("/orgs/welcome"), page.url());
 
     // --- 1. the donation ledger (case-05) ----------------------------------
-    const okA = await readThroughHomeDoor(page, path.join(root, "eval/cases/case-05-ledger-jun/input.png"), "A");
+    const only = process.env.ONLY ?? "";
+    const okA = only === "B" ? false : await readThroughHomeDoor(page, path.join(root, "eval/cases/case-05-ledger-jun/input.png"), "A");
     if (okA) {
       await sleep(1000);
       let kinds = await badgeKinds(page);
@@ -219,7 +225,7 @@ async function run() {
     }
 
     // --- 2. the AGM financial summary (case-11) ----------------------------
-    const okB = await readThroughHomeDoor(page, path.join(root, "eval/cases/case-11-ledger-agm-summary/input.png"), "B");
+    const okB = only === "A" ? false : await readThroughHomeDoor(page, path.join(root, "eval/cases/case-11-ledger-agm-summary/input.png"), "B");
     if (okB) {
       await sleep(1000);
       const kinds = await badgeKinds(page);
