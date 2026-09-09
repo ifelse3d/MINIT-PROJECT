@@ -499,6 +499,36 @@ export function parseMeetingNotesExtraction(raw: unknown) {
 // totals anything (Hard Rule 2) — sums happen in /src/lib code.
 // ---------------------------------------------------------------------------
 
+/**
+ * 136 (J 9/9, live site — 135 §B, decided): WHAT a ledger line IS. J
+ * photographed the AGM's KEWANGAN block into "Record income" and got seven
+ * "donations" — last year's balance, the hall rent, the dinner's cost, the
+ * bank balance — all offered a receipt. The reader now labels every line:
+ *
+ *   income  — money actually RECEIVED from someone (derma, yuran, 香油钱,
+ *             the dinner's takings)
+ *   expense — money PAID OUT (sewa dewan, kos, perbelanjaan, 开销)
+ *   balance — a STATE, not a movement (结存 / baki / bank / b/f / c/f)
+ *   total   — a column total (jumlah / 合计 / total) — output, so the review
+ *             does not look like it skipped a line, and hidden by code
+ *   ""      — the reader did not say (confidence "missing")
+ *
+ * It is a LABEL only: the model still computes nothing (Hard Rule 2), and a
+ * label it cannot decide is "check" with the reason in the snippet — never a
+ * default to income. Optional + .catch(undefined): every ledger saved before
+ * today parses unchanged, and a malformed label costs only itself. Code never
+ * fills a missing kind in (parseLedgerExtraction leaves it empty); the review
+ * falls back to the 135 word-list hint (src/lib/ledger-hints.ts).
+ */
+export const LEDGER_ROW_KINDS = ["income", "expense", "balance", "total"] as const;
+export type LedgerRowKind = (typeof LEDGER_ROW_KINDS)[number];
+
+export const ledgerRowKindFieldSchema = extractedField(
+  z.enum([...LEDGER_ROW_KINDS, ""] as const),
+  (v) => v === ""
+);
+export type LedgerRowKindField = z.infer<typeof ledgerRowKindFieldSchema>;
+
 export const donationRowExtractionSchema = z.object({
   donor_name: textFieldSchema,
   /** Phone as written (often absent in paper ledgers) */
@@ -507,6 +537,8 @@ export const donationRowExtractionSchema = z.object({
   /** e.g. "derma bulanan", "香油钱", "tabung bumbung" */
   purpose: textFieldSchema,
   donated_at: dateFieldSchema,
+  /** 136: income / expense / balance / total — see LEDGER_ROW_KINDS. */
+  kind: ledgerRowKindFieldSchema.optional().catch(undefined),
 });
 export type DonationRowExtraction = z.infer<typeof donationRowExtractionSchema>;
 
@@ -527,8 +559,22 @@ export const emptyLedgerExtraction: LedgerExtraction = {
   rows: [],
 };
 
+/**
+ * 136: `kind` is left exactly as the reader gave it. A row without one (an
+ * old reading, a model that did not answer) stays WITHOUT one — code never
+ * promotes an unlabelled line to income; the review shows no badge and the
+ * receipt gate treats it as "unknown, and not a balance" (receipts.ts). A
+ * label the model marked "missing" is dropped so it reads the same as absent.
+ */
 export function parseLedgerExtraction(raw: unknown) {
-  return ledgerExtractionSchema.safeParse(coerceMissingFieldsEmpty(raw));
+  const parsed = ledgerExtractionSchema.safeParse(coerceMissingFieldsEmpty(raw));
+  if (!parsed.success) return parsed;
+  for (const row of parsed.data.rows) {
+    if (row.kind && (row.kind.confidence === "missing" || row.kind.value === "")) {
+      delete row.kind;
+    }
+  }
+  return parsed;
 }
 
 // ---------------------------------------------------------------------------

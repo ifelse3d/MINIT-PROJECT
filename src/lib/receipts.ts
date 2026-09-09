@@ -1,4 +1,5 @@
 import type { LedgerExtraction } from "@/lib/extraction";
+import { kindAllowsReceipt } from "@/lib/ledger-hints";
 import { formatRm } from "@/lib/minutes-draft";
 
 // ---------------------------------------------------------------------------
@@ -172,6 +173,11 @@ export function isRegisterDonationArray(parsed: unknown): boolean {
  */
 export function eligibleForReceipt(row: LedgerExtraction["rows"][number]): boolean {
   return (
+    // 136: only money RECEIVED gets a receipt — a balance, an expense, a
+    // column total or an undecided ("check") label never does, whatever the
+    // other fields say. Rows read before today carry no label and pass
+    // unless their purpose reads as a balance (src/lib/ledger-hints.ts).
+    kindAllowsReceipt(row) &&
     row.donor_name.confidence === "confirmed" &&
     row.amount_cents.confidence === "confirmed" &&
     row.amount_cents.value !== null &&

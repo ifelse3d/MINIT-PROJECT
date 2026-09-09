@@ -22,9 +22,63 @@
 // an eval — and is listed in the 135 work order, not guessed here.
 // ---------------------------------------------------------------------------
 
-import type { LedgerExtraction } from "@/lib/extraction";
+import type { LedgerExtraction, LedgerRowKind } from "@/lib/extraction";
 
 type Row = LedgerExtraction["rows"][number];
+
+/**
+ * 136: what the review and the receipt gate treat a row AS. Three answers:
+ *   * the reader labelled it (`row.kind` with a real value) → that label,
+ *     with its confidence, `inferred: false`;
+ *   * no label, but the purpose reads as a balance word → `balance`,
+ *     `inferred: true` (the 135 word-list stands in for a silent model);
+ *   * nothing → `kind: null` — unknown, NOT income. Nothing here promotes a
+ *     line to income; only the reader or a person does that.
+ */
+export type RowKindReading = {
+  kind: LedgerRowKind | null;
+  confidence: "confirmed" | "check" | null;
+  /** True when code (the balance word-list), not the reader, said so. */
+  inferred: boolean;
+};
+
+export function rowKindOf(row: Pick<Row, "purpose"> & { kind?: Row["kind"] }): RowKindReading {
+  const k = row.kind;
+  if (k && k.confidence !== "missing" && k.value !== "") {
+    return { kind: k.value, confidence: k.confidence, inferred: false };
+  }
+  if (looksLikeBalanceRow(row.purpose.value)) {
+    return { kind: "balance", confidence: null, inferred: true };
+  }
+  return { kind: null, confidence: null, inferred: false };
+}
+
+/**
+ * 136: may this row become a RECEIPT, as far as its kind goes? Only money
+ * received does: a reader-labelled `income` that is confirmed, or an
+ * unlabelled row that does not read as a balance (a reading from before
+ * today, where the person is the only judge). A "check" label is not yet
+ * income — a person has to press the badge first.
+ */
+export function kindAllowsReceipt(row: Pick<Row, "purpose"> & { kind?: Row["kind"] }): boolean {
+  const r = rowKindOf(row);
+  if (r.kind === null) return true;
+  return r.kind === "income" && !r.inferred && r.confidence === "confirmed";
+}
+
+/**
+ * 136: re-key an index set after row `index` was removed — the same shift
+ * dropLedgerRow applies to `added`, exported for the other per-row marks the
+ * store keeps (rows handed to the expenses page).
+ */
+export function reindexAfterDrop(set: ReadonlySet<number>, index: number): Set<number> {
+  const next = new Set<number>();
+  for (const i of set) {
+    if (i === index) continue;
+    next.add(i > index ? i - 1 : i);
+  }
+  return next;
+}
 
 /** Words that make a purpose a BALANCE, not a receipt of money. */
 const BALANCE_WORDS =
@@ -61,8 +115,7 @@ export function dropLedgerRow<T>(
     return { rows: [...rows], added: new Set(added), payments: { ...payments } };
   }
   const shift = (i: number) => (i > index ? i - 1 : i);
-  const nextAdded = new Set<number>();
-  for (const i of added) if (i !== index) nextAdded.add(shift(i));
+  const nextAdded = reindexAfterDrop(added, index);
   const nextPayments: Record<number, "cash" | "transfer"> = {};
   for (const [k, v] of Object.entries(payments)) {
     const i = Number(k);
