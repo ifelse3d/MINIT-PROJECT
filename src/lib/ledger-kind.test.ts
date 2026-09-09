@@ -5,7 +5,7 @@ import {
   type LedgerExtraction,
   type LedgerRowKind,
 } from "@/lib/extraction";
-import { kindAllowsReceipt, reindexAfterDrop, rowKindOf } from "@/lib/ledger-hints";
+import { kindAllowsReceipt, readingHasNoKinds, reindexAfterDrop, rowKindOf } from "@/lib/ledger-hints";
 import { eligibleForReceipt } from "@/lib/receipts";
 import { mergeLedgerExtractions } from "@/lib/extraction-merge";
 
@@ -121,8 +121,35 @@ describe("136 — rowKindOf: reader label first, balance words second, never inc
     });
   });
 
-  it("no label and no balance word → unknown (null), not income", () => {
-    expect(rowKindOf(oldRow).kind).toBeNull();
+  it("no label and no balance / expense / income word → unknown (null), not income", () => {
+    expect(rowKindOf({ ...oldRow, purpose: t("晚宴") }).kind).toBeNull();
+    expect(rowKindOf({ ...oldRow, purpose: t("", "missing") }).kind).toBeNull();
+  });
+
+  // J's page, read by the OLD prompt (no kind anywhere): the word-lists
+  // stand in, always marked as a code guess.
+  it("expense / income words stand in for a silent reader (code guess)", () => {
+    const guess = (purpose: string) => rowKindOf({ ...oldRow, purpose: t(purpose) });
+    expect(guess("礼堂")).toEqual({ kind: "expense", confidence: null, inferred: true });
+    expect(guess("晚宴开销")).toEqual({ kind: "expense", confidence: null, inferred: true });
+    expect(guess("Sewa dewan")).toEqual({ kind: "expense", confidence: null, inferred: true });
+    expect(guess("会费")).toEqual({ kind: "income", confidence: null, inferred: true });
+    expect(guess("乐捐")).toEqual({ kind: "income", confidence: null, inferred: true });
+    expect(guess("Yuran ahli")).toEqual({ kind: "income", confidence: null, inferred: true });
+    expect(guess("晚宴").kind).toBeNull(); // a dinner alone could be either — no guess
+    expect(guess("Derma pembaikan bumbung dewan").kind).toBeNull(); // a donation FOR the hall — both words, no guess
+  });
+
+  it("the reader's label always beats the word-lists", () => {
+    expect(rowKindOf({ ...oldRow, purpose: t("礼堂"), kind: kindOf("income") }).kind).toBe("income");
+  });
+});
+
+describe("136 — readingHasNoKinds: a review read before today", () => {
+  it("true when no row carries a label, false once any does", () => {
+    expect(readingHasNoKinds([oldRow, oldRow])).toBe(true);
+    expect(readingHasNoKinds([oldRow, { ...oldRow, kind: kindOf("income") }])).toBe(false);
+    expect(readingHasNoKinds([])).toBe(false);
   });
 });
 
@@ -142,9 +169,12 @@ describe("136 — only income reaches a receipt", () => {
     expect(eligibleForReceipt({ ...oldRow, kind: kindOf("income", "check") })).toBe(false);
   });
 
-  it("old data without a label: yes, unless the purpose reads as a balance", () => {
+  it("old data without a label: yes, unless the purpose reads as a balance or an expense", () => {
     expect(eligibleForReceipt(oldRow)).toBe(true);
     expect(eligibleForReceipt({ ...oldRow, purpose: t("银行") })).toBe(false);
+    expect(eligibleForReceipt({ ...oldRow, purpose: t("礼堂") })).toBe(false);
+    // a guessed income passes like an unlabelled row
+    expect(eligibleForReceipt({ ...oldRow, purpose: t("会费") })).toBe(true);
   });
 });
 

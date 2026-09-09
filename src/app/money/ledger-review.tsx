@@ -16,7 +16,7 @@ import {
 } from "@/lib/receipts";
 import { formatRm } from "@/lib/minutes-draft";
 import { struckDoubleSuggestion } from "@/lib/bm-glossary";
-import { looksLikeSummaryPage, rowKindOf } from "@/lib/ledger-hints";
+import { looksLikeSummaryPage, readingHasNoKinds, rowKindOf } from "@/lib/ledger-hints";
 import type { LedgerRowKind } from "@/lib/extraction";
 import { signedUrlForOriginal } from "@/app/minutes/open-original";
 import { handExpenseFields, handExpensePhoto } from "@/lib/expense-handoff";
@@ -544,6 +544,21 @@ export function LedgerReview() {
             </p>
           </div>
         )}
+        {/* 136 (J, live, 5 PM): a reading stored before today carries no kind
+            on any row — the grey "(code guess)" badges are word-lists standing
+            in. Say so, and say how to get the real labels: read it again. */}
+        {!isSampleLedger && ledgerSourceLabel !== null && readingHasNoKinds(ledgerRows) && (
+          <p
+            data-probe="ledger-stale-kinds"
+            className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-400/10 dark:text-amber-100"
+          >
+            <Tri
+              bm="Bacaan ini dibuat sebelum MinitAI belajar menanda pendapatan / perbelanjaan — lencana kelabu di bawah ialah tekaan kod daripada perkataan sahaja. Untuk label sebenar: pilih gambar itu semula dan tekan “AMBIL SEMULA halaman ini”."
+              zh="这份读取是 MinitAI 学会分「收入／支出」之前读的 —— 下面灰色徽章只是码照字面猜的。要真正的标签：重新选这张照片，按「重拍这一页 —— 取代画面上的读取」。"
+              en="This reading was made before MinitAI learned to label income / expense — the grey badges below are code guessing from the words alone. For real labels: pick the photo again and press “RETAKE this page — replace what is on screen”."
+            />
+          </p>
+        )}
         {/* 136: column totals are not money moving — folded away by default,
             one line says how many, one tap shows them. Never deleted by code. */}
         {!isSampleLedger && totalRowCount > 0 && (
@@ -597,8 +612,7 @@ export function LedgerReview() {
             const reading = rowKindOf(r);
             const balance = reading.kind === "balance" && reading.inferred;
             const sent = sentToExpenses.has(i);
-            const nonIncome =
-              reading.kind !== null && reading.kind !== "income" && !reading.inferred;
+            const nonIncome = reading.kind !== null && reading.kind !== "income";
             const undecided = reading.confidence === "check";
             const struck = isSampleLedger ? null : struckDoubleSuggestion(r.purpose.value);
             // Stage 0-1: sample rows are READ-ONLY — no confirm, no edit. A
@@ -721,7 +735,7 @@ export function LedgerReview() {
                         en="Sent to Spending & claims — will not get a receipt"
                       />
                     </span>
-                  ) : nonIncome && !undecided ? (
+                  ) : nonIncome && !undecided && !balance ? (
                     <span data-probe="ledger-non-income-note">
                       <Tri
                         bm="Bukan wang yang diterima — tiada resit"

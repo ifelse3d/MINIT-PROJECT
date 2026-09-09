@@ -47,8 +47,20 @@ export function rowKindOf(row: Pick<Row, "purpose"> & { kind?: Row["kind"] }): R
   if (k && k.confidence !== "missing" && k.value !== "") {
     return { kind: k.value, confidence: k.confidence, inferred: false };
   }
-  if (looksLikeBalanceRow(row.purpose.value)) {
+  const purpose = row.purpose.value;
+  if (looksLikeBalanceRow(purpose)) {
     return { kind: "balance", confidence: null, inferred: true };
+  }
+  // Only a ONE-SIDED hit is a guess. "Derma pembaikan bumbung dewan" is a
+  // donation FOR the hall — an income word and an expense word together —
+  // and code must not call that either way; the person decides.
+  const expense = looksLikeExpenseRow(purpose);
+  const income = looksLikeIncomeRow(purpose);
+  if (expense && !income) {
+    return { kind: "expense", confidence: null, inferred: true };
+  }
+  if (income && !expense) {
+    return { kind: "income", confidence: null, inferred: true };
   }
   return { kind: null, confidence: null, inferred: false };
 }
@@ -63,7 +75,15 @@ export function rowKindOf(row: Pick<Row, "purpose"> & { kind?: Row["kind"] }): R
 export function kindAllowsReceipt(row: Pick<Row, "purpose"> & { kind?: Row["kind"] }): boolean {
   const r = rowKindOf(row);
   if (r.kind === null) return true;
-  return r.kind === "income" && !r.inferred && r.confidence === "confirmed";
+  // A code-guessed income is an unlabelled row with a hint, not a verdict —
+  // it passes like one (every other field still has to be confirmed).
+  if (r.inferred) return r.kind === "income";
+  return r.kind === "income" && r.confidence === "confirmed";
+}
+
+/** 136: true when the review holds rows the reader never labelled — a reading from before today. */
+export function readingHasNoKinds(rows: readonly Row[]): boolean {
+  return rows.length > 0 && rows.every((r) => !r.kind || r.kind.confidence === "missing" || r.kind.value === "");
 }
 
 /**
@@ -87,6 +107,27 @@ const BALANCE_WORDS =
 /** True when the row's purpose reads as a balance (上年结存, 银行, Baki bank). */
 export function looksLikeBalanceRow(purpose: string): boolean {
   return BALANCE_WORDS.test(purpose);
+}
+
+/**
+ * 136 (J, live, 5 PM): a reading stored BEFORE today has no kind at all, so
+ * every line showed "Row type?" — including 礼堂 and 晚宴开销. Two more
+ * word-lists stand in for a silent reader, the same way the balance list
+ * does: expense words → expense, income words → income. Both are shown as
+ * "(code guess)"; a guessed expense never reaches a receipt, a guessed
+ * income is treated like an unlabelled row (a person still confirms every
+ * field). Neither list is consulted when the reader DID label the row.
+ */
+const EXPENSE_WORDS =
+  /(礼堂|禮堂|租金|开销|開銷|支出|费用|費用|开支|開支|付款|\bsewa\b|\bdewan\b|\bkos\b|perbelanjaan|belanja|\bbil\b|bayaran|\bexpense|\brent\b|\bcost\b|\bpaid\b)/i;
+const INCOME_WORDS =
+  /(会费|會費|乐捐|樂捐|捐款|捐|香油|收入|奉献|奉獻|\byuran\b|\bderma\b|kutipan|sumbangan|\bhasil\b|\bpendapatan\b|\bdonation|\bincome\b|\bfees?\b)/i;
+
+export function looksLikeExpenseRow(purpose: string): boolean {
+  return EXPENSE_WORDS.test(purpose);
+}
+export function looksLikeIncomeRow(purpose: string): boolean {
+  return INCOME_WORDS.test(purpose);
 }
 
 /**
