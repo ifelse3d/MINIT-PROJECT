@@ -5,6 +5,8 @@
 > 规则在 `CLAUDE.md`，阶段在 `BUILD_PLAN.md`，历史在 `docs/archive/`。
 > 🔴 **给 J 的东西写进 `C:\dev\_J-要做的事\`，不要写在这里。**
 
+**🟣 133 号线上急修（2026-09-09 下午 ~3 PM，上台前 2 小时，直接在 `main` 上、已 push；报告在 `_J-要做的事[-報告-線上急修-存好繼續按鈕-20260909.md`）：**J 线上抓到 /orgs/new 章程读完后「没错，存好继续」按不过去。病根＝`IdentityStep` 自己是一张 `<form action={saveOrgIdentity}>`，却被放在外层 `<form action={createOrg}>` 里面（form 套 form）；React 不跑巢状表单的 action，浏览器落到占位的 `javascript:` 动作抛「A React form was unexpectedly submitted」，server 一个请求都没收到。修法：成功区块（绿色「好了」＋IdentityStep＋读取中／读取失败卡）搬到外层表单**外面**当兄弟，外面包一个同 gap 的 div；建立按钮留在表单里、`state.ok` 后隐藏。只改 `create-org-form.tsx` 一支。验证：tsc 0 · eslint 0 · 拋弃式帐号走完整流程（挡掉读取路由不花钱）——按下去 action HTTP 200、`orgs.name`／`ppm_no` 写进去、自动跳 `/constitution?setup=1`。**`after-stage` 已 merge 进 `main` 的这支 commit（merge commit），所以「上台完了」的三行照旧可用（`--ff-only` 不会卡）。**
+
 **🟣 130 号场收工（2026-09-09 凌晨，报告 `_J-要做的事\131-…md`；工作场自己写）：§3–§19 全做（§16 只做章程半、Office 半留残；§19 只写规格＝132 号单）。
 🔴 33 支 commit 全在分支 `after-stage`，`main` 一支没动、没 push——J 说「上台完了」才 `git checkout main && git merge --ff-only after-stage && git push origin main`（9/9 5:15 PM 上台前线上不动）。
 四关：tsc 0 · **eslint 0 错 0 警（19→0，`.github/workflows/ci.yml` 已加 `--max-warnings 0` 关）** · vitest **1610** · build ✓。真钱 **US$0.0076**（一次付费 eval:quality 7/7；授权 ≤3.00）。**新 migration 46**（`20260924000000_roster_particulars.sql`：committee_roster 加 ic_no／address／occupation，可空、探针、salin 46）——**J 贴**；.env／Vercel env 没动。**
