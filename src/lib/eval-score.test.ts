@@ -165,6 +165,38 @@ describe("scoreLedger", () => {
     expect(s.failures.some((f) => f.expected === "30000" && f.got === "30001")).toBe(true);
   });
 
+  // 136: the answer key may say what a line IS; the reader's label is then
+  // compared exactly, and a key without it scores exactly as before.
+  it("kind is scored as an enum when the key has it, and not at all when it does not", () => {
+    const withKind: ExpectedLedger = {
+      page_title: "KEWANGAN",
+      rows: [
+        { donor_name: "", donor_phone: "", amount_cents: 768000, purpose: "上年结存", donated_at: "", kind: "balance" },
+        { donor_name: "", donor_phone: "", amount_cents: 100000, purpose: "礼堂", donated_at: "", kind: "expense" },
+      ],
+    };
+    const kindOf = (v: "income" | "expense" | "balance" | "total") => ({
+      value: v,
+      confidence: "confirmed" as const,
+      source_ref: { location: "photo 1", snippet: v },
+    });
+    const actual: LedgerExtraction = {
+      page_title: t("KEWANGAN"),
+      rows: [
+        { ...row("", "", 768000, "上年结存", ""), kind: kindOf("balance") },
+        { ...row("", "", 100000, "礼堂", ""), kind: kindOf("income") }, // wrong: an expense called income
+      ],
+    };
+    const s = summarize(scoreLedger(withKind, actual));
+    expect(s.byKind.enum.correct).toBe(1);
+    expect(s.byKind.enum.total).toBe(2);
+    expect(s.failures.some((f) => f.field === "rows[1].kind" && f.got === "income")).toBe(true);
+    expect(s.inventedCount).toBe(0);
+    // The same reading against the pre-136 key: no enum field at all.
+    const s0 = summarize(scoreLedger(expected, actual));
+    expect(s0.byKind.enum?.total ?? 0).toBe(0);
+  });
+
   it("a completely missed row counts every sub-field as a miss", () => {
     const actual: LedgerExtraction = {
       page_title: t("Buku Derma Jun 2026"),

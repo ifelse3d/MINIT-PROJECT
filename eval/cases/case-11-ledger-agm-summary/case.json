@@ -1,0 +1,75 @@
+{
+  "type": "ledger",
+  "description": "136: a PRINTED AGM financial summary (KEWANGAN) — no donors, mixed zh/bm, one line each of balance / income / expense / total. Tests that the reader labels `kind` and manufactures no donor and no date.",
+  "orgName": "Pertubuhan Contoh Harmoni",
+  "todayIso": "2026-07-01",
+  "expected": {
+    "page_title": "LAPORAN KEWANGAN TAHUN 2025",
+    "rows": [
+      {
+        "donor_name": "",
+        "donor_phone": "",
+        "amount_cents": 768000,
+        "purpose": "上年结存",
+        "donated_at": "",
+        "kind": "balance"
+      },
+      {
+        "donor_name": "",
+        "donor_phone": "",
+        "amount_cents": 120000,
+        "purpose": "Yuran ahli 会费",
+        "donated_at": "",
+        "kind": "income"
+      },
+      {
+        "donor_name": "",
+        "donor_phone": "",
+        "amount_cents": 80000,
+        "purpose": "乐捐 Derma",
+        "donated_at": "",
+        "kind": "income"
+      },
+      {
+        "donor_name": "",
+        "donor_phone": "",
+        "amount_cents": 1160000,
+        "purpose": "慈善晚宴收入",
+        "donated_at": "",
+        "kind": "income"
+      },
+      {
+        "donor_name": "",
+        "donor_phone": "",
+        "amount_cents": 100000,
+        "purpose": "Sewa dewan 礼堂租金",
+        "donated_at": "",
+        "kind": "expense"
+      },
+      {
+        "donor_name": "",
+        "donor_phone": "",
+        "amount_cents": 915000,
+        "purpose": "晚宴开销",
+        "donated_at": "",
+        "kind": "expense"
+      },
+      {
+        "donor_name": "",
+        "donor_phone": "",
+        "amount_cents": 1159000,
+        "purpose": "Baki bank 银行结存",
+        "donated_at": "",
+        "kind": "balance"
+      },
+      {
+        "donor_name": "",
+        "donor_phone": "",
+        "amount_cents": 1360000,
+        "purpose": "Jumlah pendapatan 合计",
+        "donated_at": "",
+        "kind": "total"
+      }
+    ]
+  }
+}

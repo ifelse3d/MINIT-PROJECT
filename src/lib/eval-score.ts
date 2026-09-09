@@ -65,6 +65,12 @@ export type ExpectedLedger = {
     amount_cents: number | null;
     purpose: string;
     donated_at: string;
+    /**
+     * 136: what the line IS — income / expense / balance / total. Optional so
+     * older answer keys still score; when written it is compared exactly (an
+     * enum field). A reader that leaves it out scores a miss, not an invention.
+     */
+    kind?: "income" | "expense" | "balance" | "total";
   }[];
 };
 
@@ -274,6 +280,11 @@ export function scoreLedger(
         { name: "amount_cents", kind: "amount" as const, expected: r.amount_cents },
         { name: "purpose", kind: "text" as const, expected: r.purpose },
         { name: "donated_at", kind: "date" as const, expected: r.donated_at },
+        // 136: only when the answer key says so — a key written before today
+        // has no kind and is scored exactly as before.
+        ...(r.kind !== undefined
+          ? [{ name: "kind", kind: "enum" as const, expected: r.kind }]
+          : []),
       ]),
       actual.rows,
       (r) => [
@@ -282,6 +293,7 @@ export function scoreLedger(
         r.amount_cents.value,
         r.purpose.value,
         r.donated_at.value,
+        r.kind?.value ?? "",
       ],
       0
     ),

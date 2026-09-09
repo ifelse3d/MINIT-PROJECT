@@ -11,28 +11,32 @@
         "donor_phone": "012-3456789",
         "amount_cents": 5000,
         "purpose": "derma am",
-        "donated_at": "2026-06-07"
+        "donated_at": "2026-06-07",
+        "kind": "income"
       },
       {
         "donor_name": "Tan Ah Kow",
         "donor_phone": "",
         "amount_cents": 30000,
         "purpose": "tabung bumbung",
-        "donated_at": "2026-06-08"
+        "donated_at": "2026-06-08",
+        "kind": "income"
       },
       {
         "donor_name": "Syarikat Maju Sdn Bhd",
         "donor_phone": "03-98765432",
         "amount_cents": 100000,
         "purpose": "derma am",
-        "donated_at": "2026-06-15"
+        "donated_at": "2026-06-15",
+        "kind": "income"
       },
       {
         "donor_name": "Muthu A/L Samy",
         "donor_phone": "",
         "amount_cents": 2000,
         "purpose": "derma am",
-        "donated_at": "2026-06-28"
+        "donated_at": "2026-06-28",
+        "kind": "income"
       }
     ]
   }
