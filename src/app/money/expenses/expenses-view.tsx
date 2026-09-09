@@ -32,7 +32,11 @@ import { canDecideClaim, canSubmitClaim, type ExpenseStatus } from "@/lib/claims
 import { formatRm } from "@/lib/minutes-draft";
 import { parseRmToCents } from "@/lib/receipts";
 import { dayIsoMalaysia } from "@/lib/history";
-import { consumeExpensePhoto } from "@/lib/expense-handoff";
+import {
+  consumeExpenseFields,
+  consumeExpensePhoto,
+  type ExpenseFieldsParcel,
+} from "@/lib/expense-handoff";
 import type { ExpenseExtraction } from "@/lib/extraction";
 import { TemplateChips } from "../templates";
 import {
@@ -168,12 +172,25 @@ export function ExpensesView({ role }: { role: string }) {
   // B-5④: the ledger page's "this is spending" answer sends its photo here.
   // It waits behind an explicit, priced button — never read automatically.
   const [handedPhoto, setHandedPhoto] = useState<File | null>(null);
+  // 136: a ledger row the reader labelled EXPENSE, sent over with its fields
+  // ("record as spending"). Pre-fills the form; nothing is saved until the
+  // person presses save — the same explicit tap as any typed expense.
+  const [handedFields, setHandedFields] = useState<ExpenseFieldsParcel | null>(null);
   useEffect(() => {
     // Deferred a tick: the hand-off is an external (module-level) mailbox and
     // the read must happen once after mount, not during the render pass.
     const id = setTimeout(() => {
       const file = consumeExpensePhoto();
       if (file) setHandedPhoto(file);
+      const fields = consumeExpenseFields();
+      if (fields) {
+        setHandedFields(fields);
+        setMode("record");
+        if (fields.description) setDescription(fields.description);
+        if (fields.amountCents !== null) setAmount((fields.amountCents / 100).toFixed(2));
+        if (fields.spentAtIso) setDate(fields.spentAtIso);
+        setSource("photo");
+      }
     }, 0);
     return () => clearTimeout(id);
   }, []);
@@ -446,6 +463,43 @@ export function ExpensesView({ role }: { role: string }) {
               </div>
             )}
 
+            {/* 136: the fields that came over from a ledger row labelled
+                expense. Pre-filled below; the person checks and saves. */}
+            {handedFields && (
+              <div
+                data-probe="expense-prefill-notice"
+                className="flex flex-wrap items-start gap-3 rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-base text-amber-900 dark:bg-amber-400/10 dark:text-amber-100"
+              >
+                {handedFields.photoDataUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={handedFields.photoDataUrl}
+                    alt=""
+                    className="h-20 w-16 shrink-0 rounded-sm border object-cover"
+                  />
+                )}
+                <div className="flex min-w-48 flex-1 flex-col gap-1">
+                  <p className="font-medium">
+                    🧾{" "}
+                    <Tri
+                      bm={`Dibawa dari halaman lejar (${handedFields.sourceLabel}) — borang di bawah sudah diisi. Semak, kemudian tekan simpan.`}
+                      zh={`从账页带过来的（${handedFields.sourceLabel}）—— 下面的表格已经填好。核对后再按保存。`}
+                      en={`Brought over from the ledger page (${handedFields.sourceLabel}) — the form below is filled in. Check it, then press save.`}
+                    />
+                  </p>
+                  <p className="text-sm">
+                    <Tri
+                      bm="Tiada apa-apa disimpan lagi — baris itu tidak akan diberi resit."
+                      zh="还没有保存任何东西 —— 那一行不会开收据。"
+                      en="Nothing is saved yet — that row will not get a receipt."
+                    />
+                  </p>
+                </div>
+                <Button variant="ghost" onClick={() => setHandedFields(null)}>
+                  <Tri bm="Faham" zh="知道了" en="Got it" />
+                </Button>
+              </div>
+            )}
             {/* B-5④: the photo that came over from the ledger page. */}
             {handedPhoto && (
               <div className="flex flex-col gap-2 rounded-md border-2 border-amber-300 bg-amber-50 p-3 text-base text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">

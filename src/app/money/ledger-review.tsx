@@ -16,9 +16,11 @@ import {
 } from "@/lib/receipts";
 import { formatRm } from "@/lib/minutes-draft";
 import { struckDoubleSuggestion } from "@/lib/bm-glossary";
-import { looksLikeBalanceRow, looksLikeSummaryPage } from "@/lib/ledger-hints";
+import { looksLikeSummaryPage, rowKindOf } from "@/lib/ledger-hints";
+import type { LedgerRowKind } from "@/lib/extraction";
 import { signedUrlForOriginal } from "@/app/minutes/open-original";
-import { handExpensePhoto } from "@/lib/expense-handoff";
+import { handExpenseFields, handExpensePhoto } from "@/lib/expense-handoff";
+import { KindBadge } from "./kind-badge";
 import { PaymentMethodToggle } from "./payment-method-toggle";
 import { TypeDonations } from "./type-donations";
 import { RoundList } from "./round-list";
@@ -51,6 +53,8 @@ export function LedgerReview() {
     ledgerBackToEmpty,
     mutateLedger,
     removeLedgerRow,
+    sentToExpenses,
+    markRowSentToExpenses,
     addConfirmedRowsToRegister,
     rowsReadyToAdd,
     addManualDonations,
@@ -77,6 +81,8 @@ export function LedgerReview() {
   const [askDirection, setAskDirection] = useState<File | null>(null);
   /** B-5①: the in-page typing grid (no more jump to another page). */
   const [typingOpen, setTypingOpen] = useState(false);
+  /** 136: column totals the reader labelled `total` are folded away by default. */
+  const [showTotals, setShowTotals] = useState(false);
   const pageFullyRecorded =
     !isSampleLedger && ledgerPageFullyRecorded(ledger.rows, addedRows);
   // I-1 (26 号报告 §3-1): a review still in progress gets its own question —
@@ -138,6 +144,46 @@ export function LedgerReview() {
     f.confidence = v === "" ? "missing" : "confirmed";
     f.source_ref = v === "" ? null : f.source_ref ?? userSource();
   }
+  /** 136: a person sets (or confirms) what a row IS. Confirmed, sourced to them. */
+  function setRowKind(i: number, kind: LedgerRowKind, keepSource = false): void {
+    mutateLedger((l) => {
+      const row = l.rows[i];
+      const prev = row.kind;
+      row.kind = {
+        value: kind,
+        confidence: "confirmed",
+        source_ref: keepSource && prev?.source_ref ? prev.source_ref : userSource(),
+      };
+    });
+  }
+  /**
+   * 136: "record as spending" — the row's fields (amount, purpose, date, the
+   * page preview) travel to /money/expenses and pre-fill the form; the
+   * person saves there. The row is marked here so it never enters a receipt.
+   */
+  function sendRowToExpenses(i: number): void {
+    const r = ledger.rows[i];
+    handExpenseFields({
+      amountCents: r.amount_cents.value,
+      description: r.purpose.value,
+      spentAtIso: r.donated_at.value,
+      photoDataUrl: ledgerPages[0]?.dataUrl || null,
+      sourceLabel: `${ledgerSourceLabel ?? ""} · ${t("baris", "第", "row")} ${i + 1}`.trim(),
+    });
+    setRowKind(i, "expense", true);
+    markRowSentToExpenses(i);
+    router.push("/money/expenses");
+  }
+  // 136: which review rows are on the table. Column totals the reader
+  // labelled are folded behind one line unless the person opens them.
+  const isReaderTotal = (r: (typeof ledger.rows)[number]) => {
+    const k = rowKindOf(r);
+    return k.kind === "total" && !k.inferred;
+  };
+  const totalRowCount = ledger.rows.filter(isReaderTotal).length;
+  const visibleRows = ledger.rows
+    .map((r, i) => ({ r, i }))
+    .filter(({ r }) => showTotals || !isReaderTotal(r));
 
   return (
     <PageSection
@@ -488,7 +534,38 @@ export function LedgerReview() {
                 en="Receipts can only be made from individual donations. Photograph the actual donation ledger, or press “No paper — type it in” and record them one by one. Spending (the hall, the dinner's cost) belongs in Spending & claims. A row that is not a donation can be removed with the ✕ under it."
               />
             </p>
+            {/* 136: the reader labels every line now — say where to look. */}
+            <p className="mt-2" data-probe="ledger-summary-kind-note">
+              <Tri
+                bm="MinitAI sudah menanda setiap baris sebagai pendapatan / perbelanjaan / baki — lihat lencana di bawah setiap baris. Hanya baris PENDAPATAN boleh diberi resit; baris perbelanjaan ada butang “rekod sebagai perbelanjaan”."
+                zh="MinitAI 已把每一行标成收入／支出／结余，看每行下面的徽章。只有「收入」行能开收据；「支出」行有一键「记成支出」。"
+                en="MinitAI has labelled every line as income / expense / balance — see the badge under each row. Only INCOME rows can get a receipt; expense rows have a one-tap “record as spending”."
+              />
+            </p>
           </div>
+        )}
+        {/* 136: column totals are not money moving — folded away by default,
+            one line says how many, one tap shows them. Never deleted by code. */}
+        {!isSampleLedger && totalRowCount > 0 && (
+          <p className="text-sm text-muted-foreground" data-probe="ledger-totals-line">
+            <Tri
+              bm={`${totalRowCount} baris JUMLAH disembunyikan (bukan wang diterima)`}
+              zh={`已隐藏 ${totalRowCount} 行总计（不是收到的钱）`}
+              en={`${totalRowCount} TOTAL row(s) hidden (not money received)`}
+            />{" "}
+            <button
+              type="button"
+              className="underline underline-offset-4"
+              data-probe="ledger-totals-toggle"
+              onClick={() => setShowTotals((v) => !v)}
+            >
+              {showTotals ? (
+                <Tri bm="sembunyikan" zh="收起" en="hide" />
+              ) : (
+                <Tri bm="tunjukkan" zh="显示" en="show" />
+              )}
+            </button>
+          </p>
         )}
         {/* Compact spreadsheet-style table — one ledger row per table row */}
         <ExtractionTable
@@ -498,7 +575,7 @@ export function LedgerReview() {
             { bm: "Tarikh", zh: "日期", en: "Date" },
             { bm: "Tujuan", zh: "用途", en: "Purpose" },
           ]}
-          rows={ledgerRows.map((r, i) => {
+          rows={visibleRows.map(({ r, i }) => {
             const worst = [r.donor_name, r.amount_cents, r.donated_at]
               .map((f) => f.confidence)
               .reduce(
@@ -514,7 +591,15 @@ export function LedgerReview() {
             // tagged — a state, not money received; and a purpose the writer
             // struck and rewrote (晚晚餐宴) gets the same one-tap fix the
             // minutes page offers (129 D). Both pure; the person decides.
-            const balance = looksLikeBalanceRow(r.purpose.value);
+            // 136: what the row IS — the reader's label, or the 135 word-list
+            // when the reader said nothing (inferred, shown grey). Never
+            // income by default.
+            const reading = rowKindOf(r);
+            const balance = reading.kind === "balance" && reading.inferred;
+            const sent = sentToExpenses.has(i);
+            const nonIncome =
+              reading.kind !== null && reading.kind !== "income" && !reading.inferred;
+            const undecided = reading.confidence === "check";
             const struck = isSampleLedger ? null : struckDoubleSuggestion(r.purpose.value);
             // Stage 0-1: sample rows are READ-ONLY — no confirm, no edit. A
             // cell without handlers renders as plain text (extraction-table).
@@ -545,7 +630,18 @@ export function LedgerReview() {
               // tap to change. Hidden once the row is already in the register.
               extra: isSampleLedger ? undefined : (
                 <span className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                  {!addedRows.has(i) && (
+                  {/* 136: the kind badge — tap to change; "check" asks for a tap. */}
+                  <KindBadge
+                    reading={reading}
+                    sent={sent}
+                    onPick={(k) => setRowKind(i, k)}
+                    onConfirm={
+                      undecided && reading.kind !== null
+                        ? () => setRowKind(i, reading.kind as LedgerRowKind, true)
+                        : undefined
+                    }
+                  />
+                  {!addedRows.has(i) && !nonIncome && !undecided && !sent && (
                     <>
                       <Tri bm="Diterima sebagai" zh="收款方式" en="Received as" />
                       <PaymentMethodToggle
@@ -554,6 +650,22 @@ export function LedgerReview() {
                         onChange={(m) => setLedgerPayment(i, m)}
                       />
                     </>
+                  )}
+                  {reading.kind === "expense" && !undecided && !sent && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      data-probe="ledger-to-expense"
+                      onClick={() => sendRowToExpenses(i)}
+                    >
+                      🧾{" "}
+                      <Tri
+                        bm="Rekod sebagai perbelanjaan → Perbelanjaan & tuntutan"
+                        zh="记成支出 → 去「支出与报销」"
+                        en="Record as spending → Spending & claims"
+                      />
+                    </Button>
                   )}
                   {struck !== null && (
                     <Button
@@ -588,7 +700,7 @@ export function LedgerReview() {
                 // Every sample row says so itself — the banner above scrolls
                 // away, the label on the row does not.
                 <Tri bm="CONTOH — lihat sahaja" zh="示范 —— 只能看" en="SAMPLE — view only" />
-              ) : balance || !eligibleForReceipt(r) ? (
+              ) : balance || nonIncome || undecided || sent || !eligibleForReceipt(r) ? (
                 <span className="flex flex-col gap-1">
                   {balance && (
                     <span data-probe="ledger-balance-hint">
@@ -599,12 +711,40 @@ export function LedgerReview() {
                       />
                     </span>
                   )}
-                  {!eligibleForReceipt(r) && (
-                    <Tri
-                      bm="Belum layak resit — sahkan dahulu"
-                      zh="暂不能开收据 —— 请先确认"
-                      en="Not ready for a receipt — confirm it first"
-                    />
+                  {/* 136: a balance / total / expense the READER labelled —
+                      not money received, so no receipt, ever. */}
+                  {sent ? (
+                    <span data-probe="ledger-sent-to-expenses">
+                      <Tri
+                        bm="Sudah dihantar ke Perbelanjaan & tuntutan — tidak akan diberi resit"
+                        zh="已送去「支出与报销」—— 不会开收据"
+                        en="Sent to Spending & claims — will not get a receipt"
+                      />
+                    </span>
+                  ) : nonIncome && !undecided ? (
+                    <span data-probe="ledger-non-income-note">
+                      <Tri
+                        bm="Bukan wang yang diterima — tiada resit"
+                        zh="不是收到的钱，不会开收据"
+                        en="Not money received — no receipt"
+                      />
+                    </span>
+                  ) : undecided ? (
+                    <span data-probe="ledger-kind-undecided">
+                      <Tri
+                        bm="MinitAI tidak pasti ini pendapatan atau perbelanjaan — tekan lencana dan pilih"
+                        zh="MinitAI 分不清这是收入还是支出 —— 按徽章选一个"
+                        en="MinitAI could not tell income from spending here — tap the badge and choose"
+                      />
+                    </span>
+                  ) : (
+                    !eligibleForReceipt(r) && (
+                      <Tri
+                        bm="Belum layak resit — sahkan dahulu"
+                        zh="暂不能开收据 —— 请先确认"
+                        en="Not ready for a receipt — confirm it first"
+                      />
+                    )
                   )}
                 </span>
               ) : undefined,

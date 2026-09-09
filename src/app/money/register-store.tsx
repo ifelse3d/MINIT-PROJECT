@@ -41,7 +41,7 @@ import { todayIsoMalaysia } from "@/lib/history";
 import { uploadErrorMessage } from "@/lib/shrink-photo";
 import { prepareUploadForSend } from "@/lib/upload-relay-client";
 import { consumeIntake, peekIntake } from "@/lib/intake-handoff";
-import { dropLedgerRow } from "@/lib/ledger-hints";
+import { dropLedgerRow, reindexAfterDrop } from "@/lib/ledger-hints";
 import { useHydrated } from "@/lib/browser-store";
 import { issueAndSaveReceipts } from "./actions";
 import {
@@ -148,6 +148,9 @@ export type RegisterStore = {
   /** 135 (J 9/9): take one row OUT of the review — a balance, a total, a
    *  line that is not a donation. The per-row answers keep their rows. */
   removeLedgerRow: (rowIndex: number) => void;
+  /** 136: review rows already handed to /money/expenses (index-keyed). */
+  sentToExpenses: Set<number>;
+  markRowSentToExpenses: (rowIndex: number) => void;
   addConfirmedRowsToRegister: () => void;
 
   // --- derived counts the headers and status badges read -------------------
@@ -332,6 +335,12 @@ export function RegisterProvider({
   // Ledger rows already pushed into the register (by row index), so the same
   // row cannot be added twice.
   const [addedRows, setAddedRows] = useState<Set<number>>(new Set());
+  // 136: rows whose fields went to the expenses page. Same lifetime and
+  // re-keying as addedRows — a mark on a row, never on a receipt.
+  const [sentToExpenses, setSentToExpenses] = useState<Set<number>>(new Set());
+  const markRowSentToExpenses = useCallback((rowIndex: number) => {
+    setSentToExpenses((prev) => new Set(prev).add(rowIndex));
+  }, []);
   // D19: the reviewer's cash/transfer answer per row index. {} = all cash.
   const [ledgerPayments, setLedgerPayments] = useState<
     Record<number, "cash" | "transfer">
@@ -376,6 +385,7 @@ export function RegisterProvider({
     setLedgerSourceLabel(null);
     setShowSample(false);
     setAddedRows(new Set());
+    setSentToExpenses(new Set());
     setLedgerPayments({});
     setLedgerPages([]);
     setAiError(null);
@@ -394,6 +404,7 @@ export function RegisterProvider({
     setLedger(extraction);
     setShowSample(true);
     setAddedRows(new Set());
+    setSentToExpenses(new Set());
     setLedgerPayments({});
     setLedgerPages([]);
     setAiError(null);
@@ -420,6 +431,7 @@ export function RegisterProvider({
       const next = dropLedgerRow(ledger.rows, addedRows, ledgerPayments, rowIndex);
       setLedger((prev) => ({ ...prev, rows: next.rows }));
       setAddedRows(next.added);
+      setSentToExpenses((prev) => reindexAfterDrop(prev, rowIndex));
       setLedgerPayments(next.payments);
     },
     [ledger.rows, addedRows, ledgerPayments],
@@ -498,6 +510,7 @@ export function RegisterProvider({
       );
       if (!continuing) {
         setAddedRows(new Set());
+        setSentToExpenses(new Set());
         setLedgerPayments({});
       }
       // B-5③: keep a thumbnail of every page in this review, so a multi-page
@@ -603,6 +616,7 @@ export function RegisterProvider({
       setLedger(handed.extraction as LedgerExtraction);
       setLedgerSourceLabel(handed.fileName);
       setAddedRows(new Set());
+      setSentToExpenses(new Set());
       setLedgerPayments({});
       // 135 (J 9/9: 「沒得看回原圖」): a page that came through the home
       // door used to arrive WITHOUT its picture — the thumbnails were reset
@@ -1120,6 +1134,8 @@ export function RegisterProvider({
         ledgerBackToEmpty,
         mutateLedger,
         removeLedgerRow,
+        sentToExpenses,
+        markRowSentToExpenses,
         addConfirmedRowsToRegister,
         ledgerRowsToCheck,
         rowsReadyToAdd,
