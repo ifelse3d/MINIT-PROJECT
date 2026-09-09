@@ -42,6 +42,7 @@ import {
   type ConfirmedClause,
 } from "@/lib/constitution";
 import { reattachedClauseNo } from "@/lib/constitution-display";
+import { foldContinuationClauses } from "@/lib/constitution-fold";
 
 export type SaveConstitutionState = {
   error: string | null;
@@ -281,5 +282,8 @@ export async function loadConstitutionClauses(): Promise<ConfirmedClause[]> {
 
   if (error || !data) return [];
   const parsed: unknown = data.clauses_json;
-  return isConfirmedClauseArray(parsed) ? parsed : [];
+  // 134: clause tails the page-by-page read split off ("(3) lanjutan Fasal
+  // 10") are folded back onto their clause on the way OUT — every screen and
+  // the Q&A see one book; the stored bytes stay as read (Hard Rule 1).
+  return isConfirmedClauseArray(parsed) ? foldContinuationClauses(parsed) : [];
 }

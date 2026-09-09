@@ -17,6 +17,9 @@
 
 import type { ConfirmedClause } from "@/lib/constitution";
 import type { ConstitutionExtraction } from "@/lib/extraction";
+import { foldContinuationClauses } from "@/lib/constitution-fold";
+
+export { foldContinuationClauses };
 
 /**
  * (a) work order 97 §3: the model was TAUGHT (extract-constitution.ts, until
@@ -46,7 +49,10 @@ export function cleanClauseField(value: string): string {
 export function clausesFromConstitutionExtraction(
   e: ConstitutionExtraction,
 ): ConfirmedClause[] {
-  return e.clauses
+  // 134: a clause tail the page-by-page read split off is folded back onto
+  // its clause before anything is stored (src/lib/constitution-fold.ts).
+  return foldContinuationClauses(
+    e.clauses
     .filter(
       (c) =>
         c.clause_no.confidence !== "missing" &&
@@ -67,7 +73,8 @@ export function clausesFromConstitutionExtraction(
       page_ref: cleanClauseField(
         c.page_ref.confidence === "missing" ? "" : c.page_ref.value,
       ),
-    }));
+    })),
+  );
 }
 
 /**

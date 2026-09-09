@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { headcountLineBm, parseHeadcount } from "./headcount";
+import { absenceIsExcused, headcountLineBm, parseHeadcount } from "./headcount";
 
 // 125 §2 — the headcount line is counted by code, the people on leave are
 // counted out. Fictional names throughout (A3).
@@ -9,6 +9,7 @@ describe("🔴 125 §2 — parseHeadcount, the fixed input from J's AGM page", (
     expect(parseHeadcount("理事12人,请假2人(张伟杰,王丽华),会员40人")).toEqual({
       present: 52,
       apologies: 2,
+      excused: true,
       names: ["张伟杰", "王丽华"],
       parts: [
         { label: "理事", n: 12 },
@@ -21,6 +22,7 @@ describe("🔴 125 §2 — parseHeadcount, the fixed input from J's AGM page", (
     expect(parseHeadcount("出席人数：理事12人、会员40人、请假2人（张伟杰、王丽华）")).toEqual({
       present: 52,
       apologies: 2,
+      excused: true,
       names: ["张伟杰", "王丽华"],
       parts: [
         { label: "理事", n: 12 },
@@ -40,6 +42,7 @@ describe("125 §2 — BM and English shapes", () => {
     expect(parseHeadcount("AJK yang hadir : 33 orang")).toEqual({
       present: 33,
       apologies: 0,
+      excused: false,
       names: [],
       parts: [{ label: "AJK yang hadir", n: 33 }],
     });
@@ -77,6 +80,7 @@ describe("125 §2 — the people on leave are NEVER present", () => {
     expect(parseHeadcount("出席 30 人, 缺席 5 人")).toEqual({
       present: 30,
       apologies: 5,
+      excused: false,
       names: [],
       parts: [{ label: "出席", n: 30 }],
     });
@@ -114,5 +118,44 @@ describe("127 — headcountLineBm", () => {
   it("a line without Chinese, or one it cannot parse, is left to print as written", () => {
     expect(headcountLineBm("AJK yang hadir : 33 orang", bm)).toBeNull();
     expect(headcountLineBm("大家都来了", bm)).toBeNull();
+  });
+});
+
+// 134 (J 9/9, live site) — the paper wrote 缺席 and the document printed
+// "(DENGAN MAAF)": an apology nobody recorded. The word on the page decides.
+describe("🔴 134 — excused (请假) versus merely absent (缺席)", () => {
+  const bm = (zh: string) => (zh === "理事" ? "Ahli Jawatankuasa" : zh === "会员" ? "ahli" : zh);
+
+  it("缺席 is not excused: the BM line says 'tidak hadir', no 'dengan maaf'", () => {
+    expect(parseHeadcount("理事12人,缺席2人(张伟杰,王丽华),会员40人")?.excused).toBe(false);
+    expect(headcountLineBm("出席:理事12人,缺席2人(甲,乙),会员40人", bm)).toBe(
+      "12 orang Ahli Jawatankuasa, 40 orang ahli; tidak hadir: 2 orang",
+    );
+  });
+
+  it("请假 / apologies / dengan maaf are excused", () => {
+    expect(parseHeadcount("理事12人,请假2人,会员40人")?.excused).toBe(true);
+    expect(parseHeadcount("30 present, 2 apologies")?.excused).toBe(true);
+    expect(parseHeadcount("Hadir: 30 orang; tidak hadir dengan maaf: 2 orang")?.excused).toBe(true);
+    expect(parseHeadcount("Hadir: 30 orang; tidak hadir: 2 orang")?.excused).toBe(false);
+  });
+
+  it("absenceIsExcused reads the page's own words — the line, or the snippet an on-leave name came from", () => {
+    const ref = (snippet: string) => ({ location: "photo 1", snippet });
+    expect(
+      absenceIsExcused({
+        attendance_count: { value: "理事12人,缺席2人(甲,乙),会员40人", confidence: "confirmed" },
+        apologies: [{ name: { value: "甲", source_ref: ref("缺席2人(甲,乙)") } }],
+      }),
+    ).toBe(false);
+    expect(
+      absenceIsExcused({
+        attendance_count: { value: "理事12人,请假2人(甲,乙),会员40人", confidence: "confirmed" },
+      }),
+    ).toBe(true);
+    expect(absenceIsExcused({ apologies: [{ name: { value: "甲", source_ref: ref("请假: 甲") } }] })).toBe(true);
+    // No evidence either way = no apology is invented.
+    expect(absenceIsExcused({ apologies: [{ name: { value: "甲", source_ref: null } }] })).toBe(false);
+    expect(absenceIsExcused({})).toBe(false);
   });
 });
