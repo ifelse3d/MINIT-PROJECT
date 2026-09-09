@@ -169,7 +169,7 @@ export function HeadcountCard() {
       <p className="text-base font-semibold">🤖 「{line.value}」</p>
       <p className="text-base">
         <Tri
-          bm={`Saya kira ${counted.present} orang HADIR (${partsText})${counted.apologies > 0 ? `; ${counted.apologies} orang ${counted.excused ? "tidak hadir dengan maaf" : "tidak hadir"}, tidak dikira` : ""}. Betul?`}
+          bm={`Saya kira ${counted.present} orang HADIR (${partsText})${counted.apologies > 0 ? `; ${counted.apologies} orang tidak hadir, tidak dikira` : ""}. Betul?`}
           zh={`我算出 ${counted.present} 人出席（${partsText}）${counted.apologies > 0 ? `，${counted.excused ? "请假" : "缺席"} ${counted.apologies} 人不算` : ""}。对吗？`}
           en={`I make that ${counted.present} PRESENT (${partsText})${counted.apologies > 0 ? `; the ${counted.apologies} ${counted.excused ? "on leave" : "absent"} are not counted` : ""}. Right?`}
         />

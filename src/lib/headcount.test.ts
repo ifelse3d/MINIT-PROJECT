@@ -50,7 +50,7 @@ describe("125 §2 — BM and English shapes", () => {
 
   it("groups and a leave count in BM", () => {
     const r = parseHeadcount(
-      "Hadir: 12 orang AJK, 40 orang ahli; tidak hadir dengan maaf: 2 orang (Tan Kim Loo, Chan Mei)",
+      "Hadir: 12 orang AJK, 40 orang ahli; tidak hadir: 2 orang (Tan Kim Loo, Chan Mei)",
     );
     expect(r?.present).toBe(52);
     expect(r?.apologies).toBe(2);
@@ -109,10 +109,10 @@ describe("127 — headcountLineBm", () => {
   const bm = (zh: string) => ({ 理事: "Ahli Jawatankuasa", 会员: "ahli" })[zh] ?? zh;
   it("rebuilds the Chinese line from the parsed counts, in BM", () => {
     expect(headcountLineBm("出席:理事12人,请假2人(甲,乙),会员40人", bm)).toBe(
-      "12 orang Ahli Jawatankuasa, 40 orang ahli; tidak hadir dengan maaf: 2 orang",
+      "12 orang Ahli Jawatankuasa, 40 orang ahli; tidak hadir: 2 orang",
     );
     expect(headcountLineBm("出席:理事12人,请假2人(甲,乙),会员40人", bm, { includeNames: true })).toBe(
-      "12 orang Ahli Jawatankuasa, 40 orang ahli; tidak hadir dengan maaf: 2 orang (甲, 乙)",
+      "12 orang Ahli Jawatankuasa, 40 orang ahli; tidak hadir: 2 orang (甲, 乙)",
     );
   });
   it("a line without Chinese, or one it cannot parse, is left to print as written", () => {
@@ -131,6 +131,16 @@ describe("🔴 134 — excused (请假) versus merely absent (缺席)", () => {
     expect(headcountLineBm("出席:理事12人,缺席2人(甲,乙),会员40人", bm)).toBe(
       "12 orang Ahli Jawatankuasa, 40 orang ahli; tidak hadir: 2 orang",
     );
+  });
+
+  // 136 (J, 9/9 5 PM, decided — overrides 134): the DOCUMENT never says
+  // "dengan maaf", whatever the page said. `excused` is still parsed.
+  it("请假 on the page: excused is parsed, but the BM line still prints plain 'tidak hadir'", () => {
+    const line = "理事12人,请假2人(甲,乙),会员40人";
+    expect(parseHeadcount(line)?.excused).toBe(true);
+    const bm = headcountLineBm(line, (z) => z, { includeNames: true }) ?? "";
+    expect(bm).toContain("tidak hadir: 2 orang");
+    expect(bm.toLowerCase()).not.toContain("dengan maaf");
   });
 
   it("请假 / apologies / dengan maaf are excused", () => {

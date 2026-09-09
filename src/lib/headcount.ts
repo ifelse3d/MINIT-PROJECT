@@ -165,11 +165,10 @@ export function headcountLineBm(
   });
   let out = groups.join(", ");
   if (hc.apologies > 0) {
-    // 134: "dengan maaf" only when the page itself said the absence was
-    // excused; a plain 缺席 prints as plain "tidak hadir".
-    out += hc.excused
-      ? `; tidak hadir dengan maaf: ${hc.apologies} orang`
-      : `; tidak hadir: ${hc.apologies} orang`;
+    // 136 (J, 9/9 5 PM, decided — overrides 134): NEVER "dengan maaf". 请假
+    // and 缺席 both print "tidak hadir"; `excused` stays on the parse for the
+    // record, the document does not say it.
+    out += `; tidak hadir: ${hc.apologies} orang`;
     if (opts.includeNames && hc.names.length > 0) out += ` (${hc.names.join(", ")})`;
   }
   return out;

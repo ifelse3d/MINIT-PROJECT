@@ -13,7 +13,7 @@ import { renderMinutesDraftBm } from "./minutes-draft";
 
 const LINE = "理事12人,请假2人(张伟杰,王丽华),会员40人";
 // 127: in BM the line is rebuilt from the parsed counts — same numbers, no 人 left.
-const BM_LINE = "12 orang Ahli Jawatankuasa, 40 orang ahli; tidak hadir dengan maaf: 2 orang";
+const BM_LINE = "12 orang Ahli Jawatankuasa, 40 orang ahli; tidak hadir: 2 orang";
 const confirmed = (value: string) => ({
   value,
   confidence: "confirmed" as const,
@@ -40,7 +40,7 @@ describe("🔴 125 §2-5 — Jumlah hadir comes from the confirmed count", () =>
     expect(md).not.toContain("人");
     expect(md).toContain("Jumlah hadir: 52 orang");
     expect(md).not.toContain("Jumlah hadir: 1 orang");
-    expect(md).toContain("## TIDAK HADIR (DENGAN MAAF)");
+    expect(md).toContain("## TIDAK HADIR");
     expect(md).toContain("1. 张伟杰");
     expect(md).toContain("2. 王丽华");
     // The two on leave are NOT under KEHADIRAN.
@@ -52,7 +52,7 @@ describe("🔴 125 §2-5 — Jumlah hadir comes from the confirmed count", () =>
     const md = renderMinutesDraftBm(agm(), { orgName: "PERSATUAN CONTOH" });
     expect(md).toContain(`Kehadiran: ${BM_LINE}`);
     expect(md).toContain("Jumlah hadir: 52 orang");
-    expect(md).toContain("## TIDAK HADIR (DENGAN MAAF)");
+    expect(md).toContain("## TIDAK HADIR");
   });
 
   it("the structured document prints the line and the count too", () => {
@@ -155,7 +155,7 @@ describe("🔴 134 — 缺席 prints as TIDAK HADIR, never as an apology the pag
   });
 
   it("请假 still prints the apology heading (the page said so)", () => {
-    expect(composeMinutesMd(plan, agm(), opts)).toContain("## TIDAK HADIR (DENGAN MAAF)");
+    expect(composeMinutesMd(plan, agm(), opts)).toContain("## TIDAK HADIR");
     expect(composeMinutesMd(plan, agm(), { ...opts, lang: "zh" })).toContain("## 请假");
     expect(composeMinutesMd(plan, absentAgm(), { ...opts, lang: "zh" })).toContain("## 缺席");
   });

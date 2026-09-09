@@ -109,7 +109,8 @@ export const LABELS: Record<MinutesLang, Labels> = {
     attendance: "KEHADIRAN",
     attendanceCount: (n) => `Jumlah hadir: ${n} orang`,
     headcountLine: "Kehadiran",
-    apologies: "TIDAK HADIR (DENGAN MAAF)",
+    // 136 (J, 9/9 5 PM, decided): never "(DENGAN MAAF)" — 请假 and 缺席 both print TIDAK HADIR.
+    apologies: "TIDAK HADIR",
     absent: "TIDAK HADIR",
     discussedAndDecided: "PERKARA DIBINCANGKAN DAN KEPUTUSAN",
     money: "KEWANGAN",

@@ -47,7 +47,7 @@ export const BM_GLOSSARY: readonly (readonly [string, string])[] = [
   ["学生", "pelajar"],
   // Attendance
   ["出席", "Hadir"],
-  ["请假", "Tidak hadir dengan maaf"],
+  ["请假", "Tidak hadir"],
   ["记录", "Dicatat oleh"],
   // Headings
   ["日期", "Tarikh"],
