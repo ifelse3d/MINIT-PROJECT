@@ -122,3 +122,41 @@ describe("🔴 125 §2-5 — Jumlah hadir comes from the confirmed count", () =>
     expect(composeMinutesMd(plan, agm(), { ...opts, lang: "en" })).toContain("## APOLOGIES");
   });
 });
+
+// 134 (J 9/9, live site): the paper wrote 缺席 (absent); the document printed
+// "TIDAK HADIR (DENGAN MAAF)" — an apology nobody recorded. The page's word
+// decides the heading and the count line, in the document AND the preview.
+describe("🔴 134 — 缺席 prints as TIDAK HADIR, never as an apology the page did not record", () => {
+  const ABSENT_LINE = "理事12人,缺席2人(张伟杰,王丽华),会员40人";
+  const absentAgm = (): MeetingNotesExtraction => ({
+    ...agm(),
+    attendance_count: confirmed(ABSENT_LINE),
+    apologies: [
+      { name: { ...confirmed("张伟杰"), source_ref: { location: "photo 1", snippet: ABSENT_LINE } } },
+      { name: { ...confirmed("王丽华"), source_ref: { location: "photo 1", snippet: ABSENT_LINE } } },
+    ],
+  });
+
+  it("the formal document", () => {
+    const md = composeMinutesMd(plan, absentAgm(), opts);
+    expect(md).toContain("Kehadiran: 12 orang Ahli Jawatankuasa, 40 orang ahli; tidak hadir: 2 orang");
+    expect(md).toContain("## TIDAK HADIR\n");
+    expect(md).not.toContain("DENGAN MAAF");
+    expect(md).not.toContain("dengan maaf");
+    expect(md).toContain("1. 张伟杰");
+    expect(lintMinitMd(md, { lang: "bm", attendanceCount: true })).toEqual([]);
+  });
+
+  it("the free preview", () => {
+    const md = renderMinutesDraftBm(absentAgm(), { orgName: "PERSATUAN CONTOH" });
+    expect(md).toContain("tidak hadir: 2 orang");
+    expect(md).toContain("## TIDAK HADIR\n");
+    expect(md).not.toContain("DENGAN MAAF");
+  });
+
+  it("请假 still prints the apology heading (the page said so)", () => {
+    expect(composeMinutesMd(plan, agm(), opts)).toContain("## TIDAK HADIR (DENGAN MAAF)");
+    expect(composeMinutesMd(plan, agm(), { ...opts, lang: "zh" })).toContain("## 请假");
+    expect(composeMinutesMd(plan, absentAgm(), { ...opts, lang: "zh" })).toContain("## 缺席");
+  });
+});

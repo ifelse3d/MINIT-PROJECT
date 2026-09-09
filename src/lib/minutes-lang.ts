@@ -57,6 +57,12 @@ type Labels = {
   headcountLine: string;
   /** 125 §2: the heading of the on-leave list. */
   apologies: string;
+  /** 134: the same list when the page said only "absent" (缺席 / tidak hadir)
+   *  — no apology was recorded, so none is printed. */
+  absent: string;
+  /** 134: the free preview's heading over the resolutions of an unstructured
+   *  page (it used to be hard-coded in BM whatever the page's language). */
+  discussedAndDecided: string;
   money: string;
   officeBearers: string;
   unresolved: string;
@@ -104,6 +110,8 @@ export const LABELS: Record<MinutesLang, Labels> = {
     attendanceCount: (n) => `Jumlah hadir: ${n} orang`,
     headcountLine: "Kehadiran",
     apologies: "TIDAK HADIR (DENGAN MAAF)",
+    absent: "TIDAK HADIR",
+    discussedAndDecided: "PERKARA DIBINCANGKAN DAN KEPUTUSAN",
     money: "KEWANGAN",
     officeBearers: "PEMEGANG JAWATAN",
     unresolved: "PERKARA BELUM MUKTAMAD",
@@ -133,6 +141,8 @@ export const LABELS: Record<MinutesLang, Labels> = {
     attendanceCount: (n) => `出席人数：${n} 人`,
     headcountLine: "出席",
     apologies: "请假",
+    absent: "缺席",
+    discussedAndDecided: "讨论事项与议决",
     money: "款项",
     officeBearers: "职位与人名",
     unresolved: "还没定下来的事",
@@ -163,6 +173,8 @@ export const LABELS: Record<MinutesLang, Labels> = {
     attendanceCount: (n) => `Total present: ${n}`,
     headcountLine: "Attendance",
     apologies: "APOLOGIES",
+    absent: "ABSENT",
+    discussedAndDecided: "MATTERS DISCUSSED AND DECISIONS",
     money: "AMOUNTS",
     officeBearers: "OFFICE BEARERS",
     unresolved: "STILL TO BE DECIDED",

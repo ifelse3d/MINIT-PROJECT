@@ -73,6 +73,9 @@ export type MinitSection = {
 
 export type MinitDocModel = {
   lang: MinutesLang;
+  /** 134: true for a preview written in the PAGE'S OWN language — it is not a
+   *  translation, so the "translation — not for filing" note is not printed. */
+  suppressTranslationNote?: boolean;
   orgName: string;
   /** PPM/ROS registration line content; null/absent prints nothing. */
   ppmNo?: string | null;
@@ -98,6 +101,10 @@ export type MinitDocModel = {
   /** 125 §2: the people recorded as on leave — their own list, never among
    *  the attendees. */
   apologies?: string[];
+  /** 134: whether the page said those people were EXCUSED (请假 / apologies /
+   *  dengan maaf). false = the page said only "absent" (缺席) and the heading
+   *  says exactly that; absent = the historical "(DENGAN MAAF)" heading. */
+  apologiesExcused?: boolean;
   /** The named attendance sheet (position beside a name where confirmed). */
   attendees?: { name: string; position?: string }[];
   /** The Agenda summary table, original numbering. Usually rebuilt from
@@ -295,7 +302,9 @@ export function renderMinitMd(model: MinitDocModel): string {
     out.push(`**${model.meetingTitleLine.trim()}**`);
   }
   if (model.bilYear) out.push(L.bil(model.bilYear));
-  if (L.translationNote) out.push("", `[ ${L.translationNote} ]`);
+  if (L.translationNote && !model.suppressTranslationNote) {
+    out.push("", `[ ${L.translationNote} ]`);
+  }
   out.push("");
 
   // TARIKH / MASA / TEMPAT block — the standard header block of a minit.
@@ -342,7 +351,8 @@ export function renderMinitMd(model: MinitDocModel): string {
   // 125 §2: the on-leave list — its own heading, never among the attendees.
   const apologies = model.apologies ?? [];
   if (apologies.length > 0) {
-    out.push(`## ${L.apologies}`, "");
+    // 134: "(DENGAN MAAF)" only when the page itself recorded an excuse.
+    out.push(`## ${model.apologiesExcused === false ? L.absent : L.apologies}`, "");
     apologies.forEach((name, i) => out.push(`${i + 1}. ${name}`));
     out.push("");
   }

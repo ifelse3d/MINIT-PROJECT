@@ -28,6 +28,7 @@ import { cleanMinutesTitle, suggestMinutesTitle } from "@/lib/minutes-title";
 import { buildPastePack, type FilingRosterEntry } from "@/lib/paste-pack";
 import { dayIsoMalaysia } from "@/lib/history";
 import { type MinutesLang } from "@/lib/minutes-lang";
+import { sourceLanguageOf } from "@/lib/minutes-source-lang";
 import { consumeIntake } from "@/lib/intake-handoff";
 import { SAMPLE_ORG_NAME, sampleMeetingExtraction } from "@/lib/sample-data";
 import {
@@ -1453,17 +1454,28 @@ export function MinutesProvider({
   const documentOrgName = isSample ? SAMPLE_ORG_NAME : orgName ?? "";
   const documentSigner = signerName ?? "";
 
-  const minutesDraft = useMemo(
-    () =>
-      renderMinutesDraftBm(extraction, {
-        orgName: documentOrgName,
-        confirmedBy:
-          allReviewed && isReal && documentSigner !== ""
-            ? { name: documentSigner, dateIso: todayIso }
-            : undefined,
-      }),
-    [extraction, allReviewed, todayIso, documentOrgName, documentSigner, isReal]
-  );
+  // The document's language (the write-with-AI step below reads it too).
+  // Declared here, above the preview, since 134: the preview needs it.
+  const [docLang, setDocLang] = useState<MinutesLang>("bm");
+  // 134 (J 9/9, live site): the language the PAGE was written in — pure
+  // character counting, no AI (src/lib/minutes-source-lang.ts).
+  const sourceLang = useMemo(() => sourceLanguageOf(extraction), [extraction]);
+
+  const minutesDraft = useMemo(() => {
+    const confirmed = allReviewed && isReal && documentSigner !== "";
+    // 134: while the draft is still being CHECKED against the paper it reads
+    // in the paper's own language — a Chinese page previews in Chinese, not
+    // as BM headings over Chinese lines. Once every item is confirmed the
+    // preview is the document, in the document's language (BM by default),
+    // which is what the write-with-AI step then produces.
+    const lang = confirmed ? docLang : sourceLang;
+    return renderMinutesDraftBm(extraction, {
+      orgName: documentOrgName,
+      confirmedBy: confirmed ? { name: documentSigner, dateIso: todayIso } : undefined,
+      lang,
+      sourceCopy: lang === sourceLang,
+    });
+  }, [extraction, allReviewed, todayIso, documentOrgName, documentSigner, isReal, docLang, sourceLang]);
 
   const pastePack = useMemo(
     () => buildPastePack(extraction, filingRoster, { orgName: documentOrgName }),
@@ -1486,7 +1498,7 @@ export function MinutesProvider({
   // an effect would render the stale document once before clearing it, and
   // "the document on screen briefly disagrees with the fields" is the exact
   // failure this guard exists to prevent.
-  const [docLang, setDocLang] = useState<MinutesLang>("bm");
+  // (docLang itself is declared above the preview since 134.)
 
   // J 28/8 item 3: the Google-Docs-style pre-fill — regenerated live from the
   // confirmed facts, in the document's language. Free (no AI involved).

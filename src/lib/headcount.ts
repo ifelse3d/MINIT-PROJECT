@@ -27,15 +27,25 @@ export type Headcount = {
   present: number;
   /** People on leave / absent — never part of `present`. */
   apologies: number;
+  /**
+   * 134 (J 9/9, live site): whether the page SAID those people were excused
+   * (请假 / apologies / dengan maaf) or merely absent (缺席 / tidak hadir /
+   * absent). The document used to print "(DENGAN MAAF)" for both — an
+   * apology the paper never recorded. True only on the page's own word.
+   */
+  excused: boolean;
   /** The names written in brackets after a leave/absent count. */
   names: string[];
   /** The counted groups, in the line's order (理事 12, 会员 40). */
   parts: HeadcountPart[];
 };
 
+/** Words that say the absence was EXCUSED — leave taken, apologies sent. */
+const EXCUSED = /(请假|請假|告假|apolog|excused|leave|maaf|cuti)/i;
+
 /** Words that mark a count as NOT present — on leave, absent, excused. */
 const ABSENT =
-  /(请假|請假|缺席|未出席|没有出席|沒有出席|没来|沒來|tidak hadir|tidak dapat hadir|apolog|absent|excused|leave)/i;
+  /(请假|請假|告假|缺席|未出席|没有出席|沒有出席|没来|沒來|tidak hadir|tidak dapat hadir|apolog|absent|excused|leave|maaf|cuti)/i;
 
 /** A unit after the number: 人 / 位 / 名, orang / org, members, persons… */
 const UNIT = /(人|位|名|\borang\b|\borg\b|\bmembers?\b|\bpersons?\b|\bpeople\b|\bpax\b)/i;
@@ -79,6 +89,7 @@ export function parseHeadcount(line: string): Headcount | null {
   const parts: HeadcountPart[] = [];
   const names: string[] = [];
   let apologies = 0;
+  let excused = false;
 
   for (const rawSeg of marked.split(/[,，;；、]/)) {
     const seg = rawSeg.trim();
@@ -95,6 +106,7 @@ export function parseHeadcount(line: string): Headcount | null {
     const absent = ABSENT.test(text);
     if (absent) {
       apologies += n;
+      if (EXCUSED.test(text)) excused = true;
       for (const id of bracketIds) {
         for (const name of brackets[id].split(NAME_SEP)) {
           const t = name.trim();
@@ -121,6 +133,7 @@ export function parseHeadcount(line: string): Headcount | null {
   return {
     present: parts.reduce((sum, p) => sum + p.n, 0),
     apologies,
+    excused,
     names,
     parts,
   };
@@ -152,8 +165,44 @@ export function headcountLineBm(
   });
   let out = groups.join(", ");
   if (hc.apologies > 0) {
-    out += `; tidak hadir dengan maaf: ${hc.apologies} orang`;
+    // 134: "dengan maaf" only when the page itself said the absence was
+    // excused; a plain 缺席 prints as plain "tidak hadir".
+    out += hc.excused
+      ? `; tidak hadir dengan maaf: ${hc.apologies} orang`
+      : `; tidak hadir: ${hc.apologies} orang`;
     if (opts.includeNames && hc.names.length > 0) out += ` (${hc.names.join(", ")})`;
   }
   return out;
+}
+
+/**
+ * 134 (J 9/9, live site): did the page say the people who were not there
+ * were EXCUSED? The paper wrote 「缺席」 (absent) and the document printed
+ * "TIDAK HADIR (DENGAN MAAF)" — an apology nobody recorded. The heading now
+ * follows the page's own word: excused only when the headcount line or the
+ * source snippet of an on-leave name carries a leave/apology word (请假,
+ * apologies, dengan maaf, cuti…). No evidence = plain "TIDAK HADIR".
+ *
+ * Structural parameter on purpose — the extraction module imports this file,
+ * so this file must not import the extraction type at runtime.
+ */
+export function absenceIsExcused(e: {
+  attendance_count?: { value: string; confidence: string } | null;
+  apologies?:
+    | {
+        name: {
+          value: string;
+          source_ref?: { location?: string | null; snippet?: string | null } | null;
+        };
+      }[]
+    | null;
+}): boolean {
+  const line = e.attendance_count;
+  if (line && line.confidence !== "missing" && EXCUSED.test(line.value)) return true;
+  for (const a of e.apologies ?? []) {
+    const ref = a.name.source_ref;
+    if (!ref) continue;
+    if (EXCUSED.test(ref.snippet ?? "") || EXCUSED.test(ref.location ?? "")) return true;
+  }
+  return false;
 }

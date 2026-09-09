@@ -2,6 +2,7 @@ import "server-only";
 
 import { getSupabaseServer } from "@/db/supabase-server";
 import { isConfirmedClauseArray, searchClauses, sortClauses } from "@/lib/constitution";
+import { foldContinuationClauses } from "@/lib/constitution-fold";
 import {
   annualReturnDeadline,
   upcomingEinvoisDeadlines,
@@ -339,7 +340,8 @@ const fasalHandler: ToolHandler = async (args, ctx) => {
     return { found: 0, note: "The stored constitution could not be read." };
   }
 
-  const hits = searchClauses(sortClauses(parsed), query).slice(0, 8);
+  // 134: the same fold the constitution screens apply (loadConstitutionClauses).
+  const hits = searchClauses(sortClauses(foldContinuationClauses(parsed)), query).slice(0, 8);
   if (hits.length === 0) {
     return {
       found: 0,
